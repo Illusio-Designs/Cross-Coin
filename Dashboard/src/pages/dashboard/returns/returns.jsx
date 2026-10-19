@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Button, Table, Modal } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, EmptyState, FilterBar } from "../../../components/Dashboard/primitives";
 import { PromptModal } from "../../../components/common/AlertModal";
@@ -79,7 +79,7 @@ export default function Returns({ embedded = false }) {
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
     }),
     staleTime: 30 * 1000,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
   const rows = data?.returns || [];
 

@@ -145,7 +145,7 @@ export default function WebhookEvents() {
       </div>
 
       {/* Events table */}
-      {error && <div style={{ color: "#dc2626" }}>{error}</div>}
+      {error && <div style={{ color: "var(--ds-color-danger)" }}>{error}</div>}
       {loading ? <Loader /> : (
         <Panel flush>
           <ResponsiveTable

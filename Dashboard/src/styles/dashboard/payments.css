@@ -209,18 +209,18 @@
 }
 
 .status-success {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
 }
 
 .status-pending {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--ds-color-warn-bg);
+  color: var(--ds-color-warn);
 }
 
 .status-failed {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
 }
 
 /* Responsive adjustments */
@@ -278,23 +278,23 @@
 }
 
 .status-active {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
 }
 
 .status-pending {
-  background-color: #fef3c7;
-  color: #92400e;
+  background-color: var(--ds-color-warn-bg);
+  color: var(--ds-color-warn);
 }
 
 .status-inactive {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
 }
 
 .status-refunded {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: var(--ds-color-info-bg);
+  color: var(--ds-color-info);
 }
 
 /* Filter controls */

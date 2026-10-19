@@ -64,7 +64,7 @@ function RoleBadge({ role }) {
 // Renders every role a user holds.
 function RoleBadges({ roles }) {
   const list = (roles || []).filter(Boolean);
-  if (!list.length) return <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>;
+  if (!list.length) return <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>—</span>;
   return (
     <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
       {list.map(role => <RoleBadge key={role} role={role} />)}
@@ -194,16 +194,16 @@ export default function StaffUsers() {
   });
 
   const columns = [
-    { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: '#9ca3af', fontSize: 13 }}>{r._sn}</span> },
+    { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: 'var(--ds-color-text-faint)', fontSize: 13 }}>{r._sn}</span> },
     { header: 'User', accessor: 'username', cell: r => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--ds-color-text)', color: 'var(--ds-color-surface)', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{staffInitials(r.username)}</span>
           <span style={{ fontWeight: 600, color: 'var(--ds-color-text)' }}>{r.username}</span>
         </span>
       ) },
-    { header: 'Email',   accessor: 'email',     cell: r => <span style={{ color: '#6b7280', fontSize: 13 }}>{r.email}</span> },
+    { header: 'Email',   accessor: 'email',     cell: r => <span style={{ color: 'var(--ds-color-text-muted)', fontSize: 13 }}>{r.email}</span> },
     { header: 'Roles',   accessor: 'role',      cell: r => <RoleBadges roles={getUserRoles(r)} /> },
-    { header: 'Joined',  accessor: 'createdAt', cell: r => <span style={{ fontSize: 13, color: '#9ca3af' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '—'}</span> },
+    { header: 'Joined',  accessor: 'createdAt', cell: r => <span style={{ fontSize: 13, color: 'var(--ds-color-text-faint)' }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '—'}</span> },
     {
       header: 'Actions', accessor: 'actions',
       cell: r => (
@@ -368,7 +368,7 @@ export default function StaffUsers() {
                 <button
                   type="button"
                   onClick={() => setShowPw(v => !v)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', width: 18, height: 18, padding: 0, display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ds-color-text-faint)', width: 18, height: 18, padding: 0, display: 'flex', alignItems: 'center' }}
                   aria-label={showPw ? 'Hide password' : 'Show password'}
                 >
                   {showPw ? IC.eyeOff : IC.eye}

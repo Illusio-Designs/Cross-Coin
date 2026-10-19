@@ -2108,6 +2108,8 @@
   padding: 5px 14px; border-radius: 999px; cursor: pointer;
 }
 .was-load-older button:disabled { opacity: 0.6; cursor: default; }
+/* Same control at the bottom of the inbox thread list ("Load more"). */
+.was-load-more-convs { padding: 10px 0 14px; }
 
 /* ============================================================
    PREMIUM REFRESH + MOBILE RESPONSIVE  (appended)

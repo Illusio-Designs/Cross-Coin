@@ -16,19 +16,23 @@ const IC = {
 const money = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const when = (d) => (d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
 
+// Token pairs (bg / fg / border) so the pills read in light and dark themes.
+const tone = (t) => (t === "neutral"
+  ? { bg: "var(--ds-color-surface-soft)", fg: "var(--ds-color-text-muted)", bd: "var(--ds-color-border)" }
+  : { bg: `var(--ds-color-${t}-bg)`, fg: `var(--ds-color-${t})`, bd: `var(--ds-color-${t}-bd)` });
 const STATUS = {
-  successful: { label: "Paid", bg: "#e7f6ee", fg: "#0a7a44" },
-  completed: { label: "Paid", bg: "#e7f6ee", fg: "#0a7a44" },
-  pending: { label: "Pending", bg: "#fef3e2", fg: "#c2410c" },
-  failed: { label: "Failed", bg: "#fdeaea", fg: "#dc2626" },
-  refunded: { label: "Refunded", bg: "#ede7f6", fg: "#6d28d9" },
-  partial_refund: { label: "Part refunded", bg: "#ede7f6", fg: "#6d28d9" },
-  refund_pending: { label: "Refund pending", bg: "#fef3e2", fg: "#c2410c" },
-  cancelled: { label: "Cancelled", bg: "#f1f2f4", fg: "#555" },
+  successful: { label: "Paid", ...tone("success") },
+  completed: { label: "Paid", ...tone("success") },
+  pending: { label: "Pending", ...tone("warn") },
+  failed: { label: "Failed", ...tone("danger") },
+  refunded: { label: "Refunded", ...tone("accent2") },
+  partial_refund: { label: "Part refunded", ...tone("accent2") },
+  refund_pending: { label: "Refund pending", ...tone("warn") },
+  cancelled: { label: "Cancelled", ...tone("neutral") },
 };
 const Badge = ({ s, refund }) => {
-  const m = refund ? { label: "Refund", bg: "#ede7f6", fg: "#6d28d9" } : (STATUS[s] || { label: s || "—", bg: "#f1f2f4", fg: "#555" });
-  return <span style={{ background: m.bg, color: m.fg, padding: "3px 10px", borderRadius: 999, fontSize: ".72rem", fontWeight: 600, whiteSpace: "nowrap" }}>{m.label}</span>;
+  const m = refund ? { label: "Refund", ...tone("accent2") } : (STATUS[s] || { label: s || "—", ...tone("neutral") });
+  return <span style={{ background: m.bg, color: m.fg, border: `1px solid ${m.bd}`, padding: "3px 10px", borderRadius: 999, fontSize: ".72rem", fontWeight: 600, whiteSpace: "nowrap" }}>{m.label}</span>;
 };
 
 const copy = async (text) => {
@@ -36,7 +40,7 @@ const copy = async (text) => {
   catch { showError("copyFailed", "Couldn't copy — select the text instead"); }
 };
 const Ref = ({ label, value }) => value ? (
-  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: ".72rem", color: "#666" }}>
+  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: ".72rem", color: "var(--ds-color-text-muted)" }}>
     {label} <code style={{ fontSize: ".72rem" }}>{value}</code>
     <button type="button" className="sl-btn-edit" title="Copy" onClick={() => copy(value)} style={{ padding: 2 }}>{IC.copy}</button>
   </span>
@@ -74,18 +78,18 @@ export default function Payments() {
   const brandName = (id) => { const b = brands.find((x) => x.id === id); return b ? (b.display_name || b.name) : ""; };
 
   const columns = [
-    { header: "Date", accessor: "createdAt", cell: (r) => <span style={{ whiteSpace: "nowrap" }}>{when(r.createdAt)}<br /><span style={{ fontSize: ".72rem", color: "#888" }}>{brandName(r.brand_id)}</span></span> },
-    { header: "Order", accessor: "order", cell: (r) => <span><strong>{r.order?.order_number || "—"}</strong>{r.customer && <><br /><span style={{ fontSize: ".72rem", color: "#888" }}>{r.customer.name}{r.customer.phone ? " · " + r.customer.phone : ""}</span></>}</span> },
-    { header: "Amount", accessor: "amount", cell: (r) => <span style={{ fontWeight: 600, color: r.is_refund ? "#6d28d9" : undefined }}>{r.is_refund ? "− " + money(-r.amount) : money(r.amount)}</span> },
+    { header: "Date", accessor: "createdAt", cell: (r) => <span style={{ whiteSpace: "nowrap" }}>{when(r.createdAt)}<br /><span style={{ fontSize: ".72rem", color: "var(--ds-color-text-faint)" }}>{brandName(r.brand_id)}</span></span> },
+    { header: "Order", accessor: "order", cell: (r) => <span><strong>{r.order?.order_number || "—"}</strong>{r.customer && <><br /><span style={{ fontSize: ".72rem", color: "var(--ds-color-text-faint)" }}>{r.customer.name}{r.customer.phone ? " · " + r.customer.phone : ""}</span></>}</span> },
+    { header: "Amount", accessor: "amount", cell: (r) => <span style={{ fontWeight: 600, color: r.is_refund ? "var(--ds-color-accent2)" : undefined }}>{r.is_refund ? "− " + money(-r.amount) : money(r.amount)}</span> },
     { header: "Method", accessor: "payment_type", cell: (r) => <span>{r.payment_type === "cod" ? "COD" : (r.gateway || "Razorpay")}</span> },
     { header: "Status", accessor: "status", cell: (r) => <Badge s={r.status} refund={r.is_refund} /> },
     {
       header: "Razorpay reference", accessor: "transaction_id", cell: (r) => (
         <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {r.payment_type === "cod" ? <span style={{ fontSize: ".72rem", color: "#888" }}>—</span> : <>
+          {r.payment_type === "cod" ? <span style={{ fontSize: ".72rem", color: "var(--ds-color-text-faint)" }}>—</span> : <>
             <Ref label={r.is_refund ? "Refund" : "Payment"} value={r.transaction_id} />
             <Ref label="Order" value={r.razorpay_order_id} />
-            {!r.transaction_id && !r.razorpay_order_id && <span style={{ fontSize: ".72rem", color: "#888" }}>—</span>}
+            {!r.transaction_id && !r.razorpay_order_id && <span style={{ fontSize: ".72rem", color: "var(--ds-color-text-faint)" }}>—</span>}
           </>}
         </span>
       ),

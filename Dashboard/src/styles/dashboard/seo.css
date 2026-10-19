@@ -15,7 +15,7 @@
   width: 100%;
   border-radius: 6px;
   background: var(--ds-color-surface);
-  border: 2px solid #0a0a0a;
+  border: 2px solid var(--ds-color-text);
   transition: all 0.2s ease;
 }
 
@@ -277,8 +277,8 @@
 
 .seo-form .input-field:focus {
   outline: none;
-  border-color: #0a0a0a;
-  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
+  border-color: var(--ds-color-text);
+  box-shadow: 0 0 0 2px var(--ds-color-surface-soft);
 }
 
 .seo-image-preview {

@@ -45,13 +45,18 @@
 }
 
 .brand-selector:hover {
-    border-color: #0a0a0a;
+    border-color: var(--ds-color-text);
 }
 
 .brand-selector:focus {
     outline: none;
-    border-color: #0a0a0a;
-    box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+    border-color: var(--ds-color-text);
+    box-shadow: 0 0 0 3px var(--ds-color-surface-soft);
+}
+
+/* Dark mode: the chevron is a data-URI (#333) — swap in a light stroke. */
+:root[data-theme="dark"] .brand-selector {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a1a1aa' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }
 
 .loading-container {
@@ -121,13 +126,15 @@
     font-size: 14px;
     font-family: inherit;
     transition: border-color 0.2s;
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #0a0a0a;
+    border-color: var(--ds-color-text);
 }
 
 .form-actions {
@@ -164,25 +171,26 @@
 }
 
 .category-btn:hover {
-    border-color: #0a0a0a;
+    border-color: var(--ds-color-text);
     color: var(--ds-color-text);
 }
 
 .category-btn.active {
-    background: #0a0a0a;
-    border-color: #0a0a0a;
-    color: white;
+    background: var(--ds-color-brand);
+    border-color: var(--ds-color-brand);
+    color: var(--ds-color-bg);
 }
 
 .category-btn .count {
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--ds-color-surface-soft);
     padding: 2px 8px;
     border-radius: 6px;
     font-size: 12px;
 }
 
 .category-btn.active .count {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--ds-color-brand-strong);
+    color: var(--ds-color-bg);
 }
 
 /* Settings Grid */
@@ -246,6 +254,10 @@
 .category-badge.analytics { background: #fff9c4; color: #f57f17; }
 .category-badge.security { background: #ffebee; color: #c62828; }
 .category-badge.api { background: #f3e5f5; color: #6a1b9a; }
+:root[data-theme="dark"] .category-badge.social    { background: rgba(20,184,166,.16); color: #5eead4; }
+:root[data-theme="dark"] .category-badge.analytics { background: rgba(234,179,8,.16);  color: #fde047; }
+:root[data-theme="dark"] .category-badge.security  { background: rgba(239,68,68,.16);  color: #fca5a5; }
+:root[data-theme="dark"] .category-badge.api       { background: rgba(168,85,247,.16); color: #d8b4fe; }
 
 .setting-actions {
     display: flex;
@@ -281,8 +293,10 @@
 .setting-input {
     width: 100%;
     padding: 10px;
-    border: 2px solid #0a0a0a;
+    border: 2px solid var(--ds-color-text);
     border-radius: 6px;
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
     font-family: 'Courier New', monospace;
     font-size: 13px;
     resize: vertical;
@@ -295,8 +309,8 @@
 
 .setting-description {
     padding: 8px 12px;
-    background: #f0f7ff;
-    border-left: 3px solid #2196f3;
+    background: var(--ds-color-info-bg);
+    border-left: 3px solid var(--ds-color-info);
     border-radius: 4px;
     font-size: 13px;
     color: var(--ds-color-text-muted);
@@ -341,19 +355,19 @@
 }
 
 .btn-icon.btn-cancel {
-    color: #ff9800;
+    color: var(--ds-color-warn);
 }
 
 .btn-icon.btn-cancel:hover {
-    background: #fff3e0;
+    background: var(--ds-color-warn-bg);
 }
 
 .btn-icon.btn-danger {
-    color: #f44336;
+    color: var(--ds-color-danger);
 }
 
 .btn-icon.btn-danger:hover {
-    background: #ffebee;
+    background: var(--ds-color-danger-bg);
 }
 
 .btn-icon:disabled {
@@ -423,12 +437,13 @@
     font-family: inherit;
     transition: border-color 0.2s;
     background: var(--ds-color-surface);
+    color: var(--ds-color-text);
     cursor: pointer;
 }
 
 .form-select:focus {
     outline: none;
-    border-color: #0a0a0a;
+    border-color: var(--ds-color-text);
 }
 
 .form-textarea {
@@ -440,11 +455,13 @@
     font-family: inherit;
     transition: border-color 0.2s;
     resize: vertical;
+    background: var(--ds-color-surface);
+    color: var(--ds-color-text);
 }
 
 .form-textarea:focus {
     outline: none;
-    border-color: #0a0a0a;
+    border-color: var(--ds-color-text);
 }
 
 /* Modal Form Grid Override */
