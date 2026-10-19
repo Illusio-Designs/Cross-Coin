@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    getAllOrders, getUserOrders, getOrder, updateOrderStatus,
+    getAllOrders, getUserOrders, getOrder,
     createOrder, createGuestOrder,
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, adminRefundOrder, adminDeleteOrder, confirmOrder,
@@ -80,7 +80,6 @@ router.put('/:id/refund',              isAuthenticated, isOrderManager, adminRef
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);
 router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
-router.put('/:id/status',              isAuthenticated, isOrderManager, updateOrderStatus);
 router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
 // (RTO management module removed — RTO is handled automatically by the courier
 //  webhook in orderShippingController: it sets RTO status, restores stock and

@@ -14,61 +14,124 @@ const { sendGAEvent } = require('../integration/googleAnalytics.js');
 const { OrderItem } = require('../model/orderItemModel.js');
 const { setImmediate } = require('timers');
 
-// Get all payments (admin only)
+// Get all payments (admin only) — powers Dashboard → Payments.
+// Filters: status, payment_type ('online' | 'cod' | exact type), brand_id,
+// start_date/end_date (IST calendar days), search (order number, Razorpay
+// payment / refund id, Razorpay order id). Also returns a summary of the
+// filtered range (ignoring the status filter) for the page's tiles.
+//
+// Units: gateway rows store amount_paid in paise (refund rows negative);
+// COD rows store rupees. `amount` on each row is always rupees.
+const paymentRupees = (p) => {
+    const raw = parseFloat(p.amount_paid) || 0;
+    return p.payment_type === 'cod' ? raw : raw / 100;
+};
+const PAID_STATUSES = ['successful', 'completed'];
+
 module.exports.getAllPayments = async (req, res) => {
     try {
-        const { status, payment_type, start_date, end_date, page = 1, limit = 20 } = req.query;
+        const { status, payment_type, brand_id, start_date, end_date, search, page = 1, limit = 20 } = req.query;
         const cappedLimit = Math.min(parseInt(limit) || 20, 100);
-        const offset = (parseInt(page) - 1) * cappedLimit;
+        const pageNum = Math.max(parseInt(page) || 1, 1);
+        const offset = (pageNum - 1) * cappedLimit;
 
-        const filter = {};
-        if (status) filter.status = status;
-        if (payment_type) filter.payment_type = payment_type;
-        
-        // Date range filter
-        if (start_date && end_date) {
-            filter.createdAt = {
-                [Op.between]: [new Date(start_date), new Date(end_date)]
-            };
+        const base = {};
+        if (payment_type === 'online') base.payment_type = { [Op.ne]: 'cod' };
+        else if (payment_type && payment_type !== 'all') base.payment_type = payment_type;
+        if (brand_id && brand_id !== 'all') base.brand_id = parseInt(brand_id) || 0;
+
+        const { buildCreatedAtRange } = require('../utils/dateRange.js');
+        const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
+        if (hasRange) base.createdAt = range;
+
+        const q = String(search || '').trim();
+        if (q) {
+            const like = { [Op.like]: `%${q}%` };
+            base[Op.or] = [
+                { transaction_id: like },
+                { razorpay_order_id: like },
+                { '$Order.order_number$': like },
+            ];
         }
-        
-        const payments = await Payment.findAndCountAll({
-            where: filter,
+
+        const where = { ...base };
+        if (status === 'successful') where.status = { [Op.in]: PAID_STATUSES };
+        else if (status === 'refunded') where.status = { [Op.in]: ['refunded', 'partial_refund'] };
+        else if (status && status !== 'all') where.status = status;
+
+        const orderInclude = {
+            model: Order,
+            attributes: ['id', 'order_number', 'final_amount', 'status', 'payment_status', 'brand_id'],
+            required: false,
             include: [
-                { 
-                    model: Order,
-                    attributes: ['id', 'order_number', 'payment_type', 'user_id', 'guest_user_id'],
-                    include: [
-                        { 
-                            model: User,
-                            attributes: ['id', 'username', 'email'],
-                            required: false
-                        },
-                        {
-                            model: GuestUser,
-                            as: 'GuestUser',
-                            attributes: ['id', 'firstName', 'lastName', 'email'],
-                            required: false
-                        }
-                    ]
-                }
+                { model: User, attributes: ['id', 'username', 'email', 'phone'], required: false },
+                { model: GuestUser, as: 'GuestUser', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false },
             ],
+        };
+
+        const { count, rows } = await Payment.findAndCountAll({
+            where,
+            include: [orderInclude],
             order: [['createdAt', 'DESC']],
             limit: cappedLimit,
-            offset
+            offset,
+            distinct: true,
         });
 
-        const totalPages = Math.ceil(payments.count / cappedLimit);
+        // Summary over the same filters minus status (one pass over the
+        // lightweight columns; the range is bounded by the admin's filters).
+        const all = await Payment.findAll({
+            where: base,
+            attributes: ['status', 'payment_type', 'amount_paid'],
+            include: q ? [{ model: Order, attributes: [], required: false }] : [],
+            raw: true,
+        });
+        const summary = { collected: 0, collectedCount: 0, refunded: 0, refundedCount: 0, failedCount: 0, pendingCount: 0 };
+        for (const p of all) {
+            const amt = paymentRupees(p);
+            if (PAID_STATUSES.includes(p.status)) { summary.collected += amt; summary.collectedCount++; }
+            else if (['refunded', 'partial_refund'].includes(p.status) && amt < 0) { summary.refunded += -amt; summary.refundedCount++; }
+            else if (p.status === 'failed') summary.failedCount++;
+            else if (p.status === 'pending') summary.pendingCount++;
+        }
+        summary.collected = Math.round(summary.collected * 100) / 100;
+        summary.refunded = Math.round(summary.refunded * 100) / 100;
+
+        const payments = rows.map((r) => {
+            const p = r.get({ plain: true });
+            const o = p.Order || {};
+            const customer = o.User?.username
+                || [o.GuestUser?.firstName, o.GuestUser?.lastName].filter(Boolean).join(' ')
+                || null;
+            return {
+                id: p.id,
+                createdAt: p.createdAt,
+                status: p.status,
+                payment_type: p.payment_type,
+                gateway: p.payment_gateway,
+                amount: Math.round(paymentRupees(p) * 100) / 100,
+                is_refund: (parseFloat(p.amount_paid) || 0) < 0,
+                transaction_id: p.transaction_id,
+                razorpay_order_id: p.razorpay_order_id,
+                notes: p.notes,
+                brand_id: p.brand_id,
+                order: o.id ? {
+                    id: o.id, order_number: o.order_number, final_amount: o.final_amount,
+                    status: o.status, payment_status: o.payment_status,
+                } : null,
+                customer: customer ? {
+                    name: customer,
+                    email: o.User?.email || o.GuestUser?.email || null,
+                    phone: o.User?.phone || o.GuestUser?.phone || null,
+                } : null,
+            };
+        });
 
         res.json({
             success: true,
-            payments: payments.rows,
-            pagination: {
-                total: payments.count,
-                page: parseInt(page),
-                limit: cappedLimit,
-                totalPages
-            }
+            payments,
+            summary,
+            pagination: { total: count, page: pageNum, limit: cappedLimit, totalPages: Math.ceil(count / cappedLimit) },
         });
     } catch (error) {
         logger.error('Error getting payments:', error);
@@ -594,7 +657,7 @@ module.exports.razorpayWebhook = async (req, res) => {
                     guest_user_id: candidateOrder.guest_user_id || null,
                     payment_type: 'razorpay',
                     razorpay_order_id: rzpOrderId,
-                    amount_paid: amountInRupees,
+                    amount_paid: toSmallestUnit(amountInRupees, 'INR'), // paise, like every gateway row
                     status: 'pending',
                     payment_gateway: 'Razorpay',
                     brand_id: candidateOrder.brand_id || 1,

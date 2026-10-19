@@ -7,7 +7,7 @@
    * │                 adminCreateManualOrder, checkAddressQuality    │
    * │   tracking.*  : trackOrderByAWB, trackOrderByOrderNumber,      │
    * │                 getOrder, getUserOrders                        │
-   * │   lifecycle.* : confirmOrder, updateOrderStatus, cancelOrder,  │
+   * │   lifecycle.* : confirmOrder, cancelOrder,                     │
    * │                 adminCancelOrder, initiateReturn,              │
    * │                 updateAwbNumber                                │
    * │   admin.*     : getAllOrders                                   │
@@ -2067,56 +2067,6 @@
       res
         .status(500)
         .json({ message: "Failed to fetch order", error: error.message });
-    }
-  };
-
-  // Update order status — uses state machine validation + emits events
-  module.exports.updateOrderStatus = async (req, res) => {
-    try {
-      const { status, notes } = req.body;
-      if (!status) return res.status(400).json({ message: 'Status is required' });
-
-      const orderService = require('../services/orderService.js');
-      const orderEmitter = require('../services/orderEvents.js');
-
-      // Cancelling via the status dropdown must do the FULL cancel — restore
-      // stock, refund a prepaid order via Razorpay, and cancel at the courier —
-      // exactly like the dedicated Cancel action, not just flip the status.
-      // (Previously the dropdown only set status='cancelled' + cancelled at the
-      // courier, so a prepaid customer cancelled this way was never refunded.)
-      if (status === 'cancelled' || status === 'order cancelled') {
-        const cancelled = await orderService.cancelOrder(req.params.id, {
-          reason: notes || 'Order cancelled',
-          cancelledBy: req.user.id,
-          isAdmin: true,
-        });
-        return res.json({ success: true, message: 'Order cancelled — prepaid refund initiated if applicable', order: cancelled });
-      }
-
-      const order = await Order.findByPk(req.params.id);
-      if (!order) return res.status(404).json({ message: 'Order not found' });
-
-      // Validate transition
-      orderService.assertTransition(order.status, status);
-
-      await order.update({ status });
-      await OrderStatusHistory.create({
-        order_id: order.id,
-        status,
-        updated_by: req.user.id,
-        notes: notes || `Status updated to ${status}`,
-      });
-
-      // Emit lifecycle events
-      if (status === 'shipped') setImmediate(() => { try { orderEmitter.emit('order.shipped', order); } catch (e) { logger.warn('order.shipped emit failed:', e.message); } });
-      if (status === 'delivered') setImmediate(() => { try { orderEmitter.emit('order.delivered', order); } catch (e) { logger.warn('order.delivered emit failed:', e.message); } });
-      // (Cancellation is handled earlier by delegating to orderService.cancelOrder,
-      // which restores stock, refunds prepaid, and cancels at the courier.)
-
-      res.json({ success: true, message: `Order status updated to ${status}`, order });
-    } catch (error) {
-      const status = error.message.includes('Cannot transition') ? 400 : 500;
-      res.status(status).json({ success: false, message: error.message });
     }
   };
 

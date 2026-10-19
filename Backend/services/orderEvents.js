@@ -124,39 +124,8 @@ orderEmitter.on('order.confirmed', async (order) => {
   } catch (e) { logger.error('[Event] order.confirmed error:', e.message); }
 });
 
-// order.shipped — tracking notification
-orderEmitter.on('order.shipped', async (order) => {
-  try {
-    logger.info(`[Event] order.shipped: ${order.order_number}`);
-    const whatsappService = require('./whatsappService.js');
-    const { ShippingAddress } = require('../model/shippingAddressModel.js');
-    const addr = await ShippingAddress.findByPk(order.shipping_address_id);
-    if (addr?.phone && order.tracking_number) {
-      await whatsappService.sendOrderShipped(addr.phone, {
-        orderNumber: order.order_number,
-        awbNumber: order.tracking_number,
-        // No trackingUrl here: sendOrderShipped builds the brand's own tracking
-        // link from the Brand table. A hard-coded crosscoin.in URL was wrong for
-        // the other 6 brands and was ignored anyway.
-      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA shipped failed:', e.message));
-    }
-  } catch (e) { logger.error('[Event] order.shipped error:', e.message); }
-});
-
-// order.delivered — delivery confirmation + review request scheduled via cron (3 days later)
-orderEmitter.on('order.delivered', async (order) => {
-  try {
-    logger.info(`[Event] order.delivered: ${order.order_number}`);
-    const whatsappService = require('./whatsappService.js');
-    const { ShippingAddress } = require('../model/shippingAddressModel.js');
-    const addr = await ShippingAddress.findByPk(order.shipping_address_id);
-    if (addr?.phone) {
-      await whatsappService.sendOrderDelivered(addr.phone, {
-        orderNumber: order.order_number,
-      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA delivered failed:', e.message));
-    }
-  } catch (e) { logger.error('[Event] order.delivered error:', e.message); }
-});
+// (Shipped / delivered WhatsApp messages are sent by the courier webhook in
+// orderShippingController on every status change, so no listeners here.)
 
 // order.cancelled — cancellation message
 orderEmitter.on('order.cancelled', async (order) => {
@@ -200,7 +169,7 @@ const invalidateDashboardOnChange = (order) => {
     } catch (e) { logger.warn('[Event] dashboard cache invalidation failed: ' + e.message); }
   });
 };
-['order.created', 'order.confirmed', 'order.shipped', 'order.delivered', 'order.cancelled']
+['order.created', 'order.confirmed', 'order.cancelled']
   .forEach((evt) => orderEmitter.on(evt, invalidateDashboardOnChange));
 
 module.exports = orderEmitter;

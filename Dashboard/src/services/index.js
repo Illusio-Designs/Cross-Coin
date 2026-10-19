@@ -493,31 +493,9 @@ export const orderService = {
     }, `order_${id}`);
   },
 
-  updateOrderStatus: async (id, statusData) => {
-    try {
-      const response = await adminApi.put(`/api/orders/${id}/status`, statusData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
   getAllOrderStatusHistory: async (params = {}) => {
     try {
       const response = await adminApi.get("/api/order-status-history", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Update payment status for an order (admin)
-  updateOrderPaymentStatus: async (id, paymentStatusData) => {
-    try {
-      const response = await adminApi.put(
-        `/api/orders/${id}/status`,
-        paymentStatusData
-      );
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -960,80 +938,18 @@ export const orderService = {
 
 };
 
-// Payment Services
+// Payment Services — Dashboard → Payments (admin / order manager)
 export const paymentService = {
-  getAllPayments: async (params = {}, signal = null, forceRefresh = false) => {
-    // Check cache first (unless force refresh)
-    if (!forceRefresh) {
-      const cached = dataCache.get('/api/payments', params);
-      if (cached) return cached;
-    }
-
-    return makeRateLimitedCall('/api/payments', async () => {
-      try {
-        const config = { params };
-        if (signal) config.signal = signal;
-        const response = await adminApi.get("/api/payments", config);
-        const validated = validatePaginatedResponse(response.data);
-        const result = {
-          payments: validated.items,
-          data: validated.items,
-          total: validated.total,
-          page: validated.page,
-          pages: validated.pages,
-          limit: validated.limit
-        };
-        // Cache successful response
-        dataCache.set('/api/payments', result, params, 3 * 60 * 1000); // 3 min TTL
-        return result;
-      } catch (error) {
-        if (error.name === 'CanceledError') {
-          const emptyResult = { payments: [], data: [], total: 0, page: 1, pages: 0, limit: 10 };
-          return emptyResult;
-        }
-        // Try to use stale cache on error
-        const stale = dataCache.getStale('/api/payments', params);
-        if (stale) return stale;
-        throw new Error(getErrorMessage(error.response?.data || error.message));
-      }
-    }, `payments_list_${JSON.stringify(params)}`);
-  },
-
-  getPaymentById: async (id, signal = null) => {
-    return makeRateLimitedCall(`/api/payments/${id}`, async () => {
-      try {
-        const config = {};
-        if (signal) config.signal = signal;
-        const response = await adminApi.get(`/api/payments/${id}`, config);
-        const payment = validateItemResponse(response.data, 'data') || validateItemResponse(response.data);
-        return payment || {};
-      } catch (error) {
-        if (error.name === 'CanceledError') return {};
-        throw new Error(getErrorMessage(error.response?.data || error.message));
-      }
-    }, `payment_${id}`);
-  },
-
-  updatePaymentStatus: async (id, statusData) => {
+  getPayments: async (params = {}) => {
     try {
-      const response = await adminApi.put(`/api/payments/${id}`, statusData);
+      const response = await adminApi.get('/api/payments', { params });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  deletePayment: async (id) => {
-    try {
-      const response = await adminApi.delete(`/api/payments/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
+      throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
 };
 
-// Settings Services
 export const settingsService = {
   getAllSettings: async () => {
     try {
