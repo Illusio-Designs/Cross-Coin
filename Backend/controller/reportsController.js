@@ -465,84 +465,116 @@ exports.getBrandTraffic = async (req, res) => {
 exports.getRevenueProfit = async (req, res) => {
   try {
     const { start, end } = parseRange(req.query);
+    const { STAGE_SQL, JOINS, REFUND_SQL } = require('../services/salesReportService.js');
+    const { getBrandGst } = require('../services/invoiceService.js');
     const repl = { start, end };
 
-    // Brands (for names)
     const brands = await sequelize.query(
       `SELECT id, name, COALESCE(display_name, name) AS display_name FROM brands ORDER BY id`,
       { type: QueryTypes.SELECT }
     );
 
-    // Columns are qualified with the `o` alias — product_variations also has a
-    // `status` column, so an unqualified `status` is ambiguous once joined.
-    const ORDER_FILTER = `o.created_at BETWEEN :start AND :end
-      AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))`;
-
-    // Revenue + order count per brand (order-level — no item join, so
-    // final_amount isn't multiplied).
-    const rev = await sequelize.query(
+    // Order-level figures per brand by pipeline stage (same rules as the
+    // Overview): revenue = what reached the customer minus refunds.
+    const ord = await sequelize.query(
       `SELECT o.brand_id,
-              COUNT(*) AS orders,
-              COALESCE(SUM(o.final_amount), 0) AS revenue
-       FROM orders o
-       WHERE ${ORDER_FILTER}
-       GROUP BY o.brand_id`,
+              SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered,
+              SUM(${STAGE_SQL} IN ('delivered','returned','rto','in_transit','problems')) AS shipped,
+              SUM(${STAGE_SQL} = 'rto') AS rto,
+              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN o.final_amount ELSE 0 END) AS gross,
+              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN ${REFUND_SQL} ELSE 0 END) AS refunds,
+              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') AND LOWER(o.payment_type) <> 'cod' THEN o.final_amount ELSE 0 END) AS prepaid_gross,
+              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') AND LOWER(o.payment_type) = 'cod' THEN o.final_amount ELSE 0 END) AS cod_gross
+         FROM orders o ${JOINS}
+        WHERE o.created_at BETWEEN :start AND :end
+        GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    // COGS + units per brand (item-level). cost_price missing → 0. A line also
-    // flags whether its cost was known, so the UI can warn when cost data is thin.
+    // COGS on units the customer KEPT (delivered, not returned/RTO'd — those
+    // were restocked). cost_price missing → 0 (flagged).
     const cogs = await sequelize.query(
       `SELECT o.brand_id,
               COALESCE(SUM(COALESCE(pv.cost_price, 0) * oi.quantity), 0) AS cogs,
               COALESCE(SUM(oi.quantity), 0) AS units,
               COALESCE(SUM(CASE WHEN pv.cost_price IS NULL OR pv.cost_price = 0 THEN oi.quantity ELSE 0 END), 0) AS units_without_cost
-       FROM orders o
-       JOIN order_items oi ON oi.order_id = o.id
-       LEFT JOIN product_variations pv ON pv.id = oi.variation_id
-       WHERE ${ORDER_FILTER}
-       GROUP BY o.brand_id`,
+         FROM orders o
+         JOIN order_items oi ON oi.order_id = o.id
+         LEFT JOIN product_variations pv ON pv.id = oi.variation_id
+         ${JOINS}
+        WHERE o.created_at BETWEEN :start AND :end AND ${STAGE_SQL} = 'delivered'
+        GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    const revMap = new Map(rev.map(r => [r.brand_id, r]));
-    const cogsMap = new Map(cogs.map(c => [c.brand_id, c]));
+    const ordMap = new Map(ord.map((r) => [r.brand_id, r]));
+    const cogsMap = new Map(cogs.map((c) => [c.brand_id, c]));
+    const n = (v) => Number(v) || 0;
 
-    const rows = brands.map(b => {
-      const r = revMap.get(b.id) || {};
+    const rows = [];
+    for (const b of brands) {
+      const r = ordMap.get(b.id) || {};
       const c = cogsMap.get(b.id) || {};
-      const orders = Number(r.orders || 0);
-      const revenue = Number(r.revenue || 0);
-      const cogsAmt = Number(c.cogs || 0);
-      const units = Number(c.units || 0);
-      const unitsWithoutCost = Number(c.units_without_cost || 0);
-      return {
+      const gross = n(r.gross), refunds = n(r.refunds);
+      const revenue = gross - refunds;
+      // Prices are GST-inclusive: back the brand's GST out of net revenue.
+      const gst = await getBrandGst(b.id);
+      const rate = gst.rate || 0;
+      const revenueExGst = rate ? revenue / (1 + rate / 100) : revenue;
+      const row = {
         brandId: b.id,
         brand: b.display_name,
-        orders,
-        units,
-        unitsWithoutCost,          // units with no cost_price (counted as 0 COGS)
+        orders: n(r.delivered),          // delivered orders (the revenue base)
+        shippedOrders: n(r.shipped),     // forward shipping was paid on these
+        rtoOrders: n(r.rto),             // return shipping on these too
+        units: n(c.units),
+        unitsWithoutCost: n(c.units_without_cost),
+        grossRevenue: Math.round(gross),
+        refunds: Math.round(refunds),
         revenue: Math.round(revenue),
-        cogs: Math.round(cogsAmt), // Σ cost_price × qty (0 where unknown)
+        gstRate: gst.rate,
+        revenueExGst: Math.round(revenueExGst),
+        prepaidRevenue: Math.round(n(r.prepaid_gross)),
+        codRevenue: Math.round(n(r.cod_gross)),
+        cogs: Math.round(n(c.cogs)),
       };
-    }).filter(r => r.orders > 0 || r.revenue > 0);
+      if (row.orders || row.shippedOrders || row.rtoOrders) rows.push(row);
+    }
 
     const totals = rows.reduce((t, r) => {
-      t.orders += r.orders; t.units += r.units; t.unitsWithoutCost += r.unitsWithoutCost;
-      t.revenue += r.revenue; t.cogs += r.cogs; return t;
-    }, { orders: 0, units: 0, unitsWithoutCost: 0, revenue: 0, cogs: 0 });
+      for (const k of ['orders', 'shippedOrders', 'rtoOrders', 'units', 'unitsWithoutCost', 'grossRevenue', 'refunds', 'revenue', 'revenueExGst', 'prepaidRevenue', 'codRevenue', 'cogs']) t[k] += r[k];
+      return t;
+    }, { orders: 0, shippedOrders: 0, rtoOrders: 0, units: 0, unitsWithoutCost: 0, grossRevenue: 0, refunds: 0, revenue: 0, revenueExGst: 0, prepaidRevenue: 0, codRevenue: 0, cogs: 0 });
 
+    const ymd = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
     res.json({
       success: true,
-      range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
-      // Default per-order cost assumptions (the UI can override these live).
-      defaults: { shippingPerOrder: 90, servicePerOrder: 30, cppPerOrder: 0 },
+      range: { startDate: ymd(start), endDate: ymd(end) },
+      // Cost assumptions the UI applies live (editable there):
+      // shipping per shipped order, return shipping per RTO order, payment
+      // gateway % on prepaid revenue, COD handling % on COD revenue.
+      defaults: { shippingPerOrder: 90, rtoShippingPerOrder: 90, gatewayPct: 2, codPct: 2 },
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
     });
   } catch (error) {
     logger.error('getRevenueProfit report failed: ' + error.message);
     res.status(500).json({ success: false, message: 'Failed to build revenue/profit report', error: error.message });
+  }
+};
+
+// GET /api/reports/sales-summary?startDate=&endDate=&brandId=
+// The Reports Overview: pipeline, net sales, rates, brands, trend, products,
+// RTO by courier/state, returns by reason — services/salesReportService.js.
+exports.getSalesSummary = async (req, res) => {
+  try {
+    const { start, end } = parseRange(req.query);
+    const brandId = parseInt(req.query.brandId, 10) || null;
+    const data = await require('../services/salesReportService.js').salesSummary({ start, end, brandId });
+    res.json({ success: true, ...data });
+  } catch (error) {
+    logger.error('getSalesSummary failed: ' + error.message);
+    res.status(500).json({ success: false, message: 'Failed to build the sales report', error: error.message });
   }
 };
 
@@ -564,7 +596,7 @@ exports.getMissingCostPrices = async (req, res) => {
               p.brand_id       AS brand_id,
               COALESCE(b.display_name, b.name) AS brand
          FROM product_variations pv
-         JOIN products p ON p.id = pv.product_id
+         JOIN products p ON p.id = pv.productId
          LEFT JOIN brands b ON b.id = p.brand_id
         WHERE (pv.cost_price IS NULL OR pv.cost_price = 0)
           AND pv.status = 'active'
