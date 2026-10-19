@@ -234,6 +234,14 @@ async function closeReturnedOrder(order, adminId, ret) {
   } catch (e) { logger.warn(`closing order for ${ret.return_number} skipped: ${e.message}`); }
 }
 
+// Customer-facing shape: staff notes are internal, except the reason a
+// return was rejected.
+function serializeForCustomer(ret) {
+  const j = serialize(ret);
+  const { admin_note, reviewed_by, ...rest } = j;
+  return j.status === 'rejected' ? { ...rest, admin_note } : rest;
+}
+
 function serialize(ret) {
   const j = ret.toJSON ? ret.toJSON() : ret;
   return {
@@ -360,7 +368,7 @@ module.exports.getMyReturns = async (req, res) => {
       order: [['created_at', 'DESC']],
       limit: 100,
     });
-    return res.json({ success: true, returns: rows.map(serialize) });
+    return res.json({ success: true, returns: rows.map(serializeForCustomer) });
   } catch (error) {
     logger.error('getMyReturns error:', error);
     return res.status(500).json({ success: false, message: 'Failed to load returns' });
@@ -379,7 +387,7 @@ module.exports.getReturn = async (req, res) => {
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     const isStaff = req.user.role && req.user.role !== 'consumer';
     if (!isStaff && ret.user_id !== req.user.id) return res.status(403).json({ success: false, message: 'Access denied' });
-    return res.json({ success: true, return: serialize(ret) });
+    return res.json({ success: true, return: isStaff ? serialize(ret) : serializeForCustomer(ret) });
   } catch (error) {
     logger.error('getReturn error:', error);
     return res.status(500).json({ success: false, message: 'Failed to load return' });
@@ -580,7 +588,9 @@ module.exports.rejectReturn = async (req, res) => {
     }
     await ret.update({
       status: 'rejected',
-      admin_note: req.body.reason ? String(req.body.reason).slice(0, 1000) : ret.admin_note,
+      // Customers see this as the rejection reason, so never keep an
+      // earlier internal note here.
+      admin_note: req.body.reason ? String(req.body.reason).slice(0, 1000) : 'Not eligible for return',
       reviewed_by: req.user.id, reviewed_at: new Date(),
     });
 
