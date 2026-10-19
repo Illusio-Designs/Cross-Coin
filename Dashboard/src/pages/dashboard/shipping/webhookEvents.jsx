@@ -4,7 +4,8 @@ import { PageHeader, StatGrid, StatTile, Panel, ResponsiveTable } from "../../..
 import Loader from "../../../components/common/Loader";
 import { orderService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { RefreshIcon, CheckmarkCircle02Icon, Alert02Icon } from '@hugeicons/core-free-icons';
+import { RefreshIcon, CheckmarkCircle02Icon, Alert02Icon, PlayIcon } from '@hugeicons/core-free-icons';
+import { showSuccess, showError } from "../../../utils/toastNotification";
 
 // Backend webhook endpoint the courier (iThink) must be told to call.
 // NOTE: this is the API host, NOT the storefront (www.*).
@@ -22,6 +23,7 @@ export default function WebhookEvents() {
   const [summary, setSummary] = useState(null);
   const [events, setEvents] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [replayingId, setReplayingId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +40,22 @@ export default function WebhookEvents() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Re-run a stored event's exact payload through the webhook handler, so a
+  // failed or missed status update can be applied without the courier resending.
+  const replayEvent = async (id) => {
+    if (replayingId) return;
+    setReplayingId(id);
+    try {
+      const r = await orderService.replayWebhookEvent(id);
+      showSuccess('webhookReplayed', r?.message || 'Webhook replayed');
+      await load();
+    } catch (err) {
+      showError('webhookReplayFailed', err?.message || err?.error || 'Replay failed');
+    } finally {
+      setReplayingId(null);
+    }
+  };
 
   const copyUrl = async () => {
     try { await navigator.clipboard.writeText(WEBHOOK_URL); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ }
@@ -58,6 +76,16 @@ export default function WebhookEvents() {
         : (r.processing_error
             ? <Badge variant="danger" title={r.processing_error}>Failed</Badge>
             : <Badge variant="warning">Pending</Badge>),
+    },
+    {
+      key: "replay", label: "Actions",
+      render: (r) => (
+        <Button size="sm" variant="secondary" disabled={replayingId === r.id}
+          title="Re-run this event's payload against the order"
+          onClick={() => replayEvent(r.id)}>
+          <HugeiconsIcon icon={PlayIcon} size={14} strokeWidth={2} /> {replayingId === r.id ? "Replaying…" : "Replay"}
+        </Button>
+      ),
     },
   ];
 

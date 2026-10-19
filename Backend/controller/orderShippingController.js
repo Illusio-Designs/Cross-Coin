@@ -795,6 +795,40 @@ module.exports.getShippingWebhookEvents = async (req, res) => {
   }
 };
 
+// Replay a stored webhook event — re-runs the exact payload the courier sent
+// through the normal webhook handler, so an admin can re-apply a failed or
+// missed status update without waiting for the courier to resend it.
+module.exports.replayShippingWebhookEvent = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, message: 'Event id required' });
+
+    const [rows] = await sequelize.query(
+      'SELECT id, payload FROM shipment_webhook_events WHERE id = ? LIMIT 1',
+      { replacements: [id] }
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Webhook event not found' });
+
+    let payload;
+    try { payload = JSON.parse(rows[0].payload || '{}'); }
+    catch { return res.status(400).json({ success: false, message: 'Stored payload is not valid JSON' }); }
+
+    // Clear the processed flag so the handler's dedupe check reprocesses this
+    // same event row instead of short-circuiting as a duplicate.
+    await sequelize.query(
+      'UPDATE shipment_webhook_events SET processed = false, processing_error = NULL WHERE id = ?',
+      { replacements: [id] }
+    );
+
+    logger.info(`🔁 Replaying shipping webhook event #${id} (admin ${req.user?.id})`);
+    const replayReq = { body: payload, headers: {}, webhookVerified: true };
+    return module.exports.handleShippingWebhook(replayReq, res);
+  } catch (error) {
+    logger.error('replayShippingWebhookEvent error:', error.message);
+    return res.status(500).json({ success: false, message: 'Replay failed', error: error.message });
+  }
+};
+
 // Get tracking info for an order — uses the provider that issued the AWB.
 module.exports.getShippingTrackingForOrder = async (req, res) => {
   try {

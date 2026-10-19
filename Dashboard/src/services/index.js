@@ -605,6 +605,17 @@ export const orderService = {
     }
   },
 
+  // Replay a stored webhook event — re-runs the courier's exact payload
+  // through the webhook handler to re-apply the status update to the order.
+  replayWebhookEvent: async (eventId) => {
+    try {
+      const response = await adminApi.post(`/api/orders/shipping/webhook-events/${eventId}/replay`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Get Shipping tracking for order
   getShippingTracking: async (orderId) => {
     try {

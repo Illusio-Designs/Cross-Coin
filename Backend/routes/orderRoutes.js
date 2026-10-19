@@ -65,6 +65,7 @@ router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRef
 router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInShipping);
 router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getShippingCouriers);
 router.get('/shipping/webhook-events',  isAuthenticated, isOrderManager, getShippingWebhookEvents);
+router.post('/shipping/webhook-events/:id/replay', isAuthenticated, isOrderManager, require('../controller/orderShippingController.js').replayShippingWebhookEvent);
 router.get('/:id/labels/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
 router.post('/:id/labels/generate',     isAuthenticated, isOrderManager, generateLabelForOrder);
 router.get('/labels/pending',           isAuthenticated, isOrderManager, getPendingLabels);
