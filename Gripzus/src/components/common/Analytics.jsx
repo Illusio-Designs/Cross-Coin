@@ -1,5 +1,5 @@
 import Script from 'next/script';
-import { trackPageView } from '@/utils/pixel';
+import { trackPageView } from '../../utils/pixel';
 import GoogleTagManager from '../GoogleTagManager';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
