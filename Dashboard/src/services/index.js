@@ -2630,5 +2630,33 @@ export const returnService = {
     } catch (error) {
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
+  },  markPickedUp: async (id) => {
+    try {
+      const res = await adminApi.post(`/api/returns/${id}/picked-up`);
+      return res.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  // Parcel back at the warehouse — restocks (unless restock=false) and refunds.
+  receive: async (id, restock = true) => {
+    try {
+      const res = await adminApi.post(`/api/returns/${id}/receive`, { restock });
+      return res.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  // Issue/retry the refund for a received return (e.g. after uploading proof).
+  refund: async (id) => {
+    try {
+      const res = await adminApi.post(`/api/returns/${id}/refund`);
+      return res.data;
+    } catch (error) {
+      const d = error.response?.data;
+      const e = new Error(getErrorMessage(d || error.message));
+      e.code = d?.code;
+      throw e;
+    }
   },
 };

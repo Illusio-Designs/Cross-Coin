@@ -70,21 +70,21 @@ async function notify(fnName, phone, data, brandId) {
   } catch (e) { logger.warn(`return whatsapp ${fnName} skipped: ${e.message}`); }
 }
 
-// Book a reverse (return) pickup with the courier. Feature-flagged + fail-soft:
-// no-op until shippingService.createReversePickup exists (built in the pickup phase).
+// Book a reverse (return) pickup with the courier. Fail-soft: any problem is
+// logged and the admin can arrange pickup manually. Exchanges need the old
+// item back too, so they get a pickup like refunds do. Returns the AWB or null.
 async function bookReversePickup(ret, order, brandId) {
   try {
-    if (ret.resolution === 'exchange') return;
     const flag = String(await settingsHelper.getSetting(brandId, 'RETURN_AUTO_PICKUP', 'true')).toLowerCase();
-    if (flag === 'false' || flag === '0' || flag === 'no') return;
-    if (ret.pickup_awb) return; // already booked
+    if (flag === 'false' || flag === '0' || flag === 'no') return null;
+    if (ret.pickup_awb) return ret.pickup_awb; // already booked
 
     // Which courier handles reverse pickups for this brand. Explicit by design:
     // if unset, we never guess a courier — the admin arranges pickup manually.
     const reverseLogistics = await settingsHelper.getSetting(brandId, 'ITHINK_REVERSE_LOGISTICS', null);
     if (!reverseLogistics) {
       logger.info(`reverse pickup skipped for ${ret.return_number}: set ITHINK_REVERSE_LOGISTICS to enable auto pickup`);
-      return;
+      return null;
     }
 
     // Reload the order with the associations prepareShippingOrderData needs.
@@ -98,26 +98,139 @@ async function bookReversePickup(ret, order, brandId) {
     });
     if (!fullOrder || !fullOrder.ShippingAddress) {
       logger.warn(`reverse pickup skipped for ${ret.return_number}: order/address not available`);
-      return;
+      return null;
     }
 
     // Reuse the exact forward-order assembler; createReverseOrder flips it to a
-    // reverse (Prepaid) pickup from the customer back to the warehouse.
+    // reverse (Prepaid) pickup from the customer back to the warehouse. The
+    // reference is the return number so the reverse AWB never collides with
+    // the forward order's booking.
     const { prepareShippingOrderData } = require('./orderShippingController.js');
     const orderData = await prepareShippingOrderData(fullOrder, 'ithink', reverseLogistics, 'surface');
+    orderData.orderId = ret.return_number;
+    orderData.payment_Mode = 2; // reverse pickups are always prepaid (2 = PREPAID)
 
-    const shippingService = require('../services/shippingService.js');
-    const result = await shippingService.createReversePickup(brandId, orderData);
+    const factory = require('../services/shippingProviderFactory.js');
+    const provider = await factory.getShippingProvider(brandId);
+    const result = await provider.createReverseOrder(orderData);
     const awb = result && (result.waybill || result.awb);
     if (awb) {
-      await ret.update({ pickup_provider: 'ithink', pickup_awb: String(awb), pickup_status: 'scheduled' });
+      await ret.update({ pickup_provider: 'ithink', pickup_awb: String(awb), pickup_status: 'scheduled', status: 'pickup_scheduled' });
       logger.info(`reverse pickup booked for ${ret.return_number}: AWB ${awb}`);
-    } else {
-      logger.warn(`reverse pickup for ${ret.return_number} returned no AWB: ${result && result.message}`);
+      return String(awb);
     }
+    logger.warn(`reverse pickup for ${ret.return_number} returned no AWB: ${result && result.message}`);
+    return null;
   } catch (e) {
     logger.warn(`reverse pickup booking skipped for ${ret.return_number}: ${e.message}`);
+    return null;
   }
+}
+
+// Put the returned goods back into stock exactly once per order. The
+// rto_stock_restoration ledger is the idempotency guard (shared with RTO), so
+// a double click or a retried receipt never restocks twice. Returns units.
+async function restockReturn(ret, order, adminId) {
+  const { sequelize } = require('../config/db.js');
+  const { OrderItem } = require('../model/orderItemModel.js');
+  const { ProductVariation } = require('../model/productVariationModel.js');
+  return sequelize.transaction(async (t) => {
+    const [[done]] = await sequelize.query(
+      'SELECT COUNT(*) AS n FROM rto_stock_restoration WHERE order_id = ?',
+      { replacements: [order.id], transaction: t }
+    );
+    if (Number(done?.n) > 0) return 0;
+    const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction: t });
+    let units = 0;
+    for (const item of items) {
+      let before = 0, after = 0;
+      if (item.variation_id) {
+        const v = await ProductVariation.findByPk(item.variation_id, { transaction: t, lock: t.LOCK.UPDATE });
+        if (v) {
+          before = Number(v.stock) || 0;
+          after = before + Number(item.quantity || 0);
+          await v.update({ stock: after }, { transaction: t });
+          units += Number(item.quantity || 0);
+        }
+      }
+      await sequelize.query(
+        `INSERT INTO rto_stock_restoration
+           (order_id, order_number, product_id, variation_id, quantity_restored, stock_before, stock_after, restored_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        { replacements: [order.id, order.order_number, item.product_id, item.variation_id || null,
+            item.quantity, before, after, `admin:${adminId}`, `Restocked on receipt of return ${ret.return_number}`], transaction: t }
+      );
+    }
+    return units;
+  });
+}
+
+// Issue the refund for a return whose parcel is back (or that the admin chose
+// to refund without a pickup). Gateway payments refund automatically via
+// refundService; COD/manual payouts need the proof screenshot first.
+// Returns { ok, code?, message, refund? }.
+async function issueReturnRefund(ret, order, adminId, brandId) {
+  const { Op } = require('sequelize');
+  const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
+  const refundAmount = ret.refund_amount != null ? Number(ret.refund_amount) : eligible;
+
+  // Gateway payments are stored as 'successful' / 'completed' (no 'paid').
+  const payment = await Payment.findOne({ where: { order_id: order.id, status: { [Op.in]: ['successful', 'completed'] } }, order: [['createdAt', 'DESC']] });
+  const isGateway = payment && (
+    String(payment.transaction_id || '').startsWith('pay_')
+    || String(payment.payment_gateway || '').toLowerCase() === 'customcheckout'
+  );
+
+  if (isGateway) {
+    if (!['cancelled', 'return_initiated', 'returned_rto', 'rto delivered'].includes(order.status)) {
+      await order.update({ status: 'return_initiated' });
+    }
+    const result = await refundService.processRefund({
+      paymentId: payment.id,
+      amount: refundAmount >= eligible ? null : refundAmount,
+      reason: `Return ${ret.return_number} (${ret.reason})`,
+      adminId,
+      brandId,
+    });
+    await ret.update({ payment_id: payment.id, status: 'refunded', refunded_at: new Date() });
+    await closeReturnedOrder(order, adminId, ret);
+    return { ok: true, message: `Refund of ₹${refundAmount} issued to the original payment method.`, refund: result && result.refund };
+  }
+
+  if (!ret.payout_proof) {
+    return { ok: false, code: 'PROOF_REQUIRED', message: 'Upload the payout proof screenshot, then press Issue refund.' };
+  }
+  const newPayStatus = refundAmount >= eligible ? 'refunded' : 'partial_refund';
+  await order.update({ payment_status: newPayStatus });
+  await OrderStatusHistory.create({
+    order_id: order.id, status: order.status, updated_by: adminId,
+    notes: `Manual refund ₹${refundAmount} for return ${ret.return_number} (proof on file)`,
+  });
+  try {
+    const { auditLog } = require('../services/orderService.js');
+    await auditLog(order.id, 'refund', adminId, 'admin', { return_number: ret.return_number, amount: refundAmount, manual: true });
+  } catch (e) { logger.warn(`audit skipped: ${e.message}`); }
+  await ret.update({ status: 'refunded', refunded_at: new Date() });
+  await closeReturnedOrder(order, adminId, ret);
+  const user = await User.findByPk(ret.user_id);
+  notify('sendRefundProcessed', user && user.phone, {
+    name: user && user.username, orderNumber: order.order_number, amount: refundAmount, paymentMethod: 'UPI/Bank',
+  }, brandId);
+  return { ok: true, message: `Manual refund of ₹${refundAmount} recorded.` };
+}
+
+// A fully handled return closes the order at its terminal returned state.
+async function closeReturnedOrder(order, adminId, ret) {
+  try {
+    await order.reload();
+    if (order.status === 'return_initiated') {
+      await order.update({ status: 'returned_rto' });
+      await OrderStatusHistory.create({
+        order_id: order.id, status: 'returned_rto', updated_by: adminId,
+        notes: `Return ${ret.return_number} completed`,
+      });
+    }
+  } catch (e) { logger.warn(`closing order for ${ret.return_number} skipped: ${e.message}`); }
 }
 
 function serialize(ret) {
@@ -307,7 +420,11 @@ module.exports.uploadProof = async (req, res) => {
   }
 };
 
-// ── ADMIN: approve + issue refund (part/full) ────────────────────────────
+// ── ADMIN: approve — fix the refund amount and book the reverse pickup ────
+// The refund is NOT issued here: money goes back only once the parcel is
+// received at the warehouse (Receive), matching the RTO rule. Pass
+// refund_now=true to refund immediately without waiting for the item (e.g.
+// low-value goods the customer keeps).
 module.exports.approveReturn = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
@@ -326,98 +443,143 @@ module.exports.approveReturn = async (req, res) => {
     const charges = Math.max(0, +(eligible - refundAmount).toFixed(2));
     const adminNote = req.body.admin_note ? String(req.body.admin_note).slice(0, 1000) : null;
 
-    // book the reverse pickup (fail-soft; sets pickup_* fields)
-    await bookReversePickup(ret, order, brandId);
-
-    const patch = {
+    await ret.update({
       refund_amount: refundAmount, charges_deducted: charges, admin_note: adminNote,
       reviewed_by: req.user.id, reviewed_at: new Date(),
-    };
-
-    if (ret.resolution === 'exchange') {
-      patch.status = 'approved';
-      await ret.update(patch);
-      const exUser = await User.findByPk(ret.user_id);
-      notify('sendReturnUpdate', exUser && exUser.phone, {
-        name: exUser && exUser.username, returnNumber: ret.return_number, status: 'approved',
-        detail: 'Exchange approved — pickup arranged',
-      }, brandId);
-      return res.json({ success: true, message: 'Exchange approved. Pickup arranged.', return: serialize(ret) });
-    }
-
-    // resolve the live refundable payment for this order
-    // Gateway payments are stored as 'successful' / 'completed' — the enum has
-    // no 'paid' value, so matching on it sent every prepaid return down the
-    // manual UPI-proof path instead of the automatic gateway refund.
-    const { Op } = require('sequelize');
-    const payment = await Payment.findOne({ where: { order_id: order.id, status: { [Op.in]: ['successful', 'completed'] } }, order: [['createdAt', 'DESC']] });
-    const isPrepaid = payment && payment.transaction_id && String(payment.transaction_id).startsWith('pay_');
-
-    if (isPrepaid) {
-      // order must be in a refundable status — createReturn sets return_initiated
-      if (!['cancelled', 'return_initiated', 'returned_rto', 'rto delivered'].includes(order.status)) {
-        await order.update({ status: 'return_initiated' });
-      }
-      // refundService handles Razorpay, payment/order updates, history, and the
-      // refund_processed WhatsApp. amount=null means full refund.
-      const result = await refundService.processRefund({
-        paymentId: payment.id,
-        amount: refundAmount >= eligible ? null : refundAmount,
-        reason: `Return ${ret.return_number} approved (${ret.reason})`,
-        adminId: req.user.id,
-        brandId,
-      });
-      patch.payment_id = payment.id;
-      patch.status = 'refunded';
-      patch.refunded_at = new Date();
-      await ret.update(patch);
-      return res.json({ success: true, message: `Refund of ₹${refundAmount} issued via Razorpay.`, return: serialize(ret), refund: result && result.refund });
-    }
-
-    // COD / manual payout — needs a proof screenshot first
-    if (!ret.payout_proof) {
-      // still save the amount decision + pickup, but don't mark refunded
-      patch.status = 'approved';
-      await ret.update(patch);
-      return res.status(400).json({ success: false, code: 'PROOF_REQUIRED', message: 'Upload the payout proof screenshot before issuing a manual refund.', return: serialize(ret) });
-    }
-    const newPayStatus = refundAmount >= eligible ? 'refunded' : 'partial_refund';
-    await order.update({ payment_status: newPayStatus });
-    await OrderStatusHistory.create({
-      order_id: order.id, status: order.status, updated_by: req.user.id,
-      notes: `Manual refund ₹${refundAmount} for return ${ret.return_number} (proof on file)`,
+      status: ['requested', 'under_review'].includes(ret.status) ? 'approved' : ret.status,
     });
-    try {
-      const { auditLog } = require('../services/orderService.js');
-      await auditLog(order.id, 'refund', req.user.id, 'admin', { return_number: ret.return_number, amount: refundAmount, manual: true });
-    } catch (e) { logger.warn(`audit skipped: ${e.message}`); }
-    patch.status = 'refunded';
-    patch.refunded_at = new Date();
-    await ret.update(patch);
-    // notify (manual) — reuse refund_processed template
+
+    if (req.body.refund_now && ret.resolution !== 'exchange') {
+      const r = await issueReturnRefund(ret, order, req.user.id, brandId);
+      await ret.reload();
+      if (!r.ok) return res.status(400).json({ success: false, code: r.code, message: r.message, return: serialize(ret) });
+      return res.json({ success: true, message: r.message, return: serialize(ret), refund: r.refund });
+    }
+
+    const awb = await bookReversePickup(ret, order, brandId);
+    await ret.reload();
     const user = await User.findByPk(ret.user_id);
-    notify('sendRefundProcessed', user && user.phone, {
-      name: user && user.username, orderNumber: order.order_number, amount: refundAmount, paymentMethod: 'UPI/Bank',
+    notify('sendReturnUpdate', user && user.phone, {
+      name: user && user.username, returnNumber: ret.return_number, status: 'approved',
+      detail: awb ? `Pickup booked (AWB ${awb}) — the courier will collect it soon` : 'Approved — we will arrange the pickup',
     }, brandId);
-    return res.json({ success: true, message: `Manual refund of ₹${refundAmount} recorded.`, return: serialize(ret) });
+
+    return res.json({
+      success: true,
+      message: awb
+        ? `Approved. Reverse pickup booked (AWB ${awb}). Refund is issued once the parcel is received.`
+        : 'Approved. Arrange the pickup, then press Mark received when the parcel arrives.',
+      return: serialize(ret),
+    });
   } catch (error) {
     logger.error('approveReturn error:', error);
     return res.status(500).json({ success: false, message: 'Failed to approve return', error: error.message });
   }
 };
 
+// ── ADMIN: courier collected the parcel ──────────────────────────────────
+module.exports.markPickedUp = async (req, res) => {
+  try {
+    const ret = await Return.findByPk(req.params.id);
+    if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
+    if (!['approved', 'pickup_scheduled'].includes(ret.status)) {
+      return res.status(400).json({ success: false, message: `Cannot mark picked up from "${ret.status}".` });
+    }
+    await ret.update({ status: 'picked_up', pickup_status: 'picked_up' });
+    return res.json({ success: true, message: 'Marked as picked up.', return: serialize(ret) });
+  } catch (error) {
+    logger.error('markPickedUp error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update return' });
+  }
+};
+
+// ── ADMIN: parcel received at the warehouse → restock, then refund ────────
+// body.restock (default true): put the items back into stock. Set false when
+// the item is damaged and can't be resold.
+module.exports.receiveReturn = async (req, res) => {
+  try {
+    const brandId = req.brandId || 1;
+    const ret = await Return.findByPk(req.params.id, { include: [{ model: Order, as: 'Order' }] });
+    if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
+    if (!['approved', 'pickup_scheduled', 'picked_up', 'received'].includes(ret.status)) {
+      return res.status(400).json({ success: false, message: `Cannot receive a return in "${ret.status}" status.` });
+    }
+    const order = ret.Order || await Order.findByPk(ret.order_id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const restock = req.body.restock !== false && req.body.restock !== 'false';
+    const units = restock ? await restockReturn(ret, order, req.user.id) : 0;
+    await ret.update({ status: 'received', pickup_status: 'received' });
+    const stockNote = restock ? (units > 0 ? ` ${units} unit(s) back in stock.` : ' (stock already restored)') : ' Not restocked.';
+
+    if (ret.resolution === 'exchange') {
+      return res.json({ success: true, message: `Received.${stockNote} Create the replacement order for the customer.`, return: serialize(ret) });
+    }
+
+    const r = await issueReturnRefund(ret, order, req.user.id, brandId);
+    await ret.reload();
+    if (!r.ok) {
+      return res.json({ success: true, code: r.code, message: `Received.${stockNote} ${r.message}`, return: serialize(ret) });
+    }
+    return res.json({ success: true, message: `Received.${stockNote} ${r.message}`, return: serialize(ret), refund: r.refund });
+  } catch (error) {
+    logger.error('receiveReturn error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to receive return', error: error.message });
+  }
+};
+
+// ── ADMIN: issue (or retry) the refund for a received return ─────────────
+// Used after uploading the payout proof for a COD/manual refund, or to retry
+// a gateway refund that failed.
+module.exports.refundReturn = async (req, res) => {
+  try {
+    const brandId = req.brandId || 1;
+    const ret = await Return.findByPk(req.params.id, { include: [{ model: Order, as: 'Order' }] });
+    if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
+    if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'Already refunded.' });
+    if (ret.status !== 'received') {
+      return res.status(400).json({ success: false, message: 'Mark the parcel as received before refunding (or approve with refund now).' });
+    }
+    const order = ret.Order || await Order.findByPk(ret.order_id);
+    const r = await issueReturnRefund(ret, order, req.user.id, brandId);
+    await ret.reload();
+    if (!r.ok) return res.status(400).json({ success: false, code: r.code, message: r.message, return: serialize(ret) });
+    return res.json({ success: true, message: r.message, return: serialize(ret), refund: r.refund });
+  } catch (error) {
+    logger.error('refundReturn error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to issue refund', error: error.message });
+  }
+};
+
 // ── ADMIN: reject ────────────────────────────────────────────────────────
+// Rejecting puts the order back to 'delivered' (it was moved to
+// return_initiated when the request came in), so it no longer counts as a
+// return and the Refund action disappears from the orders page.
 module.exports.rejectReturn = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
     const ret = await Return.findByPk(req.params.id);
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'Already refunded.' });
+    if (['picked_up', 'received'].includes(ret.status)) {
+      return res.status(400).json({ success: false, message: 'The parcel is already on its way back — receive it instead of rejecting.' });
+    }
     await ret.update({
       status: 'rejected',
       admin_note: req.body.reason ? String(req.body.reason).slice(0, 1000) : ret.admin_note,
       reviewed_by: req.user.id, reviewed_at: new Date(),
     });
+
+    const order = await Order.findByPk(ret.order_id);
+    const stillOpen = await Return.count({ where: { order_id: ret.order_id, status: OPEN_STATUSES } });
+    if (order && order.status === 'return_initiated' && stillOpen === 0) {
+      await order.update({ status: 'delivered' });
+      await OrderStatusHistory.create({
+        order_id: order.id, status: 'delivered', updated_by: req.user.id,
+        notes: `Return ${ret.return_number} rejected — order back to delivered`,
+      });
+    }
+
     const user = await User.findByPk(ret.user_id);
     notify('sendReturnUpdate', user && user.phone, {
       name: user && user.username, returnNumber: ret.return_number, status: 'rejected',
@@ -428,4 +590,25 @@ module.exports.rejectReturn = async (req, res) => {
     logger.error('rejectReturn error:', error);
     return res.status(500).json({ success: false, message: 'Failed to reject return' });
   }
+};
+
+// ── Courier webhook hook: advance a return from its reverse-pickup AWB ────
+// Called by the shipping webhook before order matching. Returns true when the
+// AWB belonged to a return pickup (so the forward order is never touched).
+module.exports.applyReversePickupEvent = async (awb, courierStatus) => {
+  if (!awb) return false;
+  const ret = await Return.findOne({ where: { pickup_awb: String(awb) } });
+  if (!ret) return false;
+  const st = String(courierStatus || '').toLowerCase();
+  const patch = { pickup_status: String(courierStatus || '').slice(0, 40) || ret.pickup_status };
+  // Collected from the customer → picked_up. Arrival at the warehouse is only
+  // flagged in pickup_status: the admin confirms receipt (and condition) with
+  // Mark received, which is what restocks and refunds.
+  if (/pick(ed)?\s*up|in\s*transit|dispatched|shipped/.test(st) && ['approved', 'pickup_scheduled'].includes(ret.status)) {
+    patch.status = 'picked_up';
+  }
+  if (/deliver/.test(st)) patch.pickup_status = 'delivered_to_warehouse';
+  await ret.update(patch);
+  logger.info(`↩︎ Reverse pickup ${awb} for ${ret.return_number}: ${courierStatus}`);
+  return true;
 };

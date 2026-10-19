@@ -24,7 +24,7 @@ const ALLOWED_TRANSITIONS = {
   'out for delivery':    ['delivered', 'undelivered', 'rto'],
   undelivered:           ['rto', 'out for delivery'],
   delivered:             ['return_initiated'],
-  return_initiated:      ['returned_rto'],
+  return_initiated:      ['returned_rto', 'delivered'],
   rto:                   ['rto delivered'],
   'rto delivered':       [],
   returned_rto:          [],

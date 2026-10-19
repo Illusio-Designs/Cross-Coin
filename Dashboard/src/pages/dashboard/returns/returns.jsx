@@ -31,7 +31,11 @@ const Badge = ({ s }) => {
   const m = STATUS[s] || STATUS.requested;
   return <span style={{ background: m.bg, color: m.fg, padding: "3px 10px", borderRadius: 999, fontSize: ".72rem", fontWeight: 600 }}>{m.label}</span>;
 };
-const FILTERS = [["", "All"], ["requested", "Requested"], ["under_review", "Under review"], ["approved", "Approved"], ["refunded", "Refunded"], ["rejected", "Rejected"]];
+const FILTERS = [["", "All"], ["requested", "Requested"], ["approved", "Approved"], ["pickup_scheduled", "Pickup scheduled"], ["picked_up", "Picked up"], ["received", "Received"], ["refunded", "Refunded"], ["rejected", "Rejected"]];
+// Stages where the admin still decides the refund amount (before approving).
+const REVIEW = ["requested", "under_review"];
+// Approved but the parcel is not back yet.
+const IN_TRANSIT = ["approved", "pickup_scheduled", "picked_up"];
 
 export default function Returns() {
   const [statusFilter, setStatusFilter] = useState("");
@@ -41,6 +45,8 @@ export default function Returns() {
   const [adminNote, setAdminNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [refundNow, setRefundNow] = useState(false);
+  const [restock, setRestock] = useState(true);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["returns", "admin", statusFilter],
@@ -61,7 +67,7 @@ export default function Returns() {
     try {
       const d = await returnService.getReturn(id);
       setDetail(d); setRefundAmt(Number(d.refund_amount ?? d.requested_amount) || 0);
-      setAdminNote(d.admin_note || ""); setOpen(true);
+      setAdminNote(d.admin_note || ""); setRefundNow(false); setRestock(true); setOpen(true);
     } catch (e) { setMsg({ type: "err", text: e.message }); }
     finally { setBusy(false); }
   };
@@ -71,11 +77,11 @@ export default function Returns() {
   const doApprove = async () => {
     setBusy(true); setMsg(null);
     try {
-      const res = await returnService.approve(detail.id, { refund_amount: Number(refundAmt), admin_note: adminNote });
-      setMsg({ type: "ok", text: res.message || "Refund issued" });
+      const res = await returnService.approve(detail.id, { refund_amount: Number(refundAmt), admin_note: adminNote, refund_now: refundNow });
+      setMsg({ type: "ok", text: res.message || "Approved" });
       await refresh();
     } catch (e) {
-      setMsg({ type: "err", text: e.code === "PROOF_REQUIRED" ? "Upload the payout proof screenshot first, then approve." : e.message });
+      setMsg({ type: "err", text: e.code === "PROOF_REQUIRED" ? "Upload the payout proof screenshot first, then try again." : e.message });
       await refresh();
     } finally { setBusy(false); }
   };
@@ -87,6 +93,21 @@ export default function Returns() {
     try { const res = await returnService.reject(detail.id, reason); setMsg({ type: "ok", text: res.message || "Rejected" }); await refresh(); }
     catch (e) { setMsg({ type: "err", text: e.message }); } finally { setBusy(false); }
   };
+
+  const run = async (fn, okText) => {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fn();
+      setMsg({ type: res?.code === "PROOF_REQUIRED" ? "err" : "ok", text: res?.message || okText });
+      await refresh();
+    } catch (e) {
+      setMsg({ type: "err", text: e.message });
+      await refresh();
+    } finally { setBusy(false); }
+  };
+  const doPickedUp = () => run(() => returnService.markPickedUp(detail.id), "Marked as picked up");
+  const doReceive = () => run(() => returnService.receive(detail.id, restock), "Received");
+  const doRefund = () => run(() => returnService.refund(detail.id), "Refund issued");
 
   const doProof = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -167,6 +188,20 @@ export default function Returns() {
 
               {detail.status !== "refunded" && detail.status !== "rejected" ? (
                 <>
+                  {!REVIEW.includes(detail.status) && (
+                    <div style={{ marginTop: 18, padding: 16, background: "#f5f6f8", border: "1px solid #e4e8ee", borderRadius: 10, fontSize: ".84rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#888" }}>Approved refund</span><strong>{money(detail.refund_amount)}</strong></div>
+                      {detail.charges_deducted > 0 && <div style={{ marginTop: 4, color: "#888" }}>{money(detail.charges_deducted)} in charges deducted</div>}
+                      {detail.pickup_status && <div style={{ marginTop: 4, color: "#888" }}>Courier: {detail.pickup_status}</div>}
+                      {IN_TRANSIT.includes(detail.status) && (
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer" }}>
+                          <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />
+                          Put items back in stock on receipt (untick if damaged)
+                        </label>
+                      )}
+                    </div>
+                  )}
+                  {REVIEW.includes(detail.status) && (<>
                   <div style={{ marginTop: 18, padding: 16, background: "#f5f6f8", border: "1px solid #e4e8ee", borderRadius: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".82rem" }}><span style={{ color: "#888" }}>Item value</span><strong>{money(eligible)}</strong></div>
                     <div style={{ fontSize: ".78rem", color: "#888", margin: "10px 0 4px" }}>Refund amount — deduct charges for a part refund</div>
@@ -181,10 +216,17 @@ export default function Returns() {
                     <div style={{ marginTop: 9, fontSize: ".78rem", color: "#888" }}>
                       {deducted > 0 ? `${money(deducted)} in charges deducted · customer gets ${money(refundAmt)}` : "Full item value — no charges deducted"}
                     </div>
+                    {detail.resolution !== "exchange" && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: ".82rem", cursor: "pointer" }}>
+                        <input type="checkbox" checked={refundNow} onChange={(e) => setRefundNow(e.target.checked)} />
+                        Refund now without waiting for the item (no pickup)
+                      </label>
+                    )}
                   </div>
+                  </>)}
 
                   {isPrepaid ? (
-                    <p style={{ marginTop: 12, fontSize: ".82rem", color: "#0a7a44", display: "flex", alignItems: "center", gap: 6 }}>Prepaid — Razorpay processes this refund automatically on approve.</p>
+                    <p style={{ marginTop: 12, fontSize: ".82rem", color: "#0a7a44", display: "flex", alignItems: "center", gap: 6 }}>Prepaid — refunded automatically to the original payment method once the parcel is received.</p>
                   ) : (
                     <div style={{ marginTop: 14 }}>
                       <div style={{ fontSize: ".82rem", fontWeight: 600, marginBottom: 6 }}>Payout proof (screenshot) — required for manual refunds</div>
@@ -207,13 +249,27 @@ export default function Returns() {
             </div>
 
             <div className="modal-footer">
-              {detail.status !== "refunded" && detail.status !== "rejected" && (
+              {REVIEW.includes(detail.status) && (
                 <>
                   <Button variant="secondary" onClick={doReject} disabled={busy}>Reject</Button>
                   <Button variant="primary" onClick={doApprove} disabled={busy}>
-                    {busy ? "Working…" : (detail.resolution === "exchange" ? "Approve exchange" : isPrepaid ? "Approve & issue refund" : "Mark as paid & notify")}
+                    {busy ? "Working…" : refundNow ? "Approve & refund now" : (detail.resolution === "exchange" ? "Approve exchange & book pickup" : "Approve & book pickup")}
                   </Button>
                 </>
+              )}
+              {["approved", "pickup_scheduled"].includes(detail.status) && (
+                <>
+                  <Button variant="secondary" onClick={doReject} disabled={busy}>Reject</Button>
+                  <Button variant="secondary" onClick={doPickedUp} disabled={busy}>Mark picked up</Button>
+                </>
+              )}
+              {IN_TRANSIT.includes(detail.status) && (
+                <Button variant="primary" onClick={doReceive} disabled={busy}>
+                  {busy ? "Working…" : (detail.resolution === "exchange" ? "Mark received" : "Mark received & refund")}
+                </Button>
+              )}
+              {detail.status === "received" && detail.resolution !== "exchange" && (
+                <Button variant="primary" onClick={doRefund} disabled={busy}>{busy ? "Working…" : "Issue refund"}</Button>
               )}
               <Button variant="secondary" onClick={() => setOpen(false)}>Close</Button>
             </div>

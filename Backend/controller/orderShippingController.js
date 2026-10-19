@@ -477,6 +477,25 @@ module.exports.handleShippingWebhook = async (req, res) => {
       logger.warn('shipment_webhook_events store failed: ' + err.message);
     }
 
+    // Reverse (return) pickup AWBs belong to a Return, not the forward order —
+    // advance the return and stop, so a reverse 'delivered' never touches the
+    // order that was originally shipped.
+    try {
+      const { applyReversePickupEvent } = require('./returnController.js');
+      if (waybill && await applyReversePickupEvent(waybill, status)) {
+        await transaction.rollback();
+        if (webhookEventId) {
+          sequelize.query(
+            "UPDATE shipment_webhook_events SET processed = true, processedAt = NOW(), processing_error = NULL WHERE id = ?",
+            { replacements: [webhookEventId] }
+          ).catch(() => {});
+        }
+        return res.status(200).json({ success: true, message: 'Reverse pickup event applied to return' });
+      }
+    } catch (e) {
+      logger.warn('reverse pickup webhook handling failed: ' + e.message);
+    }
+
     // Find order by Shipping waybill or order ID. Only include the identifiers
     // the payload actually carries — Sequelize throws on an `undefined` WHERE
     // value, and iThink's events often send just the AWB with no order id.

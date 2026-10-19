@@ -11,6 +11,9 @@ const {
   approveReturn,
   rejectReturn,
   uploadProof,
+  markPickedUp,
+  receiveReturn,
+  refundReturn,
 } = require('../controller/returnController.js');
 
 // ── Consumer (logged-in shopper) ──────────────────────────────────────────
@@ -23,6 +26,11 @@ router.get('/my', isAuthenticated, getMyReturns);
 router.get('/', isAuthenticated, isOrderManager, listReturns);
 router.post('/:id/approve', isAuthenticated, isOrderManager, approveReturn);
 router.post('/:id/reject', isAuthenticated, isOrderManager, rejectReturn);
+router.post('/:id/picked-up', isAuthenticated, isOrderManager, markPickedUp);
+// Parcel back at the warehouse: restock (body.restock, default true) + refund.
+router.post('/:id/receive', isAuthenticated, isOrderManager, receiveReturn);
+// Issue/retry the refund for a received return (e.g. after uploading proof).
+router.post('/:id/refund', isAuthenticated, isOrderManager, refundReturn);
 // Upload the manual payout proof screenshot (field name: proof).
 router.post('/:id/proof', isAuthenticated, isOrderManager, upload.single('proof'), validateMagicBytes, uploadProof);
 
