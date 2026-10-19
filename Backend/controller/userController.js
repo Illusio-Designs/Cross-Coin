@@ -141,67 +141,9 @@ module.exports.login = async (req, res) => {
         const digits = String(phone).replace(/\D/g, '').slice(-10);
         if (digits.length !== 10) return res.status(400).json({ message: 'Invalid phone number' });
 
-        // Verify MSG91 access token server-side
-        const axios = require('axios');
-        const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
-
-        logger.info(`[Login] Verifying MSG91 token for ${digits}, token length: ${access_token?.length}, token preview: ${String(access_token).substring(0, 30)}...`);
-
-        let tokenValid = false;
-
-        // Dev bypass for localhost testing
-        if (access_token === 'dev-localhost-bypass') {
-            tokenValid = true;
-            logger.info(`[Login] Dev bypass accepted for ${digits}`);
-        }
-
-        // Attempt 1: MSG91 verifyAccessToken API
-        if (!tokenValid && MSG91_AUTH_KEY) {
-            try {
-                const verifyResponse = await axios.post(
-                    'https://control.msg91.com/api/v5/widget/verifyAccessToken',
-                    { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
-                    { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
-                );
-                logger.info('[Login] MSG91 verifyAccessToken response:', JSON.stringify(verifyResponse.data));
-
-                if (verifyResponse.data?.type === 'success') {
-                    tokenValid = true;
-                } else {
-                    const msg = String(verifyResponse.data?.message || '').toLowerCase();
-                    if (msg.includes('already verif') || verifyResponse.data?.code === 703) {
-                        tokenValid = true;
-                    }
-                }
-            } catch (verifyErr) {
-                const errData = verifyErr.response?.data;
-                logger.error(`[Login] MSG91 API verify failed: status=${verifyErr.response?.status}, data=${JSON.stringify(errData)}`);
-
-                const errMsg = String(errData?.message || '').toLowerCase();
-                const errCode = errData?.code;
-                if (errCode === 703 || errMsg.includes('already verif') || errMsg.includes('token already used') || errMsg.includes('verified')) {
-                    tokenValid = true;
-                }
-            }
-        } else {
-            logger.warn('[Login] MSG91_AUTH_KEY not set — skipping API verification');
-        }
-
-        // Attempt 2: Decode the JWT as fallback (only when MSG91 is configured)
-        if (!tokenValid && MSG91_AUTH_KEY) {
-            try {
-                const jwtLib = require('jsonwebtoken');
-                const decoded = jwtLib.decode(access_token);
-                logger.info('[Login] JWT decode fallback:', JSON.stringify(decoded));
-
-                if (decoded && (decoded.requestId || decoded.reqId || decoded.companyId)) {
-                    tokenValid = true;
-                    logger.info('[Login] JWT fallback accepted — valid MSG91 token structure');
-                }
-            } catch (decodeErr) {
-                logger.error('[Login] JWT decode failed:', decodeErr.message);
-            }
-        }
+        // Verify the MSG91 access token server-side, bound to this phone number.
+        const check = await require('../utils/msg91Verify.js').verifyMsg91Token(access_token, digits, 'Login');
+        const tokenValid = check.ok;
 
         if (!tokenValid) {
             return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
