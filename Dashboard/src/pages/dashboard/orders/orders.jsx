@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { orderService, dashboardService, brandService } from '../../../services';
+import { orderService, brandService, trafficReportService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import PickupScheduleModal from "../../../components/orders/PickupScheduleModal";
 import Tooltip from "../../../components/ui/Tooltip";
@@ -128,12 +128,9 @@ const Orders = ({ initialTab } = {}) => {
     const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [deletePrompt, setDeletePrompt] = useState(null);
     const [refundPrompt, setRefundPrompt] = useState(null);
-    const [allOrdersStats, setAllOrdersStats] = useState({
-        total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0,
-        totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0,
-        paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0,
-        paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0
-    });
+    // Summary tiles — same numbers as Reports › Overview for the picked range
+    // (last 30 days when no range is picked).
+    const [allOrdersStats, setAllOrdersStats] = useState(null);
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [pickupOpen, setPickupOpen] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
@@ -177,6 +174,10 @@ const Orders = ({ initialTab } = {}) => {
             try { sessionStorage.removeItem('obz-orders-status'); } catch {}
             setStatusFilter(LEGACY_TAB[hint] || hint);
         }
+        // Search typed on the home page: open All with it filled in.
+        let q = null;
+        try { q = sessionStorage.getItem('obz-orders-search'); sessionStorage.removeItem('obz-orders-search'); } catch {}
+        if (q) { setStatusFilter('all'); setFilterValue(q); }
     }, []);
 
     // Debounced search value — auto-cancels previous timer on every keystroke
@@ -263,37 +264,11 @@ const Orders = ({ initialTab } = {}) => {
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
-            const params = {};
-            if (statsStartDate) params.start_date = statsStartDate;
-            if (statsEndDate) params.end_date = statsEndDate;
-            const response = await dashboardService.getDashboardStats(params);
-            if (response.success && response.stats) {
-                const dashStats = response.stats;
-                const stats = {
-                    total: dashStats.orders?.total || 0, prepaid: 0, cod: 0,
-                    paid: dashStats.paymentStatusDistribution?.counts?.paid || 0,
-                    pending: dashStats.paymentStatusDistribution?.counts?.pending || 0,
-                    totalRevenue: dashStats.revenue?.total || 0,
-                    averageOrderValue: dashStats.revenue?.average || 0,
-                    deliveredOrders: dashStats.orders?.completed || 0,
-                    cancelledOrders: dashStats.orders?.cancelled || 0,
-                    paymentStatusPending: dashStats.paymentStatusDistribution?.counts?.pending || 0,
-                    paymentStatusPaid: dashStats.paymentStatusDistribution?.counts?.paid || 0,
-                    paymentStatusFailed: dashStats.paymentStatusDistribution?.counts?.failed || 0,
-                    paymentStatusRefunded: dashStats.paymentStatusDistribution?.counts?.refunded || 0,
-                    paymentStatusCancelled: dashStats.paymentStatusDistribution?.counts?.cancelled || 0,
-                    paymentStatusRefundPending: dashStats.paymentStatusDistribution?.counts?.refund_pending || 0
-                };
-                if (dashStats.paymentDistribution) {
-                    stats.cod = dashStats.paymentDistribution.cod?.count || 0;
-                    stats.prepaid = dashStats.paymentDistribution.prepaid?.count || 0;
-                }
-                setAllOrdersStats(stats);
-            }
-        } catch (err) {
-            setAllOrdersStats({ total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0, totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0, paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0, paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0 });
-        }
-    }, [statsStartDate, statsEndDate]);
+            const r = await trafficReportService.getSalesSummary(
+                statsStartDate || undefined, statsEndDate || undefined, brandFilter !== 'all' ? brandFilter : undefined);
+            setAllOrdersStats(r?.summary || null);
+        } catch { setAllOrdersStats(null); }
+    }, [statsStartDate, statsEndDate, brandFilter]);
 
     const downloadInvoice = async (orderId, orderNumber) => {
         try {
@@ -579,7 +554,7 @@ const Orders = ({ initialTab } = {}) => {
     }, [currentPage, loading, liveUpdates]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Stats panel re-fetches when its date range changes
-    useEffect(() => { fetchAllOrdersForStats(); }, [statsStartDate, statsEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { fetchAllOrdersForStats(); }, [fetchAllOrdersForStats]);
 
     // Reset to page 1 whenever any filter (other than the page itself) changes,
     // so users don't get stuck on an out-of-range page after narrowing results.
@@ -989,14 +964,14 @@ const Orders = ({ initialTab } = {}) => {
 
                     {/* ── KPI Strip — one clean row (prototype style) ── */}
                     <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}>
-                        <StatTile label="Total"     value={allOrdersStats.total} />
-                        <StatTile label="Revenue"   value={parseFloat(allOrdersStats.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })} prefix="₹" />
-                        <StatTile label="Prepaid"   value={allOrdersStats.prepaid} />
-                        <StatTile label="COD"       value={allOrdersStats.cod} />
-                        <StatTile label="Delivered" value={allOrdersStats.deliveredOrders} />
-                        <StatTile label="Cancelled" value={allOrdersStats.cancelledOrders} />
-                        <StatTile label="Paid"      value={allOrdersStats.paymentStatusPaid} />
-                        <StatTile label="Avg Order" value={parseFloat(allOrdersStats.averageOrderValue || 0).toFixed(0)} prefix="₹" />
+                        <StatTile label={statsStartDate && statsEndDate ? 'Placed' : 'Placed · 30 days'} value={(allOrdersStats?.placed ?? 0).toLocaleString('en-IN')} />
+                        <StatTile label="Booked value" value={Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN')} prefix="₹" />
+                        <StatTile label="Prepaid"   value={allOrdersStats?.prepaid?.orders ?? 0} />
+                        <StatTile label="COD"       value={allOrdersStats?.cod?.orders ?? 0} />
+                        <StatTile label="Delivered" value={allOrdersStats?.delivered ?? 0} />
+                        <StatTile label="Cancelled" value={allOrdersStats?.cancelled ?? 0} />
+                        <StatTile label="Net sales" value={Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN')} prefix="₹" />
+                        <StatTile label="Avg order" value={Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN')} prefix="₹" />
                     </StatGrid>
 
                     {/* ── Status tabs (left) + Filter drawer trigger (right), one line ── */}

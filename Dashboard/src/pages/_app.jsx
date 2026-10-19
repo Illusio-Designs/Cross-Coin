@@ -21,7 +21,6 @@ import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
 import "../styles/common/critical.css";
-import "../styles/common/DonutChart.css";
 import "../styles/common/Dropdown.css";
 import "../styles/components/Sidebar.css";
 import "../styles/pages/auth/adminlogin.css";

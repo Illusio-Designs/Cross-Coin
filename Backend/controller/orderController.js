@@ -86,8 +86,6 @@
   const { batchFetchProducts, batchFetchVariations, batchFetchVariationsByProductIds } = require("../utils/batchFetch.js");
   // Import batch insert utility for efficient bulk operations
   const { batchInsert } = require("../utils/batchInsert.js");
-  // Import dashboard cache invalidation
-  const { invalidateDashboardCache } = require("../services/dashboardService.js");
   const loyaltyService = require("../services/loyaltyService.js");
 
   // ─── Validation helpers ───────────────────────────────────────────────────
@@ -922,14 +920,6 @@
         });
       }
 
-      // Invalidate dashboard cache for this order's brand (the cache is keyed
-      // per brand; it also clears the cross-brand "all" view). Non-blocking.
-      try {
-        await invalidateDashboardCache(createdOrder.brand_id);
-      } catch (cacheError) {
-        logger.warn("⚠️ Warning: Error invalidating dashboard cache:", cacheError.message);
-        // Don't fail the order creation if cache invalidation fails
-      }
 
       // Note: Full sync removed - cron job handles periodic syncing
       // Individual order is already synced above via createOrUpdateForwardOrder

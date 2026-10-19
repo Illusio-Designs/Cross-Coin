@@ -1,18 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import Loader from '../common/Loader';
-import DonutChart from '../common/DonutChart';
-import { useDashboardStats } from '../../hooks/queries/useDashboard';
 import { useAuth } from '../../context/AuthContext';
-import { DateRangePicker } from '../ui';
-import { PageHeader, Panel, StatGrid, StatTile, ResponsiveTable } from './primitives';
+import { PageHeader } from './primitives';
+import { dashboardService, brandService } from '../../services';
+import Dropdown from '../ui/Dropdown';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  MoneyBag02Icon, ShoppingCart01Icon, Clock01Icon, Tick02Icon, RefreshIcon,
-  Package01Icon, StarIcon, CreditCardIcon, UndoIcon, Alert02Icon,
-  Analytics01Icon, ChartUpIcon, UserMultiple02Icon, DeliveryTruck01Icon,
-  ArrowDown01Icon, ArrowUp01Icon, ArrowRight01Icon,
-  WhatsappIcon, Building01Icon, SlidersHorizontalIcon, News01Icon,
-  Share08Icon, Search01Icon, File01Icon, DashboardSquare01Icon,
+  Package01Icon, ArrowRight01Icon, WhatsappIcon, Building01Icon,
+  SlidersHorizontalIcon, News01Icon, Search01Icon, File01Icon, DashboardSquare01Icon,
 } from '@hugeicons/core-free-icons';
 
 /* Navigate the dashboard shell to another view (same pattern as the
@@ -26,71 +22,7 @@ function goToView(view, orderStatus) {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
-/* ── Icons ── */
-const IC = {
-  rupee: <HugeiconsIcon icon={MoneyBag02Icon} size={16} strokeWidth={2} />,
-  cart:  <HugeiconsIcon icon={ShoppingCart01Icon} size={16} strokeWidth={2} />,
-  clock: <HugeiconsIcon icon={Clock01Icon} size={16} strokeWidth={2} />,
-  check: <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={2} />,
-  recent:<HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />,
-  box:   <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} />,
-  star:  <HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />,
-  card:  <HugeiconsIcon icon={CreditCardIcon} size={16} strokeWidth={2} />,
-  undo:  <HugeiconsIcon icon={UndoIcon} size={16} strokeWidth={2} />,
-  warn:  <HugeiconsIcon icon={Alert02Icon} size={16} strokeWidth={2} />,
-  chart: <HugeiconsIcon icon={Analytics01Icon} size={16} strokeWidth={2} />,
-  trend: <HugeiconsIcon icon={ChartUpIcon} size={16} strokeWidth={2} />,
-  users: <HugeiconsIcon icon={UserMultiple02Icon} size={16} strokeWidth={2} />,
-  truck: <HugeiconsIcon icon={DeliveryTruck01Icon} size={16} strokeWidth={2} />,
-  chevDown: <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={2} />,
-  chevUp: <HugeiconsIcon icon={ArrowUp01Icon} size={16} strokeWidth={2} />,
-  arrow: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
-};
-
-/* ── Action inbox card — one actionable queue, click-through to act ── */
-function ActionCard({ tone, icon, count, label, hint, onClick }) {
-  return (
-    <button type="button" className={`inbox-card tone-${tone}`} onClick={onClick}>
-      <span className="ic-chip">{icon}</span>
-      <span className="ic-body">
-        <span className="ic-top"><b className="num">{count}</b><span className="ic-label">{label}</span></span>
-        <span className="ic-hint">{hint}</span>
-      </span>
-      <span className="ic-go" aria-hidden="true">{IC.arrow}</span>
-    </button>
-  );
-}
-
-const THEMES = {
-  primary: { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
-  success: { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
-  warning: { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
-  danger:  { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
-  info:    { bg: '#f2f2f3', color: '#0a0a0a', border: '#e0e0e3' },
-  orange:  { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
-  default: { bg: '#f2f2f3', color: '#6b6b73', border: '#e0e0e3' },
-};
-
-const fmt = (n) => (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const inr = (n) => (n || 0).toLocaleString('en-IN');
-
-/* Customer initials for the avatar chip (e.g. "Jay Maurya" → "JM"). */
-function initialsOf(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '—';
-  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
-}
-
-/* Map an order status to a pill tone (good/info/warn/bad/mut). */
-function orderPill(status) {
-  const s = String(status || '').toLowerCase();
-  if (/deliver|complet/.test(s))                                return ['good', status || '—'];
-  if (/ship|transit|out for|booked|manifest|pickup|dispatch/.test(s)) return ['info', status];
-  if (/pend|await|process|confirm/.test(s))                     return ['warn', status];
-  if (/cancel|fail/.test(s))                                    return ['bad', status];
-  if (/rto|return/.test(s))                                     return ['rto', status];
-  return ['mut', status || '—'];
-}
+const IC = { arrow: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} /> };
 
 /* ── Greeting helper ── */
 function getGreeting() {
@@ -100,124 +32,6 @@ function getGreeting() {
   return 'Good evening';
 }
 
-/* ── KPI delta arrow (▲/▼ %) — green up, red down ──
-   When the previous period was ~0, the percentage explodes (e.g. 13000%) and
-   reads like a bug. Show a clean "New" for those instead of a giant number. */
-function Delta({ pct }) {
-  if (pct === undefined) return null; // delta data absent → show nothing
-  // null = no previous period to compare (fresh store); huge = grew from ~0.
-  if (pct === null || !Number.isFinite(pct) || Math.abs(pct) >= 1000) {
-    return <span className="delta up">▲ New</span>;
-  }
-  const up = pct >= 0;
-  return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
-}
-
-/* ── Revenue area chart — cumulative daily revenue (smooth upward line) ── */
-function RevenueTrend({ data }) {
-  if (!Array.isArray(data) || data.length < 2 || data.every((v) => !v)) {
-    return <div className="h-hint">Not enough revenue history yet for a trend.</div>;
-  }
-  let sum = 0;
-  const cum = data.map((v) => (sum += (v || 0)));
-  const W = 640, H = 150, PAD = 6;
-  const max = Math.max(1, ...cum);
-  const pts = cum.map((v, i) => {
-    const x = (i / (cum.length - 1)) * W;
-    const y = H - PAD - (v / max) * (H - PAD * 2);
-    return [x, y];
-  });
-  // Smooth the polyline with a light Catmull-Rom → cubic-bezier pass.
-  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-  }
-  const area = `${d} L${W} ${H} L0 ${H} Z`;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="150" preserveAspectRatio="none" style={{ display: 'block' }} role="img" aria-label="Cumulative revenue trend, last 30 days">
-      <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-      <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-      <path d={area} fill="var(--ds-color-surface-soft)" />
-      <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/* ── KPI Tile ── */
-function KpiTile({ label, value, color, prefix = '' }) {
-  return (
-    <div className="dc-kpi-tile" style={{ borderLeftColor: color }}>
-      <span className="dc-kpi-label">{label}</span>
-      <span className="dc-kpi-value" style={{ color }}>{prefix}{value}</span>
-    </div>
-  );
-}
-
-/* ── Stat Card ── */
-function StatCard({ title, value, description, icon, color = 'default' }) {
-  const t = THEMES[color] || THEMES.default;
-  return (
-    <div className="dc-stat-card">
-      <div className="dc-stat-icon" style={{ background: t.bg, color: t.color, border: `1px solid ${t.border}` }}>
-        {icon}
-      </div>
-      <div className="dc-stat-body">
-        <div className="dc-stat-label">{title}</div>
-        <div className="dc-stat-value">{value}</div>
-        {description && <div className="dc-stat-desc">{description}</div>}
-      </div>
-    </div>
-  );
-}
-
-/* ── Section Title ── */
-function SectionTitle({ icon, children }) {
-  return (
-    <div className="dc-section-title">
-      <span className="dc-section-icon">{icon}</span>
-      {children}
-    </div>
-  );
-}
-
-/* ── Collapsible Section ── */
-function CollapsibleSection({ icon, title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="dashboard-section">
-      <button className="dc-collapse-trigger" onClick={() => setOpen(!open)} type="button">
-        <SectionTitle icon={icon}>{title}</SectionTitle>
-        <span className="dc-collapse-chevron">{open ? IC.chevUp : IC.chevDown}</span>
-      </button>
-      {open && <div className="dc-collapse-body">{children}</div>}
-    </div>
-  );
-}
-
-/* ── Pipeline Step ── */
-function PipelineStep({ label, count, total, color }) {
-  const pct = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <div className="dc-pipe-step">
-      <div className="dc-pipe-bar-track">
-        <div className="dc-pipe-bar-fill" style={{ width: `${Math.max(pct, 2)}%`, background: color }} />
-      </div>
-      <div className="dc-pipe-info">
-        <span className="dc-pipe-count" style={{ color }}>{count}</span>
-        <span className="dc-pipe-label">{label}</span>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   ROLE HOME — non-reporting staff (WhatsApp / product / content
-   managers) never see the store's financial overview. They land on a
-   clean home with quick links to only the sections their role can open.
-   ══════════════════════════════════════════════════════════════ */
 const ic = (icon) => <HugeiconsIcon icon={icon} size={20} strokeWidth={2} />;
 // Curated primary destinations (sub-tabs like seo-health / whatsapp-chat are
 // intentionally omitted). Order here = order shown on the home.
@@ -267,311 +81,256 @@ function RoleHome() {
   );
 }
 
+
 /* ══════════════════════════════════════════════════════════════
-   MAIN DASHBOARD
+   TODAY HOME (admin / order managers) — GET /api/dashboard/today
+   Work queues first (most urgent on top), then the order pipeline,
+   headline numbers, the last 7 days, today by brand and a feed of
+   what just happened. Every queue opens the matching Orders tab.
    ══════════════════════════════════════════════════════════════ */
-function CardGrid() {
-  // dateFilter is what the stats query uses; pickerRange is what the date
-  // picker shows. A half-picked range (only start or only end) stays in the
-  // picker without refetching — the query only changes once both dates are
-  // set or both are cleared.
-  const [dateFilter, setDateFilter] = useState({});
-  const [pickerRange, setPickerRange] = useState({});
-  const { user, roles } = useAuth();
-  // The home's revenue/order reporting is only for roles that can open the
-  // Orders + Reports views (admin, order_manager). Everyone else (WhatsApp /
-  // product / content managers) gets a role-appropriate home and never pulls
-  // store-wide financials. Gate BOTH the fetch and the render on this.
-  const canSeeReporting = roles.includes('admin') || roles.includes('order_manager');
-  const { data: freshStats, isLoading, isFetching, error: queryError } = useDashboardStats(dateFilter, { enabled: canSeeReporting });
-  // Keep showing the last figures while a new range loads, so the page (and
-  // the open date picker) stays mounted instead of swapping to a full loader.
-  const lastStatsRef = useRef(null);
-  if (freshStats) lastStatsRef.current = freshStats;
-  const stats = freshStats || lastStatsRef.current;
-  const loading = isLoading && !stats;
-  const refreshing = isFetching && !!stats;
-  const error = queryError ? 'Failed to load dashboard statistics' : null;
+const rupee = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+const plural = (n, w) => `${Number(n || 0).toLocaleString('en-IN')} ${w}${Number(n) === 1 ? '' : 's'}`;
+const PRIORITY_LABEL = { urgent: 'Urgent', today: 'Today', later: 'When free' };
 
-  if (!canSeeReporting) return <RoleHome />;
+// Card copy for each queue the backend returns.
+function queueCard(q) {
+  switch (q.key) {
+    case 'to_confirm': return {
+      title: 'COD orders to confirm', action: 'Call & confirm',
+      detail: q.overdue > 0 ? `${q.overdue} waiting over 24 h — oldest ${q.oldestHours} h. Call, then confirm or cancel.` : 'Call the customer, then confirm or cancel.',
+    };
+    case 'ndr': return {
+      title: 'Delivery problems', action: 'Resolve',
+      detail: q.replied > 0 ? `${plural(q.replied, 'customer')} replied on WhatsApp — act on their choice.` : 'Courier couldn’t deliver — waiting for the customer’s reply.',
+    };
+    case 'refund_failed': return { title: 'Refund failed', action: 'Retry refund', detail: `${rupee(q.amount)} still owed — Razorpay refused it. Retry or pay by UPI.` };
+    case 'to_ship': return {
+      title: 'Ready to ship', action: q.labelsPending > 0 ? 'Download labels' : 'Open',
+      detail: [q.labelsPending > 0 ? `${plural(q.labelsPending, 'label')} not downloaded` : null,
+        q.notBooked > 0 ? `${q.notBooked} not booked yet${q.nextBatch ? ' — next booking 11:00' : ''}` : null].filter(Boolean).join(' · ') || 'Booked and waiting for pickup.',
+    };
+    case 'returns_refund': return { title: 'Returns to refund', action: 'Refund', detail: `Parcels received — ${rupee(q.amount)} owed.${q.toReview ? ` ${q.toReview} more to review.` : ''}` };
+    case 'booking_failed': return { title: 'Booking failed', action: 'Fix', detail: q.sample ? String(q.sample).slice(0, 90) : 'No courier could book these — fix the address or enter the AWB.' };
+    case 'whatsapp': return { title: 'Unread WhatsApp', action: 'Open inbox', detail: `${plural(q.messages, 'message')}${q.oldestHours != null ? ` · oldest ${q.oldestHours < 1 ? 'under an hour' : q.oldestHours + ' h'} ago` : ''}` };
+    case 'stock': return { title: 'Out of stock', action: 'Restock', detail: q.low ? `${plural(q.low, 'more variant')} below 10 units.` : 'Variants with no stock left.' };
+    case 'reviews': return { title: 'Reviews to approve', action: 'Review', detail: 'Waiting before they show on the stores.' };
+    default: return { title: q.key, action: 'Open', detail: '' };
+  }
+}
+const openQueue = (q) => {
+  if (q.view === 'whatsapp-chat') return goToView('whatsapp-chat');
+  if (q.view) return goToView(q.view);
+  return goToView('orders', q.tab);
+};
+const timeAgo = (d) => {
+  const m = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60000));
+  if (m < 1) return 'now';
+  if (m < 60) return `${m} min`;
+  if (m < 24 * 60) return `${Math.floor(m / 60)} h`;
+  return `${Math.floor(m / 1440)} d`;
+};
+const SearchIcon = () => (
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+);
 
-  const handleDateChange = (field, value) => {
-    const next = { ...pickerRange, [field]: value || undefined };
-    if (!next.start_date) delete next.start_date;
-    if (!next.end_date) delete next.end_date;
-    setPickerRange(next);
-    // Only reload once the range is complete (or fully cleared).
-    if (!!next.start_date === !!next.end_date) setDateFilter(next);
+function TodayHome() {
+  const { user } = useAuth();
+  const [brandId, setBrandId] = useState('');
+  const [brandList, setBrandList] = useState([]);
+  const [tab, setTab] = useState('all');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    let off = false;
+    brandService.getAllBrands(true).then((r) => { if (!off && r?.success) setBrandList(r.data || []); }).catch(() => {});
+    return () => { off = true; };
+  }, []);
+
+  const { data, isLoading, error, isFetching } = useQuery({
+    queryKey: ['dashboard', 'today', brandId],
+    queryFn: () => dashboardService.getToday(brandId || undefined),
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,      // the queues should feel live
+    refetchOnWindowFocus: true,
+  });
+
+  const runSearch = (e) => {
+    e.preventDefault();
+    const q = search.trim();
+    if (!q) return;
+    try { sessionStorage.setItem('obz-orders-search', q); } catch { /* storage blocked */ }
+    goToView('orders');
   };
 
-  const clearDateFilter = () => { setPickerRange({}); setDateFilter({}); };
-  const hasDateFilter = !!(dateFilter.start_date && dateFilter.end_date);
+  if (isLoading) return <div className="obz-home"><div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Loader /></div></div>;
+  if (error && !data) return <div className="obz-home"><div className="panel">Couldn’t load today’s dashboard: {error.message || 'try again'}</div></div>;
 
-  if (loading) return (
-    <div className="dashboard-sections">
-      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'400px' }}>
-        <Loader />
-      </div>
-    </div>
-  );
-  if (error && !stats) return <div className="dashboard-sections"><div style={{ textAlign:'center', padding:'40px', color:'var(--ds-color-text)' }}>{error}</div></div>;
-  if (!stats) return null;
-
-  /* ── Derived counts ── */
-  const orders = stats.orders || {};
-  const revenue = stats.revenue || {};
-  const customers = stats.customers || {};
-  const products = stats.products || {};
-  const reviews = stats.reviews || {};
-  const sd = orders.statusDistribution || {};
-  const g = (k) => sd[k] || 0;
-  // Mutually-exclusive, EXHAUSTIVE status buckets so the Order Overview tiles
-  // actually sum to Total Orders. Before this, "processing" was double-counted
-  // (in both Pending and Confirmed) and booked/manifested/pickup/undelivered/
-  // exception weren't shown anywhere, so the tiles never added up.
-  const pendingCount   = g('awaiting_confirmation') + g('pending');
-  const confirmedCount = g('confirmed') + g('processing');
-  const shippedCount   = g('booked') + g('pickup initiated') + g('manifested')
-                       + g('in transit') + g('shipped') + g('out for delivery')
-                       + g('undelivered') + g('exception');
-  const rtoCount       = g('rto') + g('rto delivered') + g('return_initiated') + g('returned_rto');
-  const codCount = stats.paymentDistribution?.cod?.count || 0;
-  const prepaidCount = stats.paymentDistribution?.prepaid?.count || 0;
-  const totalOrders = orders.total || 0;
-  const pipelineTotal = totalOrders || 1;
-
-  /* ── Action inbox — "needs attention" queues, each click-throughs to the
-     page where the operator can act. Only non-empty queues are shown, most
-     urgent first; counts always match what the destination page displays. ── */
-  const outOfStock = stats.lowStock?.outOfStockCount || 0;
-  const lowStock = stats.lowStock?.lowStockCount || 0;
-  // Prefer the exact pending-moderation count; fall back to total-approved for
-  // any Redis-cached payload written before the backend added reviews.pending.
-  const reviewsPending = reviews.pending ?? Math.max(0, (reviews.total || 0) - (reviews.approved || 0));
-
-  const inbox = [
-    { key: 'confirm', tone: 'warn',   icon: IC.clock, count: pendingCount, label: 'Orders to confirm', hint: 'Awaiting confirmation', onClick: () => goToView('orders', 'pending') },
-    { key: 'rto',     tone: 'danger', icon: IC.undo,  count: rtoCount,     label: 'RTO / returns',     hint: 'Review & re-attempt',   onClick: () => goToView('orders', 'rto') },
-    { key: 'oos',     tone: 'danger', icon: IC.warn,  count: outOfStock,   label: 'Out of stock',      hint: 'Restock now',           onClick: () => goToView('products') },
-    { key: 'low',     tone: 'warn',   icon: IC.box,   count: lowStock,     label: 'Low stock',         hint: 'Below 10 units',        onClick: () => goToView('products') },
-    { key: 'reviews', tone: 'info',   icon: IC.star,  count: reviewsPending, label: 'Reviews to moderate', hint: 'Awaiting approval',   onClick: () => goToView('reviews') },
-  ].filter((i) => i.count > 0);
-
-  /* ── Segmented order-overview buckets (each order counted once) ── */
-  // Explicit vivid hues (not neutral tokens) so every bucket reads as its own
-  // colour in both light and dark — matches the re-colorized status charts.
-  const segs = [
-    { label: 'Pending',       count: pendingCount,          color: '#f59e0b' }, // amber
-    { label: 'Confirmed',     count: confirmedCount,        color: '#3b82f6' }, // blue
-    { label: 'Shipped',       count: shippedCount,          color: '#06b6d4' }, // cyan
-    { label: 'Delivered',     count: orders.completed || 0, color: '#10b981' }, // green
-    { label: 'Cancelled',     count: orders.cancelled || 0, color: '#ef4444' }, // red
-    { label: 'RTO / Returns', count: rtoCount,              color: '#f97316' }, // orange
-  ];
-  const segTotal = segs.reduce((a, s) => a + s.count, 0) || 1;
-  const brandSales = stats.brandSales || [];
-  const brandMax = Math.max(1, ...brandSales.map((b) => b.revenue || 0));
-  const deltas = stats.deltas || {};
+  const queues = (data?.queues || []).filter((q) => q.count > 0);
+  const counts = { all: queues.length, urgent: 0, today: 0, later: 0 };
+  queues.forEach((q) => { counts[q.priority] += 1; });
+  const shown = queues.filter((q) => tab === 'all' || q.priority === tab);
+  const urgentItems = queues.filter((q) => q.priority === 'urgent').reduce((n, q) => n + q.count, 0);
+  const totalItems = queues.reduce((n, q) => n + q.count, 0);
+  const p = data?.pipeline || {};
+  const k = data?.kpis || {};
+  const week = data?.week || [];
+  const weekMax = Math.max(1, ...week.map((w) => w.value));
+  const weekTotal = week.reduce((n, w) => n + w.value, 0);
+  const todayYmd = week.length ? week[week.length - 1].day : '';
+  const dayName = (ymd) => (ymd === todayYmd ? 'Today' : new Date(ymd + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }));
+  const Delta = ({ v, suffix = '%' }) => (v == null ? null : <b className={v >= 0 ? 'up' : 'down'}>{v >= 0 ? '▲' : '▼'} {Math.abs(v)}{suffix}</b>);
+  const rtoDelta = k.rto30 != null && k.rto30Prev ? Math.round((k.rto30 - k.rto30Prev) * 10) / 10 : null;
 
   return (
     <div className="obz-home">
-
-      {/* ═══ 1. PAGE HEADER (greeting + date filter) ═══ */}
-      <PageHeader
-        title={`${getGreeting()}, ${user?.username || 'Admin'}`}
-        subtitle={
-          <span role="status" aria-live="polite">
-            {refreshing ? 'Updating…'
-              : error ? error
-              : hasDateFilter ? 'Showing filtered data' : "Here's your store overview"}
-          </span>
-        }
-        actions={
-          <DateRangePicker
-            label=""
-            startDate={pickerRange.start_date || ''}
-            endDate={pickerRange.end_date || ''}
-            onStartChange={val => handleDateChange('start_date', val)}
-            onEndChange={val => handleDateChange('end_date', val)}
-            onClear={clearDateFilter}
-            inline
+      <div className="hm-head">
+        <div>
+          <h1>{getGreeting()}{user?.username ? `, ${user.username}` : ''}</h1>
+          <p>
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' })}
+            {' · '}{totalItems > 0 ? `${plural(totalItems, 'thing')} need you today${urgentItems ? `, ${urgentItems} urgent` : ''}.` : 'Nothing waiting — all clear.'}
+            {isFetching && data ? ' Updating…' : ''}
+          </p>
+        </div>
+        <div className="hm-tools">
+          <form className="hm-search" onSubmit={runSearch} role="search">
+            <label htmlFor="hm-search-input" style={{ position: 'absolute', left: -9999 }}>Search orders</label>
+            <SearchIcon />
+            <input id="hm-search-input" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order no., phone, AWB or customer…" />
+          </form>
+          <Dropdown
+            value={brandId || 'all'}
+            onChange={(v) => setBrandId(v === 'all' ? '' : v)}
+            options={[{ value: 'all', label: 'All brands' }, ...brandList.map((b) => ({ value: b.id, label: b.display_name || b.name }))]}
+            className="bset-brand-select"
           />
-        }
-      />
+        </div>
+      </div>
 
-      {/* ═══ 2. ACTION INBOX — needs attention ═══ */}
-      {inbox.length > 0 && (
-        <div className="panel inbox" role="region" aria-label="Needs attention">
-          <div className="panel-h">
-            <h3>Needs attention</h3>
-            <span className="h-hint">{inbox.length} {inbox.length === 1 ? 'queue' : 'queues'} · tap to act</span>
+      <section className="panel" aria-label="Today's work">
+        <div className="panel-h">
+          <div>
+            <h3>Today’s work</h3>
+            <span className="h-hint">Most urgent first. Each button opens the right page.</span>
           </div>
-          <div className="inbox-grid">
-            {inbox.map((i) => (
-              <ActionCard key={i.key} tone={i.tone} icon={i.icon} count={inr(i.count)} label={i.label} hint={i.hint} onClick={i.onClick} />
+          <div className="hm-tabs" role="tablist" aria-label="Filter work">
+            {['all', 'urgent', 'today', 'later'].map((t) => (
+              <button key={t} type="button" role="tab" aria-selected={tab === t} className={`hm-tab${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
+                {t === 'all' ? 'All' : PRIORITY_LABEL[t]}<span className="n">{counts[t]}</span>
+              </button>
             ))}
           </div>
         </div>
-      )}
-
-      {/* ═══ 3. KPI ROW ═══ */}
-      <div className="kpis">
-        <div className="kpi">
-          <div className="kl" title="Delivered orders minus refunds paid">Net sales</div>
-          <div className="kv num">₹{fmt(revenue.earned)}</div>
-          <div className="kf"><Delta pct={deltas.revenue?.pct} /> <span className="mut">vs prev 30d</span></div>
-        </div>
-        <div className="kpi">
-          <div className="kl">Orders</div>
-          <div className="kv num">{inr(totalOrders)}</div>
-          <div className="kf"><Delta pct={deltas.orders?.pct} /> <span className="mut">{inr(deltas.orders?.today ?? 0)} today</span></div>
-        </div>
-        <div className="kpi">
-          <div className="kl">Customers</div>
-          <div className="kv num">{inr(customers.total || 0)}</div>
-          <div className="kf">{(deltas.customersNew ?? 0) > 0 && <span className="delta up">▲ {inr(deltas.customersNew)}</span>} <span className="mut">new this month</span></div>
-        </div>
-        <div className="kpi">
-          <div className="kl">Avg order value</div>
-          <div className="kv num">₹{fmt(revenue.average)}</div>
-          <div className="kf"><Delta pct={deltas.aov?.pct} /> <span className="mut">vs prev 30d</span></div>
-        </div>
-      </div>
-
-      {/* ═══ 4. REVENUE + SALES BY BRAND ═══ */}
-      <div className="grid2">
-        <div className="panel">
-          <div className="panel-h">
-            <h3>Revenue</h3>
-            <span className="h-hint">
-              Booked ₹{fmt(revenue.total)} · Net ₹{fmt(revenue.earned)}{revenue.refunds ? ` (after ₹${fmt(revenue.refunds)} refunds)` : ''} · In pipeline ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
-            </span>
+        {shown.length === 0 ? (
+          <div className="hm-empty">{queues.length === 0 ? 'Nothing waiting. Nice work.' : 'Nothing in this group.'}</div>
+        ) : (
+          <div className="hm-cards">
+            {shown.map((q) => {
+              const c = queueCard(q);
+              return (
+                <article key={q.key} className={`hm-card p-${q.priority}`}>
+                  <div className="top"><span className="tag">{PRIORITY_LABEL[q.priority]}</span><span className="count">{q.count.toLocaleString('en-IN')}</span></div>
+                  <div><h3>{c.title}</h3><p>{c.detail}</p></div>
+                  <button type="button" className="go" onClick={() => openQueue(q)}>{c.action} →</button>
+                </article>
+              );
+            })}
           </div>
-          <RevenueTrend data={stats.revenueTrend} />
-        </div>
+        )}
+      </section>
 
-        <div className="panel">
-          <div className="panel-h"><h3>Sales by brand</h3></div>
-          {brandSales.length > 0 ? brandSales.map((b) => (
-            <div className="rb" key={b.brandId}>
-              <span className="n">{b.name}</span>
-              <span className="t"><span className="f" style={{ width: `${Math.max(4, ((b.revenue || 0) / brandMax) * 100)}%` }} /></span>
-              <span className="v num">₹{inr(b.revenue || 0)}</span>
-            </div>
-          )) : (
-            <div className="h-hint">No brand sales yet.</div>
-          )}
-        </div>
-      </div>
-
-      {/* ═══ 5. ORDER OVERVIEW — segmented bar + legend ═══ */}
-      <div className="panel">
-        <div className="panel-h">
-          <h3>Order overview</h3>
-          <span className="h-hint">every order counted once — reconciles to {inr(totalOrders)}</span>
-        </div>
-        <div className="seg">
-          {segs.map((s) => s.count > 0 && (
-            <span key={s.label} style={{ width: `${(s.count / segTotal) * 100}%`, background: s.color }} />
-          ))}
-        </div>
-        <div className="legend">
-          {segs.map((s) => (
-            <div className="leg" key={s.label}>
-              <span className="d" style={{ background: s.color }} />
-              <span><b className="num">{inr(s.count)}</b><small>{s.label}</small></span>
+      <section className="panel" aria-label="Orders right now">
+        <div className="panel-h"><h3>Orders right now</h3><span className="h-hint">click a stage to open it</span></div>
+        <div className="hm-flow">
+          {[
+            { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
+            { l: 'To ship', v: p.toShip, tab: 'to_ship' },
+            { l: 'In transit', v: p.inTransit, tab: 'in_transit' },
+            { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
+          ].map((s, i, arr) => (
+            <div className="step" key={s.l}>
+              <button type="button" onClick={() => goToView('orders', s.tab)}>
+                <span className="l">{s.l}</span>
+                <span className="v">{Number(s.v || 0).toLocaleString('en-IN')}</span>
+                {s.sub && <span className="l">{s.sub}</span>}
+              </button>
+              {i < arr.length - 1 && <span className="arrow" aria-hidden="true">→</span>}
             </div>
           ))}
         </div>
-        <div className="rb" style={{ marginTop: 6, paddingTop: 12, borderTop: '1px solid var(--ds-color-border-soft)', color: 'var(--ds-color-text-muted)', fontSize: 12, gap: 18 }}>
-          <span>COD: {inr(codCount)}</span>
-          <span>Prepaid: {inr(prepaidCount)}</span>
-          <span>Recent (30d): {inr(orders.recent || 0)}</span>
+        <div className="hm-chips">
+          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems')}>Delivery problems · {p.problems || 0}</button>
+          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns')}>Returns open · {p.returnsOpen || 0}</button>
+          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto')}>Cancelled &amp; RTO today · {p.closedToday || 0}</button>
         </div>
-      </div>
+      </section>
 
-      {/* ═══ 6. RECENT ORDERS ═══ */}
-      {stats.recentOrders?.length > 0 && (
-        <div className="panel" style={{ padding: 0 }}>
-          <div className="panel-h" style={{ padding: '18px 18px 0' }}>
-            <h3>Recent orders</h3>
-            <span className="h-hint">live</span>
+      <section className="hm-kpis" aria-label="Numbers">
+        <div className="hm-kpi"><span className="kl">Orders today</span><span className="kv">{(k.ordersToday || 0).toLocaleString('en-IN')}</span><span className="kf"><Delta v={k.ordersDelta} /> vs same time yesterday</span></div>
+        <div className="hm-kpi"><span className="kl">Booked today</span><span className="kv">{rupee(k.bookedToday)}</span><span className="kf"><Delta v={k.bookedDelta} /> avg order {rupee(k.aovToday)}</span></div>
+        <div className="hm-kpi"><span className="kl">Net sales · this month</span><span className="kv">{rupee(k.netSalesMonth)}</span><span className="kf">delivered minus {rupee(k.refundsMonth)} refunds</span></div>
+        <div className="hm-kpi"><span className="kl">RTO rate · 30 days</span><span className="kv">{k.rto30 ?? 0}%</span><span className="kf">{rtoDelta != null && <b className={rtoDelta <= 0 ? 'up' : 'down'}>{rtoDelta <= 0 ? '▼' : '▲'} {Math.abs(rtoDelta)} pts </b>}COD {k.codRto30 ?? 0}% · prepaid {k.prepaidRto30 ?? 0}%</span></div>
+      </section>
+
+      <div className="hm-grid3">
+        <section className="panel">
+          <div className="panel-h"><h3>Booked value, last 7 days</h3><span className="h-hint">{rupee(weekTotal)}</span></div>
+          <div className="hm-week">
+            {week.map((w) => (
+              <div className="col" key={w.day} title={`${dayName(w.day)}: ${rupee(w.value)} · ${plural(w.orders, 'order')}`}>
+                <span className="amt">{w.value >= 1000 ? `₹${(w.value / 1000).toFixed(1)}k` : rupee(w.value)}</span>
+                <div className={`bar${w.day === todayYmd ? ' today' : ''}`} style={{ height: `${Math.max(2, Math.round((w.value / weekMax) * 120))}px` }} />
+                <span className={`day${w.day === todayYmd ? ' today' : ''}`}>{dayName(w.day)}</span>
+              </div>
+            ))}
           </div>
-          <div className="tbl-wrap">
-            <table>
-              <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
-              <tbody>
-                {stats.recentOrders.slice(0, 8).map((o) => {
-                  const [tone, label] = orderPill(o.status);
-                  const pay = String(o.paymentType || '').toLowerCase();
-                  // Payment label — mirrors the Orders page's formatPaymentType:
-                  // a COD order is always saved as 'cod', so anything non-COD
-                  // (incl. empty — older prepaid orders whose type was saved as
-                  // the invalid enum 'prepaid' and stored as '') is prepaid.
-                  // Prevents a bare "—" on the dashboard for real prepaid orders.
-                  const payText = pay === 'cod' ? 'COD' : 'Prepaid';
-                  return (
-                    <tr key={o.id}>
-                      <td><span className="oid">{o.orderNumber}</span></td>
-                      <td><span className="cust"><span className="ca">{initialsOf(o.customerName)}</span>{o.customerName || '—'}</span></td>
-                      <td className="num cell-strong">₹{inr(o.amount || 0)}</td>
-                      <td><span className={`pill ${pay === 'cod' ? 'warn' : 'mut'}`}>{payText}</span></td>
-                      <td><span className={`pill ${tone}`}>{label}</span></td>
-                      <td className="mut">{o.date ? new Date(o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+        </section>
 
-
-      {/* ═══ 9. COLLAPSIBLE: STOCK DETAILS ═══ */}
-      {stats.lowStock && (stats.lowStock.lowStockCount > 0 || stats.lowStock.outOfStockCount > 0) && (
-        <CollapsibleSection icon={IC.warn} title="Stock Details">
-          <div className="dashboard-alert-cards">
-            {stats.lowStock.outOfStockCount > 0 && (
-              <div className="dashboard-alert-card alert-danger">
-                <div className="alert-icon">{IC.warn}</div>
-                <div className="alert-content">
-                  <div className="alert-title">Out of Stock</div>
-                  <div className="alert-value">{stats.lowStock.outOfStockCount} products</div>
-                  <div className="alert-description">Need immediate restocking</div>
-                </div>
+        {!brandId && (
+          <section className="panel">
+            <div className="panel-h"><h3>Today by brand</h3></div>
+            {(data?.brands || []).length === 0 ? <div className="h-hint">No orders yet today.</div> : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="hm-table">
+                  <thead><tr><th>Brand</th><th className="r">Orders</th><th className="r">Booked</th><th className="r">To confirm</th></tr></thead>
+                  <tbody>
+                    {data.brands.map((b) => (
+                      <tr key={b.brandId}><td style={{ fontWeight: 600 }}>{b.brand}</td><td className="r">{b.orders}</td><td className="r" style={{ fontWeight: 700 }}>{rupee(b.booked)}</td><td className="r">{b.toConfirm}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-            {stats.lowStock.lowStockCount > 0 && (
-              <div className="dashboard-alert-card alert-warning">
-                <div className="alert-icon">{IC.warn}</div>
-                <div className="alert-content">
-                  <div className="alert-title">Low Stock</div>
-                  <div className="alert-value">{stats.lowStock.lowStockCount} products</div>
-                  <div className="alert-description">Stock below 10 units</div>
-                </div>
-              </div>
-            )}
-          </div>
-          {stats.lowStock.products?.length > 0 && (
-            <ResponsiveTable
-              data={stats.lowStock.products.slice(0, 10)}
-              rowKey={(_p, i) => i}
-              columns={[
-                { key: 'name',   label: 'Product', render: (p) => <span className="table-product-name">{p.name}</span> },
-                { key: 'sku',    label: 'SKU',     render: (p) => p.sku },
-                { key: 'stock',  label: 'Stock',
-                  render: (p) => <span className={`stock-badge ${p.stock<5?'stock-critical':'stock-low'}`}>{p.stock} units</span> },
-                { key: 'status', label: 'Status',
-                  render: (p) => <span className={`status-badge ${p.stock<5?'status-danger':'status-warning'}`}>{p.stock<5?'Critical':'Low'}</span> },
-              ]}
-            />
+          </section>
+        )}
+
+        <section className="panel">
+          <div className="panel-h"><h3>Just happened</h3></div>
+          {(data?.feed || []).length === 0 ? <div className="h-hint">Nothing in the last 3 days.</div> : (
+            <ol className="hm-feed">
+              {data.feed.map((e, i) => (
+                <li key={i}>
+                  <span className={`dot ${e.tone}`} aria-hidden="true" />
+                  {e.conversationId ? (
+                    <button type="button" className="txt" onClick={() => { try { sessionStorage.setItem('obz-wa-open', String(e.conversationId)); } catch { /* blocked */ } goToView('whatsapp-chat'); }}>{e.text}</button>
+                  ) : <span className="txt">{e.text}</span>}
+                  <span className="time">{timeAgo(e.at)}</span>
+                </li>
+              ))}
+            </ol>
           )}
-        </CollapsibleSection>
-      )}
-
+        </section>
+      </div>
     </div>
   );
+}
+
+/* Admin / order managers get the today home; other roles get quick links. */
+function CardGrid() {
+  const { roles } = useAuth();
+  const canSeeOrders = roles.includes('admin') || roles.includes('order_manager');
+  return canSeeOrders ? <TodayHome /> : <RoleHome />;
 }
 
 export default CardGrid;

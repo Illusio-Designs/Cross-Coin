@@ -1991,13 +1991,11 @@ export const bundleService = {
 
 // Dashboard Services
 export const dashboardService = {
-  getDashboardStats: async (params = {}) => {
-    try {
-      const response = await adminApi.get("/api/dashboard/stats", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+  // Home "today": work queues, pipeline, numbers and recent activity.
+  getToday: async (brandId) => {
+    const { data } = await adminApi.get("/api/dashboard/today", { params: brandId ? { brandId } : {} });
+    if (!data?.success) throw new Error(data?.message || "Failed to load today's dashboard");
+    return data;
   },
 };
 

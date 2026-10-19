@@ -1,42 +1,12 @@
 /**
- * Obzus dashboard home (CardGrid) — matches the approved SaaS prototype.
- * All colours reference the design tokens (tokens.css) so light + dark
- * both work automatically. Scoped under .obz-home to avoid colliding with
- * the legacy dc-/pdt- families still used elsewhere.
+ * Obzus dashboard home. .obz-home = shared shell (panels + the quick-access
+ * cards RoleHome uses); .hm-* = the "today" home for admin / order managers.
+ * Every colour is a --ds token so light and dark both work.
  */
 
 .obz-home { display: flex; flex-direction: column; gap: 18px; }
 .obz-home .num { font-variant-numeric: tabular-nums; }
 .obz-home .mut { color: var(--ds-color-text-muted); }
-
-/* ── KPI row ─────────────────────────────────────────────────────────── */
-.obz-home .kpis {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-@media (max-width: 1050px) { .obz-home .kpis { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 400px)  { .obz-home .kpis { grid-template-columns: 1fr; } }
-.obz-home .kpi {
-  background: var(--ds-color-surface);
-  border: 1px solid var(--ds-color-border);
-  border-radius: var(--ds-radius-lg);
-  padding: 15px 16px;
-  min-width: 0;
-}
-.obz-home .kl { color: var(--ds-color-text-muted); font-size: 12px; font-weight: 600; }
-.obz-home .kv {
-  font-size: 25px;
-  color: var(--ds-color-text);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 8px 0 6px;
-  line-height: 1;
-}
-.obz-home .kf { font-size: 12px; }
-.obz-home .delta { font-weight: 700; font-size: 11.5px; }
-.obz-home .delta.up   { color: var(--ds-color-success); }
-.obz-home .delta.down { color: var(--ds-color-danger); }
 
 /* ── Action inbox ("Needs attention") ───────────────────────────────── */
 .obz-home .inbox-grid {
@@ -127,82 +97,95 @@
 .obz-home .panel-h h3 { font-size: 15px; font-weight: 650; color: var(--ds-color-text); margin: 0; letter-spacing: -0.01em; }
 .obz-home .panel-h .h-hint { color: var(--ds-color-text-muted); font-size: 12px; }
 
-.obz-home .grid2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; }
-@media (max-width: 980px) { .obz-home .grid2 { grid-template-columns: 1fr; } }
-.obz-home .grid2 > * { min-width: 0; }
+/* ── Today home ─────────────────────────────────────────────────────── */
+.hm-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+.hm-head h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: var(--ds-color-text); }
+.hm-head p { margin: 3px 0 0; font-size: 13.5px; color: var(--ds-color-text-muted); }
+.hm-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: 1 1 360px; justify-content: flex-end; }
+.hm-search { position: relative; flex: 1 1 280px; max-width: 420px; }
+.hm-search input {
+  box-sizing: border-box; width: 100%; height: 42px; padding: 0 14px 0 38px;
+  border-radius: 10px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
+  color: var(--ds-color-text); font: inherit; font-size: 14px;
+}
+.hm-search input:focus { outline: 2px solid var(--ds-color-brand); outline-offset: 1px; }
+.hm-search svg { position: absolute; left: 13px; top: 13px; color: var(--ds-color-text-muted); pointer-events: none; }
 
-/* ── Segmented order bar + legend ────────────────────────────────────── */
-.obz-home .seg {
-  display: flex;
-  height: 10px;
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 2px 0 16px;
-  background: var(--ds-color-border-soft);
-}
-.obz-home .seg > span { height: 100%; }
-.obz-home .legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 14px; }
-@media (max-width: 560px) { .obz-home .legend { grid-template-columns: 1fr 1fr; } }
-.obz-home .leg { display: flex; align-items: center; gap: 9px; }
-.obz-home .leg .d { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
-.obz-home .leg b { color: var(--ds-color-text); font-size: 16px; font-weight: 700; display: block; line-height: 1.05; }
-.obz-home .leg small { color: var(--ds-color-text-muted); font-size: 11px; display: block; margin-top: 1px; }
+.hm-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--ds-color-surface-soft); border: 1px solid var(--ds-color-border); flex-wrap: wrap; }
+.hm-tab { min-height: 34px; padding: 0 12px; border-radius: 8px; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; background: transparent; color: var(--ds-color-text-muted); }
+.hm-tab .n { font-size: 11px; padding: 0 6px; border-radius: 999px; margin-left: 4px; background: var(--ds-color-border); color: var(--ds-color-text); }
+.hm-tab.on { background: var(--ds-color-brand); color: var(--ds-color-bg); }
+.hm-tab.on .n { background: var(--ds-color-bg); color: var(--ds-color-text); }
 
-/* ── Row bars (sales by brand) ───────────────────────────────────────── */
-.obz-home .rb { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
-.obz-home .rb .n {
-  width: 96px; font-size: 13px; color: var(--ds-color-text-muted); flex-shrink: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.hm-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.hm-card {
+  --t: var(--ds-color-info); --tb: var(--ds-color-info-bg); --tbd: var(--ds-color-info-bd, var(--ds-color-border));
+  background: var(--ds-color-surface); border: 1px solid var(--tbd); border-radius: 14px; padding: 15px;
+  display: flex; flex-direction: column; gap: 12px; justify-content: space-between; min-height: 160px; min-width: 0;
 }
-.obz-home .rb .t { flex: 1; height: 7px; background: var(--ds-color-border-soft); border-radius: 5px; overflow: hidden; }
-/* .f is a <span>; without display:block the width/height are ignored (inline),
-   so the fill never showed and the bars looked empty. */
-.obz-home .rb .f { display: block; height: 100%; background: var(--ds-color-text); border-radius: 5px; }
-.obz-home .rb .v { min-width: 76px; text-align: right; font-size: 12.5px; color: var(--ds-color-text); font-weight: 600; }
+.hm-card.p-urgent { --t: var(--ds-color-danger); --tb: var(--ds-color-danger-bg); --tbd: var(--ds-color-danger-bd, var(--ds-color-border)); }
+.hm-card.p-today  { --t: var(--ds-color-warn);   --tb: var(--ds-color-warn-bg);   --tbd: var(--ds-color-warn-bd, var(--ds-color-border)); }
+.hm-card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.hm-card .tag { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--tb); color: var(--t); }
+.hm-card .count { font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ds-color-text); }
+.hm-card h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ds-color-text); }
+.hm-card p { margin: 3px 0 0; font-size: 12.5px; color: var(--ds-color-text-muted); line-height: 1.45; }
+.hm-card .go {
+  align-self: flex-start; min-height: 38px; padding: 0 14px; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft); color: var(--ds-color-text);
+}
+.hm-card.p-urgent .go { background: var(--ds-color-brand); border-color: var(--ds-color-brand); color: var(--ds-color-bg); }
+.hm-card .go:hover { border-color: var(--ds-color-text-muted); }
+.hm-empty { padding: 26px; text-align: center; color: var(--ds-color-text-muted); font-size: 14px; }
 
-/* ── Tables ──────────────────────────────────────────────────────────── */
-.obz-home .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.obz-home table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
-.obz-home th {
-  text-align: left; padding: 11px 14px;
-  color: var(--ds-color-text-muted);
-  font-family: var(--ds-font-mono);
-  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
-  border-bottom: 1px solid var(--ds-color-border); white-space: nowrap;
+.hm-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.hm-flow .step { display: flex; align-items: center; gap: 8px; flex: 1 1 170px; min-width: 0; }
+.hm-flow button {
+  flex: 1; min-width: 0; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 3px;
+  padding: 13px 14px; border-radius: 12px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft);
+  color: var(--ds-color-text); font: inherit;
 }
-.obz-home td { padding: 12px 14px; border-bottom: 1px solid var(--ds-color-border-soft); color: var(--ds-color-text-muted); white-space: nowrap; }
-.obz-home tbody tr:last-child td { border-bottom: none; }
-.obz-home tbody tr:hover td { background: var(--ds-color-surface-soft); }
-.obz-home .oid { font-family: var(--ds-font-mono); font-size: 12px; color: var(--ds-color-text); font-weight: 600; }
-.obz-home .cell-strong { color: var(--ds-color-text); font-weight: 600; }
-.obz-home .cust { display: flex; align-items: center; gap: 9px; color: var(--ds-color-text); }
-.obz-home .ca {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--ds-color-text); color: var(--ds-color-surface);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; flex-shrink: 0;
-}
+.hm-flow button:hover { border-color: var(--ds-color-text-muted); }
+.hm-flow .l { font-size: 12px; color: var(--ds-color-text-muted); }
+.hm-flow .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hm-flow .arrow { color: var(--ds-color-text-faint); font-size: 18px; }
+.hm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.hm-chip { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; border: 0; cursor: pointer; background: var(--ds-color-surface-soft); color: var(--ds-color-text); }
+.hm-chip.bad { background: var(--ds-color-danger-bg); color: var(--ds-color-danger); }
+.hm-chip.ret { background: var(--ds-color-accent2-bg); color: var(--ds-color-accent2); }
 
-/* ── Tags + status pills ─────────────────────────────────────────────── */
-.obz-home .tag {
-  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
-  background: var(--ds-color-surface-soft); color: var(--ds-color-text-muted);
-  border: 1px solid var(--ds-color-border);
-}
-.obz-home .pill {
-  font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-}
-.obz-home .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.obz-home .pill.good { color: var(--ds-color-success); background: var(--ds-color-success-bg); }
-.obz-home .pill.info { color: var(--ds-color-info);    background: var(--ds-color-info-bg); }
-.obz-home .pill.warn { color: var(--ds-color-warn);    background: var(--ds-color-warn-bg); }
-.obz-home .pill.bad  { color: var(--ds-color-danger);  background: var(--ds-color-danger-bg); }
-.obz-home .pill.rto  { color: #f97316; background: rgba(249, 115, 22, 0.13); }
-.obz-home .pill.mut  { color: var(--ds-color-text-muted); background: var(--ds-color-surface-soft); }
+.hm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.hm-kpi { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.hm-kpi .kl { font-family: var(--ds-font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-color-text-muted); }
+.hm-kpi .kv { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--ds-color-text); font-variant-numeric: tabular-nums; }
+.hm-kpi .kf { font-size: 12px; color: var(--ds-color-text-muted); }
+.hm-kpi .up { color: var(--ds-color-success); font-weight: 700; }
+.hm-kpi .down { color: var(--ds-color-danger); font-weight: 700; }
 
-/* Tighten the home's section rhythm on phones so the top doesn't read as
-   empty (the desktop 18px gap felt large stacked on a narrow screen). */
-@media (max-width: 640px) {
-  .obz-home { gap: 12px; }
-}
+.hm-grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
+.hm-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; }
+.hm-week .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; min-width: 0; }
+.hm-week .bar { width: 100%; max-width: 44px; border-radius: 6px 6px 2px 2px; background: var(--ds-color-border); }
+.hm-week .bar.today { background: var(--ds-color-brand); }
+.hm-week .amt, .hm-week .day { font-size: 11px; color: var(--ds-color-text-muted); white-space: nowrap; }
+.hm-week .day.today { color: var(--ds-color-text); font-weight: 700; }
+
+.hm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hm-table th { text-align: left; font-family: var(--ds-font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-color-text-muted); font-weight: 500; padding: 8px 4px; border-bottom: 1px solid var(--ds-color-border); }
+.hm-table td { padding: 9px 4px; border-bottom: 1px solid var(--ds-color-border-soft, var(--ds-color-border)); color: var(--ds-color-text); font-variant-numeric: tabular-nums; }
+.hm-table .r { text-align: right; }
+.hm-table tr:last-child td { border-bottom: none; }
+
+.hm-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.hm-feed li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.hm-feed .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--ds-color-text-faint); }
+.hm-feed .dot.ok { background: var(--ds-color-success); }
+.hm-feed .dot.info { background: var(--ds-color-info); }
+.hm-feed .dot.bad { background: var(--ds-color-danger); }
+.hm-feed .dot.warn { background: var(--ds-color-warn); }
+.hm-feed .dot.return { background: var(--ds-color-accent2); }
+.hm-feed .dot.wa { background: #25d366; }
+.hm-feed .txt { font-size: 13px; line-height: 1.45; color: var(--ds-color-text); overflow-wrap: anywhere; }
+.hm-feed button.txt { all: unset; cursor: pointer; font-size: 13px; line-height: 1.45; color: var(--ds-color-text); overflow-wrap: anywhere; }
+.hm-feed button.txt:hover { text-decoration: underline; }
+.hm-feed .time { font-size: 11.5px; color: var(--ds-color-text-faint); white-space: nowrap; }
