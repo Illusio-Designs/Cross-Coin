@@ -92,6 +92,7 @@ export default function TrafficReport() {
   const [brandList, setBrandList] = useState([]);
   const [showAdsets, setShowAdsets] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
+  const [sitesOpen, setSitesOpen] = useState(null); // null = auto (open when few sites)
 
   useEffect(() => {
     let off = false;
@@ -122,6 +123,12 @@ export default function TrafficReport() {
   const campaigns = data?.campaigns || [];
   const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name) : 'All brands';
 
+  // "Other websites & apps" by actual site name (YouTube, Pinterest, a blog…).
+  const otherSites = (data?.otherSites || []).map((x) => ({
+    name: x.site, sessions: x.sessions, share: x.share, orders: x.orders,
+    conversion: x.conversion_rate, revenue: x.revenue, campaigns: x.campaigns || [], adsets: [],
+  }));
+  const showSites = sitesOpen ?? otherSites.length <= 6;
   const drop = data?.dropOff || { channels: [], totals: { visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 } };
 
   // Platform → campaign → ad set, merging every spelling of a platform (fb,
@@ -261,9 +268,15 @@ export default function TrafficReport() {
               <table className="rep-table">
                 <thead><tr><th>Source</th><th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                 <tbody>
-                  {sources.length === 0 ? <Empty cols={6} text="No visits in this period" /> : sources.map((c) => (
-                    <tr key={c.channel}>
-                      <td className="strong" style={{ whiteSpace: 'nowrap' }}><Dot color={chColor(c.channel)} />{chLabel(c.channel)}</td>
+                  {sources.length === 0 ? <Empty cols={6} text="No visits in this period" /> : sources.map((c) => {
+                    const expandable = c.channel === 'Referral' && otherSites.length > 0;
+                    return (
+                    <React.Fragment key={c.channel}>
+                    <tr onClick={expandable ? () => setSitesOpen(!showSites) : undefined} style={expandable ? { cursor: 'pointer' } : undefined}>
+                      <td className="strong" style={{ whiteSpace: 'nowrap' }}>
+                        <Dot color={chColor(c.channel)} />{chLabel(c.channel)}
+                        {expandable && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{showSites ? '▾' : '▸'} {plural(otherSites.length, 'site')}</span>}
+                      </td>
                       <td className="r num">{c.untracked ? <Dash /> : num(c.sessions)}</td>
                       <td>
                         {c.untracked ? <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>orders with no tracked visit</span> : (
@@ -279,7 +292,26 @@ export default function TrafficReport() {
                       <td className="r num">{c.untracked ? <Dash /> : pct(c.conversion_rate)}</td>
                       <td className="r strong num">{inr(c.revenue)}</td>
                     </tr>
-                  ))}
+                    {expandable && showSites && otherSites.map((x) => (
+                      <tr key={x.name}>
+                        <td style={{ paddingLeft: 34, color: 'var(--ds-color-text-muted)' }}>↳ {x.name}</td>
+                        <td className="r num">{num(x.sessions)}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
+                              <div style={{ width: `${Math.min(100, x.share)}%`, height: '100%', background: chColor('Referral'), opacity: 0.7 }} />
+                            </div>
+                            <span className="num" style={{ fontSize: 12, minWidth: 46, textAlign: 'right', color: 'var(--ds-color-text-muted)' }}>{pct(x.share)}</span>
+                          </div>
+                        </td>
+                        <td className="r num">{num(x.orders)}</td>
+                        <td className="r num">{pct(x.conversion)}</td>
+                        <td className="r num">{inr(x.revenue)}</td>
+                      </tr>
+                    ))}
+                    </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -391,7 +423,8 @@ export default function TrafficReport() {
                 <thead><tr><th>Platform / campaign</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                 <tbody>
                   {platforms.length === 0 ? <Empty cols={6} text="No campaign traffic in this period" /> : platforms.map((g) => {
-                    const rows = g.tagged ? g.campaigns : [];
+                    const isSites = g.channel === 'Referral' && otherSites.length > 0;
+                    const rows = isSites ? otherSites : (g.tagged ? g.campaigns : []);
                     const open = openGroups[g.channel] ?? g.campaigns.length <= 3;
                     return (
                       <React.Fragment key={g.channel}>
@@ -400,7 +433,7 @@ export default function TrafficReport() {
                           <td className="strong" style={{ whiteSpace: 'nowrap' }}>
                             <span style={{ display: 'inline-block', width: 14, color: 'var(--ds-color-text-faint)' }}>{rows.length ? (open ? '▾' : '▸') : ''}</span>
                             <Dot color={chColor(g.channel)} />{chLabel(g.channel)}
-                            {g.tagged > 0 && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{plural(g.tagged, 'campaign')}</span>}
+                            {(isSites || g.tagged > 0) && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{isSites ? plural(otherSites.length, 'site') : plural(g.tagged, 'campaign')}</span>}
                           </td>
                           <td className="r strong num">{g.untracked ? <Dash /> : num(g.sessions)}</td>
                           <td className="r num">{g.untracked ? <Dash /> : pct(g.share)}</td>
@@ -411,14 +444,17 @@ export default function TrafficReport() {
                         {open && rows.map((c) => (
                           <React.Fragment key={c.name}>
                             <tr>
-                              <td style={{ paddingLeft: 40 }}>{c.name === 'none' ? <span style={{ color: 'var(--ds-color-text-faint)' }}>Without a campaign tag (posts, bio links, shares)</span> : c.name}</td>
+                              <td style={{ paddingLeft: 40 }}>
+                                {c.name === 'none' ? <span style={{ color: 'var(--ds-color-text-faint)' }}>Without a campaign tag (posts, bio links, shares)</span> : c.name}
+                                {isSites && c.campaigns.length > 0 && <span style={{ color: 'var(--ds-color-text-faint)', fontSize: 12 }}> · {c.campaigns.join(', ')}</span>}
+                              </td>
                               <td className="r num">{num(c.sessions)}</td>
                               <td className="r num">{pct(c.share)}</td>
                               <td className="r num">{num(c.orders)}</td>
                               <td className="r num">{pct(c.conversion)}</td>
                               <td className="r num">{inr(c.revenue)}</td>
                             </tr>
-                            {showAdsets && c.adsets.length > 1 && c.adsets.map((a) => (
+                            {showAdsets && !isSites && c.adsets.length > 1 && c.adsets.map((a) => (
                               <tr key={a.name}>
                                 <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ {a.name === 'none' ? 'no ad set tag' : a.name}</td>
                                 <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
@@ -445,7 +481,7 @@ export default function TrafficReport() {
               <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
               <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
               <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
-              <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, blogs and other sites are “Other websites & apps”.</li>
+              <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, Pinterest, blogs and other sites are “Other websites & apps” — click that row to see each site by name.</li>
               <li>Paid = ads tagged utm_medium paid / cpc. Direct = no source or our own sites. Everything else (search, social posts, email, referral) is Organic.</li>
             </ul>
           </div>

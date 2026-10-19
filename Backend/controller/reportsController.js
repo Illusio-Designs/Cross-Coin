@@ -432,6 +432,42 @@ exports.getBrandTraffic = async (req, res) => {
 
     // Campaign rows (source/medium/campaign) with orders, revenue & conversion —
     // the data that used to live on the UTM Analytics page, now reconciled.
+    // "Other websites & apps" broken down by the actual site. Visits without
+    // UTM tags store the referring host (or a known name like youtube) as the
+    // source, so group those by a readable site name.
+    const SITE_NAMES = {
+      youtube: 'YouTube', twitter: 'X (Twitter)', linkedin: 'LinkedIn', bing: 'Bing', duckduckgo: 'DuckDuckGo',
+      pinterest: 'Pinterest', reddit: 'Reddit', quora: 'Quora', snapchat: 'Snapchat', telegram: 'Telegram',
+      threads: 'Threads', yahoo: 'Yahoo', amazon: 'Amazon', flipkart: 'Flipkart', meesho: 'Meesho', myntra: 'Myntra',
+    };
+    const siteName = (src) => {
+      let h = String(src || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/?#:].*$/, '');
+      h = h.replace(/^(www|m|l|lm|in|mobile|web|t)\./, '');
+      const base = h.split('.').slice(-2, -1)[0] || h; // pinterest.co.uk → pinterest
+      const key = /\.(co|com|org|net|gov|ac)\.[a-z]{2}$/.test(h) ? h.split('.').slice(-3, -2)[0] : base;
+      return SITE_NAMES[key] || SITE_NAMES[h] || h || 'Unknown site';
+    };
+    const siteAcc = new Map();
+    for (const r of campaignRows) {
+      if (channelOf(r.source, r.medium, selfHosts) !== 'Referral') continue;
+      const name = siteName(r.source);
+      const a = siteAcc.get(name) || { site: name, sessions: 0, orders: 0, revenue: 0, campaigns: new Set() };
+      a.sessions += Number(r.sessions) || 0;
+      a.orders += Number(r.orders) || 0;
+      a.revenue += Number(r.revenue) || 0;
+      if (r.campaign && r.campaign !== 'none') a.campaigns.add(r.campaign);
+      siteAcc.set(name, a);
+    }
+    const otherSites = [...siteAcc.values()].map((a) => ({
+      site: a.site,
+      sessions: a.sessions,
+      orders: a.orders,
+      revenue: Math.round(a.revenue),
+      share: Number(((a.sessions / totalSrcSessions) * 100).toFixed(2)),
+      conversion_rate: a.sessions > 0 ? Number(((a.orders / a.sessions) * 100).toFixed(2)) : null,
+      campaigns: [...a.campaigns].slice(0, 5),
+    })).sort((x, y) => y.sessions - x.sessions || y.orders - x.orders);
+
     const campaigns = campaignRows.map((r) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
@@ -509,6 +545,7 @@ exports.getBrandTraffic = async (req, res) => {
       trafficSplit,
       campaigns,
       dropOff: { channels: dropOff, totals: dropTotals },
+      otherSites,
     });
   } catch (error) {
     logger.error('getBrandTraffic report failed: ' + error.message);
