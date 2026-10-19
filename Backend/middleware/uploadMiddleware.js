@@ -13,7 +13,6 @@ const UPLOAD_DIRS = {
     slider: path.join(__dirname, '../uploads/slider'),
     reviews: path.join(__dirname, '../uploads/reviews'),
     blogs: path.join(__dirname, '../uploads/blogs'),
-    reels: path.join(__dirname, '../uploads/reels'),
 };
 
 // Create directories if they don't exist
@@ -41,8 +40,6 @@ const storage = multer.diskStorage({
             uploadDir = UPLOAD_DIRS.slider;
         } else if (req.originalUrl.includes('/blogs') || req.originalUrl.includes('/blog')) {
             uploadDir = UPLOAD_DIRS.blogs;
-        } else if (req.originalUrl.includes('/reels')) {
-            uploadDir = UPLOAD_DIRS.reels;
         }
         
         cb(null, uploadDir);

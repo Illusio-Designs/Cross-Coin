@@ -95,7 +95,7 @@ const mediumLimiter = rateLimit({
 const PUBLIC_READ_PREFIXES = [
   '/api/sliders', '/api/categories', '/api/products', '/api/seo',
   '/api/public', '/api/blogs', '/api/reviews',
-  '/api/reels', '/api/policies', '/api/faqs',
+  '/api/policies', '/api/faqs',
 ];
 const isPublicReadGet = (req) => {
   if ((req.method || 'GET').toUpperCase() !== 'GET') return false;
@@ -406,8 +406,6 @@ app.get('/', (req, res) => {
 app.use('/api/v1', routesManager);
 app.use('/api', routesManager);  // backward compat
 
-// Swagger API docs at /api/docs
-require('./docs/swagger.js')(app);
 
 // 404 handler for API routes only
 app.use(/^\/api\/v1\//, (req, res) => {

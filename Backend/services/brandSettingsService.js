@@ -112,17 +112,6 @@ async function deleteBrandSetting(brandId, key) {
 }
 
 /**
- * Clear all cached settings for a brand
- */
-function clearBrandCache(brandId) {
-    for (const key of settingsCache.keys()) {
-        if (key.startsWith(`${brandId}:`)) {
-            settingsCache.delete(key);
-        }
-    }
-}
-
-/**
  * Get all settings for a brand
  */
 async function getAllSettings(brandId) {
@@ -214,7 +203,6 @@ module.exports = {
     getAllBrandSettings,
     setBrandSetting,
     deleteBrandSetting,
-    clearBrandCache,
     getAllSettings,
     getSettingsByCategory,
     getSetting,

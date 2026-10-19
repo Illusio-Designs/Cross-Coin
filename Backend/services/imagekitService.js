@@ -190,46 +190,6 @@ class ImageKitService {
     }
   }
 
-  /**
-   * Bulk upload images
-   * @param {Array} files - Array of {buffer, fileName}
-   * @param {string} folder - Folder path
-   * @returns {Promise<Array>} Upload responses
-   */
-  async bulkUploadImages(files, folder = '/products') {
-    const results = [];
-    for (const file of files) {
-      try {
-        const result = await this.uploadImage(file.buffer, file.fileName, folder);
-        results.push(result);
-      } catch (error) {
-        console.error(`Failed to upload ${file.fileName}:`, error);
-        results.push({ success: false, fileName: file.fileName, error });
-      }
-    }
-    return results;
-  }
-
-  /**
-   * Get transformation URL with custom parameters
-   * @param {string} imagePath - Image path
-   * @param {Object} params - Transformation parameters
-   * @returns {string} Transformed URL
-   */
-  getTransformedUrl(imagePath, params = {}) {
-    const {
-      width = 600,
-      height = 600,
-      quality = 75,
-      format = 'auto', // auto, webp, jpg, png
-      fit = 'cover', // cover, contain, fill
-      position = 'center',
-    } = params;
-
-    // Check if URL already has query parameters
-    const separator = imagePath.includes('?') ? '&' : '?';
-    return `${imagePath}${separator}tr=w-${width},h-${height},q-${quality},f-${format},c-${fit},g-${position}`;
-  }
 }
 
 module.exports = new ImageKitService();

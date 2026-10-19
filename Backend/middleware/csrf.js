@@ -13,10 +13,9 @@
  *      cookie (so JS can read it), and returns it in the JSON body.
  *   2. Frontend reads the cookie and sends it back in the X-CSRF-Token
  *      header on every state-changing request.
- *   3. requireCsrf compares header vs cookie — both must match.
  *
- * Toggle with env `CSRF_REQUIRED=true` to start enforcing. The token
- * endpoint is always live so frontends can prepare for the switch.
+ * Note: server-side enforcement middleware was removed as unused; the
+ * token endpoint stays live so frontends keep working unchanged.
  */
 
 const crypto = require('crypto');
@@ -48,23 +47,4 @@ function csrfTokenHandler(req, res) {
   res.json({ success: true, data: { csrfToken: token, headerName: HEADER_NAME.toUpperCase() } });
 }
 
-function requireCsrf(req, res, next) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
-  if (process.env.CSRF_REQUIRED !== 'true') return next();
-
-  const cookieToken = req.cookies?.[COOKIE_NAME];
-  const headerToken = (req.headers[HEADER_NAME] || '').toString();
-
-  if (!cookieToken || !headerToken) {
-    logger.warn(`[csrf] missing token on ${req.method} ${req.path}`);
-    return res.status(403).json({ success: false, message: 'CSRF token required' });
-  }
-  if (cookieToken.length !== headerToken.length
-      || !crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken))) {
-    logger.warn(`[csrf] token mismatch on ${req.method} ${req.path}`);
-    return res.status(403).json({ success: false, message: 'CSRF token invalid' });
-  }
-  next();
-}
-
-module.exports = { issueToken, csrfTokenHandler, requireCsrf };
+module.exports = { issueToken, csrfTokenHandler };

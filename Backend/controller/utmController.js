@@ -111,34 +111,3 @@ exports.trackUTM = async (req, res) => {
   }
 };
 
-// Get UTM data by session
-exports.getUTMBySession = async (req, res) => {
-  try {
-    const sessionId = req.cookies?.session_id;
-    
-    if (!sessionId) {
-      return res.status(404).json({
-        success: false,
-        message: 'No session found'
-      });
-    }
-
-    const utmData = await UTMTracking.findAll({
-      where: { session_id: sessionId },
-      order: [['created_at', 'DESC']]
-    });
-
-    res.status(200).json({
-      success: true,
-      data: utmData
-    });
-  } catch (error) {
-    logger.error('Error fetching UTM data:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching UTM data',
-      error: error.message
-    });
-  }
-};
-

@@ -55,36 +55,6 @@ async function getBrandById(id) {
 }
 
 /**
- * Get brand by slug
- */
-async function getBrandBySlug(slug) {
-    try {
-        const brand = await Brand.findOne({
-            where: { slug }
-        });
-        return brand;
-    } catch (error) {
-        console.error('Error fetching brand by slug:', error);
-        throw error;
-    }
-}
-
-/**
- * Get brand by domain
- */
-async function getBrandByDomain(domain) {
-    try {
-        const brand = await Brand.findOne({
-            where: { domain }
-        });
-        return brand;
-    } catch (error) {
-        console.error('Error fetching brand by domain:', error);
-        throw error;
-    }
-}
-
-/**
  * Create a new brand
  */
 async function createBrand(brandData) {
@@ -198,8 +168,6 @@ async function searchBrands(query) {
 module.exports = {
     getAllBrands,
     getBrandById,
-    getBrandBySlug,
-    getBrandByDomain,
     createBrand,
     updateBrand,
     deleteBrand,

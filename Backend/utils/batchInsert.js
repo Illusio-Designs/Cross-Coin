@@ -77,67 +77,6 @@ async function batchInsert(model, records, options = {}) {
   }
 }
 
-/**
- * Batch insert with transaction support
- * Wraps batch insert in a transaction for ACID compliance
- * 
- * @param {Object} model - Sequelize model to insert into
- * @param {Array} records - Array of record objects to insert
- * @param {Object} options - Options for bulk insert (see batchInsert)
- * @returns {Promise<Array>} - Array of created records
- */
-async function batchInsertWithTransaction(model, records, options = {}) {
-  const transaction = await sequelize.transaction();
-
-  try {
-    const createdRecords = await batchInsert(model, records, {
-      ...options,
-      transaction
-    });
-
-    await transaction.commit();
-    return createdRecords;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}
-
-/**
- * Batch insert multiple models in a single transaction
- * Useful for inserting related records atomically
- * 
- * @param {Array} operations - Array of {model, records, options} objects
- * @returns {Promise<Object>} - Object with results for each model
- */
-async function batchInsertMultiple(operations) {
-  const transaction = await sequelize.transaction();
-  const results = {};
-
-  try {
-    for (const { model, records, options = {} } of operations) {
-      console.log(`📦 Batch inserting ${records.length} records into ${model.name}...`);
-      
-      const createdRecords = await batchInsert(model, records, {
-        ...options,
-        transaction
-      });
-
-      results[model.name] = createdRecords;
-    }
-
-    await transaction.commit();
-    console.log(`✅ All batch inserts completed successfully`);
-    return results;
-  } catch (error) {
-    await transaction.rollback();
-    console.error(`❌ Error during multi-model batch insert:`, error);
-    throw error;
-  }
-}
-
 module.exports = {
   batchInsert,
-  batchInsertWithTransaction,
-  batchInsertMultiple
 };

@@ -58,15 +58,5 @@ const sanitizeRichText = (str) => {
  * @param {string[]} fields - Field names to sanitize
  * @returns {Object} Object with sanitized fields
  */
-const sanitizeFields = (obj, fields) => {
-    if (!obj || typeof obj !== 'object') return obj;
-    const result = { ...obj };
-    for (const field of fields) {
-        if (typeof result[field] === 'string') {
-            result[field] = sanitize(result[field]);
-        }
-    }
-    return result;
-};
 
-module.exports = { sanitize, sanitizeRichText, sanitizeFields };
+module.exports = { sanitize, sanitizeRichText };

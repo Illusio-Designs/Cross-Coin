@@ -3,14 +3,6 @@
 // In-memory SSE client registry
 const clients = new Set();
 
-function addClient(res) {
-  clients.add(res);
-}
-
-function removeClient(res) {
-  clients.delete(res);
-}
-
 function broadcast(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const res of clients) {
@@ -71,4 +63,4 @@ function emitNewWhatsApp(phone, message) {
   notifyAll(waWaiters); // wakes the WhatsApp inbox live stream
 }
 
-module.exports = { addClient, removeClient, emitNewOrder, emitNewWhatsApp, waitForNotification, waitForWhatsApp };
+module.exports = { emitNewOrder, emitNewWhatsApp, waitForNotification, waitForWhatsApp };

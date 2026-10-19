@@ -126,39 +126,6 @@ class ImageHandler {
         }
     }
 
-    // Product Image Handlers
-    async handleProductImage(oldImageUrl, newImageFile, productId) {
-        try {
-            return await this.handleImageUpdate(oldImageUrl, newImageFile, {
-                width: 800,
-                height: 800,
-                quality: 85,
-                format: 'webp',
-                filename: `product-${productId}-${Date.now()}`,
-                type: 'products'
-            });
-        } catch (error) {
-            console.error('Error handling product image:', error);
-            throw error;
-        }
-    }
-
-    async handleProductGalleryImage(oldImageUrl, newImageFile, productId, index) {
-        try {
-            return await this.handleImageUpdate(oldImageUrl, newImageFile, {
-                width: 800,
-                height: 800,
-                quality: 85,
-                format: 'webp',
-                filename: `product-${productId}-gallery-${index}-${Date.now()}`,
-                type: 'products/gallery'
-            });
-        } catch (error) {
-            console.error('Error handling product gallery image:', error);
-            throw error;
-        }
-    }
-
     // Category Image Handlers
     async handleCategoryImage(oldImageUrl, newImageFile, categoryId) {
         try {
@@ -176,27 +143,6 @@ class ImageHandler {
         }
     }
 
-    // User Image Handlers
-    async handleUserProfileImage(oldImageUrl, newImageFile, userId) {
-        try {
-            return await this.handleImageUpdate(oldImageUrl, newImageFile, {
-                width: 200,
-                height: 200,
-                quality: 85,
-                format: 'webp',
-                filename: `user-${userId}-${Date.now()}`,
-                type: 'users'
-            });
-        } catch (error) {
-            console.error('Error handling user profile image:', error);
-            throw error;
-        }
-    }
-
-    // Helper method to get full path for serving images
-    getImagePath(filename) {
-        return path.join(this.uploadDir, filename);
-    }
 }
 
 module.exports = ImageHandler; 

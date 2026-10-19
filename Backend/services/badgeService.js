@@ -155,14 +155,6 @@ class BadgeService {
     }
   }
 
-  /**
-   * Get badge display configuration
-   * @param {string} badge - Badge value
-   * @returns {Object} - Display configuration
-   */
-  static getBadgeDisplay(badge) {
-    return badgeConfig.BADGE_DISPLAY[badge] || badgeConfig.BADGE_DISPLAY['none'];
-  }
 }
 
 module.exports = BadgeService;

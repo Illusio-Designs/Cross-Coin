@@ -64,15 +64,4 @@ async function checkAddressQuality(req, res) {
   }
 }
 
-// Pull the still-monolithic functions through so route consumers can
-// import everything from this one shim until the migration is done.
-const orderController = require('../orderController.js');
-
-module.exports = {
-  // Migrated — local implementation:
-  checkAddressQuality,
-  // Still in monolith — re-exported:
-  createOrder: orderController.createOrder,
-  createGuestOrder: orderController.createGuestOrder,
-  adminCreateManualOrder: orderController.adminCreateManualOrder,
-};
+module.exports = { checkAddressQuality };

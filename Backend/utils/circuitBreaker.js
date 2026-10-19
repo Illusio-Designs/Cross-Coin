@@ -64,9 +64,7 @@ class CircuitBreaker {
 
 // Singleton breakers for external services
 const breakers = {
-  shipping: new CircuitBreaker('Shipping',    { threshold: 3, timeout: 60000 }),
-  razorpay: new CircuitBreaker('Razorpay', { threshold: 3, timeout: 30000 }),
-  whatsapp: new CircuitBreaker('WhatsApp', { threshold: 5, timeout: 60000 }),
+  shipping: new CircuitBreaker('Shipping', { threshold: 3, timeout: 60000 }),
 };
 
 module.exports = { CircuitBreaker, breakers };

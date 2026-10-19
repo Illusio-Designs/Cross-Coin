@@ -98,14 +98,6 @@ const schemas = {
     reason: { label: 'Cancellation reason', rules: ['required', ['min', 5], ['max', 500]] },
   },
 
-  createAddress: {
-    address: { label: 'Address', rules: ['required', ['min', 15]] },
-    city:    { label: 'City',    rules: ['required'] },
-    state:   { label: 'State',   rules: ['required'] },
-    postal_code: { label: 'Pincode', rules: ['required', 'pincode'] },
-    phone_number: { label: 'Phone', rules: ['required', 'phone'] },
-  },
-
   register: {
     username: { label: 'Username', rules: ['required', ['min', 2], ['max', 50]] },
     email:    { label: 'Email',    rules: ['required', 'email'] },

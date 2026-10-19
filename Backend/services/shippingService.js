@@ -30,18 +30,6 @@ async function getFreeShippingThreshold(brandId = 1) {
   }
 }
 
-// Resolve the configured COD fee for a brand (brand-scoped first, then any COD row).
-async function getCodFee(brandId = 1) {
-  try {
-    const row = (await ShippingFee.findOne({ where: { orderType: 'cod', brand_id: brandId } }))
-      || (await ShippingFee.findOne({ where: { orderType: 'cod' } }));
-    return row ? Number(row.fee) : 0;
-  } catch (e) {
-    logger.error('getCodFee error: ' + e.message);
-    return 0;
-  }
-}
-
 // The delivery fee for an order. Shipping is now FREE on every order — prepaid
 // and COD alike (COD carries no fee). The per-brand threshold is retained only to
 // drive the storefront's free-shipping badge; it no longer gates the fee.
@@ -49,4 +37,4 @@ async function computeShippingFee({ orderType, subtotal = 0, brandId = 1 }) { //
   return 0;
 }
 
-module.exports = { getFreeShippingThreshold, getCodFee, computeShippingFee };
+module.exports = { getFreeShippingThreshold, computeShippingFee };

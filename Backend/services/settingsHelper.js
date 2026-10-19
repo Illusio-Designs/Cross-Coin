@@ -104,12 +104,6 @@ class SettingsHelper {
         }
     }
 
-    /**
-     * Clear all cache
-     */
-    clearAllCache() {
-        this.cache.clear();
-    }
 }
 
 // Export singleton instance

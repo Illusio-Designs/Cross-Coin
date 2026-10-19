@@ -63,7 +63,6 @@ function validate(schemas = {}) {
 
 const validateBody = (schema) => validate({ body: schema });
 const validateQuery = (schema) => validate({ query: schema });
-const validateParams = (schema) => validate({ params: schema });
 
 // ── Reusable atomic schemas ───────────────────────────────────────────
 const indianPhoneSchema = z
@@ -83,21 +82,16 @@ const passwordSchema = z
   .min(8, 'Password must be at least 8 characters')
   .max(128, 'Password is too long');
 
-const positiveIntSchema = z.coerce.number().int().positive();
-const nonNegativeIntSchema = z.coerce.number().int().nonnegative();
 
 module.exports = {
   validate,
   validateBody,
   validateQuery,
-  validateParams,
   z,
   schemas: {
     indianPhone: indianPhoneSchema,
     indianPincode: indianPincodeSchema,
     email: emailSchema,
     password: passwordSchema,
-    positiveInt: positiveIntSchema,
-    nonNegativeInt: nonNegativeIntSchema,
   },
 };

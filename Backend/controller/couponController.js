@@ -708,35 +708,6 @@ module.exports.applyCoupon = async (req, res) => {
     }
 };
 
-// Get coupon usage history for a user
-module.exports.getUserCouponHistory = async (req, res) => {
-    try {
-        const userId = req.user.id; // Always use authenticated user's ID
-
-        const usageHistory = await CouponUsage.findAll({
-            where: { userId },
-            include: [{
-                model: Coupon,
-                attributes: ['code', 'type', 'value', 'minPurchase', 'maxDiscount']
-            }],
-            order: [['usedAt', 'DESC']]
-        });
-
-        res.status(200).json({
-            success: true,
-            message: 'Coupon usage history retrieved successfully',
-            history: usageHistory
-        });
-    } catch (error) {
-        logger.error('Error fetching coupon history:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch coupon history',
-            error: error.message
-        });
-    }
-};
-
 // Update a coupon
 module.exports.updateCoupon = async (req, res) => {
     try {

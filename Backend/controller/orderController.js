@@ -2687,4 +2687,3 @@
   // Backward-compatibility re-shim for functions migrated OUT of this file.
   // When a function moves to controller/orders/<domain>Controller.js, add a
   // line here so existing `require("./orderController").<fn>` keeps working.
-  module.exports.checkAddressQuality = require("./orders/createController.js").checkAddressQuality;

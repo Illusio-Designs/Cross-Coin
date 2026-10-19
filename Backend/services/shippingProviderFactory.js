@@ -24,7 +24,7 @@ const instanceCache = new Map();
 
 /**
  * Get the shipping provider service for a brand.
- * Reads SHIPPING_PROVIDER from brand_settings (default: 'fship').
+ * Reads SHIPPING_PROVIDER from brand_settings (default: 'ithink').
  *
  * @param {number} brandId
  * @returns {Promise<ShippingService|IThinkService>}

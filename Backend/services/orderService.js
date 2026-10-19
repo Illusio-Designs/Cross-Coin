@@ -76,25 +76,6 @@ async function auditLog(orderId, action, performedBy, role, metadata = {}, trans
   });
 }
 
-// ── Webhook deduplication ─────────────────────────────────────────────────────
-
-async function isWebhookProcessed(source, eventId) {
-  const { sequelize } = require('../config/db.js');
-  const [rows] = await sequelize.query(
-    'SELECT id FROM webhooks_log WHERE event_id = ? LIMIT 1',
-    { replacements: [eventId] }
-  );
-  return rows.length > 0;
-}
-
-async function markWebhookProcessed(source, eventId) {
-  const { sequelize } = require('../config/db.js');
-  await sequelize.query(
-    'INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())',
-    { replacements: [eventId, source] }
-  );
-}
-
 // ── Confirm order (admin) ─────────────────────────────────────────────────────
 
 async function confirmOrder(orderId, adminId) {
@@ -522,8 +503,6 @@ module.exports = {
   getRtoRiskLevel,
   checkCodEligibility,
   auditLog,
-  isWebhookProcessed,
-  markWebhookProcessed,
   ALLOWED_TRANSITIONS,
   DISPATCHED_STATUSES,
 };

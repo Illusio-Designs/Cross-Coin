@@ -271,21 +271,6 @@ class CacheManager {
   }
 
   /**
-   * Get TTL of a cache key
-   */
-  async getTTL(key) {
-    try {
-      const prefixedKey = this._prefixKey(key);
-      if (this._useRedis()) {
-        return await redisService.getClient().ttl(prefixedKey);
-      }
-      return this._mem.ttl(prefixedKey);
-    } catch (error) {
-      return -2;
-    }
-  }
-
-  /**
    * Set expiration on an existing key
    */
   async expire(key, ttl) {
@@ -297,34 +282,6 @@ class CacheManager {
       return this._mem.expire(prefixedKey, ttl);
     } catch (error) {
       return 0;
-    }
-  }
-
-  /**
-   * Get all keys matching a pattern
-   */
-  async getKeys(pattern) {
-    try {
-      const prefixedPattern = pattern.startsWith(NAMESPACE) ? pattern : `${NAMESPACE}${pattern}`;
-      let keys;
-      if (this._useRedis()) {
-        const client = redisService.getClient();
-        let cursor = '0';
-        keys = [];
-        do {
-          const [newCursor, batch] = await client.scan(cursor, 'MATCH', prefixedPattern, 'COUNT', 100);
-          cursor = newCursor;
-          keys.push(...batch);
-        } while (cursor !== '0');
-      } else {
-        keys = this._mem.keys(prefixedPattern);
-      }
-      // Strip namespace prefix from returned keys for caller transparency
-      return keys.map(k => k.startsWith(NAMESPACE) ? k.slice(NAMESPACE.length) : k);
-    } catch (error) {
-      const { logger } = require('../config/logging.js');
-      logger.warn(`Cache KEYS error for pattern ${pattern}: ${error.message}`);
-      return [];
     }
   }
 

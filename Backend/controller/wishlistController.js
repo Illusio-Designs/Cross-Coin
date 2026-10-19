@@ -132,19 +132,6 @@ module.exports.getWishlist = async (req, res) => {
     }
 };
 
-// Check if a product is in the wishlist
-module.exports.checkWishlist = async (req, res) => {
-    try {
-        const where = ownerWhere(req, { productId: req.params.productId });
-        if (!where) return res.status(200).json({ isInWishlist: false });
-        const wishlistItem = await Wishlist.findOne({ where });
-        res.status(200).json({ isInWishlist: !!wishlistItem, wishlistItem });
-    } catch (error) {
-        logger.error('Error checking wishlist:', error);
-        res.status(500).json({ message: 'Failed to check wishlist status', error: error.message });
-    }
-};
-
 // Remove product from wishlist
 module.exports.removeFromWishlist = async (req, res) => {
     try {

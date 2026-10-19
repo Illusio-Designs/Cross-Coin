@@ -142,33 +142,6 @@ class RedisService {
     }
   }
 
-  /**
-   * Flush all data from current database
-   * @returns {Promise<void>}
-   */
-  async flushDb() {
-    if (!this.client) {
-      throw new Error('Redis client not initialized');
-    }
-    await this.client.flushdb();
-    console.log('✅ Redis database flushed');
-  }
-
-  /**
-   * Get connection info
-   * @returns {Object} Connection info
-   */
-  getConnectionInfo() {
-    const c = resolveRedis();
-    return {
-      host: c.host,
-      port: c.port,
-      db: c.db,
-      isConnected: this.isConnected,
-      status: this.client ? this.client.status : 'not_initialized'
-    };
-  }
-
   async get(key) {
     if (!this.client || !this.isConnected) return null;
     return this.client.get(key);
