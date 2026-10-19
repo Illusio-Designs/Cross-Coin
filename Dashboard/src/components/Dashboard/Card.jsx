@@ -117,10 +117,16 @@ function queueCard(q) {
     default: return { title: q.key, action: 'Open', detail: '' };
   }
 }
-const openQueue = (q) => {
+const openQueue = (q, brandId) => {
   if (q.view === 'whatsapp-chat') return goToView('whatsapp-chat');
+  // "Reviews to approve" lands on the Waiting tab, filtered to the brand picked here.
+  if (q.key === 'reviews') { try { sessionStorage.setItem('obz-reviews', JSON.stringify({ tab: 'pending', brandId: brandId || '' })); } catch { /* storage blocked */ } }
+  // "Out of stock → Restock" lands on the Products page's Out of stock filter.
+  if (q.key === 'stock') { try { sessionStorage.setItem('obz-products-filter', 'out'); } catch { /* storage blocked */ } }
   if (q.view) return goToView(q.view);
-  return goToView('orders', q.tab);
+  // Delivery problems / returns to refund / failed refunds open Orders → Problems on that filter.
+  const problems = { ndr: 'problems:ndr', returns_refund: 'problems:refund', refund_failed: 'problems:refund' }[q.key];
+  return goToView('orders', problems || q.tab);
 };
 const timeAgo = (d) => {
   const m = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60000));
@@ -232,7 +238,7 @@ function TodayHome() {
                 <article key={q.key} className={`hm-card p-${q.priority}`}>
                   <div className="top"><span className="tag">{PRIORITY_LABEL[q.priority]}</span><span className="count">{q.count.toLocaleString('en-IN')}</span></div>
                   <div><h3>{c.title}</h3><p>{c.detail}</p></div>
-                  <button type="button" className="go" onClick={() => openQueue(q)}>{c.action} →</button>
+                  <button type="button" className="go" onClick={() => openQueue(q, brandId)}>{c.action} →</button>
                 </article>
               );
             })}

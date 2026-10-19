@@ -156,36 +156,8 @@ function registerWorkers() {
   // (cron:shipping-sync removed — bulk auto-booking is gone; orders are booked
   // per-order from the dashboard via the shipping:sync-order job above.)
 
-  // ── cron:shipping-status-refresh ─────────────────────────────────
-  const shippingStatusRefreshHandler = async () => {
-    const orderShippingController = require('../controller/orderShippingController.js');
-    const mockReq = {
-      user: { id: 'system', username: 'cron_job' },
-      query: {
-        limit: 100,
-        status: 'confirmed,processing,booked,pickup initiated,manifested,in transit,shipped,out for delivery,undelivered,rto,exception',
-      },
-    };
-    let result = null;
-    const mockRes = {
-      json: (data) => { result = data; },
-      status: () => ({ json: () => {} }),
-    };
-    await orderShippingController.bulkRefreshShippingStatus(mockReq, mockRes);
-    logger.info(`[queue] cron:shipping-status-refresh done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
-    return result || { ok: true };
-  };
-  registerProcessor('cron:shipping-status-refresh', 1, shippingStatusRefreshHandler);
-
-  // ── cron:loyalty-expiry ───────────────────────────────────────────
-  registerProcessor('cron:loyalty-expiry', 1, async () => {
-    const loyaltyService = require('./loyaltyService.js');
-    const result = await loyaltyService.expirePoints();
-    logger.info(`[queue] cron:loyalty-expiry done: ${JSON.stringify(result || {}).slice(0, 200)}`);
-    return result;
-  });
-
-  // (cron:instagram-refresh processor removed — Instagram feed retired.)
+  // The scheduled jobs' processors (cron:*) are registered by
+  // config/cronJobs.js, which wraps every run in the job-run log.
 
   logger.info('[integrationQueue] all workers registered');
 }

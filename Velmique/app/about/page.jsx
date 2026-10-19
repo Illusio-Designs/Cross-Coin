@@ -1,9 +1,15 @@
 import Link from 'next/link';
+import { seoMeta } from '@/lib/site';
 
-export const metadata = {
-  title: 'Our Story — Velmique Maison de Parfum',
-  description: 'VELMIQUE is a maison of handcrafted Indian fragrances — rare ingredients, timeless technique and a modern sensibility.',
-};
+export const revalidate = 600;
+
+export async function generateMetadata() {
+  return seoMeta('about', {
+    title: 'Our Story — Velmique Maison de Parfum',
+    description: 'VELMIQUE is a maison of handcrafted Indian fragrances — rare ingredients, timeless technique and a modern sensibility.',
+    path: '/about',
+  });
+}
 
 export default function MaisonAbout() {
   return (
@@ -34,7 +40,7 @@ export default function MaisonAbout() {
           <p>Every composition is balanced across top, heart and base notes, so it evolves across the hours — a fresh opening, a characterful heart, and a lasting memory in the dry-down. We obsess over the details most houses overlook: the weight of the glass, the throw of the atomiser, the honesty of the ingredient list.</p>
           <h2>Luxury for every day</h2>
           <p>We make perfume to be worn, not kept for occasions. Extraordinary, yet personal — a signature you reach for every morning.</p>
-          <p style={{ marginTop: 28 }}><Link className="m-btn m-btn--fill" href="/test/shop">Discover the collection <span className="m-arrow">→</span></Link></p>
+          <p style={{ marginTop: 28 }}><Link className="m-btn m-btn--fill" href="/shop">Discover the collection <span className="m-arrow">→</span></Link></p>
         </div>
       </div></section>
     </>

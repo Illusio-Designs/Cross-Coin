@@ -33,6 +33,7 @@ const FILES = [
   'Card.css',
   'payments.css',
   'products.css',
+  'productsStock.css',
   'orders.css',
   'reports.css',
   'media.css',
@@ -48,6 +49,9 @@ const FILES = [
   'waPagesA.css',
   'waPagesB.css',
   'globalSearch.css',
+  'exceptions.css',
+  'reviews.css',
+  'customers.css',
 ];
 
 const parts = [];

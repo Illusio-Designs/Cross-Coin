@@ -33,11 +33,13 @@ module.exports = {
           muted: '#3A3128',
         },
       },
+      // The Mint type pair (loaded in app/layout.jsx) for Tailwind-styled
+      // shared components such as the cart drawer.
       fontFamily: {
-        serif:   ['Bodoni Moda', 'Didot', 'Georgia', 'serif'],
-        sans:    ['Bodoni Moda', 'Georgia', 'serif'],
-        body:    ['Manrope', 'system-ui', 'sans-serif'],
-        display: ['Bodoni Moda', 'Didot', 'Georgia', 'serif'],
+        serif:   ['Playfair Display', 'Georgia', 'serif'],
+        sans:    ['Inter', 'system-ui', 'sans-serif'],
+        body:    ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Playfair Display', 'Georgia', 'serif'],
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',

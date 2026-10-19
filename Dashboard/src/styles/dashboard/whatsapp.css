@@ -115,7 +115,7 @@
 .wst-nav-item.is-active .wst-nav-badge { background: var(--ds-color-bg); color: var(--ds-color-text); }
 
 .wst-main { flex: 1; min-width: 0; overflow: auto; position: relative; }
-.wst-main--inbox { overflow: hidden; display: flex; }
+.wst-main--inbox { overflow: hidden; display: flex; container: wib-area / inline-size; }
 .wst-page { padding: 20px clamp(14px, 2vw, 26px) 40px; box-sizing: border-box; min-width: 0; }
 
 .wst-loading,
@@ -501,8 +501,8 @@
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.wib-msg.is-in .wib-bubble { background: var(--ds-color-success-bg); border: 1px solid var(--ds-color-success-bd); border-top-left-radius: 4px; }
-.wib-msg.is-out .wib-bubble { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-top-right-radius: 4px; }
+.wib-msg.is-in .wib-bubble { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-top-left-radius: 4px; }
+.wib-msg.is-out .wib-bubble { background: var(--ds-color-success-bg); border: 1px solid var(--ds-color-success-bd); border-top-right-radius: 4px; }
 .wib-text a { color: var(--ds-color-info); }
 .wib-meta {
   display: flex;
@@ -978,8 +978,9 @@
 .wib-product-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Responsive ────────────────────────────────────────────── */
-/* Below 1200px the customer panel becomes a slide-over opened from the chat header. */
-@media (max-width: 1200px) {
+/* The inbox reacts to its own width (it sits beside the dashboard sidebar and
+   the studio menu): when narrow, the customer panel becomes a slide-over. */
+@container wib-area (max-width: 1100px) {
   .wib-info-btn { display: inline-flex; }
   .wib-side {
     position: fixed;
@@ -1015,7 +1016,7 @@
   }
 }
 
-@media (max-width: 1000px) {
+@container wib-area (max-width: 900px) {
   .wib-list { flex-basis: 290px; }
 }
 
@@ -1057,8 +1058,8 @@
   }
 }
 
-/* Phones: list OR chat, with a back button. */
-@media (max-width: 760px) {
+/* Narrow (phones): list OR chat, with a back button. */
+@container wib-area (max-width: 640px) {
   .wib { padding: 0; gap: 0; }
   .wib-list, .wib-chat { border-radius: 0; border: 0; flex: 1 1 auto; width: 100%; }
   .wib .wib-chat { display: none; }
@@ -1076,7 +1077,7 @@
   .wib-tpl { max-height: 65%; }
 }
 
-@media (max-width: 420px) {
+@container wib-area (max-width: 420px) {
   .wib-send span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .wib-qr-label { display: none; }
   .wib-order-actions { grid-template-columns: 1fr; }

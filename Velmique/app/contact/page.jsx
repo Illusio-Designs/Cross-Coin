@@ -1,18 +1,23 @@
-'use client';
+import { seoMeta } from '@/lib/site';
+import ContactForm from './ContactForm';
 
-import { useState } from 'react';
+export const revalidate = 600;
+
+export async function generateMetadata() {
+  return seoMeta('contact', {
+    title: 'Contact — Velmique',
+    description: 'Questions about an order, a fragrance or gifting? Reach the VELMIQUE concierge by email, phone or WhatsApp.',
+    path: '/contact',
+  });
+}
 
 const INFO = [
   { label: 'Email', value: 'obzusindia@gmail.com', href: 'mailto:obzusindia@gmail.com' },
   { label: 'Phone / WhatsApp', value: '+91 97128 91700', href: 'tel:+919712891700' },
-  { label: 'Address', value: 'Obzus India Pvt. Ltd., Royal Plaza, Panchasar Road, Morbi — 363641, Gujarat, India', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
+  { label: 'Address', value: 'Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi — 363641, Gujarat, India', href: 'https://maps.google.com/?q=Royal+Plaza+Panchasar+Road+Morbi+363641' },
 ];
 
 export default function MaisonContact() {
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
-  const [sent, setSent] = useState(false);
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
-
   return (
     <>
       <section className="m-wrap m-ph">
@@ -39,28 +44,20 @@ export default function MaisonContact() {
               <div className="m-sumrow" style={{ padding: '5px 0' }}><span>Saturday</span><span>10:00 AM – 4:00 PM IST</span></div>
               <div className="m-sumrow" style={{ padding: '5px 0' }}><span>Sunday</span><span>Closed</span></div>
             </div>
+            {/* Grievance Officer — required by the DPDP Act 2023 and the
+                Consumer Protection (E-Commerce) Rules 2020 (footer links here). */}
+            <div className="m-infocard" id="grievance" style={{ scrollMarginTop: 110 }}>
+              <small style={{ display: 'block', fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', color: 'var(--m-ink-faint)', marginBottom: 10 }}>Grievance Officer</small>
+              <p style={{ color: 'var(--m-ink-soft)', fontSize: 13.5, lineHeight: 1.7, marginBottom: 12 }}>For privacy requests — access, correction, deletion or withdrawing consent — or any grievance about how your personal data is handled. We respond within the timelines required under the DPDP Act, 2023.</p>
+              <div className="m-sumrow" style={{ padding: '4px 0' }}><span>Name</span><span>Divyesh Kotadiya</span></div>
+              <div className="m-sumrow" style={{ padding: '4px 0' }}><span>Entity</span><span>Obzus India Private Limited</span></div>
+              <div className="m-sumrow" style={{ padding: '4px 0' }}><span>Email</span><a href="mailto:obzusindia@gmail.com">obzusindia@gmail.com</a></div>
+              <div className="m-sumrow" style={{ padding: '4px 0' }}><span>Phone</span><a href="tel:+919712891700">+91 97128 91700</a></div>
+            </div>
           </div>
 
           <div className="m-formcard">
-            {sent ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="var(--m-accent)" strokeWidth="1.5" style={{ margin: '0 auto' }}><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg>
-                <h2 style={{ fontSize: 30, margin: '16px 0 10px' }}>Message Sent</h2>
-                <p style={{ color: 'var(--m-ink-soft)', marginBottom: 20 }}>Thank you for reaching out. We&rsquo;ll reply within 24 hours.</p>
-                <button className="m-btn m-btn--ghost" onClick={() => setSent(false)}>Send another</button>
-              </div>
-            ) : (
-              <form onSubmit={(e) => { e.preventDefault(); setSent(true); }}>
-                <span className="m-eyebrow">Send a message</span>
-                <div className="m-grid2" style={{ marginTop: 16 }}>
-                  <div className="m-field"><label className="m-label">Name</label><input className="m-input" value={form.name} onChange={set('name')} required /></div>
-                  <div className="m-field"><label className="m-label">Email</label><input className="m-input" type="email" value={form.email} onChange={set('email')} required /></div>
-                </div>
-                <div className="m-field"><label className="m-label">Subject</label><input className="m-input" value={form.subject} onChange={set('subject')} /></div>
-                <div className="m-field"><label className="m-label">Message</label><textarea className="m-textarea" value={form.message} onChange={set('message')} required /></div>
-                <button type="submit" className="m-btn m-btn--fill" style={{ width: '100%', justifyContent: 'center' }}>Send message</button>
-              </form>
-            )}
+            <ContactForm />
           </div>
         </div>
       </div>

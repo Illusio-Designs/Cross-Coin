@@ -139,6 +139,15 @@ function Dots({ label }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// One of our messages from the last 10 minutes that WhatsApp hasn't confirmed
+// (delivered / read) or rejected yet.
+function hasUnconfirmed(list) {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  return (list || []).some((m) => m.direction === 'outbound'
+    && (m.status === 'sent' || m.status === 'sending' || !m.status)
+    && new Date(m.createdAt || m.sent_at || 0).getTime() > cutoff);
+}
+
 export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUnreadChange }) {
   const { canAccessView } = useAuth();
   const canOrders = canAccessView ? canAccessView('orders') : true;
@@ -173,6 +182,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   useEffect(() => { activeRef.current = activeConv; }, [activeConv]);
   const activeId = activeConv?.id || null;
   const [messages, setMessages] = useState([]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [msgLoading, setMsgLoading] = useState(false);
   const [msgError, setMsgError] = useState(null);
   const [hasMoreMsgs, setHasMoreMsgs] = useState(false);
@@ -411,6 +422,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       activeRef.current = { ...open, last_message_at: updated.last_message_at };
       setActiveConv((prev) => (prev && prev.id === open.id ? { ...prev, last_message_at: updated.last_message_at, last_message: updated.last_message } : prev));
       refreshActiveMessages(open.id);
+    } else if (hasUnconfirmed(messagesRef.current)) {
+      // Delivered / read / failed ticks don't move last_message_at, so keep
+      // re-reading the open chat while one of our recent messages is unconfirmed.
+      refreshActiveMessages(open.id);
     }
   };
   const onLiveRef = useRef(onLive);
@@ -533,6 +548,11 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       if (!data?.success) throw new Error(data?.message || 'Could not send the message');
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...data.message, _quotedMsg: msg._quotedMsg || null } : m)));
       setConversations((prev) => prev.map((c) => (c.id === msg.conversation_id ? { ...c, last_message: msg.body, last_message_at: new Date().toISOString(), waiting_since: null } : c)));
+      // The send to WhatsApp finishes in the background — pick up "Not sent"
+      // (or the first tick) without waiting for the next live update.
+      [4000, 12000].forEach((ms) => setTimeout(() => {
+        if (activeRef.current?.id === msg.conversation_id) refreshActiveMessages(msg.conversation_id);
+      }, ms));
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m)));
       if (e?.response?.status === 409 && e.response.data?.code === 'WINDOW_CLOSED') {

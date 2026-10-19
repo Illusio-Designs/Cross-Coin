@@ -213,7 +213,7 @@ export default function AnalyticsPage({ brandId = '', brands = [], isAdmin = fal
                         : 'An admin can see why in Settings → Failed sends.'}
                     </span>
                   ) : (
-                    <span className="wpb-hint">Every message was delivered.</span>
+                    <span className="wpb-hint">No failed sends.</span>
                   )}
                 </>
               )}

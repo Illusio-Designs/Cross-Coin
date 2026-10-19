@@ -36,12 +36,49 @@ function _prune() {
   for (const [k] of oldest) _recent.delete(k);
 }
 
+// ── Error count (System health page: "Errors · 24 h") ─────────────────────
+// Every report() is counted — before dedupe, and even with alerts off — in
+// hourly Redis buckets (shared by all app processes, kept 25 h), with an
+// in-process fallback when Redis is down. Two cheap commands per error.
+const HOUR_MS = 3600 * 1000;
+const _localErrorTimes = []; // timestamps, fallback only
+function _redis() {
+  try { const r = require('./redisService.js'); return r.isReady() ? r.getClient() : null; } catch (_) { return null; }
+}
+function _countError() {
+  try {
+    const now = Date.now();
+    _localErrorTimes.push(now);
+    while (_localErrorTimes.length && (_localErrorTimes[0] < now - 24 * HOUR_MS || _localErrorTimes.length > 5000)) _localErrorTimes.shift();
+    const redis = _redis();
+    if (redis) {
+      const key = `errors:hour:${Math.floor(now / HOUR_MS)}`;
+      redis.multi().incr(key).expire(key, 25 * 3600).exec().catch(() => {});
+    }
+  } catch (_) { /* counting must never throw */ }
+}
+
+/** Errors reported in the last 24 hours ({ count, source: 'redis'|'process' }). */
+async function errorsLast24h() {
+  const redis = _redis();
+  if (redis) {
+    try {
+      const h = Math.floor(Date.now() / HOUR_MS);
+      const vals = await redis.mget(Array.from({ length: 24 }, (_, i) => `errors:hour:${h - i}`));
+      return { count: vals.reduce((n, v) => n + (Number(v) || 0), 0), source: 'redis' };
+    } catch (_) { /* fall through */ }
+  }
+  const since = Date.now() - 24 * HOUR_MS;
+  return { count: _localErrorTimes.filter((t) => t >= since).length, source: 'process' };
+}
+
 /**
  * @param {string} kind    short category, e.g. 'Server error', 'Uncaught exception'
  * @param {Error|any} err  the error
  * @param {{method?:string, url?:string, userId?:string|number}} context
  */
 async function report(kind, err, context = {}) {
+  _countError();
   try {
     if (String(process.env.ERROR_ALERTS).toLowerCase() === 'off') return;
 
@@ -98,4 +135,4 @@ async function notify(title, lines = [], { dedupeKey } = {}) {
   } catch (_) { /* never throw */ }
 }
 
-module.exports = { report, notify };
+module.exports = { report, notify, errorsLast24h };

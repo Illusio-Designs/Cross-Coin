@@ -116,8 +116,18 @@ export function WhatsAppManager() {
       const id = takeDeepLinkConversation();
       if (id) goTo('inbox', { conversationId: id });
     };
+    // A link or typed URL that only changes the #section.
+    const onHash = () => {
+      const fromHash = pageFromHash();
+      setPage(fromHash || 'inbox');
+      setExtra(null);
+    };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    window.addEventListener('hashchange', onHash);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('hashchange', onHash);
+    };
   }, [goTo]);
 
   useEffect(() => {

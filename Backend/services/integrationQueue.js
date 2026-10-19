@@ -15,6 +15,7 @@
  *   enqueue(jobName, payload, opts?)  → adds a job to the queue
  *   registerProcessor(jobName, fn)    → wires a worker for a job type
  *   getStats()                        → counts for dashboard display
+ *   getHealth()                       → waiting / active / failed in 24 h
  *   close()                           → graceful shutdown
  *
  * Job processors run in the same Node process for now (cheaper than
@@ -144,6 +145,23 @@ async function getStats() {
   }
 }
 
+// For the System health page: what's waiting/running now and how many jobs
+// failed for good in the last 24 h (Bull keeps failed jobs 7 days / 500).
+// null when Bull isn't in use.
+async function getHealth() {
+  tryInit();
+  if (!bullAvailable || !queue) return null;
+  const counts = await queue.getJobCounts();
+  const since = Date.now() - 24 * 3600 * 1000;
+  const failed = await queue.getFailed(0, 499);
+  return {
+    waiting: counts.waiting || 0,
+    active: counts.active || 0,
+    delayed: counts.delayed || 0,
+    failed_24h: failed.filter((j) => j && (j.finishedOn || j.processedOn || j.timestamp || 0) >= since).length,
+  };
+}
+
 async function close() {
   if (queue && bullAvailable) {
     try { await queue.close(); } catch {}
@@ -152,4 +170,4 @@ async function close() {
   bullAvailable = false;
 }
 
-module.exports = { enqueue, registerProcessor, getStats, close };
+module.exports = { enqueue, registerProcessor, getStats, getHealth, close };

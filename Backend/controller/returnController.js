@@ -64,6 +64,15 @@ async function getWindowDays() {
   return RETURN_WINDOW_DAYS;
 }
 
+// Dashboard staff work across brands without a brand header, so act with the
+// order's own brand (Razorpay keys, courier account, WhatsApp sender).
+const brandOf = (req, ret, order) => (order && order.brand_id) || (ret && ret.brand_id) || req.brandId || 1;
+
+// Timeline entry on Orders → Problems (best-effort).
+function logReturnEvent(ret, text, opts) {
+  return require('../services/exceptionsService.js').logEvent('return', ret.id, ret.order_id, text, opts);
+}
+
 async function notify(fnName, phone, data, brandId) {
   try {
     if (!phone) return;
@@ -450,6 +459,7 @@ module.exports.uploadProof = async (req, res) => {
     if (!req.file) return res.status(400).json({ success: false, message: 'No proof image uploaded' });
     const [stored] = await storeUploads([req.file], '/returns');
     await ret.update({ payout_proof: stored });
+    await logReturnEvent(ret, 'UPI payment screenshot uploaded', { tone: 'info', actorId: req.user.id });
     return res.json({ success: true, message: 'Proof uploaded', payout_proof: proofUrl(stored) });
   } catch (error) {
     logger.error('uploadProof error:', error);
@@ -462,7 +472,6 @@ module.exports.uploadProof = async (req, res) => {
 // received at the warehouse and staff press Issue refund.
 module.exports.approveReturn = async (req, res) => {
   try {
-    const brandId = req.brandId || 1;
     const ret = await Return.findByPk(req.params.id, { include: [{ model: Order, as: 'Order' }] });
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'This return is already refunded.' });
@@ -470,6 +479,7 @@ module.exports.approveReturn = async (req, res) => {
 
     const order = ret.Order || await Order.findByPk(ret.order_id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const brandId = brandOf(req, ret, order);
 
     const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
     let refundAmount = req.body.refund_amount != null ? Number(req.body.refund_amount) : eligible;
@@ -484,8 +494,11 @@ module.exports.approveReturn = async (req, res) => {
       status: ['requested', 'under_review'].includes(ret.status) ? 'approved' : ret.status,
     });
 
+    const hadAwb = !!ret.pickup_awb;
     const awb = await bookReversePickup(ret, order, brandId);
     await ret.reload();
+    if (awb && !hadAwb) await logReturnEvent(ret, `Pickup booked with the courier · AWB ${awb}`, { tone: 'info' });
+    else if (!awb) await logReturnEvent(ret, 'Pickup wasn’t booked automatically — arrange it in the courier panel', { tone: 'warn' });
     const user = await User.findByPk(ret.user_id);
     notify('sendReturnUpdate', user && user.phone, {
       name: user && user.username, returnNumber: ret.return_number, status: 'approved',
@@ -514,6 +527,7 @@ module.exports.markPickedUp = async (req, res) => {
       return res.status(400).json({ success: false, message: `Cannot mark picked up from "${ret.status}".` });
     }
     await ret.update({ status: 'picked_up', pickup_status: 'picked_up' });
+    await logReturnEvent(ret, 'Marked as picked up', { tone: 'info', actorId: req.user.id });
     return res.json({ success: true, message: 'Marked as picked up.', return: serialize(ret) });
   } catch (error) {
     logger.error('markPickedUp error:', error);
@@ -527,7 +541,6 @@ module.exports.markPickedUp = async (req, res) => {
 // (Issue refund) so staff check the item first.
 module.exports.receiveReturn = async (req, res) => {
   try {
-    const brandId = req.brandId || 1;
     const ret = await Return.findByPk(req.params.id, { include: [{ model: Order, as: 'Order' }] });
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (!['approved', 'pickup_scheduled', 'picked_up', 'received'].includes(ret.status)) {
@@ -535,11 +548,13 @@ module.exports.receiveReturn = async (req, res) => {
     }
     const order = ret.Order || await Order.findByPk(ret.order_id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const brandId = brandOf(req, ret, order);
 
     const restock = req.body.restock !== false && req.body.restock !== 'false';
     const units = restock ? await restockReturn(ret, order, req.user.id) : 0;
     await ret.update({ status: 'received', pickup_status: 'received' });
     const stockNote = restock ? (units > 0 ? ` ${units} unit(s) back in stock.` : ' (stock already restored)') : ' Not restocked.';
+    await logReturnEvent(ret, `Received & checked —${restock ? (units > 0 ? ` ${units} unit(s) back in stock` : ' stock was already restored') : ' not put back in stock'}`, { tone: 'good', actorId: req.user.id });
 
     const next = ret.is_cod
       ? 'Pay the customer by UPI, upload the payout screenshot, then press Issue refund.'
@@ -563,7 +578,6 @@ module.exports.receiveReturn = async (req, res) => {
 // the manual UPI payout (screenshot required). Also retries a failed refund.
 module.exports.refundReturn = async (req, res) => {
   try {
-    const brandId = req.brandId || 1;
     const ret = await Return.findByPk(req.params.id, { include: [{ model: Order, as: 'Order' }] });
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'Already refunded.' });
@@ -571,6 +585,8 @@ module.exports.refundReturn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Mark the parcel as received before refunding.' });
     }
     const order = ret.Order || await Order.findByPk(ret.order_id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const brandId = brandOf(req, ret, order);
     // The amount is decided here, after the parcel is received and checked
     // (deduct shipping / damage charges for a part refund).
     if (req.body.refund_amount != null) {
@@ -582,7 +598,13 @@ module.exports.refundReturn = async (req, res) => {
       const refundAmount = Math.round(amt * 100) / 100;
       await ret.update({ refund_amount: refundAmount, charges_deducted: Math.max(0, +(eligible - refundAmount).toFixed(2)) });
     }
-    const r = await issueReturnRefund(ret, order, req.user.id, brandId);
+    let r;
+    try {
+      r = await issueReturnRefund(ret, order, req.user.id, brandId);
+    } catch (e) {
+      await logReturnEvent(ret, `Refund failed — ${String(e.message).slice(0, 200)}`, { tone: 'bad', actorId: req.user.id });
+      return res.status(400).json({ success: false, message: e.message });
+    }
     await ret.reload();
     if (!r.ok) return res.status(400).json({ success: false, code: r.code, message: r.message, return: serialize(ret) });
     return res.json({ success: true, message: r.message, return: serialize(ret), refund: r.refund });
@@ -598,7 +620,6 @@ module.exports.refundReturn = async (req, res) => {
 // return and the Refund action disappears from the orders page.
 module.exports.rejectReturn = async (req, res) => {
   try {
-    const brandId = req.brandId || 1;
     const ret = await Return.findByPk(req.params.id);
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'Already refunded.' });
@@ -614,6 +635,7 @@ module.exports.rejectReturn = async (req, res) => {
     });
 
     const order = await Order.findByPk(ret.order_id);
+    const brandId = brandOf(req, ret, order);
     const stillOpen = await Return.count({ where: { order_id: ret.order_id, status: OPEN_STATUSES } });
     if (order && order.status === 'return_initiated' && stillOpen === 0) {
       await order.update({ status: 'delivered' });
@@ -651,7 +673,13 @@ module.exports.applyReversePickupEvent = async (awb, courierStatus) => {
     patch.status = 'picked_up';
   }
   if (/deliver/.test(st)) patch.pickup_status = 'delivered_to_warehouse';
+  const changed = patch.pickup_status !== ret.pickup_status || (patch.status && patch.status !== ret.status);
   await ret.update(patch);
+  if (changed) {
+    await logReturnEvent(ret, patch.pickup_status === 'delivered_to_warehouse'
+      ? 'Courier says the parcel is back at the warehouse'
+      : `Courier update: ${String(courierStatus || '').slice(0, 60)}`, { tone: 'info' });
+  }
   logger.info(`↩︎ Reverse pickup ${awb} for ${ret.return_number}: ${courierStatus}`);
   return true;
 };

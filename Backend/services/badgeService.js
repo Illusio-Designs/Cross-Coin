@@ -91,13 +91,16 @@ class BadgeService {
   }
 
   /**
-   * Update product badge if changed
+   * Update product badge if changed (skipped while the badge is locked)
    * @param {Object} product - Product instance
    * @param {Object} transaction - Sequelize transaction
    * @returns {Promise<boolean>} - True if badge was updated
    */
   static async updateBadgeIfChanged(product, transaction = null) {
     try {
+      // A badge staff set by hand (products.badge_locked) is never replaced —
+      // not on save, not by an order, not by the nightly refresh.
+      if (await require('./productStockService.js').isBadgeLocked(product.id, transaction)) return false;
       const newBadge = await this.calculateBadge(product, transaction);
       const oldBadge = product.badge;
 

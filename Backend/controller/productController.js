@@ -19,6 +19,7 @@ const { Op } = require("sequelize");
 const fs = require("fs/promises");
 const fsSync = require("fs");
 const BadgeService = require("../services/badgeService.js");
+const ProductStock = require("../services/productStockService.js");
 const ProductService = require("../services/productService.js");
 const cacheManager = require("../services/cacheManager.js");
 const imagekitService = require("../services/imagekitService.js");
@@ -329,8 +330,71 @@ const handleProductAttributes = async (variation, transaction) => {
   return productAttributes;
 };
 
+// Per-brand settings from the editor: [{ brand_id, status, price_override,
+// stock_override }]. Returns null when the client didn't send any (older
+// clients send only brandIds). Throws on bad values.
+const parseBrandSettings = (raw) => {
+  if (raw === undefined || raw === null || raw === '') return null;
+  let list;
+  try { list = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { throw new Error('Invalid brand settings'); }
+  if (!Array.isArray(list)) throw new Error('Invalid brand settings');
+  const seen = new Set();
+  return list.map((b) => {
+    const brandId = parseInt(b?.brand_id ?? b?.id, 10);
+    if (!Number.isFinite(brandId) || brandId <= 0) throw new Error('Invalid brand in brand settings');
+    if (seen.has(brandId)) throw new Error('Brand listed twice in brand settings');
+    seen.add(brandId);
+    const status = b.status === 'inactive' ? 'inactive' : 'active';
+    const blank = (v) => v === undefined || v === null || String(v).trim() === '';
+    let price = null;
+    if (!blank(b.price_override)) {
+      price = Number(b.price_override);
+      if (!Number.isFinite(price) || price <= 0) throw new Error('Invalid price for a brand — use a number above 0 or leave it empty');
+      price = Math.round(price * 100) / 100;
+    }
+    let stockCap = null;
+    if (!blank(b.stock_override)) {
+      if (!/^\d+$/.test(String(b.stock_override).trim())) throw new Error('Invalid stock for a brand — use a whole number or leave it empty');
+      stockCap = Number(String(b.stock_override).trim());
+    }
+    return { brand_id: brandId, status, price_override: price, stock_override: stockCap };
+  });
+};
+
+// Make the product's brand links match `brandIds`, keeping each existing
+// link's status/overrides unless `settings` (from the editor) says otherwise.
+// (Older code deleted and re-created every link on save, which silently reset
+// a brand's "hidden" status and its overrides.)
+const syncProductBrands = async (productId, brandIds, settings, transaction) => {
+  const { ProductBrand } = require('../model/productBrandModel.js');
+  const ids = [...new Set(brandIds.map(Number).filter((n) => Number.isFinite(n) && n > 0))];
+  const existing = await ProductBrand.findAll({ where: { product_id: productId }, transaction });
+  const byBrand = new Map(existing.map((r) => [Number(r.brand_id), r]));
+  for (const row of existing) {
+    if (!ids.includes(Number(row.brand_id))) await row.destroy({ transaction });
+  }
+  for (const brandId of ids) {
+    const s = settings ? settings.find((x) => x.brand_id === brandId) : null;
+    const fields = s ? { status: s.status, price_override: s.price_override, stock_override: s.stock_override } : {};
+    const row = byBrand.get(brandId);
+    if (row) {
+      if (s) await row.update(fields, { transaction });
+    } else {
+      await ProductBrand.create({ product_id: productId, brand_id: brandId, status: 'active', ...fields }, { transaction });
+    }
+  }
+};
+
+// Sellable stock (active sizes) — the total productAlertService watches.
+const sellableStock = (variations) => (variations || [])
+  .filter((v) => (v.status || 'active') !== 'inactive')
+  .reduce((sum, v) => sum + Math.max(0, Number(v.stock) || 0), 0);
+
 // Create a new product
 module.exports.createProduct = async (req, res) => {
+  // Schema first (adds products.badge_locked once) — must run before the
+  // transaction below touches `products`.
+  await ProductStock.ensureSchema().catch(() => {});
   const transaction = await sequelize.transaction();
 
   try {
@@ -349,7 +413,11 @@ module.exports.createProduct = async (req, res) => {
     const variations = JSON.parse(req.body.variations || "[]");
     const seo = JSON.parse(req.body.seo || "{}");
     const images = req.files;
-    const brandIds = JSON.parse(req.body.brandIds || "[]"); // ✅ Array of brand IDs
+    const brandSettings = parseBrandSettings(req.body.brandSettings);
+    const brandIds = brandSettings
+      ? brandSettings.map((b) => b.brand_id)
+      : JSON.parse(req.body.brandIds || "[]"); // ✅ Array of brand IDs
+    const badgeLock = ProductStock.parseBadgeLock(req.body);
 
     logger.debug("brandIds received:", brandIds);
     logger.debug("req.body.brandIds raw:", req.body.brandIds);
@@ -404,15 +472,8 @@ module.exports.createProduct = async (req, res) => {
       { transaction }
     );
 
-    // ✅ Assign product to multiple brands
-    const { ProductBrand } = require('../model/productBrandModel.js');
-    for (const brandId of brandIds) {
-      await ProductBrand.create({
-        product_id: product.id,
-        brand_id: brandId,
-        status: 'active'
-      }, { transaction });
-    }
+    // ✅ Assign product to multiple brands (with per-brand settings if sent)
+    await syncProductBrands(product.id, brandIds, brandSettings, transaction);
 
     // Create SEO record — all field defaults (title, description, OG,
     // canonical, schema.org JSON-LD) come from buildProductSeoData so
@@ -508,9 +569,12 @@ module.exports.createProduct = async (req, res) => {
       }
     }
 
-    // Calculate and set initial badge
-    const badge = await BadgeService.calculateBadge(product, transaction);
+    // Initial badge: the one staff fixed by hand, else the automatic one
+    const badge = badgeLock.locked
+      ? badgeLock.badge
+      : await BadgeService.calculateBadge(product, transaction);
     await product.update({ badge }, { transaction });
+    if (badgeLock.locked) await ProductStock.setBadgeLocked(product.id, true, transaction);
 
     // Handle product-level images
     if (images && images.length > 0) {
@@ -615,8 +679,8 @@ module.exports.getAllProducts = async (req, res) => {
       ];
     }
 
-    // Lean "list mode" for the admin products TABLE: it only shows name, badge,
-    // category, brands, rating and status — so we skip variations, product/
+    // Lean "list mode" for admin pickers (pack pricing, FAQs): name, badge,
+    // category, brands, rating and status only — so we skip variations, product/
     // variation images, SEO and the heavy TEXT columns. This avoids the join
     // row-explosion + DISTINCT that made this query take 1–2s. Full data still
     // loads on Edit via GET /api/products/:id. Opt-in via ?view=list so other
@@ -634,10 +698,6 @@ module.exports.getAllProducts = async (req, res) => {
       ? [
           { model: Category, attributes: ['id', 'name', 'slug'] },
           { ...brandInclude, attributes: ['id', 'name', 'slug', 'display_name'] },
-          // Lightweight SEO join (3 tracked columns only) so the listing can
-          // show a per-product "SEO gaps" badge without the full ProductSEO
-          // payload. required:false → products with no SEO row still list.
-          { model: ProductSEO, as: 'ProductSEO', attributes: ['metaTitle', 'metaDescription', 'ogImage'], required: false },
         ]
       : [
           { model: Category, attributes: ['id', 'name', 'slug'] },
@@ -686,21 +746,6 @@ module.exports.getAllProducts = async (req, res) => {
         price_override: brand.ProductBrand?.price_override,
         stock_override: brand.ProductBrand?.stock_override
       })) : [];
-      // Per-product SEO gap flags for the listing's "SEO" column. A field is a
-      // gap when empty/absent; a product with no SEO row at all = all 3 missing.
-      // Same definition the SEO Health summary uses (metaTitle/metaDescription/
-      // ogImage). Only computed in listMode (the only mode that joins the lean
-      // ProductSEO columns); the `seo` blob is stripped to keep the row small.
-      if (listMode) {
-        const seo = formatted.seo || {};
-        const miss = (v) => v == null || String(v).trim() === '';
-        const seoGaps = [];
-        if (miss(seo.metaTitle)) seoGaps.push('metaTitle');
-        if (miss(seo.metaDescription)) seoGaps.push('metaDescription');
-        if (miss(seo.ogImage)) seoGaps.push('ogImage');
-        formatted.seoGaps = seoGaps;
-        delete formatted.seo;
-      }
       return formatted;
     });
 
@@ -719,6 +764,49 @@ module.exports.getAllProducts = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to get products", error: error.message });
+  }
+};
+
+// ── Admin Products page (stock-first list) ───────────────────────────────
+// GET /api/products/admin/stock-list?search&brandId&stock=all|out|low|slow|hidden&sort&page&limit
+module.exports.getStockList = async (req, res) => {
+  try {
+    const brandId = parseInt(req.query.brandId, 10) || null;
+    const data = await ProductStock.listStock({
+      search: req.query.search,
+      brandId,
+      stock: String(req.query.stock || 'all'),
+      sort: String(req.query.sort || 'attention'),
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+    res.json({ success: true, ...data });
+  } catch (error) {
+    logger.error('getStockList failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load products' });
+  }
+};
+
+// GET /api/products/admin/:id/variations — sizes with stock, sold 30 d, waiting
+module.exports.getVariationStock = async (req, res) => {
+  try {
+    const data = await ProductStock.getVariations(req.params.id);
+    if (!data) return res.status(404).json({ success: false, message: 'Product not found' });
+    res.json({ success: true, ...data });
+  } catch (error) {
+    logger.error('getVariationStock failed:', error);
+    res.status(500).json({ success: false, message: 'Could not load sizes' });
+  }
+};
+
+// PATCH /api/products/admin/variations/:variationId/stock  { stock, expected? }
+module.exports.patchVariationStock = async (req, res) => {
+  try {
+    const out = await ProductStock.updateVariationStock(req.params.variationId, req.body?.stock, req.body?.expected);
+    res.status(out.status).json(out.body);
+  } catch (error) {
+    logger.error('patchVariationStock failed:', error);
+    res.status(500).json({ success: false, message: 'Could not save the stock' });
   }
 };
 
@@ -751,7 +839,8 @@ module.exports.getProduct = async (req, res) => {
     }
 
     const formattedProduct = formatProductResponse(product);
-    
+
+
     // Add brand assignments
     formattedProduct.brands = product.Brands ? product.Brands.map(brand => ({
       id: brand.id,
@@ -774,7 +863,9 @@ module.exports.getProduct = async (req, res) => {
 
 // Update product
 module.exports.updateProduct = async (req, res) => {
+  await ProductStock.ensureSchema().catch(() => {});
   const transaction = await sequelize.transaction();
+  let restockCheck = null;
 
   try {
     const { logger } = require('../config/logging.js');
@@ -824,6 +915,9 @@ module.exports.updateProduct = async (req, res) => {
     if (!product) {
       throw new Error("Product not found");
     }
+    const sellableBefore = sellableStock(product.ProductVariations);
+    const brandSettings = parseBrandSettings(req.body.brandSettings);
+    const badgeLock = ProductStock.parseBadgeLock(req.body);
 
     // --- Delete product-level images marked for deletion ---
     if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
@@ -903,20 +997,13 @@ module.exports.updateProduct = async (req, res) => {
       { transaction }
     );
 
-    // Update brand assignments
-    const brandIds = JSON.parse(req.body.brandIds || "[]");
+    // Update brand assignments (keeps each link's status/overrides unless the
+    // editor sent new ones)
+    const brandIds = brandSettings
+      ? brandSettings.map((b) => b.brand_id)
+      : JSON.parse(req.body.brandIds || "[]");
     if (brandIds.length > 0) {
-      const { ProductBrand } = require('../model/productBrandModel.js');
-      // Remove existing brand assignments
-      await ProductBrand.destroy({ where: { product_id: id }, transaction });
-      // Add new brand assignments
-      for (const brandId of brandIds) {
-        await ProductBrand.create({
-          product_id: id,
-          brand_id: Number(brandId),
-          status: 'active'
-        }, { transaction });
-      }
+      await syncProductBrands(product.id, brandIds, brandSettings, transaction);
     }
 
     // Update or create SEO data — all derivation handled by the helper so we
@@ -1183,10 +1270,28 @@ module.exports.updateProduct = async (req, res) => {
     
     // If no new images and no library images, preserve all existing images (do nothing)
 
-    // Recalculate and update badge
+    // Badge: a fixed (locked) badge is saved as chosen; otherwise recalculate
+    if (badgeLock.provided) {
+      await ProductStock.setBadgeLocked(product.id, badgeLock.locked, transaction);
+      if (badgeLock.locked) await product.update({ badge: badgeLock.badge }, { transaction });
+    }
     await BadgeService.updateBadgeIfChanged(product, transaction);
 
+    const [[sellableRow]] = await sequelize.query(
+      `SELECT COALESCE(SUM(CASE WHEN status = 'active' THEN GREATEST(stock, 0) ELSE 0 END), 0) AS n
+         FROM product_variations WHERE productId = ?`,
+      { replacements: [product.id], transaction }
+    );
+    if (sellableBefore <= 0 && Number(sellableRow?.n) > 0) restockCheck = product.id;
+
     await transaction.commit();
+
+    // Sold out → back in stock: same alert check the inline stock edit runs.
+    if (restockCheck) {
+      const alerts = require('../services/productAlertService.js');
+      alerts.recordSoldOut(restockCheck).then(() => alerts.checkProductNow(restockCheck))
+        .catch((e) => logger.warn(`[ProductAlerts] restock check for ${restockCheck} failed: ${e.message}`));
+    }
 
     // Drop cached storefront product lists so edits (price, stock, etc.) show immediately
     await cacheManager.invalidate('products:*');
@@ -1419,63 +1524,72 @@ module.exports.listProductSeo = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = (req.query.search || '').toString().trim();
     const gapsOnly = req.query.gaps_only === 'true';
-    const brandId = parseInt(req.query.brand_id, 10) || null;
+    const brandId = parseInt(req.query.brand_id ?? req.query.brandId, 10) || null;
 
-    const productWhere = {};
-    if (brandId) productWhere.brand_id = brandId;
+    // A product has a gap when its meta title or meta description is empty,
+    // or any of its photos has no alt text ("image text").
+    const where = [];
+    const R = { limit, offset, brandId };
+    if (brandId) where.push('EXISTS (SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId)');
     if (search) {
-      productWhere[Op.or] = [
-        { name: { [Op.like]: `%${search}%` } },
-        { slug: { [Op.like]: `%${search}%` } },
-      ];
+      R.q = `%${search.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+      where.push('(p.name LIKE :q OR p.slug LIKE :q)');
     }
-
-    const seoInclude = {
-      model: ProductSEO,
-      as: 'ProductSEO',
-      required: false,
-      attributes: ['metaTitle', 'metaDescription', 'metaKeywords', 'ogImage', 'canonicalUrl'],
-    };
-    if (gapsOnly) {
-      seoInclude.where = {
-        [Op.or]: [
-          { metaTitle: null }, { metaTitle: '' },
-          { metaDescription: null }, { metaDescription: '' },
-          { ogImage: null }, { ogImage: '' },
-        ],
-      };
-      seoInclude.required = false;
-    }
-
-    const { rows, count } = await Product.findAndCountAll({
-      where: productWhere,
-      include: [seoInclude],
-      attributes: ['id', 'name', 'slug', 'updatedAt'],
-      order: [['updatedAt', 'DESC']],
-      limit,
-      offset,
-      distinct: true,
-    });
+    const base = `
+      SELECT p.id, p.name, p.slug, p.updatedAt,
+             s.meta_title, s.meta_description, s.meta_keywords, s.og_image, s.canonical_url,
+             COALESCE(im.n, 0) AS image_n, COALESCE(im.no_alt, 0) AS image_no_alt, im.first_alt
+        FROM products p
+        LEFT JOIN product_seo s ON s.product_id = p.id
+        LEFT JOIN (SELECT product_id, COUNT(*) AS n,
+                          SUM(alt_text IS NULL OR TRIM(alt_text) = '') AS no_alt,
+                          MAX(NULLIF(TRIM(alt_text), '')) AS first_alt
+                     FROM product_images GROUP BY product_id) im ON im.product_id = p.id
+       WHERE ${where.length ? where.join(' AND ') : '1=1'}`;
+    const gapSql = `(COALESCE(TRIM(t.meta_title), '') = '' OR COALESCE(TRIM(t.meta_description), '') = '' OR t.image_no_alt > 0)`;
+    const filter = gapsOnly ? gapSql : '1=1';
+    const sel = { replacements: R, type: sequelize.QueryTypes.SELECT };
+    const [rows, [cnt], [gapCnt]] = await Promise.all([
+      sequelize.query(`SELECT t.* FROM (${base}) t WHERE ${filter} ORDER BY t.updatedAt DESC, t.id DESC LIMIT :limit OFFSET :offset`, sel),
+      sequelize.query(`SELECT COUNT(*) AS n FROM (${base}) t WHERE ${filter}`, sel),
+      sequelize.query(`SELECT COUNT(*) AS n FROM (${base}) t WHERE ${gapSql}`, sel),
+    ]);
+    const count = Number(cnt?.n) || 0;
+    const str = (v) => (v == null ? '' : String(v));
 
     return res.json({
       success: true,
       total: count,
+      gapsTotal: Number(gapCnt?.n) || 0,
       page,
       limit,
       pages: Math.ceil(count / limit),
-      items: rows.map(r => ({
-        id: r.id,
-        name: r.name,
-        slug: r.slug,
-        updatedAt: r.updatedAt,
-        seo: r.ProductSEO ? {
-          metaTitle: r.ProductSEO.metaTitle || '',
-          metaDescription: r.ProductSEO.metaDescription || '',
-          metaKeywords: r.ProductSEO.metaKeywords || '',
-          ogImage: r.ProductSEO.ogImage || '',
-          canonicalUrl: r.ProductSEO.canonicalUrl || '',
-        } : { metaTitle: '', metaDescription: '', metaKeywords: '', ogImage: '', canonicalUrl: '' },
-      })),
+      items: rows.map(r => {
+        const seo = {
+          metaTitle: str(r.meta_title),
+          metaDescription: str(r.meta_description),
+          metaKeywords: str(r.meta_keywords),
+          ogImage: str(r.og_image),
+          canonicalUrl: str(r.canonical_url),
+        };
+        const imageCount = Number(r.image_n) || 0;
+        const imagesMissingAlt = Number(r.image_no_alt) || 0;
+        return {
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+          updatedAt: r.updatedAt,
+          seo,
+          imageCount,
+          imagesMissingAlt,
+          imageAlt: str(r.first_alt),
+          gaps: [
+            !seo.metaTitle.trim() && 'metaTitle',
+            !seo.metaDescription.trim() && 'metaDescription',
+            imagesMissingAlt > 0 && 'imageAlt',
+          ].filter(Boolean),
+        };
+      }),
     });
   } catch (err) {
     logger.error('listProductSeo failed:', err.message);
@@ -1485,10 +1599,12 @@ module.exports.listProductSeo = async (req, res) => {
 
 /**
  * PUT /api/admin/seo/products/bulk
- * Body: { items: [{ id, metaTitle?, metaDescription?, metaKeywords?, ogImage?, canonicalUrl? }] }
+ * Body: { items: [{ id, metaTitle?, metaDescription?, metaKeywords?, ogImage?, canonicalUrl?, imageAlt? }] }
  *
  * Updates only the SEO fields on the supplied products. Each row's
- * ProductSEO is upserted; the rest of the product record is untouched.
+ * ProductSEO is upserted; `imageAlt` fills the alt text of that product's
+ * photos that have none (photos that already have text are left alone).
+ * The rest of the product record is untouched.
  */
 module.exports.bulkUpdateProductSeo = async (req, res) => {
   try {
@@ -1510,13 +1626,23 @@ module.exports.bulkUpdateProductSeo = async (req, res) => {
         const patch = {};
         ['metaTitle', 'metaDescription', 'metaKeywords', 'ogImage', 'canonicalUrl']
           .forEach(k => { if (item[k] !== undefined) patch[k] = item[k] === '' ? null : item[k]; });
-        if (Object.keys(patch).length === 0) continue;
+        const alt = typeof item.imageAlt === 'string' ? item.imageAlt.trim().slice(0, 255) : '';
+        if (Object.keys(patch).length === 0 && !alt) continue;
 
-        const existing = await ProductSEO.findOne({ where: { product_id: id } });
-        if (existing) {
-          await existing.update(patch);
-        } else {
-          await ProductSEO.create({ product_id: id, ...patch });
+        if (Object.keys(patch).length) {
+          const existing = await ProductSEO.findOne({ where: { product_id: id } });
+          if (existing) {
+            await existing.update(patch);
+          } else {
+            await ProductSEO.create({ product_id: id, ...patch });
+          }
+        }
+        if (alt) {
+          await sequelize.query(
+            `UPDATE product_images SET alt_text = ?, updated_at = NOW()
+              WHERE product_id = ? AND (alt_text IS NULL OR TRIM(alt_text) = '')`,
+            { replacements: [alt, id] }
+          );
         }
         updated.push(id);
       } catch (rowErr) {

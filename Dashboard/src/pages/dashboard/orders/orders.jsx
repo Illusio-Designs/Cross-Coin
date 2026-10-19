@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { orderService, brandService, trafficReportService } from '../../../services';
+import { orderService, brandService, trafficReportService, exceptionsService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import PickupScheduleModal from "../../../components/orders/PickupScheduleModal";
 import Tooltip from "../../../components/ui/Tooltip";
@@ -16,8 +16,7 @@ import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 import OrderStory from '../../../components/orders/OrderStory';
-import Returns from '../returns/returns';
-import FailedDeliveries from '../ndr/ndr';
+import ExceptionsDesk from '../exceptions/ExceptionsDesk';
 import { PageHeader, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -31,21 +30,30 @@ import {
 // clipped by the table's horizontal-scroll container. Keeps the actions column
 // narrow: only View + the one relevant action stay inline; the rest live here.
 // Order Desk tabs = the backend pipeline's work queues (GET /api/orders?stage=).
-// 'problems' and 'returns' render the Failed Deliveries / Returns views inline.
+// 'problems' renders the Problems desk (failed deliveries, returns, refunds
+// due) instead of the orders table.
 const DESK_TABS = [
     { v: 'to_confirm',    l: 'To confirm',        count: 'to_confirm' },
     { v: 'to_ship',       l: 'To ship',           count: 'to_ship' },
     { v: 'in_transit',    l: 'In transit',        count: 'in_transit' },
-    { v: 'problems',      l: 'Delivery problems', count: 'ndr_open' },
-    { v: 'returns',       l: 'Returns',           count: 'returns_open' },
-    { v: 'refund_due',    l: 'Refunds due',       count: 'refund_due' },
+    { v: 'problems',      l: 'Problems',          count: 'problems_total' },
     { v: 'delivered',     l: 'Delivered' },
     { v: 'cancelled_rto', l: 'Cancelled & RTO' },
     { v: 'all',           l: 'All' },
 ];
-const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'in_transit', 'problems', 'returns', 'delivered', 'cancelled_rto', 'refund_due']);
+const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'in_transit', 'delivered', 'cancelled_rto']);
 // Old home-inbox deep links used status buckets — map them onto the tabs.
 const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit', rto: 'cancelled_rto', cancelled: 'cancelled_rto' };
+// Links into the Problems desk: 'problems:<all|ndr|return|refund>', plus the
+// old tab names (Delivery problems / Returns / Refunds due) they replaced.
+const PROBLEM_LINKS = { problems: 'ndr', returns: 'return', refund_due: 'refund' };
+function parseTab(v) {
+    if (!v) return { tab: null, desk: null };
+    const m = /^problems:(all|ndr|return|refund)$/.exec(v);
+    if (m) return { tab: 'problems', desk: m[1] };
+    if (PROBLEM_LINKS[v]) return { tab: 'problems', desk: PROBLEM_LINKS[v] };
+    return { tab: LEGACY_TAB[v] || v, desk: null };
+}
 
 function OverflowMenu({ items }) {
     const [open, setOpen] = useState(false);
@@ -118,7 +126,14 @@ const Orders = ({ initialTab } = {}) => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
-    const [statusFilter, setStatusFilter] = useState(initialTab || "to_confirm");
+    const [statusFilter, setStatusFilter] = useState(() => parseTab(initialTab).tab || "to_confirm");
+    // Problems desk opening filter ({ type, q }); `n` remounts it on each new link.
+    const [deskPreset, setDeskPreset] = useState(() => ({ type: parseTab(initialTab).desk || 'all', q: '', n: 0 }));
+    const openDesk = (type, q = '') => {
+        setDeskPreset((p) => ({ type, q, n: p.n + 1 }));
+        setStatusFilter('problems');
+        setCurrentPage(1);
+    };
     const [deskCounts, setDeskCounts] = useState({});
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [refundDueFilter, setRefundDueFilter] = useState(false);
@@ -172,7 +187,8 @@ const Orders = ({ initialTab } = {}) => {
         try { hint = sessionStorage.getItem('obz-orders-status'); } catch {}
         if (hint) {
             try { sessionStorage.removeItem('obz-orders-status'); } catch {}
-            setStatusFilter(LEGACY_TAB[hint] || hint);
+            const t = parseTab(hint);
+            if (t.desk) openDesk(t.desk); else setStatusFilter(t.tab);
         }
         // Search typed on the home page: open All with it filled in.
         let q = null;
@@ -191,6 +207,7 @@ const Orders = ({ initialTab } = {}) => {
     const requestIdRef = useRef(0);
 
     const fetchOrders = useCallback(async (page = currentPage, { silent = false, _attempt = 0 } = {}) => {
+        if (statusFilter === 'problems') return; // the Problems desk loads its own queue
         const reqId = ++requestIdRef.current;
         let willRetry = false;
         // Foreground fetches (page change, filter change, manual refresh) show the
@@ -257,7 +274,8 @@ const Orders = ({ initialTab } = {}) => {
         try {
             const r = await orderService.getDeskCounts(brandFilter);
             const c = r?.counts || {};
-            setDeskCounts({ ...c, returns_open: (c.returns_to_review || 0) + (c.returns_in_pickup || 0) + (c.returns_to_refund || 0) });
+            const p = await exceptionsService.list({ limit: 1, brandId: brandFilter !== 'all' ? brandFilter : undefined }).catch(() => null);
+            setDeskCounts({ ...c, problems_total: p?.counts?.all || 0 });
         } catch { /* counts are optional */ }
     }, [brandFilter]);
     useEffect(() => { fetchDeskCounts(); }, [fetchDeskCounts, orders]);
@@ -567,7 +585,11 @@ const Orders = ({ initialTab } = {}) => {
 
     // Single source of truth for fetching the orders list.
     // fetchOrders depends on every filter, so this effect re-runs whenever any of them change.
-    useEffect(() => { fetchOrders(currentPage); }, [fetchOrders, currentPage]);
+    // The Problems tab shows its own queue — only its tab count needs a refresh.
+    useEffect(() => {
+        if (statusFilter === 'problems') { fetchDeskCounts(); return; }
+        fetchOrders(currentPage);
+    }, [fetchOrders, currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSearchChange = (e) => setFilterValue(e.target.value);
 
@@ -690,8 +712,8 @@ const Orders = ({ initialTab } = {}) => {
         let primary = { label: 'View', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } };
         if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
         else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
-        else if (ndr) primary = { label: 'Resolve NDR', onClick: () => { setStatusFilter('problems'); setCurrentPage(1); } };
-        else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => { setStatusFilter('returns'); setCurrentPage(1); } };
+        else if (ndr) primary = { label: 'Resolve NDR', onClick: () => openDesk('ndr', row.order_number) };
+        else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => openDesk(ret.status === 'received' ? 'refund' : 'return', row.order_number) };
         else if (canRefund) primary = { label: pmt === 'refund_pending' ? 'Retry refund' : 'Refund', onClick: () => refundOrder(row.id, row.order_number) };
         else if (waybill && !row.shipping_label_url && !isFinal) primary = { label: generatingLabel.has(row.id) ? 'Getting…' : 'Get label', disabled: generatingLabel.has(row.id), onClick: () => generateLabelForOrder(row.id) };
         else if (st === 'delivered') primary = { label: 'Invoice', onClick: () => downloadInvoice(row.id, row.order_number) };
@@ -1092,7 +1114,11 @@ const Orders = ({ initialTab } = {}) => {
                         {deskCounts.to_confirm_overdue} COD order{deskCounts.to_confirm_overdue === 1 ? '' : 's'} waiting more than 24 hours — call the customer, then Confirm or Cancel.
                     </div>
                 )}
-                {statusFilter === 'problems' ? <FailedDeliveries embedded /> : statusFilter === 'returns' ? <Returns embedded /> : (
+                {statusFilter === 'problems' ? (
+                    <ExceptionsDesk key={`desk-${deskPreset.n}`} initialType={deskPreset.type} initialSearch={deskPreset.q}
+                        brandId={brandFilter !== 'all' ? brandFilter : ''}
+                        onOpenOrder={(no) => { setStatusFilter('all'); setFilterValue(no); setCurrentPage(1); }} />
+                ) : (
                 /* Table Section */
                 <section className="sl-table-wrap" aria-label="Orders table">
                     {loading ? (

@@ -646,11 +646,15 @@ async function sendCartNow(id) {
       recoverToken: token,
     }, row.brandId || 1);
   } catch (e) {
+    if (e && e.code === 'RATE_LIMITED') {
+      return { status: 429, body: { success: false, code: 'RATE_LIMITED', message: 'This customer already got 10 messages in the last hour. Try again later.' } };
+    }
     const metaMsg = typeof whatsappService.metaError === 'function' ? whatsappService.metaError(e) : e.message;
     return { status: 502, body: { success: false, code: 'SEND_FAILED', message: `WhatsApp didn’t accept the message: ${metaMsg}` } };
   }
-  if (result && result.rate_limited) {
-    return { status: 429, body: { success: false, code: 'RATE_LIMITED', message: 'This customer already got 10 messages in the last hour. Try again later.' } };
+  if (result && result.skipped) {
+    const why = result.automation_disabled ? 'The abandoned-cart message is switched off in Automatic messages' : 'This customer has opted out of WhatsApp messages';
+    return { status: 409, body: { success: false, code: 'SKIPPED', message: why } };
   }
   await recovery.markMessaged(row); // keeps updated_at (= when the cart was left)
   return { status: 200, body: { success: true, wa_message_id: result?.messages?.[0]?.id || null, conversation_id: convs[0]?.id || null } };
@@ -968,9 +972,9 @@ async function sendTest({ phone, templateName, brandId: rawBrand, params } = {})
       result = await whatsappService.sendTemplate(to, name, vals, brandId, { urlParam: 'TEST' });
       used = name;
     }
-    if (result && result.rate_limited) return { status: 429, body: { success: false, message: 'This number already got 10 messages in the last hour' } };
     return { status: 200, body: { success: true, sent_to: maskPhone(to) || to, template: used, wa_message_id: result?.messages?.[0]?.id || null, at: new Date() } };
   } catch (e) {
+    if (e && e.code === 'RATE_LIMITED') return { status: 429, body: { success: false, message: 'This number already got 10 messages in the last hour' } };
     return { status: 502, body: { success: false, message: `WhatsApp didn’t accept the test: ${err(e)}` } };
   }
 }
@@ -1086,7 +1090,7 @@ async function sendAutoText(conv, text, kind, sendText) {
   } catch (e) { error = e; }
   const waId = result?.messages?.[0]?.id || null;
   let failed = null;
-  if (result && result.rate_limited) failed = 'Hourly limit of 10 messages to this customer reached';
+  if (error && error.code === 'RATE_LIMITED') failed = 'Hourly limit of 10 messages to this customer reached';
   else if (error) {
     const ws = require('./whatsappService.js');
     failed = String((typeof ws.metaError === 'function' ? ws.metaError(error) : error.message) || 'Send failed').slice(0, 255);

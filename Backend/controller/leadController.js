@@ -17,7 +17,8 @@ exports.submitContact = async (req, res) => {
     // A submission can self-declare as a DPDP grievance / privacy request.
     const msgType = type === 'grievance' ? 'grievance' : 'general';
     await ContactMessage.create({
-      brand_id: brandId ? Number(brandId) : null,
+      // Storefronts identify themselves with X-Brand-Name (optionalBrand).
+      brand_id: brandId ? Number(brandId) : (req.brandId || null),
       name: name?.trim() || null,
       email: email?.trim() || null,
       phone: phone ? String(phone).replace(/\s+/g, '') : null,

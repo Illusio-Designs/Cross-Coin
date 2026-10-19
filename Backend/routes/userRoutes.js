@@ -4,7 +4,7 @@ const {
     forgotPassword, resetPassword,
     getCurrentUser, getProfile, updateProfile, updateUser,
     updatePassword, deleteUser, exportMyData,
-    getAllUsers, getStaffUsers, getGuestUsers, upload, updateUserRole, createStaffUser,
+    getAllUsers, getStaffUsers, upload, updateUserRole, createStaffUser,
     checkPhone
 } = require('../controller/userController.js');
 const { isAuthenticated, isAdmin, isOrderManager } = require('../middleware/authMiddleware.js');
@@ -81,10 +81,10 @@ router.get('/export', isAuthenticated, exportMyData);
 router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin
-// Customer list: order managers handle customers too (Consumers page).
+// Raw user list (order managers too). The Consumers page now uses
+// GET /api/admin/customers; this stays for the Staff page fallback + storefront admin.
 router.get('/all', isAuthenticated, isOrderManager, getAllUsers);
 router.get('/staff-list', isAuthenticated, isAdmin, getStaffUsers);
-router.get('/guests', isAuthenticated, isOrderManager, getGuestUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
 router.delete('/:id', isAuthenticated, isAdmin, require('../controller/userController.js').adminDeleteUser);

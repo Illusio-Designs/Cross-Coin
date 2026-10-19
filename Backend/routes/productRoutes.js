@@ -3,7 +3,8 @@ const {
     createProduct, getAllProducts, getProduct, updateProduct, deleteProduct,
     getProductsByCategory, searchProducts,
     getPublicProductBySlug, getAllPublicProducts, getBestSellers,
-    getExistingImages, uploadImages, deleteImages, regenerateProductSeo
+    getExistingImages, uploadImages, deleteImages, regenerateProductSeo,
+    getStockList, getVariationStock, patchVariationStock
 } = require('../controller/productController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 const { productUpload } = require('../middleware/uploadMiddleware.js');
@@ -49,6 +50,10 @@ router.get('/category/:categoryId', getProductsByCategory);
 // ── Admin / Product Manager ───────────────────────────────────────────────
 router.get('/',                     isAuthenticated, isProductManager, getAllProducts);
 router.get('/existing-images',      isAuthenticated, isProductManager, getExistingImages);
+// Products page: stock-first list, sizes of one product, inline stock edit
+router.get('/admin/stock-list',     isAuthenticated, isProductManager, getStockList);
+router.get('/admin/:id/variations', isAuthenticated, isProductManager, getVariationStock);
+router.patch('/admin/variations/:variationId/stock', isAuthenticated, isProductManager, patchVariationStock);
 router.post('/upload-images',       isAuthenticated, isProductManager, productUpload.any(), multerErr, uploadImages);
 router.delete('/delete-images',     isAuthenticated, isProductManager, deleteImages);
 router.post('/',                    isAuthenticated, isProductManager, productUpload.any(), multerErr, validateBody(productBaseSchema), createProduct);

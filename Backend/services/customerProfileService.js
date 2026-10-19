@@ -102,6 +102,7 @@ async function resolve({ kind, id, phone }) {
   let p10 = '';
   let users = [];
   let guests = [];
+  let lead = null;
 
   if (kind === 'user') {
     const u = await User.findByPk(id, { attributes: ['id', 'username', 'email', 'phone', 'loyalty_points', 'source_brand_id', 'createdAt'] });
@@ -150,20 +151,47 @@ async function resolve({ kind, id, phone }) {
     } else if (addrIds.length) {
       anchor = { kind: 'phone', id: null };
     } else {
-      return null;
+      // A lead (left a cart / gave the phone in the popup) — no orders, but
+      // staff open them from the Customers list to call.
+      lead = await findLead(p10, hash);
+      if (!lead) return null;
+      anchor = { kind: 'phone', id: null };
     }
   }
   // Keep the anchor user first (its name / email / since lead the header).
   if (anchor.kind === 'user') users.sort((a, b) => (a.id === anchor.id ? -1 : b.id === anchor.id ? 1 : 0));
   if (anchor.kind === 'guest') guests.sort((a, b) => (a.id === anchor.id ? -1 : b.id === anchor.id ? 1 : 0));
-  return { anchor, p10, users, guests, addrIds };
+  return { anchor, p10, users, guests, addrIds, lead };
+}
+
+// Newest abandoned cart / popup sign-up for a phone that has no account,
+// guest checkout or order.
+async function findLead(p10, hash) {
+  if (p10.length !== 10) return null;
+  const carts = await q(
+    hash
+      ? `SELECT customer_name, cart_value, updated_at FROM abandoned_carts WHERE phone_hash = :hash ORDER BY updated_at DESC LIMIT 1`
+      : `SELECT customer_name, cart_value, updated_at FROM abandoned_carts WHERE REGEXP_REPLACE(phone, '[^0-9]', '') LIKE :like ORDER BY updated_at DESC LIMIT 1`,
+    { hash, like: `%${p10}` }
+  ).catch(() => []);
+  const pops = await q(
+    `SELECT createdAt FROM lead_captures WHERE REGEXP_REPLACE(phone, '[^0-9]', '') LIKE :like ORDER BY createdAt DESC LIMIT 1`,
+    { like: `%${p10}` }
+  ).catch(() => []);
+  if (!carts[0] && !pops[0]) return null;
+  return {
+    name: carts[0]?.customer_name || null,
+    cartValue: carts[0] ? num(carts[0].cart_value) : null,
+    cartAt: carts[0]?.updated_at || null,
+    signedUpAt: pops[0]?.createdAt || null,
+  };
 }
 
 // ── Build the profile ────────────────────────────────────────────────────
 async function getCustomerProfile({ kind, id, phone }) {
   const who = await resolve({ kind, id, phone });
   if (!who) return null;
-  const { anchor, p10, users, guests, addrIds } = who;
+  const { anchor, p10, users, guests, addrIds, lead } = who;
   const userIds = users.map((u) => u.id);
   const guestIds = guests.map((g) => g.id);
 
@@ -349,13 +377,14 @@ async function getCustomerProfile({ kind, id, phone }) {
   const firstGuest = guests[0] || null;
   const latestAddr = addresses.find((a) => a.ids.includes(last?.shipping_address_id)) || addresses[0] || null;
   const guestName = firstGuest ? [firstGuest.firstName, firstGuest.lastName].filter(Boolean).join(' ') : '';
-  const name = cleanName((anchor.kind === 'guest' ? guestName : firstUser?.username) || firstUser?.username || guestName || latestAddr?.name) || 'Customer';
+  const name = cleanName((anchor.kind === 'guest' ? guestName : firstUser?.username) || firstUser?.username || guestName || latestAddr?.name || lead?.name) || 'Customer';
   const phoneShown = (anchor.kind === 'guest' ? firstGuest?.phone : firstUser?.phone) || firstUser?.phone || firstGuest?.phone || latestAddr?.phone || (p10 || null);
   const email = (anchor.kind === 'guest' ? firstGuest?.email : firstUser?.email) || firstUser?.email || firstGuest?.email || null;
   const sinceCandidates = [
     ...users.map((u) => u.createdAt),
     ...guests.map((g) => g.get('created_at') || g.get('createdAt')),
     orders.length ? orders[orders.length - 1].created_at : null,
+    lead?.cartAt, lead?.signedUpAt,
   ].filter(Boolean).map((d) => new Date(d)).filter((d) => !Number.isNaN(d.getTime()));
   const since = sinceCandidates.length ? new Date(Math.min(...sinceCandidates)) : null;
 
@@ -419,6 +448,8 @@ async function getCustomerProfile({ kind, id, phone }) {
     if (orders.length === 1) summary.push('First order — new customer.');
   } else {
     summary.push('No orders yet.');
+    if (lead?.cartAt) summary.push(`Left a cart${lead.cartValue ? ` worth ${inr(lead.cartValue)}` : ''} ${agoText(lead.cartAt)} without ordering.`);
+    else if (lead?.signedUpAt) summary.push(`Gave their number in the website popup ${agoText(lead.signedUpAt)}.`);
   }
 
   const notes = orders.filter((o) => o.notes && String(o.notes).trim()).slice(0, 3)
@@ -467,4 +498,4 @@ async function loadAddresses(orders, userIds, guestIds) {
   return [...groups.values()];
 }
 
-module.exports = { getCustomerProfile, stageOf };
+module.exports = { getCustomerProfile, stageOf, cleanName };

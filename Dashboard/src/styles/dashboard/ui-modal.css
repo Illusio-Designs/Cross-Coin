@@ -103,21 +103,6 @@
   padding: 0;
 }
 
-/* Step bar — sticks to the top of the scrolling body (the product form now
-   lives inside the Modal's .modal-body so its footer can pin via the footer
-   prop). Negative margins bleed it back to the panel edges over the 24px body
-   padding so it reads as a fixed sub-header. */
-.modal-box .prod-steps {
-  padding: 14px 24px 12px;
-  border-bottom: 1px solid var(--ds-color-border-soft, var(--ds-color-border));
-  background: var(--ds-color-surface, var(--ds-color-surface));
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  margin: -24px -24px 16px;
-}
-
 /* Body — only this scrolls */
 .modal-body {
   padding: 24px;
@@ -198,7 +183,6 @@
   .modal-box { width: 100vw; }
   .modal-header { padding: 0 18px; height: 56px; }
   .modal-body { padding: 18px; }
-  .modal-box .prod-steps { padding: 12px 18px 10px; }
   .modal-footer { padding: 12px 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
   .modal-footer > .btn { flex: 1; }
 }
@@ -207,7 +191,6 @@
   .modal-title { font-size: 14px; }
   .modal-body { padding: 16px; }
   .modal-footer { padding: 10px 16px; }
-  .modal-box .prod-steps { padding: 10px 16px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay, .modal-box { transition: none; }

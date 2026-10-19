@@ -323,6 +323,26 @@ export const trafficReportService = {
   },
 };
 
+// System health (admin only) — server, job queue, webhooks, errors and the
+// scheduled jobs with their run log; "Run now" for one job.
+export const systemHealthService = {
+  getHealth: async () => {
+    const { data } = await adminApi.get('/api/admin/system/health');
+    if (!data?.success) throw new Error(data?.message || 'Failed to load system health');
+    return data;
+  },
+  // Resolves { finished, run? , message? }; rejects with the server's message
+  // (e.g. "This job is running right now").
+  runJob: async (key) => {
+    try {
+      const { data } = await adminApi.post(`/api/admin/system/jobs/${encodeURIComponent(key)}/run`);
+      return data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to start the job');
+    }
+  },
+};
+
 // Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve
 // the brand from the X-Brand-Name header, so pass the brand's slug per call.
 export const facebookCapiService = {
@@ -928,16 +948,8 @@ export const orderService = {
 
 };
 
-// Failed deliveries (courier NDR cases) — Dashboard → Failed Deliveries
+// Failed deliveries (courier NDR cases) — actions from Orders → Problems.
 export const ndrService = {
-  list: async (status = 'open') => {
-    try {
-      const response = await adminApi.get('/api/ndr', { params: { status } });
-      return response.data;
-    } catch (error) {
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
-  },
   sendToCourier: async (id, action, date) => {
     try {
       const response = await adminApi.post(`/api/ndr/${id}/courier`, { action, date });
@@ -946,9 +958,56 @@ export const ndrService = {
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
+  // New delivery address for the order ({ address, useSaved, reattempt, date }).
+  saveAddress: async (id, payload) => {
+    try {
+      const response = await adminApi.post(`/api/ndr/${id}/address`, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
   resolve: async (id, note) => {
     try {
       const response = await adminApi.post(`/api/ndr/${id}/resolve`, { note });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+};
+
+// Orders → Problems: failed deliveries, returns and refunds due in one queue.
+export const exceptionsService = {
+  // { type: all|ndr|return|refund, brandId, q, page, limit } → { items, counts, needsYou, total, totalPages }
+  list: async (params = {}) => {
+    try {
+      const response = await adminApi.get('/api/admin/exceptions', { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  // src = ndr | return | order
+  get: async (src, id) => {
+    try {
+      const response = await adminApi.get(`/api/admin/exceptions/${src}/${id}`);
+      return response.data.item;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  getReturnCharges: async (brandId) => {
+    try {
+      const response = await adminApi.get('/api/admin/exceptions/return-charges', { params: { brandId } });
+      return response.data.charges;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  saveReturnCharges: async (brandId, charges) => {
+    try {
+      const response = await adminApi.put('/api/admin/exceptions/return-charges', { brandId, ...charges });
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error.response?.data || error.message));
@@ -1105,12 +1164,41 @@ export const userService = {
     }
   },
 
-  // Guest (unregistered) customers, mapped into the consumer shape.
-  getGuestUsers: async () => {
+  // Customers page: one row per shopper (registered, guest or lead) with
+  // orders / spend / RTO, server-side search + paging, and segment counts.
+  // params: { q, brandId, segment, sort, page, limit }
+  getCustomerList: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/users/guests");
+      const response = await adminApi.get("/api/admin/customers", { params });
       return response.data;
     } catch (error) {
+      throw handleApiError(error);
+    }
+  },
+
+  // CSV of the whole filtered customer list (admin only) — saved as a file.
+  downloadCustomerList: async (params = {}, filename = 'customers.csv') => {
+    try {
+      const response = await adminApi.get("/api/admin/customers/export", {
+        params, responseType: 'blob', timeout: 120000,
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      return { success: true };
+    } catch (error) {
+      // Error bodies arrive as a Blob too — surface the server's message.
+      const data = error.response?.data;
+      if (typeof Blob !== 'undefined' && data instanceof Blob) {
+        let message = 'Download failed';
+        try { message = JSON.parse(await data.text()).message || message; } catch { /* not JSON */ }
+        throw { message };
+      }
       throw handleApiError(error);
     }
   },
@@ -1376,9 +1464,30 @@ export const productService = {
     }
   },
 
+  // Products page — stock-first list (server-side search/filter/sort/paging),
+  // one product's sizes, and the inline stock edit. Errors keep the server's
+  // body ({ message, code, current }) so the page can roll back precisely.
+  getStockList: async (params = {}, signal) => {
+    const response = await adminApi.get('/api/products/admin/stock-list', { params, signal });
+    return response.data;
+  },
+  getVariationStock: async (productId) => {
+    const response = await adminApi.get(`/api/products/admin/${productId}/variations`);
+    return response.data;
+  },
+  updateVariationStock: async (variationId, stock, expected) => {
+    try {
+      const response = await adminApi.patch(`/api/products/admin/variations/${variationId}/stock`, { stock, expected });
+      invalidateCache('/api/products');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: error.message || 'Could not save the stock' };
+    }
+  },
+
   // Re-runs the backend's SEO auto-fill helper from scratch and returns the
   // derived fields (or persists them when persist=true). Used by the "Regenerate
-  // from product data" button on the SEO tab of the product edit modal.
+  // from product data" button in the SEO section of the product editor.
   regenerateSeo: async (id, persist = false) => {
     try {
       const response = await adminApi.post(`/api/products/${id}/seo/regenerate`, { persist });
@@ -1542,40 +1651,23 @@ export const couponService = {
 
 // Review Services
 export const reviewService = {
-  getAllReviews: async (status = "all", params = {}) => {
+  // Moderation list: { reviews, pagination, counts, avgRating, reviewRequestsToday }.
+  // tab = pending | approved | rejected | photos; brandId '' = all brands.
+  getModerationList: async ({ tab = 'pending', brandId, search, page = 1, limit = 20 } = {}) => {
     try {
-      const { page = 1, limit = 10, brandId, search } = params;
-      const headers = {};
-      if (brandId) {
-        // Find brand slug from brandId — pass as X-Brand-Name header for backend filtering
-        headers['X-Brand-Name'] = params.brandSlug || brandId;
-      }
-      const response = await adminApi.get(`/api/reviews/admin/all`, {
-        params: { status, page, limit, ...(search ? { search } : {}) },
-        headers,
+      const response = await adminApi.get('/api/reviews/admin/all', {
+        params: { tab, page, limit, ...(brandId ? { brandId } : {}), ...(search ? { search } : {}) },
       });
-      if (response.data) return response.data;
-      throw new Error("Invalid response format from server");
+      return response.data;
     } catch (error) {
       throw handleApiError(error);
     }
   },
 
-  getReviewById: async (id) => {
+  // One-tap / bulk moderation in one transaction. action = approve | reject | feature | unfeature.
+  bulkModerate: async (ids, action) => {
     try {
-      const response = await adminApi.get(`/api/reviews/admin/${id}`);
-      return response.data.review;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
-
-  updateReviewStatus: async (id, statusData) => {
-    try {
-      const response = await adminApi.put(
-        `/api/reviews/admin/${id}/moderate`,
-        statusData
-      );
+      const response = await adminApi.post('/api/reviews/admin/bulk', { ids, action });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1591,22 +1683,10 @@ export const reviewService = {
     }
   },
 
-  moderateReview: async (id, moderationData) => {
+  // Status / featured / staff notes for one review.
+  moderateReview: async (id, { status, is_featured, admin_notes }) => {
     try {
-      // Ensure the data is in the correct format
-      const formattedData = {
-        status: moderationData.status,
-        is_featured: moderationData.is_featured,
-        admin_notes: moderationData.admin_notes,
-      };
-      const response = await adminApi.put(
-        `/api/reviews/admin/${id}/moderate`,
-        formattedData
-      );
-      if (!response.data) {
-        throw new Error("No response data received");
-      }
-
+      const response = await adminApi.put(`/api/reviews/admin/${id}/moderate`, { status, is_featured, admin_notes });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -2470,22 +2550,6 @@ export const whatsappService = {
 
 // ── Returns & Refunds (admin) ──────────────────────────────────────────────
 export const returnService = {
-  getReturns: async (params = {}) => {
-    try {
-      const res = await adminApi.get('/api/returns', { params });
-      return res.data; // { success, returns, pagination }
-    } catch (error) {
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
-  },
-  getReturn: async (id) => {
-    try {
-      const res = await adminApi.get(`/api/returns/${id}`);
-      return res.data.return;
-    } catch (error) {
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
-  },
   approve: async (id, payload) => {
     try {
       const res = await adminApi.post(`/api/returns/${id}/approve`, payload);

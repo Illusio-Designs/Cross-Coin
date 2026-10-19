@@ -2172,7 +2172,8 @@ async function getAutomationReport({ days = 7, brandId = null } = {}) {
     }),
   }));
   summary.sales = Math.round(summary.sales);
-  summary.delivered_pct = summary.sent ? Math.round(((summary.delivered + summary.read) / summary.sent) * 1000) / 10 : null;
+  // `delivered` already includes read messages (status delivered OR read).
+  summary.delivered_pct = summary.sent ? Math.round((summary.delivered / summary.sent) * 1000) / 10 : null;
   summary.read_pct = summary.sent ? Math.round((summary.read / summary.sent) * 100) : null;
   return { days: Number(days) || 7, summary, not_ready: notReady, template_check_error: tpl.error, groups };
 }
@@ -2256,7 +2257,7 @@ function templateParamKeys(name, bodyText) {
 // Values we can fill from the chat: customer, store, latest order.
 async function _fillValues(conv, latestOrder) {
   const brandId = conv.brand_id || SHARED_WA_BRAND_ID;
-  const first = String(conv.customer_name || '').trim().split(/\s+/)[0] || 'there';
+  const first = String(conv.customer_name || latestOrder?.customerName || '').trim().split(/\s+/)[0] || 'there';
   const v = { name: first, brand: await _brandName(brandId) };
   if (latestOrder) {
     const orderNo = latestOrder.orderNumber || latestOrder.order_number;
@@ -2517,8 +2518,9 @@ async function buildAudience(type, brandId = null) {
 
   if (t === 'all') {
     const convs = await sq.query(
+      // Include STOP chats here — they are removed (and counted) below.
       `SELECT customer_phone, customer_name, brand_id FROM whatsapp_conversations
-        WHERE opted_out = 0 ${brandId ? 'AND brand_id = :brandId' : ''}`,
+        WHERE ${brandId ? 'brand_id = :brandId' : '1=1'}`,
       { replacements: { brandId }, type: QueryTypes.SELECT });
     for (const c of convs) {
       const p = _p10(c.customer_phone);

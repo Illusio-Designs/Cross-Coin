@@ -40,18 +40,24 @@ async function ensureTables() {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
 }
 
-// Current stock + lowest in-stock price for every active product.
-async function currentProductState() {
+// Current stock + lowest in-stock price for every active product (or one).
+async function currentProductState(productId = null) {
   return sequelize.query(
     `SELECT p.id, p.brand_id, p.name, p.slug,
             COALESCE(SUM(CASE WHEN v.status = 'active' THEN GREATEST(v.stock, 0) ELSE 0 END), 0) AS stock,
             MIN(CASE WHEN v.status = 'active' AND v.stock > 0 THEN v.price END) AS min_price
        FROM products p
        JOIN product_variations v ON v.productId = p.id
-      WHERE p.status = 'active'
+      WHERE p.status = 'active'${productId ? ' AND p.id = :pid' : ''}
       GROUP BY p.id, p.brand_id, p.name, p.slug`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT, replacements: { pid: productId } }
   );
+}
+
+// Same window as the cron ('20,50 9-20 * * *' IST): nobody is messaged at night.
+function inSendingHours(d = new Date()) {
+  const h = new Date(d.getTime() + 330 * 60000).getUTCHours();
+  return h >= 9 && h < 21;
 }
 
 // Customers to tell about a product: wishlist + active cart, with a phone,
@@ -105,10 +111,13 @@ async function notify(event) {
   return sent;
 }
 
-async function runProductAlerts() {
-  await ensureTables();
-  const products = await currentProductState();
-  const stateRows = await sequelize.query(`SELECT product_id, in_stock, min_price FROM product_alert_state`, { type: QueryTypes.SELECT });
+// Compare products against their last snapshot, record the new snapshot and
+// message the audience for each back-in-stock / price-drop change.
+async function evaluate(products, productId = null) {
+  const stateRows = await sequelize.query(
+    `SELECT product_id, in_stock, min_price FROM product_alert_state${productId ? ' WHERE product_id = :pid' : ''}`,
+    { type: QueryTypes.SELECT, replacements: { pid: productId } }
+  );
   const prev = new Map(stateRows.map((r) => [r.product_id, r]));
 
   const events = [];
@@ -141,4 +150,31 @@ async function runProductAlerts() {
   return { checked: products.length, events: events.length, sent };
 }
 
-module.exports = { runProductAlerts, ensureTables };
+async function runProductAlerts() {
+  await ensureTables();
+  return evaluate(await currentProductState());
+}
+
+/**
+ * Run the same check for ONE product right away — used when staff edit stock
+ * inline on the Products page, so a restock doesn't wait for the next cron
+ * tick. Outside sending hours it does nothing (the snapshot is left as-is),
+ * so the first morning run still sees the change and sends it then.
+ */
+async function checkProductNow(productId) {
+  const pid = parseInt(productId, 10);
+  if (!Number.isFinite(pid) || pid <= 0) return { checked: 0, events: 0, sent: 0 };
+  if (!inSendingHours()) return { checked: 0, events: 0, sent: 0, deferred: true };
+  await ensureTables();
+  return evaluate(await currentProductState(pid), pid);
+}
+
+// Staff just restocked a product that had sold out. If the snapshot still
+// says "in stock" (it sold out between two cron runs), correct it so the
+// restock is seen as one. Products never snapshotted keep the baseline rule.
+async function recordSoldOut(productId) {
+  await ensureTables();
+  await sequelize.query(`UPDATE product_alert_state SET in_stock = 0 WHERE product_id = ?`, { replacements: [productId] });
+}
+
+module.exports = { runProductAlerts, checkProductNow, recordSoldOut, inSendingHours, ensureTables };

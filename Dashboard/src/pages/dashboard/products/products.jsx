@@ -1,1803 +1,500 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Button, Input, Modal, Table, Pagination, Select, Badge } from "../../../components/ui";
-import { PageHeader, Panel, FilterBar } from "../../../components/Dashboard/primitives";
-import Loader from "../../../components/common/Loader";
-import { TableSkeleton } from "../../../components/common/SkeletonLoader";
-import { ConfirmModal } from '../../../components/common/AlertModal';
-import { productService } from "../../../services";
-import { categoryService } from "../../../services";
-import { attributeService } from "../../../services";
-import { brandService } from "../../../services";
-import { debounce } from 'lodash';
-import AttributeSelector from '../../../components/products/AttributeSelector';
-import ExistingImageSelector from '../../../components/products/ExistingImageSelector';
-import BrandTags from '../../../components/Dashboard/BrandTags';
-import BrandAssignment from '../../../components/Dashboard/BrandAssignment';
-import SerpPreview, { brandSiteName, brandUrl } from '../../../components/common/SerpPreview';
-import SeoLengthMeter from '../../../components/common/SeoLengthMeter';
-import { showSuccess, showError } from '../../../utils/toastNotification';
-import dynamic from 'next/dynamic';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { StarIcon, PencilEdit02Icon, Delete02Icon, ArrowUp01Icon, ArrowDown01Icon, Search01Icon, Add01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
-const Editor = dynamic(() => import('../../../components/common/Editor'), {
-  ssr: false,
-  loading: () => <div style={{ height: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />
-});
+import { Search01Icon, Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { productService, brandService, seoAdminService } from '../../../services';
+import { useAuth } from '../../../context/AuthContext';
+import { showSuccess } from '../../../utils/toastNotification';
+import ProductEditor from '../../../components/products/ProductEditor';
+import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
 
-// Friendly labels for the per-product SEO gap badges (keys match the backend
-// listing's `seoGaps` values).
-const SEO_GAP_LABEL = {
-  metaTitle: 'Meta title',
-  metaDescription: 'Meta desc',
-  ogImage: 'OG image',
+/*
+ * Products — stock first. Tiles filter the list (same thresholds as Home's
+ * "Out of stock → Restock" queue), brand chips + search narrow it, and each
+ * product opens to its sizes where stock is typed straight in (Enter or
+ * leaving the box saves). Editing a product's details opens a full-page
+ * editor (?edit=<id> / ?new=1); "Fix SEO in bulk" opens ?seo=1. The browser
+ * Back button returns to the list.
+ */
+
+const PAGE_SIZE = 25;
+const FILTER_KEY = 'obz-products-filter'; // hand-off from Home ('out')
+
+const inr = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+const plural = (n, one, many = `${one}s`) => `${Number(n).toLocaleString('en-IN')} ${n === 1 ? one : many}`;
+const priceRange = (min, max) => (min == null ? '—' : (max != null && max !== min ? `${inr(min)}–${inr(max)}` : inr(min)));
+
+const BADGE_LABEL = { new_arrival: 'New arrival', hot_selling: 'Hot selling', low_stock: 'Low stock', out_of_stock: 'Out of stock', none: 'No badge' };
+const SORTS = [
+  { value: 'attention', label: 'Needs attention first' },
+  { value: 'days', label: 'Runs out soonest' },
+  { value: 'sold', label: 'Best sellers (30 days)' },
+  { value: 'stock', label: 'Lowest stock' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'name', label: 'Name A–Z' },
+];
+
+function lastsText(days) {
+  if (days === 0) return 'Out now';
+  if (days == null) return 'No sales';
+  if (days > 90) return '90+ days';
+  return plural(days, 'day');
+}
+function lastsTone(days) {
+  if (days === 0) return 'out';
+  if (days != null && days <= 7) return 'low';
+  if (days == null) return 'muted';
+  return '';
+}
+const stockTone = (stock, days, lowSizes) => (stock <= 0 ? 'out' : ((days != null && days <= 7) || lowSizes > 0 ? 'low' : ''));
+
+const VISIBILITY = {
+  live: 'Live',
+  draft: 'Hidden — draft',
+  off: 'Hidden — turned off',
+  brand_off: 'Hidden on this site',
+  no_brand: 'Hidden — no site picked',
 };
 
-const ProductsPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [confirmState, setConfirmState] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [filterValue, setFilterValue] = useState("");
-  const [loading, setLoading] = useState(false);
-  // Separate from `loading` (which gates the table skeleton) so opening the
-  // edit panel doesn't flash/reload the whole products table.
-  const [editLoading, setEditLoading] = useState(false);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  // Brand filter — empty string means "All brands". When a slug is set,
-  // the productService sends X-Brand-Name so the listing is scoped server-side.
+// ── URL state: ?edit=<id> | ?new=1 | ?seo=1 on /dashboard/products ──
+function readMode() {
+  if (typeof window === 'undefined') return { mode: 'list' };
+  const sp = new URLSearchParams(window.location.search);
+  if (sp.get('edit')) return { mode: 'edit', id: sp.get('edit') };
+  if (sp.get('new')) return { mode: 'new' };
+  if (sp.get('seo')) return { mode: 'seo' };
+  return { mode: 'list' };
+}
+function pushMode(query) {
+  window.history.pushState({}, '', `/dashboard/products${query ? `?${query}` : ''}`);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+function goToView(view) {
+  window.history.pushState({}, '', `/dashboard/${view}`);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+export default function ProductsPage() {
+  const { canAccessView } = useAuth();
+  const [route, setRoute] = useState({ mode: 'list' });
   const [brands, setBrands] = useState([]);
-  const [selectedBrandSlug, setSelectedBrandSlug] = useState('');
-  const [currentStep, setCurrentStep] = useState(1);
-  const [showExistingImageSelector, setShowExistingImageSelector] = useState(false);
-  const [showVariationImageSelector, setShowVariationImageSelector] = useState(false);
-  const [currentVariationIndex, setCurrentVariationIndex] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    categoryId: "",
-    status: "active",
-    price: "",
-    stock: "",
-    images: [],
-    imagesToDelete: [], // Track images to delete
-    variationImagesToDelete: [], // Track variation images to delete
-    weight: "",
-    weightUnit: "g",
-    dimensions: { length: "", width: "", height: "" },
-    dimensionUnit: "cm",
-    gst_rate: "5",
-    attributes: [{ key: 'notes', values: [] }],
-    brandIds: [], // Will be set by BrandAssignment component
-    variations: [{
-      price: "",
-      comparePrice: "",
-      cost_price: "",
-      stock: "",
-      sku: "",
-      attributes: {}
-    }],
-    seo: {
-      metaTitle: "",
-      metaDescription: "",
-      metaKeywords: "",
-      ogTitle: "",
-      ogDescription: "",
-      ogImage: "",
-      canonicalUrl: "",
-      structuredData: ""
-    },
-    variationImages: [], // Array of arrays, one per variation
-  });
-  const [openVariations, setOpenVariations] = useState({});
-  const [attributes, setAttributes] = useState({});
+  const [brandId, setBrandId] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('attention');
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [seoGaps, setSeoGaps] = useState(null);
 
-  const toggleVariation = (index) => {
-    setOpenVariations(prev => ({ ...prev, [index]: !prev[index] }));
-  };
-
-
-
-  // Debounced search — one memoized lodash debouncer so rapid typing issues a
-  // single fetch. The previous version created a fresh setTimeout per keystroke
-  // and discarded its cancel, so nothing was ever actually debounced.
-  const debouncedSetFilter = useMemo(() => debounce((v) => setFilterValue(v), 300), []);
-  useEffect(() => () => debouncedSetFilter.cancel(), [debouncedSetFilter]);
-
-  const handleSearchChange = (e) => debouncedSetFilter(e.target.value);
-
-  // Fetch categories
-  const fetchCategories = async () => {
-    try {
-      const response = await categoryService.getAllCategories();
-      setCategories(response);
-    } catch (err) {
-      }
-  };
-
+  // Route + Home hand-off (read once, then cleared so a refresh shows all).
   useEffect(() => {
-    fetchCategories();
+    setRoute(readMode());
+    try {
+      const f = sessionStorage.getItem(FILTER_KEY);
+      if (f) { sessionStorage.removeItem(FILTER_KEY); if (['all', 'out', 'low', 'slow', 'hidden'].includes(f)) setFilter(f); }
+    } catch { /* storage blocked */ }
+    const sync = () => setRoute((r) => {
+      const m = readMode();
+      return m.mode === r.mode && m.id === r.id ? r : m;
+    });
+    // The sidebar changes the URL without a popstate when you're already on
+    // this view (e.g. "Products" clicked from inside the editor) — re-read
+    // the URL after any click so the page follows it.
+    const onClick = () => setTimeout(sync, 0);
+    window.addEventListener('popstate', sync);
+    document.addEventListener('click', onClick, true);
+    return () => { window.removeEventListener('popstate', sync); document.removeEventListener('click', onClick, true); };
   }, []);
 
-  // Fetch attributes
-  const fetchAttributes = async () => {
-    try {
-      const response = await attributeService.getAllAttributes();
-      // Correctly access `AttributeValues` from the backend response
-      // And map them to an array of just the string values
-      const formattedAttributes = response.reduce((acc, attribute) => {
-        const attributeValues = attribute.AttributeValues?.map(val => val.value) || [];
-        acc[attribute.name] = attributeValues;
-        return acc;
-      }, {});
-      setAttributes(formattedAttributes);
-      } catch (err) {
-      }
-  };
-
-  useEffect(() => {
-    fetchAttributes();
-  }, []);
-
-  // Fetch products data
-  const fetchProducts = useCallback(async (forceRefresh = false) => {
-    setLoading(true);
-    try {
-      const response = await productService.getAllProducts(
-        currentPage,
-        itemsPerPage,
-        filterValue,
-        null,            // signal
-        forceRefresh === true, // bypass the 3-min list cache after a save/delete
-        selectedBrandSlug, // brandSlug — '' means all brands
-        true             // listMode — lean columns for the table (full data loads on Edit)
-      );
-      if (response && response.products) {
-        setProducts(response.products);
-        // productService.getAllProducts returns the count under `total`
-        // (mapped from validatePaginatedResponse.total). Fall back to a
-        // few likely shapes so future service tweaks don't silently
-        // hide the pagination bar again.
-        setTotalProducts(
-          response.total ??
-          response.totalProducts ??
-          response.pagination?.total ??
-          0
-        );
-      } else {
-        setError('Invalid response format');
-      }
-    } catch (error) {
-      setError(error.message || 'Failed to fetch products');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, itemsPerPage, filterValue, selectedBrandSlug]);
-
-  // Fetch brands once for the filter dropdown. Includes only active brands.
   useEffect(() => {
     let alive = true;
-    brandService.getAllBrands(false).then((res) => {
-      if (!alive) return;
-      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-      setBrands(list);
-    }).catch(() => { /* dropdown stays empty */ });
+    brandService.getAllBrands(false)
+      .then((res) => { if (alive) setBrands((Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []).filter((b) => b.status !== 'inactive')); })
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
 
-  // Reset to first page when brand filter changes
+  // Debounced server-side search.
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedBrandSlug]);
+    const t = setTimeout(() => setSearch(searchText.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchText]);
+  useEffect(() => { setPage(1); }, [filter, brandId, search, sort]);
 
-  // Initial data fetch for products
+  const params = useMemo(() => ({ stock: filter, brandId: brandId || undefined, search: search || undefined, sort, page, limit: PAGE_SIZE }), [filter, brandId, search, sort, page]);
+
+  const reqId = useRef(0);
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  // Handle filter application
-  // Backend handles filtering and pagination
-  const filteredData = products;
-
-  const totalPages = Math.ceil(totalProducts / itemsPerPage);
-  const currentItems = filteredData;
-
-  // Add serial number to each row
-  const currentItemsWithSN = currentItems.map((item, idx) => ({
-    ...item,
-    serial_number: (currentPage - 1) * itemsPerPage + idx + 1
-  }));
-
-  // Reset to first page when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterValue]);
-
-  // Add badge display component
-  const BadgeDisplay = ({ badge }) => {
-    if (!badge || badge === 'none') return null;
-
-    const badgeStyles = {
-      new_arrival: { color: '#10B981', bgColor: '#D1FAE5' },
-      hot_selling: { color: '#EF4444', bgColor: '#FEE2E2' },
-      low_stock: { color: '#F59E0B', bgColor: '#FEF3C7' }
-    };
-
-    const badgeLabels = {
-      new_arrival: 'New Arrival',
-      hot_selling: 'Hot Selling',
-      low_stock: 'Low Stock'
-    };
-
-    const style = badgeStyles[badge] || { color: '#6B7280', bgColor: '#F3F4F6' };
-
-    return (
-      <span className={`prod-badge prod-badge--${badge}`}>
-        {badgeLabels[badge] || badge}
-      </span>
-    );
-  };
-
-  // Monogram initials for the product thumbnail — first two words' initials,
-  // else the first two letters (deterministic, no external image needed).
-  const initials = (s = '') => {
-    const w = String(s).trim().split(/\s+/).filter(Boolean);
-    const t = w.length >= 2 ? (w[0][0] + w[1][0]) : (w[0] || '').slice(0, 2);
-    return t.toUpperCase() || '·';
-  };
-
-  // Update columns definition to include badge and avg_rating
-  const columns = [
-    {
-      header: "#",
-      width: 48,
-      sortable: false,
-      accessor: row => <span className="obz-sn">{row.serial_number}</span>
-    },
-    {
-      header: "Product",
-      accessor: row => (
-        <div className="obz-prod-cell">
-          <div className="obz-thumb">{initials(row.brands?.[0]?.display_name || row.brands?.[0]?.name || row.name)}</div>
-          <div className="obz-prod-meta">
-            <span className="obz-prod-name">{row.name}</span>
-            <BadgeDisplay badge={row.badge} />
-          </div>
-        </div>
-      )
-    },
-    {
-      header: "Category",
-      accessor: row => (
-        <span className="obz-cat">
-          {row.category?.name || 'Uncategorized'}
-        </span>
-      )
-    },
-    {
-      header: "Brands",
-      sortable: false,
-      accessor: row => <BrandTags brands={row.brands || []} />
-    },
-    {
-      header: "Avg. Rating",
-      accessor: row => (
-        row.avg_rating
-          ? <span className="obz-rating"><HugeiconsIcon icon={StarIcon} size={16} strokeWidth={2} />{Number(row.avg_rating).toFixed(1)}</span>
-          : <span className="obz-na">N/A</span>
-      )
-    },
-    {
-      header: "SEO",
-      sortable: false,
-      accessor: row => {
-        // Per-product SEO gaps come from the listing endpoint (seoGaps). This
-        // surfaces the same missing-field flags the SEO Health page used to
-        // show, right where you edit the product. `undefined` = older cached
-        // payload / backend not yet restarted → show a neutral dash.
-        const gaps = row.seoGaps;
-        if (!Array.isArray(gaps)) return <span className="obz-na">—</span>;
-        if (gaps.length === 0) {
-          return (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--ds-color-success, #16a34a)' }}>
-              <HugeiconsIcon icon={Tick02Icon} size={15} strokeWidth={2.5} /> Complete
-            </span>
-          );
-        }
-        return (
-          <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4 }}>
-            {gaps.map(g => <Badge key={g} variant="danger" size="sm">{SEO_GAP_LABEL[g] || g}</Badge>)}
-          </span>
-        );
-      }
-    },
-    {
-      header: "Status",
-      accessor: row => {
-        const st = row.status || 'unknown';
-        return (
-          <Badge variant={row.status === 'active' ? 'success' : 'default'}>
-            {st.charAt(0).toUpperCase() + st.slice(1)}
-          </Badge>
-        );
-      }
-    },
-    {
-      header: "Actions",
-      accessor: "actions",
-      align: "right",
-      sortable: false,
-      cell: ({ id }) => (
-        <div className="obz-acts">
-          <button className="obz-ico" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>
-            <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />
-          </button>
-          <button className="obz-ico del" title="Delete" onClick={() => handleDelete(id)}>
-            <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />
-          </button>
-        </div>
-      )
-    }
-  ];
-
-  // Update handleEdit to include badge
-  const handleEdit = async (id) => {
-    // Open the panel immediately (with a loader) so it doesn't feel like the
-    // click did nothing while the product details are fetched.
-    setCurrentStep(1);
-    setEditLoading(true);
-    setIsModalOpen(true);
-    try {
-      const response = await productService.getProduct(id);
-      const product = response;
-      
-      if (product.variations) {
-        product.variations.forEach((variation, index) => {
-          });
-      }
-      // Format the data for the form
-      const formData = {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        categoryId: product.categoryId,
-        status: product.status,
-        badge: product.badge || 'none',
-        total_sold: product.total_sold || 0,
-        brandIds: product.brands?.map(b => Number(b.id)).filter(Boolean) || [], // Extract brand IDs as numbers
-        imagesToDelete: [], // Reset deletion tracking
-        variationImagesToDelete: [], // Reset deletion tracking
-        images: product.images?.map(img => {
-          // Get the base URL
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-          const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
-          
-          // Construct the proper image URL
-          let imageUrl = img.image_url;
-          if (!imageUrl.startsWith('http')) {
-            if (imageUrl.startsWith('/products') || imageUrl.startsWith('/categories') || imageUrl.startsWith('/sliders')) {
-              imageUrl = `${imageKitEndpoint}${imageUrl}`;
-            } else if (imageUrl.startsWith('/uploads/')) {
-              imageUrl = `${baseUrl}${imageUrl}`;
-            } else {
-              imageUrl = `${imageKitEndpoint}/products/${imageUrl}`;
-            }
-          }
-          
-          return {
-            id: img.id,
-            name: imageUrl.split('/').pop(),
-            image_url: imageUrl, // Use the full URL
-            url: imageUrl, // Also provide url for compatibility
-            type: 'image/jpeg',
-            existing: true
-          };
-        }) || [],
-        weight: product.weight || '',
-        weightUnit: product.weightUnit || 'g',
-        dimensions: product.dimensions || { length: '', width: '', height: '' },
-        dimensionUnit: product.dimensionUnit || 'cm',
-        gst_rate: product.gst_rate != null ? String(product.gst_rate) : '5',
-        attributes: (() => {
-          // Product-level attributes arrive as { <key>: [{name,image}] } (older
-          // products only carry `notes`). Convert to the editor's array-of-groups
-          // shape, tolerating legacy bare-string values. Always surface a `notes`
-          // group so it shows even when empty.
-          let parsed;
-          try {
-            parsed = typeof product.attributes === 'string'
-              ? JSON.parse(product.attributes || '{}')
-              : (product.attributes || {});
-          } catch (e) {
-            parsed = {};
-          }
-          if (!parsed || typeof parsed !== 'object') parsed = {};
-          const groups = Object.entries(parsed)
-            .filter(([, v]) => Array.isArray(v))
-            .map(([key, arr]) => ({
-              key,
-              values: arr.map((item) => (item && typeof item === 'object')
-                ? { name: String(item.name ?? ''), image: String(item.image ?? '') }
-                : { name: String(item ?? ''), image: '' })
-            }));
-          if (!groups.some((g) => String(g.key).toLowerCase() === 'notes')) {
-            groups.unshift({ key: 'notes', values: [] });
-          }
-          return groups;
-        })(),
-        variations: product.variations?.map(variation => {
-          // Parse attributes if it's a string and ensure proper object structure
-          let attributes = variation.attributes || {}; // Directly get attributes from attributes from variation
-          if (typeof attributes === 'string') {
-            try {
-              attributes = JSON.parse(attributes);
-            } catch (e) {
-              attributes = {};
-            }
-          }
-          const formattedAttributes = {};
-          if (attributes) {
-            Object.entries(attributes).forEach(([key, value]) => {
-              const formattedKey = key.toLowerCase();
-              // `_images` is the reserved value→image URL map, not an attribute
-              // value list — carry it through as-is so existing images show when
-              // editing (and survive a re-save). Everything else stays a string
-              // array exactly as before.
-              if (formattedKey === '_images') {
-                formattedAttributes._images = (value && typeof value === 'object' && !Array.isArray(value))
-                  ? value
-                  : {};
-                return;
-              }
-              formattedAttributes[formattedKey] = Array.isArray(value) ? value : [String(value)];
-            });
-          }
-          return {
-            id: variation.id,
-            price: variation.price,
-            comparePrice: variation.comparePrice,
-            cost_price: variation.cost_price != null ? String(variation.cost_price) : '',
-            stock: variation.stock,
-            sku: variation.sku,
-            attributes: formattedAttributes
-          };
-        }) || [],
-        seo: {
-          metaTitle: product.seo?.metaTitle || product.name,
-          metaDescription: product.seo?.metaDescription || product.description,
-          metaKeywords: product.seo?.metaKeywords || '',
-          ogTitle: product.seo?.ogTitle || product.name,
-          ogDescription: product.seo?.ogDescription || product.description,
-          ogImage: product.seo?.ogImage || (product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${product.images[0].image_url}` : null),
-          canonicalUrl: product.seo?.canonicalUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in'}/products/${product.slug}`,
-          structuredData: product.seo?.structuredData || JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": product.name,
-            "description": product.description,
-            "image": product.images?.[0] ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}${product.images[0].image_url}` : null,
-            "offers": {
-              "@type": "Offer",
-              "price": product.variations?.[0]?.price || 0,
-              "priceCurrency": "INR",
-              "availability": product.variations?.[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-            }
-          })
-        },
-        variationImages: product.variations?.map((variation, vIndex) => {
-          const variationImages = variation.images?.map(img => {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
-            const imageKitEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
-            
-            let imageUrl = img.image_url;
-            if (!imageUrl.startsWith('http')) {
-              if (imageUrl.startsWith('/products') || imageUrl.startsWith('/categories') || imageUrl.startsWith('/sliders')) {
-                imageUrl = `${imageKitEndpoint}${imageUrl}`;
-              } else if (imageUrl.startsWith('/uploads/')) {
-                imageUrl = `${baseUrl}${imageUrl}`;
-              } else {
-                imageUrl = `${imageKitEndpoint}/products/${imageUrl}`;
-              }
-            }
-            
-            const imageObj = {
-              id: img.id,
-              name: imageUrl.split('/').pop(),
-              url: imageUrl,
-              image_url: imageUrl, // Also provide image_url for compatibility
-              type: 'image/jpeg',
-              existing: true
-            };
-            return imageObj;
-          }) || [];
-          
-          return variationImages;
-        }) || []
-      };
-
-      setFormData(formData);
-    } catch (err) {
-      setError(err.response?.data?.message || "Error fetching product details");
-      setIsModalOpen(false); // close the panel if the fetch failed
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const handleDelete = (id) => {
-    setConfirmState({ message: "Are you sure you want to delete this product?", onConfirm: async () => {
-      setConfirmState(null);
-      try {
-        setLoading(true);
-        await productService.deleteProduct(id);
-        await fetchProducts(true);
-      } catch (err) {
-        setError(err.message || "Failed to delete product");
-      } finally {
-        setLoading(false);
-      }
-    }});
-  };
-
-  const handleAddNew = () => {
-    setFormData({
-      name: "",
-      description: "",
-      categoryId: "",
-      status: "active",
-      price: "",
-      stock: "",
-      images: [],
-      imagesToDelete: [], // Add missing array
-      variationImagesToDelete: [], // Add missing array
-      weight: "",
-      weightUnit: "g",
-      dimensions: { length: "", width: "", height: "" },
-      dimensionUnit: "cm",
-      gst_rate: "5",
-      attributes: [{ key: 'notes', values: [] }],
-      brandIds: [],
-      variations: [{
-        price: "",
-        comparePrice: "",
-        cost_price: "",
-        stock: "",
-        sku: "",
-        attributes: {}
-      }],
-      seo: {
-        metaTitle: "",
-        metaDescription: "",
-        metaKeywords: "",
-        ogTitle: "",
-        ogDescription: "",
-        ogImage: "",
-        canonicalUrl: "",
-        structuredData: ""
-      },
-      variationImages: []
-    });
-    setCurrentStep(1);
-    setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setCurrentStep(1);
-    setShowExistingImageSelector(false); // Reset image selector
-    setShowVariationImageSelector(false); // Reset variation image selector
-    setCurrentVariationIndex(null); // Reset variation index
-    setFormData({
-      name: "",
-      description: "",
-      categoryId: "",
-      status: "active",
-      price: "",
-      stock: "",
-      images: [],
-      imagesToDelete: [], // Reset deletion tracking
-      variationImagesToDelete: [], // Reset deletion tracking
-      weight: "",
-      weightUnit: "g",
-      dimensions: { length: "", width: "", height: "" },
-      dimensionUnit: "cm",
-      gst_rate: "5",
-      attributes: [{ key: 'notes', values: [] }],
-      variations: [{
-        price: "",
-        comparePrice: "",
-        cost_price: "",
-        stock: "",
-        sku: "",
-        attributes: {}
-      }],
-      seo: {
-        metaTitle: "",
-        metaDescription: "",
-        metaKeywords: "",
-        ogTitle: "",
-        ogDescription: "",
-        ogImage: "",
-        canonicalUrl: "",
-        structuredData: ""
-      },
-      variationImages: []
-    });
-  };
-
-  const handleExistingImagesSelect = (selectedImages) => {
-    setFormData(prev => ({
-      ...prev,
-      images: [...(prev.images || []), ...selectedImages]
-    }));
-  };
-
-  const handleVariationExistingImagesSelect = (selectedImages) => {
-    if (currentVariationIndex !== null) {
-      setFormData(prev => {
-        const newVariationImages = [...(prev.variationImages || [])];
-        // Initialize the array for this variation if it doesn't exist
-        if (!newVariationImages[currentVariationIndex]) {
-          newVariationImages[currentVariationIndex] = [];
-        }
-        // Add selected images to the variation
-        newVariationImages[currentVariationIndex] = [
-          ...(newVariationImages[currentVariationIndex] || []),
-          ...selectedImages
-        ];
-        return { ...prev, variationImages: newVariationImages };
-      });
-    }
-  };
-
-  const openVariationImageSelector = (variationIndex) => {
-    setCurrentVariationIndex(variationIndex);
-    setShowVariationImageSelector(true);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
-
-    if (!name) {
-      return;
-    }
-    
-    if (name.startsWith('seo.')) {
-      const seoField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        seo: {
-          ...prev.seo,
-          [seoField]: value
-        }
-      }));
-    } else if (name.startsWith('variations.')) {
-      const [_, index, ...fields] = name.split('.');
-      const variationIndex = parseInt(index);
-
-      setFormData(prev => {
-        const newVariations = [...prev.variations];
-        let current = newVariations[variationIndex];
-
-        // Handle nested fields (attributes, dimensions, etc.)
-        if (fields.length === 2) {
-          // e.g., dimensions.length, attributes.color, etc.
-          const [parent, child] = fields;
-          if (parent === 'attributes' || parent === 'dimensions') {
-            current = {
-              ...current,
-              [parent]: {
-                ...current[parent],
-                [child]: type === 'number' ? (value ? Number(value) : '') : value
-              }
-            };
-          } else {
-            current = {
-              ...current,
-              [parent]: type === 'number' ? (value ? Number(value) : '') : value
-            };
-          }
-        } else if (fields.length === 1) {
-          // e.g., price, stock, sku, weight, weightUnit, dimensionUnit
-          const [field] = fields;
-          current = {
-            ...current,
-            [field]: type === 'number' ? (value ? Number(value) : '') : value
-          };
-        }
-
-        newVariations[variationIndex] = current;
-        return {
-          ...prev,
-          variations: newVariations
-        };
-      });
-    } else if (name.startsWith('dimensions.')) {
-      const dimKey = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        dimensions: {
-          ...prev.dimensions,
-          [dimKey]: type === 'number' ? (value ? Number(value) : '') : value
-        }
-      }));
-    } else if (name.startsWith('weight')) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'number' ? (value ? Number(value) : '') : value
-      }));
-    } else if (name.startsWith('dimensionUnit')) {
-      setFormData(prev => ({
-        ...prev,
-        dimensionUnit: value
-      }));
-    } else if (name.startsWith('variationImage.')) {
-      const variationIndex = parseInt(name.split('.')[1]);
-      const files = Array.from(e.target.files);
-      setFormData(prev => {
-        const newVariationImages = [...(prev.variationImages || [])];
-        // Initialize the array for this variation if it doesn't exist
-        if (!newVariationImages[variationIndex]) {
-          newVariationImages[variationIndex] = [];
-        }
-        // Add new files to existing images for this variation
-        newVariationImages[variationIndex] = [...newVariationImages[variationIndex], ...files];
-        return { ...prev, variationImages: newVariationImages };
-      });
-      return;
-    } else {
-      setFormData(prev => {
-        const updated = { ...prev, [name]: value };
-        return updated;
-      });
-    }
-  };
-
-  // New handler for AttributeSelector changes
-  const handleAttributeChange = (variationIndex, updatedAttributes) => {
-    setFormData(prev => {
-      const newVariations = [...prev.variations];
-      newVariations[variationIndex] = {
-        ...newVariations[variationIndex],
-        attributes: updatedAttributes
-      };
-      return {
-        ...prev,
-        variations: newVariations
-      };
-    });
-  };
-
-  const addVariation = () => {
-    setFormData(prev => {
-      const newIndex = prev.variations.length;
-      setOpenVariations(o => ({ ...o, [newIndex]: true }));
-      return {
-        ...prev,
-        variations: [
-          ...prev.variations,
-          { price: "", comparePrice: "", cost_price: "", stock: "", sku: "", attributes: {} }
-        ]
-      };
-    });
-  };
-
-  const removeVariation = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      variations: prev.variations.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleNextStep = () => {
-    setCurrentStep(prev => prev + 1);
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStep(prev => prev - 1);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (route.mode !== 'list') return undefined;
+    const id = ++reqId.current;
+    const ctrl = new AbortController();
     setLoading(true);
-    setError(null);
+    setError('');
+    productService.getStockList(params, ctrl.signal)
+      .then((res) => { if (id === reqId.current) setData(res); })
+      .catch((e) => { if (id === reqId.current && e?.name !== 'CanceledError') setError(e?.response?.data?.message || 'Couldn’t load products. Check your connection and try again.'); })
+      .finally(() => { if (id === reqId.current) setLoading(false); });
+    return () => ctrl.abort();
+  }, [params, route.mode, reloadKey]);
 
-    try {
-        if (formData.images) {
-          formData.images.forEach((img, idx) => {
-            });
-        }
-        // Get the first image URL for SEO
-        let firstImageUrl = null;
-        if (formData.images && formData.images.length > 0) {
-            const firstImage = formData.images[0];
-            if (firstImage instanceof File) {
-                firstImageUrl = URL.createObjectURL(firstImage);
-            } else if (firstImage.url) {
-                firstImageUrl = firstImage.url;
-            }
-        }
+  // SEO gaps count for the bottom panel.
+  useEffect(() => {
+    if (route.mode !== 'list') return undefined;
+    let alive = true;
+    seoAdminService.listProducts({ gaps_only: 'true', limit: 1, brand_id: brandId || undefined })
+      .then((r) => { if (alive) setSeoGaps(Number(r?.gapsTotal ?? r?.total) || 0); })
+      .catch(() => { if (alive) setSeoGaps(null); });
+    return () => { alive = false; };
+  }, [brandId, route.mode, reloadKey]);
 
-        // Handle variations with attributes
-        const variationsWithAttributes = formData.variations.map(variation => {
-            // Process attributes: filter out empty, ensure values are arrays of strings
-            const processedAttributes = {};
-            if (variation.attributes) {
-                Object.entries(variation.attributes).forEach(([key, value]) => {
-                    // Normalize key to lowercase to ensure consistency
-                    const normalizedKey = key.toLowerCase();
+  // After an inline save, refresh only the tile numbers — the rows stay put
+  // so a product doesn't vanish from "Out of stock" while you're still typing.
+  const countsTimer = useRef(null);
+  const refreshCounts = useCallback(() => {
+    clearTimeout(countsTimer.current);
+    countsTimer.current = setTimeout(() => {
+      productService.getStockList({ ...params, page: 1, limit: 1 })
+        .then((res) => setData((d) => (d ? { ...d, counts: res.counts } : d)))
+        .catch(() => {});
+    }, 800);
+  }, [params]);
+  useEffect(() => () => clearTimeout(countsTimer.current), []);
 
-                    // `_images` is the reserved value→image URL map. Carry it
-                    // through unchanged (prune empty) — it is persisted inside
-                    // the same variation attributes JSON and must NOT be coerced
-                    // into a string-value array like the real attributes.
-                    if (normalizedKey === '_images') {
-                        if (value && typeof value === 'object' && !Array.isArray(value)) {
-                            const imgMap = {};
-                            Object.entries(value).forEach(([k, group]) => {
-                                if (group && typeof group === 'object') {
-                                    const kept = {};
-                                    Object.entries(group).forEach(([val, url]) => {
-                                        if (url) kept[val] = url;
-                                    });
-                                    if (Object.keys(kept).length) imgMap[k.toLowerCase()] = kept;
-                                }
-                            });
-                            if (Object.keys(imgMap).length) processedAttributes._images = imgMap;
-                        }
-                        return;
-                    }
+  const patchRow = useCallback((productId, fn) => {
+    setData((d) => (d ? { ...d, items: d.items.map((it) => (it.id === productId ? { ...it, ...fn(it) } : it)) } : d));
+  }, []);
 
-                    let cleanedValues = [];
-                    if (typeof value === 'string' && value.trim() !== '') {
-                        cleanedValues = value.split(',').map(v => v.trim()).filter(v => v !== '');
-                    } else if (Array.isArray(value)) {
-                        cleanedValues = value.map(v => String(v).trim()).filter(v => v !== '');
-                    }
+  const backToList = () => { pushMode(''); setReloadKey((k) => k + 1); };
 
-                    if (cleanedValues.length > 0) {
-                        processedAttributes[normalizedKey] = cleanedValues;
-                    }
-                });
-            }
+  if (route.mode === 'edit' || route.mode === 'new') {
+    return (
+      <ProductEditor
+        key={route.mode === 'edit' ? `e${route.id}` : 'new'}
+        productId={route.mode === 'edit' ? route.id : null}
+        onClose={backToList}
+        onSaved={(id) => { if (route.mode === 'new' && id) pushMode(`edit=${id}`); }}
+        onDeleted={backToList}
+      />
+    );
+  }
+  if (route.mode === 'seo') {
+    return <SeoBulkPanel brands={brands} initialBrandId={brandId} onClose={backToList} />;
+  }
 
-            return {
-                id: variation.id,
-            price: variation.price,
-                comparePrice: variation.comparePrice || null,
-                cost_price: variation.cost_price !== '' && variation.cost_price != null ? variation.cost_price : null,
-            stock: variation.stock,
-            sku: variation.sku,
-                attributes: processedAttributes
-            };
-        });
-
-        // === VALIDATION ===
-        for (const v of variationsWithAttributes) {
-          if (!v.price || isNaN(v.price) || Number(v.price) <= 0) {
-            setError("Each variation must have a valid price.");
-            setLoading(false);
-            return;
-          }
-        }
-        if (!formData.categoryId) {
-          setError("Category is required.");
-          setLoading(false);
-          return;
-        }
-        if (!formData.brandIds || formData.brandIds.length === 0) {
-          setError("Please assign the product to at least one brand.");
-          setLoading(false);
-          return;
-        }
-
-        // Handle SEO data
-        const seoData = {
-            metaTitle: formData.seo.metaTitle || formData.name,
-            metaDescription: formData.seo.metaDescription || formData.description,
-            metaKeywords: formData.seo.metaKeywords || '',
-            ogTitle: formData.seo.metaTitle || formData.name,
-            ogDescription: formData.seo.metaDescription || formData.description,
-            ogImage: firstImageUrl,
-            canonicalUrl: formData.seo.canonicalUrl || `${process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in'}/products/${formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')}`,
-            structuredData: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "Product",
-                "name": formData.name,
-                "description": formData.description,
-                "image": firstImageUrl,
-                "offers": {
-                    "@type": "Offer",
-                    "price": variationsWithAttributes[0]?.price || 0,
-                    "priceCurrency": "INR",
-                    "availability": variationsWithAttributes[0]?.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-                }
-            })
-        };
-
-        // Create FormData
-        const formDataToSend = new FormData();
-
-        // Add basic fields
-        formDataToSend.append('name', formData.name);
-        formDataToSend.append('description', formData.description);
-        formDataToSend.append('categoryId', formData.categoryId);
-        formDataToSend.append('status', formData.status);
-        formDataToSend.append('badge', formData.badge || 'none');
-        formDataToSend.append('total_sold', formData.total_sold || 0);
-        formDataToSend.append('weight', formData.weight || '');
-        formDataToSend.append('weightUnit', formData.weightUnit || 'g');
-        formDataToSend.append('dimensions', JSON.stringify(formData.dimensions));
-        formDataToSend.append('dimensionUnit', formData.dimensionUnit || 'cm');
-        formDataToSend.append('gst_rate', formData.gst_rate ?? '5');
-
-        // Product-level attributes — named value groups with optional imagery
-        // (e.g. notes, accords). Collapse the editor's array-of-groups into the
-        // backend/storefront shape { <key>: [{name,image}] }. Keys are lowercased
-        // for consistency with the storefront (which reads attributes.notes); empty
-        // names/groups are dropped, and values from duplicate keys are merged.
-        // `notes` is always included (possibly empty) so the saved shape stays
-        // backward compatible with existing products and the PDP contract.
-        const attributesObj = {};
-        (Array.isArray(formData.attributes) ? formData.attributes : []).forEach(group => {
-          const key = String(group?.key || '').trim().toLowerCase();
-          if (!key) return;
-          const cleanedValues = (group?.values || [])
-            .filter(v => v && v.name && v.name.trim())
-            .map(v => ({ name: v.name.trim(), image: (v.image || '').trim() }));
-          if (cleanedValues.length === 0) return;
-          attributesObj[key] = (attributesObj[key] || []).concat(cleanedValues);
-        });
-        if (!attributesObj.notes) attributesObj.notes = [];
-        formDataToSend.append('attributes', JSON.stringify(attributesObj));
-        
-        // Add brand IDs
-        formDataToSend.append('brandIds', JSON.stringify(formData.brandIds || []));
-
-        // Add variations
-        formDataToSend.append('variations', JSON.stringify(variationsWithAttributes));
-
-        // Add SEO data
-        formDataToSend.append('seo', JSON.stringify(seoData));
-
-        // Add images (ONLY new files and newly selected library images)
-        const libraryImages = [];
-        
-        if (formData.images && formData.images.length > 0) {
-            formData.images.forEach((image, index) => {
-                if (image instanceof File) {
-                    // New uploaded files
-                    formDataToSend.append(`images`, image);
-                } else if (image.fromLibrary === true) {
-                    // Newly selected library images
-                    libraryImages.push({
-                        image_url: image.image_url || image.url,
-                        url: image.url || image.image_url,
-                        name: image.name
-                    });
-                }
-                // Existing images (image.existing === true) are completely ignored
-                // They will be preserved automatically by the backend
-            });
-        }
-        
-        // Debug preserve IDs
-        if (formData.id && formData.images) {
-            const existingImageIds = formData.images
-                .filter(img => img.existing === true && img.id)
-                .map(img => img.id);
-            }
-        if (formData.id && formData.variationImages) {
-            const existingVariationImageIds = [];
-            formData.variationImages.forEach(images => {
-                if (images && images.length > 0) {
-                    images.forEach(img => {
-                        if (img.existing === true && img.id) {
-                            existingVariationImageIds.push(img.id);
-                        }
-                    });
-                }
-            });
-            }
-        
-        // Add library images data
-        if (libraryImages.length > 0) {
-            formDataToSend.append('libraryImages', JSON.stringify(libraryImages));
-        }
-
-        // Add images to delete (for updates)
-        if (formData.id && formData.imagesToDelete && formData.imagesToDelete.length > 0) {
-            formDataToSend.append('imagesToDelete', JSON.stringify(formData.imagesToDelete));
-        }
-
-        // Add variation images to delete (for updates)
-        if (formData.id && formData.variationImagesToDelete && formData.variationImagesToDelete.length > 0) {
-            formDataToSend.append('variationImagesToDelete', JSON.stringify(formData.variationImagesToDelete));
-        }
-
-        // Add existing image IDs to preserve (for updates)
-        if (formData.id && formData.images) {
-            const existingImageIds = formData.images
-                .filter(img => img.existing === true && img.id)
-                .map(img => img.id);
-            if (existingImageIds.length > 0) {
-                formDataToSend.append('preserveImageIds', JSON.stringify(existingImageIds));
-            }
-        }
-
-        // Add existing variation image IDs to preserve (for updates)
-        if (formData.id && formData.variationImages) {
-            const existingVariationImageIds = [];
-            formData.variationImages.forEach(images => {
-                if (images && images.length > 0) {
-                    images.forEach(img => {
-                        if (img.existing === true && img.id) {
-                            existingVariationImageIds.push(img.id);
-                        }
-                    });
-                }
-            });
-            if (existingVariationImageIds.length > 0) {
-                formDataToSend.append('preserveVariationImageIds', JSON.stringify(existingVariationImageIds));
-            }
-        }
-
-        // Add variation images (ONLY new files and newly selected library images)
-        const variationLibraryImages = [];
-        
-        if (formData.variationImages && formData.variationImages.length > 0) {
-          formData.variationImages.forEach((images, vIdx) => {
-            if (images && images.length > 0) {
-              images.forEach((img, imgIdx) => {
-                if (img instanceof File) {
-                  formDataToSend.append(`variation_${vIdx}_image`, img);
-                } else if (img.fromLibrary === true) {
-                  // Newly selected library images for variation
-                  if (!variationLibraryImages[vIdx]) {
-                    variationLibraryImages[vIdx] = [];
-                  }
-                  variationLibraryImages[vIdx].push({
-                    image_url: img.image_url || img.url,
-                    url: img.url || img.image_url,
-                    name: img.name
-                  });
-                }
-                // Existing variation images (img.existing === true) are completely ignored
-                // They will be preserved automatically by the backend
-              });
-            }
-          });
-        }
-
-        // Add variation library images data
-        if (variationLibraryImages.length > 0) {
-          formDataToSend.append('variationLibraryImages', JSON.stringify(variationLibraryImages));
-        }
-
-        let response;
-        if (formData.id) {
-            response = await productService.updateProduct(formData.id, formDataToSend);
-        } else {
-            response = await productService.createProduct(formDataToSend);
-        }
-
-        if (response.success) {
-            setIsModalOpen(false);
-            await fetchProducts(true);
-        } else {
-            throw new Error(response.message || 'Failed to save product');
-        }
-    } catch (err) {
-        setError(err.message || err.response?.data?.message || "Error saving product");
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  const renderModalStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <>
-            <Input
-              label="Product Name"
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
-            <div className="dm-field">
-              <label className="dm-label">Description</label>
-              <Editor
-                value={formData.description}
-                onChange={val => setFormData(prev => ({ ...prev, description: val }))}
-                placeholder="Write product description..."
-              />
-            </div>
-            <div className="obz-form-row3">
-            <Select
-              label="Category"
-              required
-              // Coerce to string so a numeric categoryId loaded on edit still
-              // matches the String(cat.id) option values (DS Select uses ===).
-              value={formData.categoryId != null ? String(formData.categoryId) : ''}
-              onChange={(v) => setFormData(prev => ({ ...prev, categoryId: v }))}
-              options={[
-                { value: '', label: 'Select a category' },
-                ...categories.map(cat => ({ value: String(cat.id), label: cat.name })),
-              ]}
-            />
-            <Input
-              label="Status"
-              type="select"
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              options={[
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
-                { value: 'draft', label: 'Draft' }
-              ]}
-              required
-            />
-            <Input
-              label="Badge"
-              type="select"
-              name="badge"
-              value={formData.badge}
-              onChange={handleInputChange}
-              options={[
-                { value: 'none', label: 'No Badge' },
-                { value: 'new_arrival', label: 'New Arrival' },
-                { value: 'hot_selling', label: 'Hot Selling' },
-                { value: 'low_stock', label: 'Low Stock' }
-              ]}
-            />
-            </div>
-
-            {/* Brand Assignment */}
-            <BrandAssignment
-              selectedBrands={formData.brandIds || []}
-              onChange={(brandIds) => setFormData(prev => ({ ...prev, brandIds }))}
-              disabled={loading}
-            />
-            
-            {/* Product Images Upload */}
-            <div className="product-images-section">
-              <label className="dm-label">Product Images</label>
-              <div className="prd-upload-row">
-                <input
-                  type="file"
-                  name="images"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files);
-                    setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...files] }));
-                  }}
-                />
-                <button type="button" className="prd-select-btn" onClick={() => setShowExistingImageSelector(true)}>
-                  Select Existing
-                </button>
-              </div>
-              <div className="prd-img-grid">
-                {formData.images && formData.images.map((img, imgIdx) => {
-                  const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
-                  return (
-                    <div key={imgIdx} className="prd-img-thumb">
-                      <img src={imageUrl} alt={`Product Image ${imgIdx + 1}`} />
-                      <button type="button" className="prd-img-remove" onClick={() => {
-                        const imageToRemove = formData.images[imgIdx];
-                        setFormData(prev => {
-                          const newState = { ...prev, images: prev.images.filter((_, i) => i !== imgIdx) };
-                          if (imageToRemove.existing && imageToRemove.id) newState.imagesToDelete = [...prev.imagesToDelete, imageToRemove.id];
-                          return newState;
-                        });
-                      }}>×</button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="weight-dimensions-section">
-              <div className="weight-section">
-                <Input
-                  label="Weight"
-                  type="number"
-                  name="weight"
-                  value={formData.weight}
-                  onChange={handleInputChange}
-                  placeholder="Enter weight"
-                />
-                <Input
-                  label="Weight Unit"
-                  type="select"
-                  name="weightUnit"
-                  value={formData.weightUnit}
-                  onChange={handleInputChange}
-                  options={[
-                    { value: 'g', label: 'Grams (g)' },
-                    { value: 'kg', label: 'Kilograms (kg)' },
-                    { value: 'lb', label: 'Pounds (lb)' },
-                    { value: 'oz', label: 'Ounces (oz)' }
-                  ]}
-                />
-                <Input
-                  label="GST rate (%)"
-                  type="number"
-                  name="gst_rate"
-                  value={formData.gst_rate ?? '5'}
-                  onChange={handleInputChange}
-                  placeholder="5"
-                />
-              </div>
-              <div className="dimensions-section">
-                <h6>Dimensions</h6>
-                <div className="dimensions-inputs">
-                  <Input
-                    label="Length"
-                    type="number"
-                    name="dimensions.length"
-                    value={formData.dimensions.length}
-                    onChange={handleInputChange}
-                    placeholder="Length"
-                  />
-                  <Input
-                    label="Width"
-                    type="number"
-                    name="dimensions.width"
-                    value={formData.dimensions.width}
-                    onChange={handleInputChange}
-                    placeholder="Width"
-                  />
-                  <Input
-                    label="Height"
-                    type="number"
-                    name="dimensions.height"
-                    value={formData.dimensions.height}
-                    onChange={handleInputChange}
-                    placeholder="Height"
-                  />
-                  <Input
-                    label="Dimension Unit"
-                    type="select"
-                    name="dimensionUnit"
-                    value={formData.dimensionUnit}
-                    onChange={handleInputChange}
-                    options={[
-                      { value: 'cm', label: 'Centimeters (cm)' },
-                      { value: 'm', label: 'Meters (m)' },
-                      { value: 'in', label: 'Inches (in)' },
-                      { value: 'ft', label: 'Feet (ft)' }
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Product-level attributes editor removed: notes/accords (and their
-                images) are managed on each VARIATION via AttributeSelector's
-                per-value image upload (attributes._images). The stored
-                product-level data still round-trips untouched through
-                handleSubmit so older products keep working. */}
-          </>
-        );
-      case 2:
-        return (
-          <>
-            <div className="variations-section">
-              <div className="variations-header">
-                <h3>Product Variations</h3>
-              </div>
-              {formData.variations.map((variation, index) => {
-                const isOpen = openVariations[index] === true; // default closed (keeps the step compact)
-                const skuLabel = variation.sku ? ` — ${variation.sku}` : '';
-                const priceLabel = variation.price ? ` · ₹${variation.price}` : '';
-                const attrEntries = Object.entries(variation.attributes || {}).filter(([k, v]) => {
-                  if (String(k).toLowerCase() === '_images') return false; // reserved image map, not a displayable attribute
-                  const val = Array.isArray(v) ? v.join('') : String(v || '');
-                  return val.trim() !== '';
-                });
-                const attrLabel = attrEntries.length > 0
-                  ? ' · ' + attrEntries.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
-                  : '';
-                return (
-                  <div key={index} className={`variation-item variation-accordion${isOpen ? ' variation-accordion--open' : ''}`}>
-                    <div className="variation-accordion-header" onClick={() => toggleVariation(index)}>
-                      <div className="variation-accordion-title">
-                        <span className="variation-accordion-num">Variation {index + 1}</span>
-                        {!isOpen && (
-                          <span className="variation-accordion-summary">
-                            {skuLabel}{priceLabel}{attrLabel}
-                          </span>
-                        )}
-                      </div>
-                      <div className="variation-accordion-actions">
-                        {index > 0 && (
-                          <button
-                            type="button"
-                            className="variation-remove-btn"
-                            onClick={(e) => { e.stopPropagation(); removeVariation(index); }}
-                          >
-                            Remove
-                          </button>
-                        )}
-                        <span className="variation-accordion-chevron">
-                          <HugeiconsIcon icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon} size={14} strokeWidth={2} />
-                        </span>
-                      </div>
-                    </div>
-
-                    {isOpen && (
-                      <div className="variation-accordion-body">
-                        <Input
-                          label="SKU"
-                          type="text"
-                          name={`variations.${index}.sku`}
-                          value={variation.sku}
-                          onChange={handleInputChange}
-                          placeholder="Enter SKU"
-                        />
-                        <div className="dm-2col">
-                          <Input
-                            label="Price"
-                            type="number"
-                            name={`variations.${index}.price`}
-                            value={variation.price}
-                            onChange={handleInputChange}
-                            required
-                          />
-                          <Input
-                            label="Compare Price"
-                            type="number"
-                            name={`variations.${index}.comparePrice`}
-                            value={variation.comparePrice || ''}
-                            onChange={handleInputChange}
-                            placeholder="Optional"
-                          />
-                        </div>
-                        <div className="dm-2col">
-                          <Input
-                            label="Cost Price"
-                            type="number"
-                            name={`variations.${index}.cost_price`}
-                            value={variation.cost_price || ''}
-                            onChange={handleInputChange}
-                            placeholder="Internal — for reports"
-                          />
-                          <Input
-                            label="Stock"
-                            type="number"
-                            name={`variations.${index}.stock`}
-                            value={variation.stock}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                        <AttributeSelector
-                          variationIndex={index}
-                          attributes={attributes}
-                          selectedAttributes={variation.attributes || {}}
-                          onChange={handleAttributeChange}
-                        />
-                        {/* Variation Images Upload */}
-                        <div className="variation-images-upload">
-                          <label className="dm-label">Variation Images</label>
-                          <div className="prd-upload-row">
-                            <input
-                              type="file"
-                              name={`variationImage.${index}`}
-                              multiple
-                              accept="image/*"
-                              onChange={handleInputChange}
-                            />
-                            <button type="button" className="prd-select-btn" onClick={() => openVariationImageSelector(index)}>
-                              Select Existing
-                            </button>
-                          </div>
-                          <div className="prd-img-grid">
-                            {(formData.variationImages?.[index]?.length > 0) ?
-                              formData.variationImages[index].map((img, imgIdx) => {
-                                const imageUrl = img instanceof File ? URL.createObjectURL(img) : (img.url || img.image_url);
-                                return (
-                                  <div key={imgIdx} className="prd-img-thumb">
-                                    <img src={imageUrl} alt={`Variation ${index + 1} Image ${imgIdx + 1}`} />
-                                    <button type="button" className="prd-img-remove" onClick={() => {
-                                      const imageToRemove = formData.variationImages[index][imgIdx];
-                                      setFormData(prev => {
-                                        const newVariationImages = [...(prev.variationImages || [])];
-                                        if (newVariationImages[index]) newVariationImages[index] = newVariationImages[index].filter((_, i) => i !== imgIdx);
-                                        const newState = { ...prev, variationImages: newVariationImages };
-                                        if (imageToRemove?.existing && imageToRemove.id) newState.variationImagesToDelete = [...(prev.variationImagesToDelete || []), imageToRemove.id];
-                                        return newState;
-                                      });
-                                    }}>×</button>
-                                  </div>
-                                );
-                              }) : (
-                                <p className="prd-img-empty">No images for this variation yet</p>
-                              )
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <Button variant="secondary" size="small" onClick={addVariation}>
-                Add Variation
-              </Button>
-            </div>
-          </>
-        );
-      case 3:
-        return (
-          <ProductSeoStep
-            formData={formData}
-            setFormData={setFormData}
-            handleInputChange={handleInputChange}
-            editingProductId={formData.id}
-            brands={brands}
-          />
-        );
-    }
-  };
+  const counts = data?.counts || {};
+  const rules = data?.rules || { lowStock: 10, slowMinStock: 30, slowDays: 180 };
+  const brandName = brands.find((b) => String(b.id) === String(brandId));
+  const tiles = [
+    { key: 'all', label: 'All products', value: counts.all, note: brandName ? `on ${brandName.display_name || brandName.name}` : `across ${plural(brands.length || 0, 'brand')}`, tone: '' },
+    { key: 'out', label: 'Out of stock', value: counts.out, note: counts.outSizes != null ? `${plural(counts.outSizes, 'size')} at 0${counts.waitingOut ? ` · ${plural(counts.waitingOut, 'customer')} waiting` : ''}` : '', tone: 'out' },
+    { key: 'low', label: 'Running low', value: counts.low, note: `a size has fewer than ${rules.lowStock} left`, tone: 'low' },
+    { key: 'slow', label: 'Slow movers', value: counts.slow, note: `${rules.slowMinStock}+ in stock, over ${Math.round(rules.slowDays / 30)} months to sell`, tone: 'slow' },
+    { key: 'hidden', label: 'Hidden on site', value: counts.hidden, note: 'not shown to shoppers', tone: 'muted' },
+  ];
+  const total = data?.total ?? 0;
+  const pages = Math.max(1, data?.pages || 1);
+  const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const to = Math.min(total, page * PAGE_SIZE);
 
   return (
-    <>
-    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
-    <div className="dashboard-page">
-      {error && (
-        <div role="alert" style={{ backgroundColor: 'var(--ds-color-danger-bg)', border: '1px solid var(--ds-color-danger)', borderRadius: '6px', padding: '12px 16px', margin: '16px', color: 'var(--ds-color-danger)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>{error}</span>
-          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+    <div className="dashboard-page pst">
+      <header className="pst-head">
+        <div>
+          <h1 className="pst-title">Products</h1>
+          <p className="pst-sub">Stock first: see what’s running out, fix quantities right in the list, open a product only to edit its details.</p>
+        </div>
+        <div className="pst-head-actions">
+          {canAccessView?.('pack-pricing') && (
+            <button type="button" className="pst-btn" onClick={() => goToView('pack-pricing')}>Pack prices</button>
+          )}
+          <button type="button" className="pst-btn pst-btn--primary" onClick={() => pushMode('new=1')}>
+            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} /> New product
+          </button>
+        </div>
+      </header>
+
+      <section className="pst-tiles" aria-label="Stock health">
+        {tiles.map((t) => (
+          <button key={t.key} type="button" className={`pst-tile${filter === t.key ? ' is-on' : ''}`} aria-pressed={filter === t.key} onClick={() => setFilter(t.key)}>
+            <span className="pst-tile-l">{t.label}</span>
+            <span className={`pst-tile-v ${t.tone ? `tone-${t.tone}` : ''}`}>{t.value == null ? '—' : Number(t.value).toLocaleString('en-IN')}</span>
+            <span className="pst-tile-n">{t.note}</span>
+          </button>
+        ))}
+      </section>
+
+      <div className="pst-bar">
+        <label className="pst-search">
+          <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
+          <input type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search name, SKU or colour" aria-label="Search products" />
+        </label>
+        <select className="pst-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
+          {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </div>
+      {brands.length > 1 && (
+        <div className="pst-chips" role="group" aria-label="Brand">
+          <button type="button" className={`pst-chip${brandId === '' ? ' is-on' : ''}`} onClick={() => setBrandId('')}>All brands</button>
+          {brands.map((b) => (
+            <button key={b.id} type="button" className={`pst-chip${String(brandId) === String(b.id) ? ' is-on' : ''}`} onClick={() => setBrandId(String(b.id))}>
+              {b.display_name || b.name}
+            </button>
+          ))}
         </div>
       )}
-      <PageHeader
-        title="Products"
-        subtitle={`${totalProducts} products · manage your catalog`}
-        actions={
-          <button className="ds-btn ds-btn--primary" onClick={handleAddNew}>
-            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />
-            Add Product
-          </button>
-        }
-      />
 
-      <Panel style={{ marginBottom: 16 }}>
-      <FilterBar hideSearch>
-        <div className="obz-search">
-          <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
-          <input type="text" placeholder="Search products…"
-            onChange={handleSearchChange} defaultValue={filterValue} />
-        </div>
-        <div style={{ minWidth: 170 }}>
-          <Select
-            options={[
-              { value: '', label: 'All Brands' },
-              ...brands.map((b) => ({ value: b.slug, label: b.display_name || b.name })),
-            ]}
-            value={selectedBrandSlug}
-            onChange={setSelectedBrandSlug}
-            placeholder="All Brands"
-          />
-        </div>
-      </FilterBar>
-      </Panel>
-      {/* Table Section */}
-      <Panel flush>
-        {loading ? (
-          <div style={{ padding: '20px' }}>
-            <TableSkeleton rows={itemsPerPage} columns={6} />
+      <section className="pst-panel">
+        {error ? (
+          <div className="pst-state">
+            <p>{error}</p>
+            <button type="button" className="pst-btn" onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
+          </div>
+        ) : loading && !data ? (
+          <div className="pst-state">Loading products…</div>
+        ) : !data?.items?.length ? (
+          <div className="pst-state">
+            {search ? `No products match “${search}”.` : filter === 'all' ? 'No products yet. Add your first one with “New product”.' : 'Nothing here — good news.'}
           </div>
         ) : (
-          <>
-            {filteredData.length === 0 ? (
-              <div className="sl-empty">
-                <p>{filterValue ? "No results found for your search" : "No products found"}</p>
-              </div>
-            ) : (
-              <>
-                <Table
-                  columns={columns}
-                  data={currentItemsWithSN}
-                  loading={loading}
-                  error={error}
-                  className="w-full"
-                  striped={false}
-                  hoverable={true}
-                  cardOnMobile
-                />
-                {totalProducts > itemsPerPage && (
-                  <div className="sl-pagination">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </Panel>
-      {/* Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        title={formData.id ? "Edit Product" : "Add New Product"}
-        closeOnOverlayClick={false}
-        size="lg"
-        footer={
-          <>
-            {currentStep > 1 && (
-              <Button variant="secondary" size="medium" onClick={handlePrevStep} disabled={loading} type="button">Previous</Button>
-            )}
-            {currentStep < 3 ? (
-              <Button variant="primary" size="medium" onClick={handleNextStep} disabled={loading || editLoading} type="button">Next</Button>
-            ) : (
-              <>
-                <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-                <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading || editLoading} type="button">{loading ? "Saving..." : "Save"}</Button>
-              </>
-            )}
-          </>
-        }
-      >
-        <form onSubmit={handleSubmit} className="seo-form">
-          {/* Step indicator — sticky at the top of the scrollable body */}
-          <div className="prod-steps">
-            {['Basic Info', 'Variations', 'SEO'].map((label, i) => {
-              const step = i + 1;
-              const isActive = currentStep === step;
-              const isDone = currentStep > step;
-              return (
-                <div key={step} className={`prod-step ${isActive ? 'prod-step--active' : ''} ${isDone ? 'prod-step--done' : ''}`}>
-                  <div className="prod-step-circle">
-                    {isDone ? (
-                      <HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={2} />
-                    ) : step}
-                  </div>
-                  <span className="prod-step-label">{label}</span>
-                  {i < 2 && <div className={`prod-step-line ${isDone ? 'prod-step-line--done' : ''}`} />}
-                </div>
-              );
-            })}
+          <div className={`pst-scroll${loading ? ' is-busy' : ''}`}>
+            <table className="pst-table">
+              <thead>
+                <tr>
+                  <th className="pst-col-prod">Product</th>
+                  <th>Brand</th>
+                  <th className="r">Price</th>
+                  <th className="r">In stock</th>
+                  <th className="r">Sold · 30 d</th>
+                  <th className="r">Lasts</th>
+                  <th>Badge</th>
+                  <th>Shows on site</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((p) => (
+                  <ProductRow key={p.id} p={p} onPatch={patchRow} onSaved={refreshCounts} onOpen={() => pushMode(`edit=${p.id}`)} />
+                ))}
+              </tbody>
+            </table>
           </div>
-          {editLoading
-            ? <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 260 }}><Loader /></div>
-            : renderModalStep()}
-        </form>
-      </Modal>
+        )}
+        <div className="pst-foot">
+          <span>Type a new quantity and press Enter — it saves at once. When a sold-out product gets stock again, customers who saved it or have it in their cart get a WhatsApp (9 AM–9 PM).</span>
+          {total > 0 && (
+            <span className="pst-pager">
+              Showing {from}–{to} of {total.toLocaleString('en-IN')}
+              {pages > 1 && (
+                <>
+                  <button type="button" className="pst-icon-btn" disabled={page <= 1 || loading} onClick={() => setPage((x) => x - 1)} aria-label="Previous page"><HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} /></button>
+                  <button type="button" className="pst-icon-btn" disabled={page >= pages || loading} onClick={() => setPage((x) => x + 1)} aria-label="Next page"><HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} /></button>
+                </>
+              )}
+            </span>
+          )}
+        </div>
+      </section>
 
-      {/* Existing Image Selector Modal */}
-      <ExistingImageSelector
-        isOpen={showExistingImageSelector}
-        onClose={() => setShowExistingImageSelector(false)}
-        onSelectImages={handleExistingImagesSelect}
-        productId={formData.id} // Pass the product ID when editing
-      />
-
-      {/* Variation Image Selector Modal */}
-      <ExistingImageSelector
-        isOpen={showVariationImageSelector}
-        onClose={() => {
-          setShowVariationImageSelector(false);
-          setCurrentVariationIndex(null);
-        }}
-        onSelectImages={handleVariationExistingImagesSelect}
-        productId={formData.id} // Pass the product ID when editing
-      />
-
+      <section className="pst-panel pst-seo">
+        <div>
+          <b>Search engine gaps{seoGaps != null ? ` · ${plural(seoGaps, 'product')}` : ''}</b>
+          <span>Missing a meta title, meta description or photo text. Fix them together instead of one product at a time.</span>
+        </div>
+        <button type="button" className="pst-btn" onClick={() => pushMode('seo=1')}>Fix SEO in bulk</button>
+      </section>
     </div>
-    </>
   );
-};
+}
 
-export default ProductsPage;
+// ── One product + its sizes ─────────────────────────────────────────────────
+function ProductRow({ p, onPatch, onSaved, onOpen }) {
+  const [open, setOpen] = useState(false);
+  const [vars, setVars] = useState(null);
+  const [varsError, setVarsError] = useState('');
+  const [varsLoading, setVarsLoading] = useState(false);
 
-/**
- * SEO tab for the product edit modal.
- *
- * Fields:
- *   - All ProductSEO columns (title / description / keywords / og_* / canonical / structured_data)
- *   - Live SERP preview + length meters for title and description
- *   - "Regenerate from product data" button: calls the backend helper that
- *     auto-fills every field from the product's name, brand, description,
- *     variations, reviews and brand SEO settings. Skips persisting — admin
- *     reviews the result first.
- *
- * Defensive: editingProductId is only available when editing an existing
- * product (formData.id). The "Regenerate" button is hidden for new products
- * because there's nothing to regenerate from yet — backend auto-fills on
- * first save.
- */
-function ProductSeoStep({ formData, setFormData, handleInputChange, editingProductId, brands = [] }) {
-  const [regenerating, setRegenerating] = useState(false);
-  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const loadVars = useCallback(() => {
+    setVarsLoading(true);
+    setVarsError('');
+    productService.getVariationStock(p.id)
+      .then((res) => setVars(res.variations || []))
+      .catch(() => setVarsError('Couldn’t load the sizes.'))
+      .finally(() => setVarsLoading(false));
+  }, [p.id]);
 
-  const previewBrand = brands.find(b => Number(b.id) === Number(formData.brandIds?.[0]));
-  const previewUrl = formData.seo?.canonicalUrl
-    || brandUrl(previewBrand, `products/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'product'}`);
-
-  const handleRegenerate = () => {
-    if (!editingProductId) {
-      showError('noProduct', 'Save the product first, then regenerate SEO.');
-      return;
-    }
-    setConfirmRegenerate(true);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && !vars && !varsLoading) loadVars();
   };
 
-  const runRegenerate = async () => {
-    setConfirmRegenerate(false);
-    setRegenerating(true);
-    try {
-      const res = await productService.regenerateSeo(editingProductId, false);
-      if (res?.success && res.seo) {
-        setFormData(prev => ({
-          ...prev,
-          seo: {
-            ...prev.seo,
-            metaTitle:       res.seo.metaTitle ?? '',
-            metaDescription: res.seo.metaDescription ?? '',
-            metaKeywords:    res.seo.metaKeywords ?? '',
-            ogTitle:         res.seo.ogTitle ?? '',
-            ogDescription:   res.seo.ogDescription ?? '',
-            ogImage:         res.seo.ogImage ?? '',
-            canonicalUrl:    res.seo.canonicalUrl ?? '',
-            structuredData:  res.seo.structuredData ?? '',
-          },
-        }));
-        showSuccess('regenerated', 'SEO fields refreshed from product data. Review then click Save.');
-      }
-    } catch (err) {
-      showError('regenerateFailed', typeof err === 'string' ? err : (err.message || 'Failed to regenerate SEO'));
-    } finally {
-      setRegenerating(false);
-    }
-  };
+  // Keep the product row's totals in step with the sizes being edited.
+  const edited = useRef(false);
+  const applyStock = useCallback((variationId, stock) => {
+    edited.current = true;
+    setVars((list) => (list || []).map((v) => (v.id === variationId
+      ? { ...v, stock, daysLeft: stock <= 0 ? 0 : v.sold30 > 0 ? Math.floor(stock / (v.sold30 / 30)) : null }
+      : v)));
+  }, []);
+  useEffect(() => {
+    if (!edited.current || !vars) return;
+    const totalStock = vars.reduce((a, v) => a + Math.max(0, v.stock), 0);
+    onPatch(p.id, (row) => ({
+      totalStock,
+      outSizes: vars.filter((v) => v.stock <= 0).length,
+      lowSizes: vars.filter((v) => v.stock > 0 && v.stock < 10).length,
+      daysLeft: totalStock <= 0 ? 0 : row.sold30 > 0 ? Math.floor(totalStock / (row.sold30 / 30)) : null,
+    }));
+  }, [vars, onPatch, p.id]);
+
+  const sTone = stockTone(p.totalStock, p.daysLeft, p.lowSizes);
+  const meta = [
+    p.variationCount ? plural(p.variationCount, 'size') : 'No sizes yet',
+    p.category,
+    p.outSizes > 0 && p.totalStock > 0 ? `${p.outSizes} out` : null,
+    p.totalStock <= 0 && p.waiting > 0 ? `${plural(p.waiting, 'customer')} waiting` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <>
-      <ConfirmModal
-        title="Regenerate SEO?"
-        confirmLabel="Regenerate"
-        tone="primary"
-        message={confirmRegenerate ? 'Replace all SEO fields with auto-generated values from the product name, brand, description and variations? Your manual edits will be lost in this form (you can still cancel before saving).' : null}
-        onConfirm={runRegenerate}
-        onCancel={() => setConfirmRegenerate(false)}
-      />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>SEO Settings</h3>
-        <button
-          type="button"
-          onClick={handleRegenerate}
-          disabled={regenerating || !editingProductId}
-          title={editingProductId
-            ? 'Re-runs the auto-fill based on the product name, brand, description, variations and reviews'
-            : 'Save the product first'}
-          style={{
-            padding: '6px 12px',
-            background: 'var(--ds-color-surface)',
-            border: '1px solid var(--ds-color-border)',
-            borderRadius: 6,
-            cursor: editingProductId ? 'pointer' : 'not-allowed',
-            fontSize: 13,
-            color: 'var(--ds-color-text)',
-            opacity: editingProductId ? 1 : 0.5,
-          }}
-        >
-          {regenerating ? 'Regenerating…' : '↻ Regenerate from product data'}
-        </button>
-      </div>
-
-      <div style={{
-        background: 'var(--ds-color-surface-soft)',
-        border: '1px solid var(--ds-color-border)',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
-        fontSize: 13,
-        color: 'var(--ds-color-text-muted)',
-      }}>
-        Leave any field empty to use the auto-fill default. The defaults come from
-        the product name, brand, description, variations and your global SEO settings.
-        Only fill fields here when you want to override.
-      </div>
-
-      <Input
-        label="Meta Title"
-        type="text"
-        name="seo.metaTitle"
-        value={formData.seo.metaTitle}
-        onChange={handleInputChange}
-        placeholder="Auto: {Product Name} | CrossCoin"
-      />
-      <SeoLengthMeter value={formData.seo.metaTitle || ''} type="title" />
-
-      <Input
-        label="Meta Description"
-        type="textarea"
-        name="seo.metaDescription"
-        value={formData.seo.metaDescription}
-        onChange={handleInputChange}
-        placeholder="Auto: trimmed from product description, 160 char target"
-      />
-      <SeoLengthMeter value={formData.seo.metaDescription || ''} type="description" />
-
-      <Input
-        label="Meta Keywords"
-        type="text"
-        name="seo.metaKeywords"
-        value={formData.seo.metaKeywords}
-        onChange={handleInputChange}
-        placeholder="comma-separated; auto: name, brand, buy online, india"
-      />
-
-      <Input
-        label="OG Title"
-        type="text"
-        name="seo.ogTitle"
-        value={formData.seo.ogTitle}
-        onChange={handleInputChange}
-        placeholder="Auto: same as Meta Title"
-      />
-
-      <Input
-        label="OG Description"
-        type="textarea"
-        name="seo.ogDescription"
-        value={formData.seo.ogDescription}
-        onChange={handleInputChange}
-        placeholder="Auto: same as Meta Description"
-      />
-
-      <Input
-        label="OG Image URL"
-        type="text"
-        name="seo.ogImage"
-        value={formData.seo.ogImage}
-        onChange={handleInputChange}
-        placeholder="Full URL or filename. Auto: first product image (1200×630 ideal)"
-      />
-
-      <Input
-        label="Canonical URL"
-        type="text"
-        name="seo.canonicalUrl"
-        value={formData.seo.canonicalUrl}
-        onChange={handleInputChange}
-        placeholder={`Auto: https://crosscoin.in/products/${formData.slug || '<slug>'}`}
-      />
-
-      <Input
-        label="Structured Data (JSON-LD)"
-        type="textarea"
-        name="seo.structuredData"
-        value={formData.seo.structuredData}
-        onChange={handleInputChange}
-        placeholder="Auto: schema.org/Product with brand, sku, offers, returns, shipping, aggregateRating"
-      />
-
-      <div style={{ marginTop: 24 }}>
-        <h4 style={{ marginBottom: 12, color: 'var(--ds-color-text)' }}>Live Search Preview</h4>
-        <SerpPreview
-          title={formData.seo.metaTitle || `${formData.name || 'Product'} | ${brandSiteName(previewBrand)}`}
-          description={formData.seo.metaDescription || formData.description?.slice(0, 160) || ''}
-          siteName={brandSiteName(previewBrand)}
-          url={previewUrl}
-          variant="both"
-        />
-      </div>
+      <tr className={open ? 'is-open' : ''}>
+        <td className="pst-col-prod">
+          <div className="pst-prod">
+            {p.thumb ? <img className="pst-thumb" src={p.thumb} alt="" loading="lazy" /> : <span className="pst-thumb pst-thumb--ph" aria-hidden="true">{(p.name || '?').slice(0, 1).toUpperCase()}</span>}
+            <div className="pst-prod-text">
+              <button type="button" className="pst-name" onClick={onOpen} title="Edit details">{p.name}</button>
+              <div className="pst-meta">{meta}</div>
+            </div>
+          </div>
+        </td>
+        <td className="pst-brands">
+          {p.brands.length === 0 ? <span className="muted">—</span> : p.brands.map((b) => (
+            <span key={b.id} className={b.live ? '' : 'is-off'} title={b.live ? undefined : 'Hidden on this site'}>{b.name}</span>
+          ))}
+        </td>
+        <td className="r">{priceRange(p.minPrice, p.maxPrice)}</td>
+        <td className="r"><b className={`pst-stock ${sTone ? `tone-${sTone}` : ''}`}>{p.totalStock.toLocaleString('en-IN')}</b></td>
+        <td className="r">{p.sold30.toLocaleString('en-IN')}</td>
+        <td className={`r tone-${lastsTone(p.daysLeft) || 'none'}`}>{lastsText(p.daysLeft)}</td>
+        <td>
+          <span className="pst-badge" title={p.badgeReason}>{p.badge === 'none' ? '—' : BADGE_LABEL[p.badge] || p.badge}</span>
+          <span className="pst-badge-how">{p.badgeLocked ? 'Fixed' : 'Auto'}</span>
+        </td>
+        <td><span className={`pst-live ${p.visibility === 'live' ? 'is-live' : ''}`}>{VISIBILITY[p.visibility] || 'Hidden'}</span></td>
+        <td className="r pst-acts">
+          <button type="button" className="pst-btn pst-btn--sm" onClick={toggle} aria-expanded={open} disabled={!p.variationCount}>
+            {open ? 'Hide sizes' : 'Edit stock'}
+          </button>
+          <button type="button" className="pst-btn pst-btn--sm pst-btn--ghost" onClick={onOpen}>Open</button>
+        </td>
+      </tr>
+      {open && (varsLoading && !vars ? (
+        <tr className="pst-sub"><td colSpan={9} className="pst-sub-msg">Loading sizes…</td></tr>
+      ) : varsError ? (
+        <tr className="pst-sub"><td colSpan={9} className="pst-sub-msg">{varsError} <button type="button" className="pst-link" onClick={loadVars}>Try again</button></td></tr>
+      ) : (vars || []).map((v) => (
+        <VariationRow key={v.id} v={v} waiting={p.waiting} productOut={p.totalStock <= 0} onApply={applyStock} onSaved={onSaved} />
+      )))}
     </>
   );
 }
 
+function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
+  const [draft, setDraft] = useState(String(v.stock));
+  const [state, setState] = useState({ saving: false, saved: false, error: '' });
+  const savedTimer = useRef(null);
+  const busy = useRef(false);
+  const escaping = useRef(false);
+  useEffect(() => { if (!busy.current) setDraft(String(v.stock)); }, [v.stock]);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
 
+  const commit = async (value) => {
+    const raw = String(value ?? draft).trim();
+    if (raw === String(v.stock) || busy.current) return;
+    if (!/^\d+$/.test(raw) || Number(raw) > 1000000) {
+      setState({ saving: false, saved: false, error: 'Use a whole number, 0 or more' });
+      return;
+    }
+    const next = Number(raw);
+    const prev = v.stock;
+    busy.current = true;
+    onApply(v.id, next); // optimistic
+    setState({ saving: true, saved: false, error: '' });
+    try {
+      const res = await productService.updateVariationStock(v.id, next, prev);
+      setState({ saving: false, saved: true, error: '' });
+      clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setState((s) => ({ ...s, saved: false })), 2000);
+      if (res?.restockAlert === 'sending') showSuccess('restock', 'Back in stock — customers waiting for it are getting a WhatsApp now.');
+      else if (res?.restockAlert === 'morning') showSuccess('restock', 'Back in stock — customers waiting for it will get a WhatsApp after 9 AM.');
+      onSaved?.();
+    } catch (err) {
+      const current = Number.isFinite(Number(err?.current)) && err?.code === 'STOCK_CHANGED' ? Number(err.current) : prev;
+      onApply(v.id, current); // roll back (to the live number if it moved)
+      setDraft(String(current));
+      setState({ saving: false, saved: false, error: err?.message || 'Couldn’t save. Try again.' });
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(e.currentTarget.value); }
+    if (e.key === 'Escape') {
+      escaping.current = true;
+      setDraft(String(v.stock));
+      setState({ saving: false, saved: false, error: '' });
+      e.currentTarget.blur();
+    }
+  };
+  const onBlur = (e) => {
+    if (escaping.current) { escaping.current = false; return; }
+    commit(e.currentTarget.value);
+  };
+
+  let note = '';
+  if (!v.active) note = 'This size is hidden on the site';
+  else if (v.stock <= 0) {
+    const bits = [];
+    if (v.inCarts) bits.push(`${plural(v.inCarts, 'customer')} ${v.inCarts === 1 ? 'has' : 'have'} it in their cart`);
+    if (productOut && waiting) bits.push(`${plural(waiting, 'customer')} waiting for this product`);
+    note = `Out${bits.length ? ` — ${bits.join(' · ')}` : ''}`;
+  } else if (v.daysLeft != null && v.daysLeft <= 7) note = `Runs out in about ${plural(Math.max(1, v.daysLeft), 'day')}`;
+  else if (v.stock < 10) note = `Fewer than 10 left`;
+
+  const dTone = lastsTone(v.daysLeft);
+  return (
+    <tr className="pst-sub">
+      <td className="pst-col-prod pst-var">
+        {v.label} <span className="pst-sku">{v.sku}</span>
+      </td>
+      <td />
+      <td className="r">{v.price != null ? inr(v.price) : '—'}</td>
+      <td className="r">
+        <input
+          className={`pst-qty${state.error ? ' is-error' : ''}`}
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => { setDraft(e.target.value); if (state.error) setState((s) => ({ ...s, error: '' })); }}
+          onBlur={onBlur}
+          onKeyDown={onKey}
+          readOnly={state.saving}
+          aria-label={`Stock for ${v.label}`}
+          aria-invalid={!!state.error}
+        />
+      </td>
+      <td className="r">{v.sold30.toLocaleString('en-IN')}</td>
+      <td className={`r tone-${dTone || 'none'}`}>{lastsText(v.daysLeft)}</td>
+      <td colSpan={3} className="pst-note">
+        {state.error ? <span className="pst-err" role="alert">{state.error}</span>
+          : state.saving ? <span className="muted">Saving…</span>
+          : state.saved ? <span className="pst-ok"><HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2.5} /> Saved</span>
+          : note}
+      </td>
+    </tr>
+  );
+}

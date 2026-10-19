@@ -785,31 +785,6 @@ module.exports.getStaffUsers = async (req, res) => {
     }
 };
 
-// Guest (unregistered) customers — mapped into the same shape the consumers
-// list uses, so they can be shown alongside registered customers.
-module.exports.getGuestUsers = async (req, res) => {
-    try {
-        // The model names its timestamp column created_at, and phone/email are
-        // decrypted by model getters — so no `raw: true` here.
-        const rows = await GuestUser.findAll({ order: [['created_at', 'DESC']], limit: 2000 });
-        const guests = rows.map((r) => ({ ...r.get({ plain: true }), phone: r.phone, email: r.email }));
-        const mapped = guests.map((g) => ({
-            id: `g${g.id}`,
-            username: [g.first_name, g.last_name].filter(Boolean).join(' ') || null,
-            email: g.email || null,
-            phone: g.phone || null,
-            role: 'guest',
-            isGuest: true,
-            status: g.status,
-            createdAt: g.created_at || g.createdAt,
-        }));
-        res.json({ guests: mapped, total: mapped.length });
-    } catch (error) {
-        logger.error('Get guest users error:', error);
-        res.status(500).json({ message: 'Error getting guest users' });
-    }
-};
-
 // Get user profile
 module.exports.getProfile = async (req, res) => {
     try {

@@ -259,7 +259,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
       <button type="button" className="m-btn m-buynow" onClick={buy} disabled={soldOut || (isMix && !mixCount)}>Buy now</button>
 
       {barOn && (
-        <div className="m-buynowbar">
+        <div className="m-buynowbar" data-sticky-atc="">
           <div className="m-wrap m-buynowbar__in">
             <span className="m-buynowbar__n"><b>{product.name}</b><small>{opt.label}</small></span>
             <span className="m-buynowbar__p">{inr(isMix ? (mixCount ? mixTotal : Number(opt.price) || 0) : lineTotal)}</span>

@@ -31,7 +31,7 @@ router.use('/utm',                require('./utmRoutes.js'));
 router.use('/events',             require('./eventsRoutes.js'));
 router.use('/consent',            optionalBrand, require('./consentRoutes.js'));
 router.use('/pickup-schedule',    require('./pickupScheduleRoutes.js'));
-router.use('/leads',              require('./leadRoutes.js'));
+router.use('/leads',              optionalBrand, require('./leadRoutes.js'));
 
 // ── Auth (OTP) ────────────────────────────────────────────────────────────
 const { otpRouter, checkoutRouter } = require('./checkoutRoutes.js');
@@ -46,6 +46,9 @@ router.use('/whatsapp',           require('./whatsappInsightsRoutes.js')); // ca
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.js'));
+router.use('/admin/exceptions',   require('./exceptionsRoutes.js'));
+router.use('/admin/customers',    require('./adminCustomerRoutes.js'));
+router.use('/admin/system',       require('./adminSystemRoutes.js'));
 router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
 router.use('/admin',              require('./brandRoutes.js'));
 router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));

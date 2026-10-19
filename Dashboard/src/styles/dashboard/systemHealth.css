@@ -1,0 +1,113 @@
+/**
+ * System health page (pages/dashboard/system/systemHealth.jsx).
+ * Sits on the Reports look (.obz-rep / .rep-*); everything here is .sh-*
+ * and uses only --ds-* tokens, so light + dark both work.
+ */
+
+.sh .sh-small { font-size: 11.5px; color: var(--ds-color-text-muted); font-weight: 400; }
+.sh .sh-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sh-head-act { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ── Tiles ── */
+.sh-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.sh-tile { display: flex; flex-direction: column; gap: 6px; }
+.sh-tile-v {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 19px; font-weight: 700; color: var(--ds-color-text); letter-spacing: -0.02em;
+}
+.sh-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--ds-color-text-faint); }
+.sh-dot--ok    { background: var(--ds-color-success); }
+.sh-dot--warn  { background: var(--ds-color-warn); }
+.sh-dot--bad   { background: var(--ds-color-danger); }
+.sh-dot--muted { background: var(--ds-color-text-faint); }
+
+/* ── Jobs table ── */
+.sh-table { min-width: 900px; }
+.sh-table td { vertical-align: top; }
+.sh-table .sh-when { color: var(--ds-color-text); white-space: normal; min-width: 120px; max-width: 220px; }
+.sh-table .sh-when.mut { color: var(--ds-color-text-muted); }
+.sh-row.is-open td { background: var(--ds-color-surface-soft); }
+.sh-job { min-width: 190px; white-space: normal; }
+.sh-name {
+  display: inline-flex; align-items: flex-start; gap: 6px; padding: 0; border: 0; background: none;
+  font: inherit; font-weight: 650; color: var(--ds-color-text); cursor: pointer; text-align: left;
+}
+.sh-name svg { margin-top: 2px; flex: none; color: var(--ds-color-text-muted); }
+.sh-name:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.sh-name:focus-visible { outline: 2px solid var(--ds-color-info); outline-offset: 3px; border-radius: 4px; }
+.sh-tag { margin: 4px 0 0 20px; font-size: 11px; color: var(--ds-color-text-muted); }
+
+.sh-result { white-space: normal; min-width: 230px; }
+.sh-result-in { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sh-sum { font-size: 12.5px; color: var(--ds-color-text-muted); overflow-wrap: anywhere; }
+.sh-late { margin-top: 5px; font-size: 11.5px; font-weight: 600; color: var(--ds-color-danger); }
+
+.sh-pill {
+  display: inline-block; flex: none; font-size: 11px; font-weight: 700; line-height: 1;
+  padding: 4px 9px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+}
+.sh-pill--ok    { background: var(--ds-color-success-bg); color: var(--ds-color-success); border-color: var(--ds-color-success-bd); }
+.sh-pill--warn  { background: var(--ds-color-warn-bg);    color: var(--ds-color-warn);    border-color: var(--ds-color-warn-bd); }
+.sh-pill--bad   { background: var(--ds-color-danger-bg);  color: var(--ds-color-danger);  border-color: var(--ds-color-danger-bd); }
+.sh-pill--info  { background: var(--ds-color-info-bg);    color: var(--ds-color-info);    border-color: var(--ds-color-info-bd); }
+.sh-pill--muted { background: var(--ds-color-surface-soft); color: var(--ds-color-text-muted); border-color: var(--ds-color-border); }
+
+/* ── Run now ── */
+.sh-act { text-align: right; white-space: normal; min-width: 130px; }
+.sh-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px;
+  border-radius: 9px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
+  color: var(--ds-color-text); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1;
+  cursor: pointer; white-space: nowrap;
+}
+.sh-btn:hover:not(:disabled) { border-color: var(--ds-color-text-faint); }
+.sh-btn:disabled { opacity: .6; cursor: not-allowed; }
+.sh-btn:focus-visible { outline: 2px solid var(--ds-color-info); outline-offset: 2px; }
+.sh-btn--primary { background: var(--ds-color-brand); border-color: var(--ds-color-brand); color: var(--ds-color-surface); }
+.sh-btn--primary:hover:not(:disabled) { background: var(--ds-color-brand-strong); border-color: var(--ds-color-brand-strong); }
+.sh-confirm { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.sh-confirm-q { font-size: 12px; color: var(--ds-color-text); max-width: 220px; text-align: right; }
+.sh-confirm-btns { display: flex; gap: 6px; }
+.sh-msg { margin-top: 6px; font-size: 11.5px; max-width: 240px; margin-left: auto; text-align: right; overflow-wrap: anywhere; }
+.sh-msg--ok    { color: var(--ds-color-success); }
+.sh-msg--warn  { color: var(--ds-color-warn); }
+.sh-msg--bad   { color: var(--ds-color-danger); }
+.sh-msg--muted { color: var(--ds-color-text-muted); }
+
+.sh-spin {
+  width: 12px; height: 12px; border-radius: 50%; flex: none;
+  border: 2px solid var(--ds-color-border); border-top-color: var(--ds-color-text);
+  animation: sh-spin .8s linear infinite;
+}
+@keyframes sh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sh-spin { animation-duration: 2.4s; } }
+
+/* ── History (expanded row) ── */
+.sh-table tbody tr.sh-hist-row:hover td,
+.sh-hist-row td { background: var(--ds-color-surface-soft); white-space: normal; padding-top: 4px; }
+.sh-hist { padding: 0 0 6px 20px; }
+.sh-hist-head { font-size: 11px; font-weight: 600; color: var(--ds-color-text-muted); text-transform: uppercase; letter-spacing: .05em; font-family: var(--ds-font-mono); margin-bottom: 8px; }
+.sh-hist-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sh-hist-item { border-left: 2px solid var(--ds-color-border); padding-left: 12px; }
+.sh-hist-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sh-hist-time { font-size: 12.5px; color: var(--ds-color-text); font-variant-numeric: tabular-nums; min-width: 130px; }
+.sh-hist-meta { margin-left: auto; }
+.sh-hist-empty { padding: 4px 0 8px 20px; font-size: 12.5px; color: var(--ds-color-text-muted); }
+.sh-err {
+  margin: 6px 0 0; padding: 8px 10px; max-height: 160px; overflow: auto;
+  background: var(--ds-color-danger-bg); color: var(--ds-color-danger); border: 1px solid var(--ds-color-danger-bd);
+  border-radius: 8px; font: 11.5px/1.45 var(--ds-font-mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* ── States ── */
+.sh-error { color: var(--ds-color-danger); display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.sh-stale {
+  padding: 10px 14px; border-radius: 10px; font-size: 12.5px;
+  background: var(--ds-color-warn-bg); color: var(--ds-color-warn); border: 1px solid var(--ds-color-warn-bd);
+}
+
+@media (max-width: 520px) {
+  .sh-tiles { grid-template-columns: 1fr; }
+  .sh-hist { padding-left: 0; }
+  .sh-hist-meta { margin-left: 0; }
+}

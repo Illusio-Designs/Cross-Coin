@@ -770,7 +770,8 @@ exports.resolveConversation = async (req, res) => {
 async function latestOrderForConv(conv) {
   try {
     const ctx = await require('../services/chatContextService.js').getChatContext(conv.id);
-    return ctx?.orders?.[0] || null;
+    const o = ctx?.orders?.[0];
+    return o ? { ...o, customerName: ctx.address?.name || null } : null;
   } catch (_) { return null; }
 }
 
@@ -1040,9 +1041,12 @@ async function handleAutoReply(phone, text, brandId) {
     // One thread per phone on the shared number → opt-out is per PHONE (all
     // brands), never scoped by brand_id.
     const variants = (() => { const d = String(phone).replace(/\D/g, ''); const t = d.slice(-10); return [...new Set([d, t, `91${t}`, `+91${t}`])]; })();
-    if (lower === 'stop' || lower === 'unsubscribe' || lower === 'opt out') {
+    // STOP / opt-out words are handled (and confirmed) by
+    // whatsappInsightsService.handleInboundAutomation before this runs; this is
+    // only a silent safety net so the flag is set phone-wide even if an admin
+    // removed "stop" from the opt-out word list.
+    if (lower === 'stop' || lower === 'unsubscribe') {
       await WhatsappConversation.update({ opted_out: true }, { where: { customer_phone: variants } });
-      await say(`You've been unsubscribed from ${storeName} WhatsApp offers. Order updates will still reach you. Reply *START* to re-subscribe.`, false);
       return;
     }
 
@@ -1215,18 +1219,23 @@ async function captureNewAddress(phone, addressText, orderNumber, brandId) {
   const addr = await ShippingAddress.findByPk(order.shipping_address_id);
   if (!addr) return;
 
-  const clean = String(addressText || '').trim();
-  const pin = (clean.match(/\b(\d{6})\b/) || [])[1] || addr.pincode;
-  await addr.update({ address: clean, pincode: pin });
+  // A NEW address row for this order — never edit the shared address-book row
+  // (it is also used by the customer's other orders and invoices). Rejects a
+  // reply without a full address / PIN and asks again.
+  const r = await require('../services/ndrService.js').applyNewAddressToOrder(order.id, addressText);
+  if (!r.ok) {
+    await WhatsappConversation.update({ awaiting_address_for: orderNumber }, { where: { customer_phone: phone } });
+    return whatsappSvc.sendTextMessage(phone, r.message, brandId);
+  }
 
   const firstName = (addr.full_name || '').split(' ')[0] || 'there';
   await whatsappSvc.sendCodConfirmation(phone, {
     name: firstName,
     orderNumber: order.order_number,
     amount: parseFloat(order.final_amount).toFixed(2),
-    fullAddress: [addr.full_name, clean].filter(Boolean).join(', '),
+    fullAddress: r.address.text,
   }, brandId);
-  logger.info(`[WhatsApp] Captured corrected COD address for ${orderNumber} (pincode ${pin})`);
+  logger.info(`[WhatsApp] Captured corrected COD address for ${orderNumber} (pincode ${r.address.pincode})`);
 }
 
 // ─── Webhook: receive (POST) ──────────────────────────────────────────────────
@@ -1472,12 +1481,17 @@ exports.receiveWebhook = async (req, res) => {
             setImmediate(() => processCodReply(phone, 'button', buttonPayload, effectiveBrand).catch(e => logger.error('[WhatsApp] COD button reply error: ' + e.message)));
           }
 
-          // Auto-reply bot — only for plain text messages that aren't a captured
-          // address (so the address text doesn't trip keyword auto-replies), and
-          // only on a verified webhook (never let a spoofed inbound make our
-          // number send to an attacker-chosen recipient).
-          if (trusted && msg.type === 'text' && !conv.awaiting_address_for) {
-            setImmediate(() => handleAutoReply(phone, text, effectiveBrand).catch(() => {}));
+          // Inbound automation (opt-out words, "where is my order", away
+          // message — whatsappInsightsService) first; if it didn't answer, the
+          // keyword bot. Plain text that isn't a captured address only, and only
+          // on a verified webhook (never let a spoofed inbound make our number
+          // send to an attacker-chosen recipient).
+          if (trusted && msgType !== 'reaction') {
+            setImmediate(async () => {
+              let auto = { handled: false };
+              try { auto = await require('../services/whatsappInsightsService.js').handleInboundAutomation(conv, { type: msgType, body: text, awaitingAddress: !!conv.awaiting_address_for }); } catch (e) { logger.warn('[WhatsApp] inbound automation error: ' + e.message); }
+              if (!auto.handled && msg.type === 'text' && !conv.awaiting_address_for) await handleAutoReply(phone, text, effectiveBrand).catch(() => {});
+            });
           }
          } catch (msgErr) {
           logger.error(`[WhatsApp] webhook message handler error (${msg?.id || 'no-id'}): ${msgErr.message}`);

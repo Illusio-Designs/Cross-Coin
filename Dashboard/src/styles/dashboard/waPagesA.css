@@ -137,7 +137,7 @@
 
 /* ── Tables ─────────────────────────────────────────────────────────── */
 .wpa-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.wpa-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+.wpa-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
 .wpa-tbl th {
   text-align: left; font-family: var(--ds-font-mono); font-size: 10.5px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--ds-color-text-muted); font-weight: 500;
