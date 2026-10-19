@@ -494,7 +494,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v12';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v13';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1644,6 +1644,76 @@ const startServer = async () => {
             logger.info('✓ cart_items pack columns ensured');
         } catch (err) {
             logger.error('cart_items pack columns migration failed: ' + err.message);
+        }
+
+        // ── De-brand FShip (v13): rename the orders fship_* columns and the
+        // label-download table to shipping_*. Pure renames — every row, index
+        // and foreign key keeps its data. Each step is guarded by
+        // information_schema so re-runs and fresh installs no-op. MUST run
+        // before the renamed code serves traffic, hence here in the gated
+        // startup block (setupDatabase is schema-version-gated and rarely runs).
+        try {
+            const RENAMES = [
+                ['fship_order_id', 'shipping_order_id', 'VARCHAR(255) NULL'],
+                ['fship_waybill', 'shipping_waybill', 'VARCHAR(255) NULL'],
+                ['fship_route_code', 'shipping_route_code', 'VARCHAR(255) NULL'],
+                ['fship_courier_id', 'shipping_courier_id', 'INT NULL'],
+                ['fship_label_url', 'shipping_label_url', 'TEXT NULL'],
+                ['fship_label_downloaded', 'shipping_label_downloaded', 'TINYINT(1) NULL DEFAULT 0'],
+                ['fship_label_downloaded_at', 'shipping_label_downloaded_at', 'DATETIME NULL'],
+                ['fship_label_downloaded_by', 'shipping_label_downloaded_by', 'INT NULL'],
+                ['fship_tracking_number', 'shipping_tracking_number', 'VARCHAR(100) NULL'],
+                ['fship_last_synced_at', 'shipping_last_synced_at', 'DATETIME NULL'],
+                ['fship_sync_status', 'shipping_sync_status', "ENUM('pending','syncing','synced','failed') NULL DEFAULT 'pending'"],
+                ['fship_sync_attempts', 'shipping_sync_attempts', 'INT NULL DEFAULT 0'],
+                ['fship_sync_error', 'shipping_sync_error', 'TEXT NULL'],
+            ];
+            const [cols] = await sequelize.query(`
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
+            `);
+            const have = new Set(cols.map((c) => c.COLUMN_NAME));
+            for (const [oldCol, newCol, def] of RENAMES) {
+                if (have.has(oldCol) && !have.has(newCol)) {
+                    await sequelize.query(`ALTER TABLE orders CHANGE \`${oldCol}\` \`${newCol}\` ${def}`);
+                    logger.info(`✓ orders.${oldCol} → ${newCol}`);
+                }
+            }
+            const [tables] = await sequelize.query(`
+                SELECT TABLE_NAME FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME IN ('fship_label_downloads', 'shipping_label_downloads')
+            `);
+            const names = new Set(tables.map((r) => r.TABLE_NAME));
+            if (names.has('fship_label_downloads') && !names.has('shipping_label_downloads')) {
+                await sequelize.query('RENAME TABLE fship_label_downloads TO shipping_label_downloads');
+                logger.info('✓ fship_label_downloads → shipping_label_downloads');
+            }
+            logger.info('✓ FShip de-brand renames ensured');
+        } catch (err) {
+            logger.error('FShip de-brand migration failed: ' + err.message);
+        }
+
+        // ── Drop the legacy coupon_usage duplicate (v13) — empty tables only.
+        // The app records redemptions in coupon_usages; the singular table was
+        // a dead duplicate. Data is never touched: a non-empty table is left
+        // in place with a loud log for manual review.
+        try {
+            const [[legacy]] = await sequelize.query(`
+                SELECT COUNT(*) AS n FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupon_usage'
+            `);
+            if (Number(legacy.n) > 0) {
+                const [[rows]] = await sequelize.query('SELECT COUNT(*) AS n FROM coupon_usage');
+                if (Number(rows.n) === 0) {
+                    await sequelize.query('DROP TABLE coupon_usage');
+                    logger.info('✓ Dropped empty legacy coupon_usage table');
+                } else {
+                    logger.warn(`coupon_usage has ${rows.n} rows — left for manual review`);
+                }
+            }
+        } catch (err) {
+            logger.error('coupon_usage cleanup failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future
