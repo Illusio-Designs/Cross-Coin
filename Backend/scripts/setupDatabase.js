@@ -1336,26 +1336,32 @@ const setupDatabase = async () => {
       `);
       console.log("✓ Migration 002 completed");
       
-      // Migration 003: Ensure coupon_usage table exists
-      console.log("Running migration 003: Ensure coupon_usage table exists...");
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS coupon_usage (
-          id INT PRIMARY KEY AUTO_INCREMENT,
-          coupon_id INT NOT NULL,
-          user_id INT NULL,
-          guest_user_id INT NULL,
-          order_id INT NULL,
-          used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          INDEX idx_coupon_user (coupon_id, user_id),
-          INDEX idx_coupon_guest (coupon_id, guest_user_id),
-          INDEX idx_order (order_id),
-          CONSTRAINT fk_coupon_usage_coupon FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
-          CONSTRAINT fk_coupon_usage_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-          CONSTRAINT fk_coupon_usage_guest FOREIGN KEY (guest_user_id) REFERENCES guest_users(id) ON DELETE SET NULL,
-          CONSTRAINT fk_coupon_usage_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-      `);
-      console.log("✓ Migration 003 completed");
+      // Migration 003 (rewritten): the app records coupon redemptions in
+      // coupon_usages (the Sequelize model); the singular coupon_usage table
+      // was a legacy duplicate this migration used to recreate on every boot.
+      // Now it drops the legacy table instead — but only when it is empty, so
+      // a DB where something unexpectedly wrote rows is left for a human.
+      console.log("Running migration 003: drop legacy coupon_usage (singular) if empty...");
+      try {
+        const [[legacy]] = await sequelize.query(`
+          SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.TABLES
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupon_usage'
+        `);
+        if (Number(legacy.n) > 0) {
+          const [[rows]] = await sequelize.query('SELECT COUNT(*) AS n FROM coupon_usage');
+          if (Number(rows.n) === 0) {
+            await sequelize.query('DROP TABLE coupon_usage');
+            console.log('  ✓ Dropped empty legacy coupon_usage table');
+          } else {
+            console.log(`  ⚠️ coupon_usage has ${rows.n} rows — left in place for manual review`);
+          }
+        } else {
+          console.log('  ✓ Legacy coupon_usage already gone');
+        }
+        console.log("✓ Migration 003 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 003 skipped:", e.message);
+      }
       
       // Migration 004: webhooks_log table for Razorpay webhook deduplication
       console.log("Running migration 004: Create webhooks_log table...");

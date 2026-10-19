@@ -1375,9 +1375,9 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
 
         // Construct label URL based on provider
         if (providerName === 'fship') {
-          // Shipping label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{ORDER_ID}_TH.pdf
-          labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${orderId}_TH.pdf`;
-          logger.debug(`✅ Shipping label URL constructed: ${labelUrl}`);
+          // FShip is retired — its manifest host is dead, so constructing a
+          // label URL for a legacy shipment would only store a broken link.
+          logger.debug('📄 Legacy FShip shipment — no label available (provider retired)');
         } else if (providerName === 'ithink') {
           // iThink typically provides the label URL via API, so we'll try to fetch it
           logger.debug(`📄 Fetching iThink label URL via API for waybill: ${waybill}`);
@@ -2494,11 +2494,8 @@ module.exports.generateLabelForOrder = async (req, res) => {
         }
       }
 
-      // If no label from getShippingLabel, construct Shipping label URL
-      if (!labelUrl && order.shipping_order_id) {
-        labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${order.shipping_order_id}_TH.pdf`;
-        logger.debug(`✅ Shipping label URL constructed: ${labelUrl}`);
-      }
+      // No constructed fallback: the old FShip manifest host is retired, so a
+      // guessed URL would just save a dead link onto the order.
     }
 
     // If we got a label URL but it's not saved, save it
