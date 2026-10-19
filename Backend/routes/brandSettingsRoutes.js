@@ -4,8 +4,11 @@ const brandSettingsController = require('../controller/brandSettingsController')
 const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 const shippingProviderFactory = require('../services/shippingProviderFactory.js');
 
-// All routes require admin authentication
-router.use('/', authenticate, isAdmin);
+// This router is mounted at /api/admin alongside other admin routers, so the
+// admin check must cover ONLY its own paths — a bare router.use('/') made every
+// /api/admin/* request (brands, SEO, FAQs, bundle tiers…) admin-only and broke
+// product / order managers.
+router.use(['/brand-settings', '/shipping'], authenticate, isAdmin);
 
 // Get all settings (with optional category filter via query param)
 router.get('/brand-settings', brandSettingsController.getAllSettings);

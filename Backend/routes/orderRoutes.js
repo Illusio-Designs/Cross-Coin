@@ -5,7 +5,7 @@ const {
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, adminRefundOrder, adminDeleteOrder, confirmOrder,
     updateAwbNumber, initiateReturn,
-    adminCreateManualOrder, updateOrderAddress,
+    updateOrderAddress,
 } = require('../controller/orderController.js');
 // checkAddressQuality has been migrated to the domain-grouped file.
 const { checkAddressQuality } = require('../controller/orders/createController.js');
@@ -81,7 +81,6 @@ router.put('/:id/refund',              isAuthenticated, isOrderManager, adminRef
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);
 router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
-router.post('/manual',                  isAuthenticated, isOrderManager, adminCreateManualOrder);
 // (RTO management module removed — RTO is handled automatically by the courier
 //  webhook in orderShippingController: it sets RTO status, restores stock and
 //  refunds prepaid orders. The old standalone /rto endpoints were unused.)

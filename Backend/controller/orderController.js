@@ -4,7 +4,7 @@
    * │                                                                │
    * │ Functions here are grouped by domain in controller/orders/:    │
    * │   create.*    : createOrder, createGuestOrder,                 │
-   * │                 adminCreateManualOrder, checkAddressQuality    │
+   * │                 checkAddressQuality                            │
    * │   tracking.*  : trackOrderByAWB, trackOrderByOrderNumber,      │
    * │                 getOrder, getUserOrders                        │
    * │   lifecycle.* : confirmOrder, cancelOrder,                     │
@@ -1086,325 +1086,6 @@
   };
 
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // Admin Manual Order Creation
-  // Creates an order from the admin dashboard with full tracking (FB, GA, WA, Shipping)
-  // ══════════════════════════════════════════════════════════════════════════
-  module.exports.adminCreateManualOrder = async (req, res) => {
-    let transaction = null;
-    try {
-      transaction = await sequelize.transaction({
-        isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
-      });
-
-      const {
-        customer_phone,
-        customer_email,
-        customer_name,
-        shipping_address, // { full_name, address, city, state, pincode, phone, country }
-        items,            // [{ product_id, variation_id?, quantity }]
-        payment_type,     // 'cod' | 'razorpay' | 'upi' etc.
-        payment_status,   // 'paid' | 'pending'
-        notes,
-        discount_amount,
-        coupon_id,
-        brand_id: bodyBrandId,
-      } = req.body;
-
-      const adminId = req.user.id;
-      const brandId = bodyBrandId ? parseInt(bodyBrandId) : (req.brand?.id || 1);
-
-      // ── Validation ──────────────────────────────────────────────────────
-      if (!customer_phone || !shipping_address || !items?.length || !payment_type) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, message: 'Customer phone, shipping address, items, and payment type are required.' });
-      }
-
-      const digits = String(customer_phone).replace(/\D/g, '').slice(-10);
-      if (!/^[6-9]\d{9}$/.test(digits)) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
-      }
-
-      // ── Find or create customer ─────────────────────────────────────────
-      const bcrypt = require('bcrypt');
-      let user = await User.findOne({ where: { phone: digits } });
-      if (!user && customer_email) {
-        user = await User.findOne({ where: { email: customer_email.toLowerCase() } });
-      }
-      if (!user) {
-        const tempPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10);
-        user = await User.create({
-          username: customer_name || `Customer ${digits.slice(-4)}`,
-          email: customer_email?.toLowerCase() || `${digits}@manual.order`,
-          phone: digits,
-          password: tempPassword,
-          role: 'consumer',
-        }, { transaction });
-        logger.info(`[AdminManualOrder] Created new consumer user ${user.id}`);
-      }
-
-      // ── Create shipping address ─────────────────────────────────────────
-      const addr = await ShippingAddress.create({
-        user_id: user.id,
-        full_name: shipping_address.full_name || customer_name || user.username,
-        address: shipping_address.address,
-        city: shipping_address.city,
-        state: shipping_address.state,
-        pincode: shipping_address.pincode,
-        phone: shipping_address.phone || digits,
-        country: shipping_address.country || 'India',
-        is_default: false,
-      }, { transaction });
-
-      // ── Validate items & calculate totals ───────────────────────────────
-      const productIds = items.map(i => i.product_id);
-      const variationIds = items.filter(i => i.variation_id).map(i => i.variation_id);
-      const [productMap, variationMap, variationsByProductMap] = await Promise.all([
-        batchFetchProducts(productIds),
-        batchFetchVariations(variationIds),
-        batchFetchVariationsByProductIds(productIds),
-      ]);
-
-      let totalAmount = 0;
-      const validatedItems = [];
-
-      for (const item of items) {
-        const { product_id, quantity } = item;
-        let { variation_id } = item;
-
-        if (!product_id || !quantity || quantity < 1) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: 'Product ID and quantity (≥1) are required for each item.' });
-        }
-
-        const product = productMap.get(product_id);
-        if (!product) {
-          await transaction.rollback();
-          return res.status(404).json({ success: false, message: `Product ${product_id} not found.` });
-        }
-
-        let variation;
-        if (variation_id) {
-          variation = variationMap.get(variation_id);
-          if (!variation || variation.productId !== product_id) {
-            await transaction.rollback();
-            return res.status(404).json({ success: false, message: `Invalid variation for product ${product_id}.` });
-          }
-        } else {
-          const variations = variationsByProductMap.get(product_id) || [];
-          if (!variations.length) {
-            await transaction.rollback();
-            return res.status(400).json({ success: false, message: `Product ${product_id} has no variations.` });
-          }
-          variation = variations[0];
-          variation_id = variation.id;
-        }
-
-        // Stock check (admin can override but we still warn)
-        if (variation.stock < quantity) {
-          logger.warn(`[AdminManualOrder] Low stock for variation ${variation_id}: ${variation.stock} < ${quantity}`);
-        }
-
-        const price = parseFloat(variation.price);
-        const subtotal = price * quantity;
-        totalAmount += subtotal;
-
-        validatedItems.push({
-          product_id,
-          variation_id,
-          quantity,
-          price,
-          discount: 0,
-          subtotal,
-          _variation: variation,
-        });
-      }
-
-      const subTotal = Number(totalAmount);
-      const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
-      const shippingFee = Number(await calculateShippingFee(payment_type, subTotal, req.brand?.id || 1));
-      const finalAmount = Math.max(0, subTotal - appliedDiscount + shippingFee);
-
-      // ── RTO risk scoring ────────────────────────────────────────────────
-      let rtoRiskScore = 0;
-      const rtoCount = await getRtoCount(digits, user.id);
-      if (rtoCount >= 1) rtoRiskScore += 20;
-      if (String(shipping_address.address || '').trim().length < 30) rtoRiskScore += 10;
-
-      // ── Create order ────────────────────────────────────────────────────
-      const orderStatus = (payment_status === 'paid' && payment_type !== 'cod') ? 'confirmed' : 'awaiting_confirmation';
-      const order = await Order.create({
-        order_number: await generateUniqueOrderNumber(transaction, brandId),
-        user_id: user.id,
-        shipping_address_id: addr.id,
-        total_amount: subTotal,
-        discount_amount: appliedDiscount,
-        coupon_id: coupon_id || null,
-        shipping_fee: shippingFee,
-        final_amount: finalAmount,
-        payment_type,
-        payment_status: payment_status || 'pending',
-        status: orderStatus,
-        notes: `[Manual Order by Admin #${adminId}] ${notes || ''}`.trim(),
-        brand_id: brandId,
-        rto_risk_score: rtoRiskScore,
-      }, { transaction });
-
-      // ── Create order items ──────────────────────────────────────────────
-      const orderItemsData = validatedItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        variation_id: item.variation_id,
-        quantity: item.quantity,
-        price: item.price,
-        discount: item.discount,
-        subtotal: item.subtotal,
-      }));
-      await batchInsert(OrderItem, orderItemsData, { transaction });
-
-      // ── Decrement stock ─────────────────────────────────────────────────
-      for (const item of validatedItems) {
-        if (item._variation) {
-          item._variation.stock -= item.quantity;
-          await item._variation.save({ transaction });
-        }
-      }
-
-      // ── Payment record ──────────────────────────────────────────────────
-      const { toSmallestUnit } = require('../utils/amountConverter');
-      await Payment.create({
-        order_id: order.id,
-        user_id: user.id,
-        payment_type,
-        amount_paid: payment_type === 'cod' ? finalAmount : toSmallestUnit(finalAmount, 'INR'),
-        status: payment_status === 'paid' ? 'successful' : 'pending',
-        payment_gateway: payment_type === 'cod' ? null : 'Manual',
-        brand_id: brandId,
-        notes: `Manual order created by admin #${adminId}`,
-      }, { transaction });
-
-      // ── Status history ──────────────────────────────────────────────────
-      await OrderStatusHistory.create({
-        order_id: order.id,
-        status: orderStatus,
-        updated_by: adminId,
-        notes: `Manual order created by admin`,
-      }, { transaction });
-
-      // ── Coupon usage ────────────────────────────────────────────────────
-      if (coupon_id && appliedDiscount > 0) {
-        const { Coupon, CouponUsage } = require('../model/associations.js');
-        const coupon = await Coupon.findByPk(coupon_id, { transaction });
-        if (coupon) {
-          await CouponUsage.create({
-            couponId: coupon_id, userId: user.id, orderId: order.id, discountAmount: appliedDiscount,
-          }, { transaction });
-          await coupon.increment('usageCount', { by: 1, transaction });
-        }
-      }
-
-      await transaction.commit();
-      logger.info(`[AdminManualOrder] Order ${order.order_number} created by admin #${adminId}`);
-
-      // ── Fetch full order ────────────────────────────────────────────────
-      const createdOrder = await Order.findByPk(order.id, {
-        include: [
-          { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
-          { model: User, attributes: ['id', 'username', 'email'] },
-          { model: ShippingAddress, as: 'ShippingAddress' },
-        ],
-      });
-
-      // ── Post-creation side effects (non-blocking) ──────────────────────
-
-      // SSE notification
-      const orderEmitter = require('../services/orderEvents.js');
-      setImmediate(() => {
-        try {
-          createdOrder._itemCount = validatedItems.length;
-          orderEmitter.emit('order.created', createdOrder);
-          if (orderStatus === 'confirmed') {
-            orderEmitter.emit('order.confirmed', createdOrder);
-          }
-        } catch (e) {
-          logger.warn('[AdminManualOrder] order event emit failed:', e.message);
-        }
-      });
-
-      // WhatsApp notification
-      setImmediate(async () => {
-        try {
-          const whatsappService = require('../services/whatsappService.js');
-          if (addr.phone) {
-            if (payment_type === 'cod') {
-              const fullAddress = [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
-              await whatsappService.sendCodConfirmation(addr.phone, {
-                name: (addr.full_name || '').split(' ')[0] || 'there',
-                orderNumber: createdOrder.order_number,
-                amount: parseFloat(createdOrder.final_amount).toFixed(2),
-                fullAddress,
-              }, brandId);
-              await Order.update({ cod_address_confirmed: false }, { where: { id: order.id } });
-            } else {
-              // Prepaid: the order.confirmed event (emitted above when the order is
-              // created as 'confirmed') sends the single "Order Confirmed" message.
-              // Sending it inline here too produced two identical confirmations.
-            }
-          }
-        } catch (e) { logger.warn('[AdminManualOrder] WhatsApp failed:', e.message); }
-      });
-
-      // Analytics: FB Pixel + GA4
-      setImmediate(async () => {
-        try {
-          const eventPayload = {
-            brand_id: brandId,
-            order_number: createdOrder.order_number,
-            total_amount: parseFloat(createdOrder.final_amount),
-            final_amount: parseFloat(createdOrder.final_amount),
-            currency: 'INR',
-            email: user.email,
-            phone: addr.phone || digits,
-            first_name: (user.username || '').split(/\s+/)[0] || null,
-            last_name: (user.username || '').split(/\s+/).slice(1).join(' ') || null,
-            zip_code: addr.pincode || null,
-            city: addr.city || null,
-            state: addr.state || null,
-            country: 'in',
-            items: createdOrder.OrderItems.map(i => ({
-              product_id: i.product_id,
-              quantity: i.quantity,
-              price: parseFloat(i.price || 0),
-              name: i.Product?.name || '',
-            })),
-          };
-          // Admin-created MANUAL orders (phone / offline) are NOT website ad
-          // conversions — do not send them to the Meta pixel/CAPI or they inflate
-          // ad Purchase counts with non-ad sales (and have no fbp/fbc to match on).
-          // Keep internal GA only.
-          await sendGAEvent('purchase', eventPayload);
-          await sendGAEvent('add_shipping_info', eventPayload);
-        } catch (e) { logger.error('[AdminManualOrder] Analytics error:', e.message); }
-      });
-
-
-      res.status(201).json({
-        success: true,
-        message: `Manual order ${createdOrder.order_number} created successfully`,
-        order: createdOrder,
-      });
-
-    } catch (error) {
-      if (transaction && !transaction.finished) {
-        try { await transaction.rollback(); } catch (e) { /* ignore */ }
-      }
-      logger.error('[AdminManualOrder] Error:', error.message);
-      res.status(500).json({ success: false, message: 'Failed to create manual order', error: error.message });
-    }
-  };
-
-
   // Track order by AWB number (works for both registered and guest orders)
   module.exports.trackOrderByAWB = async (req, res) => {
     try {
@@ -1834,7 +1515,12 @@
       const offset = (page - 1) * safeLimit;
 
       // Build order clause
-      const orderClause = [[sort, order.toUpperCase()]];
+      // Whitelist sortable columns ('total' is the Dashboard's label for the
+      // final amount); anything else falls back to newest first.
+      const SORTABLE = { createdAt: 'createdAt', created_at: 'createdAt', total: 'final_amount', final_amount: 'final_amount', status: 'status', payment_status: 'payment_status', order_number: 'order_number' };
+      const sortCol = SORTABLE[String(sort)] || 'createdAt';
+      const sortDir = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const orderClause = [[sortCol, sortDir]];
 
       // Build the main query
       const hasSearch = searchConditions.length > 0;
@@ -2399,9 +2085,12 @@
   module.exports.updateAwbNumber = async (req, res) => {
     try {
       const orderId = req.params.id;
-      const { awbNumber, courierName } = req.body;
+      // The route's zod schema validates awb_number / courier_name (and
+      // replaces req.body with the parsed fields); accept camelCase too.
+      const awbNumber = req.body.awb_number ?? req.body.awbNumber;
+      const courierName = req.body.courier_name ?? req.body.courierName;
 
-      if (!awbNumber || !awbNumber.trim()) {
+      if (!awbNumber || !String(awbNumber).trim()) {
         return res.status(400).json({
           success: false,
           message: "AWB number is required"
@@ -2417,11 +2106,11 @@
       }
 
       // Update AWB and courier information
-      order.shipping_waybill = awbNumber.trim();
-      if (courierName && courierName.trim()) {
-        order.courier_name = courierName.trim();
+      order.shipping_waybill = String(awbNumber).trim();
+      if (courierName && String(courierName).trim()) {
+        order.courier_name = String(courierName).trim();
       }
-      order.tracking_number = awbNumber.trim(); // Also update tracking number
+      order.tracking_number = String(awbNumber).trim(); // Also update tracking number
 
       await order.save();
 

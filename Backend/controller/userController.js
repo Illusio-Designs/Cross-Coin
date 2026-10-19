@@ -786,7 +786,10 @@ module.exports.getStaffUsers = async (req, res) => {
 // list uses, so they can be shown alongside registered customers.
 module.exports.getGuestUsers = async (req, res) => {
     try {
-        const guests = await GuestUser.findAll({ order: [['createdAt', 'DESC']], limit: 2000, raw: true });
+        // The model names its timestamp column created_at, and phone/email are
+        // decrypted by model getters — so no `raw: true` here.
+        const rows = await GuestUser.findAll({ order: [['created_at', 'DESC']], limit: 2000 });
+        const guests = rows.map((r) => ({ ...r.get({ plain: true }), phone: r.phone, email: r.email }));
         const mapped = guests.map((g) => ({
             id: `g${g.id}`,
             username: [g.first_name, g.last_name].filter(Boolean).join(' ') || null,
@@ -795,7 +798,7 @@ module.exports.getGuestUsers = async (req, res) => {
             role: 'guest',
             isGuest: true,
             status: g.status,
-            createdAt: g.createdAt,
+            createdAt: g.created_at || g.createdAt,
         }));
         res.json({ guests: mapped, total: mapped.length });
     } catch (error) {

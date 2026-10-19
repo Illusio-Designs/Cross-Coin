@@ -12,7 +12,6 @@
  * Still re-exported (move when you touch):
  *   - createOrder
  *   - createGuestOrder
- *   - adminCreateManualOrder
  */
 
 const { logger } = require('../../config/logging.js');

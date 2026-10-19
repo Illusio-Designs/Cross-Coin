@@ -7,7 +7,7 @@ const {
     getAllUsers, getStaffUsers, getGuestUsers, upload, updateUserRole, createStaffUser,
     checkPhone
 } = require('../controller/userController.js');
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isAdmin, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
 const { validateBody: zValidateBody, z, schemas: zSchemas } = require('../middleware/validate.js');
 
@@ -72,9 +72,10 @@ router.get('/export', isAuthenticated, exportMyData);
 router.delete('/delete', isAuthenticated, deleteUser);
 
 // Admin
-router.get('/all', isAuthenticated, isAdmin, getAllUsers);
+// Customer list: order managers handle customers too (Consumers page).
+router.get('/all', isAuthenticated, isOrderManager, getAllUsers);
 router.get('/staff-list', isAuthenticated, isAdmin, getStaffUsers);
-router.get('/guests', isAuthenticated, isAdmin, getGuestUsers);
+router.get('/guests', isAuthenticated, isOrderManager, getGuestUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
 router.delete('/:id', isAuthenticated, isAdmin, require('../controller/userController.js').adminDeleteUser);
