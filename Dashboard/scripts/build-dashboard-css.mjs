@@ -51,6 +51,7 @@ const FILES = [
   'globalSearch.css',
   'exceptions.css',
   'reviews.css',
+  'systemHealth.css',
   'customers.css',
 ];
 

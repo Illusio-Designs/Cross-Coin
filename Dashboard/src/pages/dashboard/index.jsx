@@ -36,6 +36,7 @@ import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
 import TrafficReport from "./reports/trafficReport";
 import RevenueProfitReport from "./reports/revenueProfit";
+import SystemHealth from "./system/systemHealth";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
@@ -268,8 +269,9 @@ function Dashboard() {
       case 'leads':           return <Leads />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;
-      // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the
-      // in-app System Monitoring panel (5s polling) was removed.
+      // Scheduled jobs, queue, webhooks and errors (admin only — no other
+      // role lists it in ROLE_VIEWS).
+      case 'system-health':   return <SystemHealth />;
       default:                return <CardGrid />;
     }
   };

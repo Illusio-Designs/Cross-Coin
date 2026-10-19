@@ -139,12 +139,16 @@ async function pruneOldRuns() {
   } catch (e) { logger.warn('[jobs] prune failed: ' + e.message); }
 }
 
+// DATETIME(3) in UTC (the app's Sequelize timezone) — keeps the milliseconds,
+// which a plain Date replacement drops.
+const sqlTime = (d) => new Date(d).toISOString().slice(0, 23).replace('T', ' ');
+
 async function recordRun(row) {
   await ensureSchema();
   await sequelize.query(
     `INSERT INTO job_runs (job_key, started_at, finished_at, status, summary, error, duration_ms, triggered_by)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    { replacements: [row.job_key, row.started_at, row.finished_at, row.status,
+    { replacements: [row.job_key, sqlTime(row.started_at), sqlTime(row.finished_at), row.status,
       row.summary ? String(row.summary).slice(0, 255) : null,
       row.error ? String(row.error).slice(0, 4000) : null,
       row.duration_ms, row.triggered_by || null] },

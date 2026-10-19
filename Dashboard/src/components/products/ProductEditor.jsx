@@ -25,7 +25,6 @@ const Editor = dynamic(() => import('../common/Editor'), {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const IK_URL = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crosscoin.in';
 
 const SECTIONS = [
   ['details', 'Details'],
@@ -720,7 +719,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
               <Input label="Share image URL (OG)" name="seo.ogImage" value={form.seo.ogImage} onChange={(e) => setSeo('ogImage', e.target.value)} placeholder="Auto: first photo (1200×630 is ideal)" />
             </div>
             <Input label="Share description (OG)" multiline rows={2} name="seo.ogDescription" value={form.seo.ogDescription} onChange={(e) => setSeo('ogDescription', e.target.value)} placeholder="Auto: same as meta description" />
-            <Input label="Canonical URL" name="seo.canonicalUrl" value={form.seo.canonicalUrl} onChange={(e) => setSeo('canonicalUrl', e.target.value)} placeholder={`Auto: ${SITE_URL}/products/${form.slug || '<slug>'}`} />
+            <Input label="Canonical URL" name="seo.canonicalUrl" value={form.seo.canonicalUrl} onChange={(e) => setSeo('canonicalUrl', e.target.value)} placeholder={`Auto: ${brandUrl(previewBrand, `products/${form.slug || '<slug>'}`)}`} />
             <Input label="Structured data (JSON-LD)" multiline rows={4} name="seo.structuredData" value={form.seo.structuredData} onChange={(e) => setSeo('structuredData', e.target.value)} placeholder="Auto: schema.org Product with brand, SKU, offers, returns, shipping and rating" />
             <div className="pst-field">
               <span className="pst-label">Search preview</span>

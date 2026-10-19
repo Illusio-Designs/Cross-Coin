@@ -39,6 +39,7 @@ export const getPageTitle = (view) => {
     'leads': 'Leads',
     'loyalty': 'Loyalty',
     'staff-users': 'Staff Users',
+    'system-health': 'System health',
   };
   return titles[view] || 'Dashboard';
 };

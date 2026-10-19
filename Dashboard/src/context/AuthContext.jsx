@@ -37,7 +37,7 @@ export const ROLE_LABELS = {
 
 // Which sidebar views each role can access
 export const ROLE_VIEWS = {
-  admin: null, // null = all views
+  admin: null, // null = all views (incl. admin-only ones like 'system-health')
   product_manager: [
     'main', 'products', 'categories', 'attributes', 'media-gallery',
     'brands', 'slider', 'blogs',

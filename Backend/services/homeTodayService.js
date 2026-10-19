@@ -71,7 +71,7 @@ async function getToday({ brandId = null } = {}) {
          FROM orders o WHERE ${TO_SHIP} AND o.shipping_waybill IS NULL AND LOWER(o.shipping_sync_status) = 'failed'${b}`, R),
     safe(q(`SELECT COUNT(*) AS chats, COALESCE(SUM(unread_count), 0) AS messages, MIN(last_message_at) AS oldest
               FROM whatsapp_conversations WHERE unread_count > 0${bPlain}`, R), [{}]),
-    safe(q(`SELECT SUM(pv.stock = 0) AS out_n, SUM(pv.stock > 0 AND pv.stock < 10) AS low_n
+    safe(q(`SELECT SUM(pv.stock <= 0) AS out_n, SUM(pv.stock > 0 AND pv.stock < 10) AS low_n
               FROM product_variations pv JOIN products p ON p.id = pv.productId
              WHERE p.status = 'active'${brandId ? ' AND EXISTS (SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId)' : ''}`, R), [{}]),
     safe(q(`SELECT COUNT(*) AS n FROM reviews WHERE status = 'pending'${brandId ? ' AND brandId = :brandId' : ''}`, R), [{}]),

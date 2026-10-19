@@ -92,6 +92,7 @@ const ALL_MENU = [
       { label: 'Shipping Fees',  view: 'shippingFees' },
       { label: 'Courier Webhooks', view: 'webhook-events' },
       { label: 'Staff Users',    view: 'staff-users' },
+      { label: 'System health',  view: 'system-health' },
     ],
   },
   { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'], also: ['customer'] },
