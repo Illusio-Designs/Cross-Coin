@@ -1602,30 +1602,26 @@ const setupDatabase = async () => {
     console.log("Creating slider_brands table...");
     // await createSliderBrandsTable(); // Temporarily disabled - function defined later in file
 
-    // Now it's safe to create the admin user.
-    // Use raw SQL to avoid model-column mismatch issues on legacy schemas.
+    // Bootstrap an admin ONLY on a database that has none, and only with
+    // credentials supplied via env (ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD) —
+    // never a fixed, publicly known password.
     if (models["User"]) {
-      const bcrypt = require("bcrypt");
-      const adminEmail = "admin@admin.com";
-      const adminPassword = "Admin@123";
-      const adminUsername = "admin";
-      const adminRole = "admin";
-
-      const [existingAdminRows] = await sequelize.query(
-        `SELECT id FROM users WHERE email = ? LIMIT 1`,
-        { replacements: [adminEmail] }
-      );
-
-      if (!existingAdminRows.length) {
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      const seedEmail = process.env.ADMIN_SEED_EMAIL;
+      const seedPassword = process.env.ADMIN_SEED_PASSWORD;
+      const [admins] = await sequelize.query(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
+      if (admins.length) {
+        console.log("✓ Admin user already exists");
+      } else if (seedEmail && seedPassword) {
+        const bcrypt = require("bcrypt");
+        const hashedPassword = await bcrypt.hash(seedPassword, 10);
         await sequelize.query(
           `INSERT INTO users (username, email, password, role, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, NOW(), NOW())`,
-          { replacements: [adminUsername, adminEmail, hashedPassword, adminRole] }
+           VALUES (?, ?, ?, 'admin', NOW(), NOW())`,
+          { replacements: ["admin", seedEmail, hashedPassword] }
         );
-        console.log("✓ Admin user created: admin@admin.com / Admin@123");
+        console.log(`✓ Admin user created: ${seedEmail}`);
       } else {
-        console.log("✓ Admin user already exists");
+        console.log("⚠️ No admin user exists — set ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD and re-run setup to create one");
       }
     }
 
@@ -1658,14 +1654,6 @@ const setupDatabase = async () => {
     } catch (error) {
       console.log("⚠️ Error checking/adding brand_id column:", error.message);
     }
-    
-    // Clean up duplicate payments
-    console.log("\nCleaning up duplicate payments...");
-    await cleanupDuplicatePayments();
-    
-    // Sync payment data (fix NULL payment_type and amount_paid)
-    console.log("\nSyncing payment data...");
-    await syncPaymentData();
     
     // Fix category image paths
     console.log("\nFixing category image paths...");
@@ -1713,127 +1701,7 @@ const setupDatabase = async () => {
 
 
 
-// Function to clean up duplicate payments
-const cleanupDuplicatePayments = async () => {
-  try {
-    const { Payment } = require("../model/paymentModel.js");
 
-    console.log("Checking for duplicate payment records...");
-
-    // Find all payments grouped by order_id
-    const [duplicates] = await sequelize.query(`
-      SELECT order_id, COUNT(*) as count
-      FROM payments
-      GROUP BY order_id
-      HAVING count > 1
-    `);
-
-    if (duplicates.length === 0) {
-      console.log("✓ No duplicate payments found");
-      return;
-    }
-
-    console.log(`Found ${duplicates.length} orders with duplicate payments`);
-
-    let removed = 0;
-
-    for (const dup of duplicates) {
-      // Get all payments for this order
-      const payments = await Payment.findAll({
-        where: { order_id: dup.order_id },
-        order: [
-          ["status", "DESC"], // Keep successful over pending
-          ["createdAt", "DESC"], // Keep latest
-        ],
-      });
-
-      // Keep the first one (successful and latest), delete the rest
-      const toKeep = payments[0];
-      const toDelete = payments.slice(1);
-
-      for (const payment of toDelete) {
-        await payment.destroy();
-        removed++;
-        console.log(
-          `  Removed duplicate payment ID ${payment.id} for order ${dup.order_id}`
-        );
-      }
-    }
-
-    console.log(`✓ Removed ${removed} duplicate payment records`);
-  } catch (error) {
-    console.error("⚠️ Error cleaning up duplicate payments:", error.message);
-  }
-};
-
-// Function to sync payment data
-const syncPaymentData = async () => {
-  try {
-    const { Payment } = require("../model/paymentModel.js");
-    const { Order } = require("../model/orderModel.js");
-
-    console.log("Checking payments for missing data...");
-
-    // Get all payments
-    const allPayments = await Payment.findAll({
-      include: [
-        {
-          model: Order,
-          attributes: ["id", "order_number", "payment_type", "final_amount"],
-        },
-      ],
-    });
-
-    let stats = {
-      nullPaymentType: 0,
-      nullAmount: 0,
-      updated: 0,
-    };
-
-    for (const payment of allPayments) {
-      let needsUpdate = false;
-      const updates = {};
-
-      // Fix NULL payment_type
-      if (!payment.payment_type) {
-        stats.nullPaymentType++;
-        if (payment.Order && payment.Order.payment_type) {
-          updates.payment_type = payment.Order.payment_type;
-          needsUpdate = true;
-        } else {
-          // Default to COD if order also doesn't have it
-          updates.payment_type = "cod";
-          needsUpdate = true;
-        }
-      }
-
-      // Fix NULL or 0 amount_paid
-      if (!payment.amount_paid || payment.amount_paid === 0) {
-        stats.nullAmount++;
-        if (payment.Order && payment.Order.final_amount) {
-          updates.amount_paid = payment.Order.final_amount;
-          needsUpdate = true;
-        }
-      }
-
-      // Update if needed
-      if (needsUpdate) {
-        await payment.update(updates);
-        stats.updated++;
-      }
-    }
-
-    if (stats.updated > 0) {
-      console.log(`✓ Fixed ${stats.nullPaymentType} payments with NULL payment_type`);
-      console.log(`✓ Fixed ${stats.nullAmount} payments with NULL/0 amount`);
-      console.log(`✓ Total payments updated: ${stats.updated}`);
-    } else {
-      console.log("✓ All payment data is already synchronized");
-    }
-  } catch (error) {
-    console.error("⚠️ Error syncing payment data:", error.message);
-  }
-};
 
 // Function to fix category image paths
 const fixCategoryImagePaths = async () => {

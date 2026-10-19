@@ -1817,15 +1817,22 @@ const startServer = async () => {
         let needsSetup = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-            const [rows] = await sequelize.query(`SELECT version FROM schema_version LIMIT 1`);
-            needsSetup = rows.length === 0 || rows[0].version !== SCHEMA_VERSION;
+            // Exact match: the table also holds the 'seo-init-*' marker row, and
+            // an unqualified "first row" read returned that marker (it sorts
+            // before 'v2…'), so setup re-ran on EVERY boot.
+            const [rows] = await sequelize.query(
+                `SELECT version FROM schema_version WHERE version = ? LIMIT 1`,
+                { replacements: [SCHEMA_VERSION] }
+            );
+            needsSetup = rows.length === 0;
         } catch { needsSetup = true; }
 
         if (needsSetup) {
             logger.info('Setting up database (schema version changed)...');
             await setupDatabase();
-            await sequelize.query(`DELETE FROM schema_version`);
-            await sequelize.query(`INSERT INTO schema_version (version) VALUES ('${SCHEMA_VERSION}')`);
+            // Replace only the old schema version — keep the seo-init marker.
+            await sequelize.query(`DELETE FROM schema_version WHERE version NOT LIKE 'seo-%'`);
+            await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES (?)`, { replacements: [SCHEMA_VERSION] });
             logger.info('✓ Database setup completed');
         } else {
             logger.info('✓ Database schema up-to-date, skipping setup');
