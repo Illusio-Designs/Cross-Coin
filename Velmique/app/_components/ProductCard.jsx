@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { ik } from '@/lib/imagekit';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
@@ -20,7 +21,7 @@ export default function ProductCard({ product }) {
   if (!product) return null;
 
   const img = product.images?.[0] || '';
-  const href = `/test/product/${product.slug}`;
+  const href = `/product/${product.slug}`;
   // Fragrance notes (from the default variation) as the subtitle.
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
   const noteNames = (defVar?.noteItems?.length
@@ -44,6 +45,7 @@ export default function ProductCard({ product }) {
       price: product.price,
       size: product.sizes?.[0] || '',
       image: img,
+      slug: product.slug,
       quantity: 1,
     });
   };
@@ -56,13 +58,13 @@ export default function ProductCard({ product }) {
     <article className="m-card">
       <div className="m-card__fig">
         <Link className="m-card__imglink" href={href} aria-label={product.name}>
-          <span className="m-card__tile">{img ? <img src={img} alt={product.name} loading="lazy" /> : null}</span>
+          <span className="m-card__tile">{img ? <img src={ik(img, 600)} alt={product.name} loading="lazy" decoding="async" /> : null}</span>
           <span className="m-card__shade" />
         </Link>
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
-        <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label="Toggle wishlist" onClick={wish}><Heart filled={wished} /></button>
+        <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={wished} onClick={wish}><Heart filled={wished} /></button>
         {rating > 0 ? <span className="m-card__rbadge"><Star />{rating.toFixed(1)}/5</span> : null}
-        <button className="m-card__add" aria-label="Add to bag" onClick={add}><Bag />Add to bag</button>
+        <button className="m-card__add" aria-label={`Add ${product.name} to bag`} onClick={add}><Bag />Add to bag</button>
       </div>
       <div className="m-card__body">
         <div className="m-card__top">
@@ -71,7 +73,7 @@ export default function ProductCard({ product }) {
         </div>
         {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
         {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} reviews</div> : null}
-        <button className="m-card__addbody" aria-label="Add to bag" onClick={add}><Bag />Add to bag</button>
+        <button className="m-card__addbody" aria-label={`Add ${product.name} to bag`} onClick={add}><Bag />Add to bag</button>
       </div>
     </article>
   );

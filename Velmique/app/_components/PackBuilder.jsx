@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { ik } from '@/lib/imagekit';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const check = (
@@ -49,6 +50,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
         price: Number(p.price || 0),
         size: p.sizes?.[0] || '',
         image: p.images?.[0] || '',
+        slug: p.slug,
         quantity: n,
         // One shared group for every mix-pack line, so items added from the
         // pack page, the PDP row and the tier cards all count together.
@@ -99,7 +101,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
                         <span className="m-ptier__sub">{t.off ? `${t.pairs}+ scents` : '1 scent'}</span>
                         <span className="m-ptier__imgs">
                           {products.slice(0, Math.min(t.pairs, 3)).map((p) => (
-                            p.images?.[0] ? <img key={p.id} src={p.images[0]} alt="" loading="lazy" /> : null
+                            p.images?.[0] ? <img key={p.id} src={ik(p.images[0], 120)} alt="" loading="lazy" /> : null
                           ))}
                         </span>
                         <b className={`m-ptier__off ${t.off ? '' : 'mut'}`}>{t.off ? `${t.off}% OFF` : 'Full price'}</b>
@@ -141,7 +143,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
                 <article key={p.id} className={`m-card m-pkcard ${on ? 'sel' : ''}`}>
                   <button type="button" className="m-card__fig m-pkcard__figbtn" onClick={() => bump(p.id, 1)} aria-label={`Add ${p.name} to pack`}>
                     <span className="m-card__imglink">
-                      <span className="m-card__tile">{img ? <img src={img} alt={p.name} loading="lazy" /> : null}</span>
+                      <span className="m-card__tile">{img ? <img src={ik(img, 600)} alt={p.name} loading="lazy" decoding="async" /> : null}</span>
                       <span className="m-card__shade" />
                     </span>
                     {p.badge ? <span className="m-card__tag">{p.badge}</span> : null}

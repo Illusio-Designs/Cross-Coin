@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
 
@@ -14,10 +15,18 @@ const I = {
 };
 
 const NAV = [
-  { label: 'Shop', href: '/test/shop' },
-  { label: 'Build a Pack', href: '/test/pack' },
-  { label: 'About', href: '/test/about' },
-  { label: 'Journal', href: '/test/journal' },
+  { label: 'Shop', href: '/shop' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'Build a Pack', href: '/pack' },
+  { label: 'About', href: '/about' },
+  { label: 'Journal', href: '/journal' },
+];
+// Extra destinations in the mobile slide-nav (desktop reaches them via icons).
+const MNAV_EXTRA = [
+  { label: 'Search', href: '/search' },
+  { label: 'Wishlist', href: '/wishlist' },
+  { label: 'My Account', href: '/account' },
+  { label: 'Track Order', href: '/track-order' },
 ];
 
 const ANNO = [
@@ -41,10 +50,10 @@ function AnnoSeq({ hidden = false }) {
 
 function Brand({ className = '', text = false }) {
   if (text) {
-    return <Link href="/test" className={`m-brand ${className}`}>VELMIQUE<small>MAISON DE PARFUM</small></Link>;
+    return <Link href="/" className={`m-brand ${className}`}>VELMIQUE<small>MAISON DE PARFUM</small></Link>;
   }
   return (
-    <Link href="/test" className={`m-logo-link ${className}`} aria-label="Velmique">
+    <Link href="/" className={`m-logo-link ${className}`} aria-label="Velmique">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo.webp" alt="Velmique" className="m-logo" />
     </Link>
@@ -52,10 +61,22 @@ function Brand({ className = '', text = false }) {
 }
 
 export default function MintShell({ children }) {
-  // The bag itself is the full live CartDrawer (mounted globally and skinned to
-  // onyx on /test); MintShell only needs to open it and show the count.
+  // The bag itself is the CartDrawer mounted in the root layout; the shell
+  // only opens it and shows the count.
   const { cartCount, setCartOpen } = useStore();
   const [menu, setMenu] = useState(false);
+  const pathname = usePathname();
+
+  // Close the slide-nav on navigation and on Escape; lock page scroll while open.
+  useEffect(() => { setMenu(false); }, [pathname]);
+  useEffect(() => {
+    if (!menu) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [menu]);
 
   return (
     <>
@@ -63,27 +84,28 @@ export default function MintShell({ children }) {
 
       <header className="m-header">
         <div className="m-wrap m-nav">
-          <button className="m-burger" aria-label="Open menu" onClick={() => setMenu(true)}>{I.menu}</button>
+          <button className="m-burger" aria-label="Open menu" aria-expanded={menu} aria-controls="m-mnav" onClick={() => setMenu(true)}>{I.menu}</button>
           <nav className="m-nav__links" aria-label="Primary">
             {NAV.map((n) => <Link key={n.label} className="m-lnk" href={n.href}>{n.label}</Link>)}
           </nav>
           <Brand />
           <div className="m-icons">
-            <Link href="/test/search" aria-label="Search">{I.search}</Link>
-            <Link href="/test/wishlist" aria-label="Wishlist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg></Link>
-            <Link href="/test/account" aria-label="Account">{I.user}</Link>
-            <button className="m-bag" aria-label="Cart" onClick={() => setCartOpen(true)}>{I.bag}<b>{cartCount}</b></button>
+            <Link href="/search" aria-label="Search">{I.search}</Link>
+            <Link href="/wishlist" aria-label="Wishlist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg></Link>
+            <Link href="/account" aria-label="Account">{I.user}</Link>
+            <button className="m-bag" aria-label={`Open bag, ${cartCount} item${cartCount === 1 ? '' : 's'}`} onClick={() => setCartOpen(true)}>{I.bag}<b aria-hidden="true">{cartCount}</b></button>
           </div>
         </div>
       </header>
 
       {/* mobile slide-nav */}
-      <div className={`m-mnav ${menu ? 'on' : ''}`}>
+      <div id="m-mnav" className={`m-mnav ${menu ? 'on' : ''}`} role="dialog" aria-modal="true" aria-label="Menu" aria-hidden={!menu} inert={menu ? undefined : ''}>
         <button className="m-mnav__x" aria-label="Close menu" onClick={() => setMenu(false)}>{I.close}</button>
         {NAV.map((n) => <Link key={n.label} href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
+        {MNAV_EXTRA.map((n) => <Link key={n.label} className="m-mnav__sub" href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
       </div>
 
-      {children}
+      <main id="main">{children}</main>
 
       {/* ── Footer ── */}
       <footer className="m-footer">
@@ -104,41 +126,38 @@ export default function MintShell({ children }) {
             <div>
               <h4>Shop</h4>
               <ul>
-                <li><Link href="/test/shop">All Fragrances</Link></li>
-                <li><Link href="/test/shop">Best Sellers</Link></li>
-                <li><Link href="/test/shop">Collections</Link></li>
-                <li><Link href="/test/shop">Gift Sets</Link></li>
+                <li><Link href="/shop">All Fragrances</Link></li>
+                <li><Link href="/collections">Collections</Link></li>
+                <li><Link href="/pack">Build a Pack</Link></li>
+                <li><Link href="/wishlist">Wishlist</Link></li>
               </ul>
             </div>
             <div>
               <h4>About</h4>
               <ul>
-                <li><Link href="/test/about">Our Story</Link></li>
-                <li><Link href="/test/about">Craftsmanship</Link></li>
-                <li><Link href="/test/journal">Journal</Link></li>
-                <li><Link href="/test/contact">Contact</Link></li>
+                <li><Link href="/about">Our Story</Link></li>
+                <li><Link href="/journal">Journal</Link></li>
+                <li><Link href="/account">My Account</Link></li>
+                <li><Link href="/contact">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h4>Customer Care</h4>
               <ul>
-                <li><Link href="/test/track-order">Track Order</Link></li>
-                <li><Link href="/test/shipping-returns">Shipping &amp; Returns</Link></li>
-                <li><Link href="/test/cancellation-refund">Cancellation &amp; Refund</Link></li>
-                <li><Link href="/test/contact">Contact</Link></li>
+                <li><Link href="/track-order">Track Order</Link></li>
+                <li><Link href="/account/returns">Returns &amp; Refunds</Link></li>
+                <li><Link href="/shipping-returns">Shipping Policy</Link></li>
+                <li><Link href="/cancellation-refund">Cancellation &amp; Refund</Link></li>
               </ul>
             </div>
           </div>
           <div className="m-legal">
             <span>© {new Date().getFullYear()} VELMIQUE. All rights reserved.</span>
-            <span><Link href="/test/privacy-policy">Privacy Policy</Link><Link href="/test/terms">Terms Of Use</Link><Link href="/test/contact#grievance">Grievance</Link><CookieSettingsButton className="m-legal__cookie" /></span>
+            <span><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms">Terms Of Use</Link><Link href="/contact#grievance">Grievance</Link><CookieSettingsButton className="m-legal__cookie" /></span>
             <span className="m-legal__by">Made with <em>❤</em> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           </div>
         </div>
       </footer>
-
-      {/* The bag is the full live CartDrawer, mounted globally and skinned to
-          onyx on /test — opened by the header bag button (setCartOpen). */}
     </>
   );
 }

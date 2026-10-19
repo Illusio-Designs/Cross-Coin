@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { ik } from '@/lib/imagekit';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const check = (
@@ -159,7 +160,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
                   {opt.image ? (
                     <span className="m-packopt__imgs">
                       {Array.from({ length: Math.min(p.pairs, 3) }).map((_, k) => (
-                        <img key={k} src={opt.image} alt="" loading="lazy" />
+                        <img key={k} src={ik(opt.image, 160)} alt="" loading="lazy" />
                       ))}
                     </span>
                   ) : null}
@@ -183,7 +184,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
                 <button key={`${o.pid}`} type="button" role="checkbox" aria-checked={on} className={`m-byp ${on ? 'on' : ''}`} onClick={() => togglePick(i)}>
                   {i === 0 ? <span className="m-byp__this">This page</span> : null}
                   <span className="m-byp__box">{check}</span>
-                  <span className="m-byp__img">{o.image ? <img src={o.image} alt={o.name} loading="lazy" /> : null}</span>
+                  <span className="m-byp__img">{o.image ? <img src={ik(o.image, 240)} alt={o.name} loading="lazy" /> : null}</span>
                   <span className="m-byp__n">{o.name}</span>
                   <span className="m-byp__p">{inr(o.price)}</span>
                 </button>

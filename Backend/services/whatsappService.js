@@ -1717,6 +1717,1056 @@ async function syncProductsToCatalog(brandId = 1) {
   return { synced, skipped, errors, total: synced + skipped + errors.length };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// WhatsApp Studio — settings store, automation on/off switches, saving
+// automatic messages to the chat, customer ↔ order matching, the Automations
+// report, template enrichment, broadcast audiences and the broadcast runner.
+// ════════════════════════════════════════════════════════════════════════════
+const { AsyncLocalStorage } = require('async_hooks');
+const { QueryTypes } = require('sequelize');
+const { phoneHash, decrypt } = require('../utils/encryption.js');
+
+const _autoCtx = new AsyncLocalStorage();
+const RATE_LIMIT_REASON = 'Hourly limit for this number reached (10 messages an hour)';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const _db = () => require('../config/db.js').sequelize;
+const _waModels = () => require('../model/whatsappConversationModel.js');
+
+// ── Settings store (whatsapp_settings: key → value) ──────────────────────────
+// index.js creates the table at boot (startup-migrations-v27); this lazy guard
+// keeps the settings working on a process that started before that migration.
+let _settingsReady = null;
+function _ensureSettingsTable() {
+  if (!_settingsReady) {
+    _settingsReady = _db().query(`CREATE TABLE IF NOT EXISTS whatsapp_settings (
+      \`key\` VARCHAR(64) NOT NULL PRIMARY KEY,
+      value TEXT NULL,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`).catch((e) => { _settingsReady = null; throw e; });
+  }
+  return _settingsReady;
+}
+
+async function getWaSetting(key, fallback = null) {
+  await _ensureSettingsTable();
+  const rows = await _db().query('SELECT value FROM whatsapp_settings WHERE `key` = :key LIMIT 1',
+    { replacements: { key }, type: QueryTypes.SELECT });
+  return rows.length && rows[0].value != null ? rows[0].value : fallback;
+}
+
+async function setWaSetting(key, value) {
+  await _ensureSettingsTable();
+  await _db().query(
+    'INSERT INTO whatsapp_settings (`key`, value) VALUES (:key, :value) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = CURRENT_TIMESTAMP',
+    { replacements: { key, value: value == null ? null : String(value) } });
+}
+
+// ── Automation catalogue ─────────────────────────────────────────────────────
+// Every automatic message the code sends. `senders` are the exported helpers
+// that are gated by the switch; `templates` are base names (tName() adds the
+// version). `marketing` ones skip customers who replied STOP and get sales
+// attribution (orders within 3 days of the message).
+const AUTOMATION_GROUPS = [
+  { key: 'orders', title: 'Orders', sub: 'sent on every order', rows: [
+    { key: 'cod_confirm', name: 'COD confirmation', desc: 'Confirm / wrong-address buttons, then asks for the right address', when: 'COD order placed', templates: ['cod_order_confirmation', 'address_request'] },
+    { key: 'order_confirmed', name: 'Order confirmed', desc: 'Thank-you with order number and amount', when: 'Prepaid order paid / COD order confirmed', templates: ['order_confirmation'] },
+    { key: 'order_packed', name: 'Packed', desc: 'Order packed and ready to ship', when: 'Order packed in the dashboard', templates: ['order_packed'] },
+    { key: 'order_shipped', name: 'Shipped', desc: 'AWB and tracking link', when: 'Courier picks up', templates: ['order_shipped'] },
+    { key: 'out_for_delivery', name: 'Out for delivery', desc: 'Arriving today — keep the phone handy', when: 'Courier marks out for delivery', templates: ['order_out_for_delivery'] },
+    { key: 'delivered_invoice', name: 'Delivered + invoice', desc: 'Thank-you message with the GST invoice download', when: 'Courier marks delivered', templates: ['delivered_invoice', 'order_delivered', 'invoice'] },
+    { key: 'failed_delivery', name: 'Failed delivery', desc: 'Deliver again / new address / cancel buttons', when: 'Courier reports a failed attempt', templates: ['delivery_failed_action', 'delivery_failed'] },
+    { key: 'order_cancelled', name: 'Order cancelled', desc: 'Cancellation notice with refund note', when: 'Order cancelled', templates: ['order_cancelled'] },
+    { key: 'rto', name: 'Returned to us (RTO)', desc: 'COD: nothing to refund · Prepaid: refund once it reaches us', when: 'Courier sends the parcel back', templates: ['cod_rto', 'prepaid_rto'] },
+  ] },
+  { key: 'returns', title: 'Returns & refunds', sub: 'keep customers informed', rows: [
+    { key: 'return_requested', name: 'Return requested', desc: 'We got the return request', when: 'Customer asks for a return', templates: ['return_requested'] },
+    { key: 'return_update', name: 'Return update', desc: 'Approved, picked up or received at the warehouse', when: 'Return status changes', templates: ['return_update'] },
+    { key: 'refund_sent', name: 'Refund sent', desc: 'Amount and where it went (card / UPI)', when: 'Refund processed', templates: ['refund_processed'] },
+  ] },
+  { key: 'sales', title: 'Sales', sub: 'bring shoppers back', rows: [
+    { key: 'abandoned_cart', name: 'Abandoned cart', desc: 'Their cart + CART10 code, opens the cart', when: 'Shopper leaves checkout with items', templates: ['cart_abandoned'], marketing: true },
+    { key: 'back_in_stock', name: 'Back in stock', desc: 'To wishlist and cart shoppers', when: 'Out-of-stock item restocked', templates: ['back_in_stock'], marketing: true },
+    { key: 'price_drop', name: 'Price drop', desc: 'To wishlist and cart shoppers', when: 'Price falls by 2% or more', templates: ['price_drop'], marketing: true },
+    { key: 'win_back', name: 'Win-back', desc: 'Offer for customers who haven’t ordered in a while', when: 'Daily at 11:00', templates: ['win_back'], marketing: true },
+    { key: 'upsell', name: 'After-purchase upsell', desc: 'A matching product after delivery', when: '1 day after delivery', templates: ['post_purchase_upsell'], marketing: true },
+    { key: 'review_request', name: 'Review request', desc: 'Asks for a product review', when: '3 days after delivery', templates: ['review_request'], marketing: true },
+    { key: 'loyalty_points', name: 'Loyalty points', desc: 'Points earned and balance', when: 'Points credited for an order', templates: ['loyalty_points'] },
+    { key: 'popup_coupon', name: 'Website pop-up coupon', desc: 'Sends the code a visitor asked for on the website', when: 'Visitor enters their number in the pop-up', templates: ['popup_coupon'], marketing: true },
+  ] },
+  { key: 'chat', title: 'Chat replies', sub: 'answers inside the 24-hour window', rows: [
+    { key: 'chat_auto_replies', name: 'Keyword replies', desc: 'Answers hi / track / return; STOP, START and CANCEL are always handled', when: 'Customer sends one of those words', templates: [] },
+  ] },
+];
+const AUTOMATIONS = AUTOMATION_GROUPS.flatMap((g) => g.rows.map((r) => ({ ...r, group: g.key })));
+const AUTOMATION_BY_KEY = Object.fromEntries(AUTOMATIONS.map((a) => [a.key, a]));
+const MARKETING_KEYS = AUTOMATIONS.filter((a) => a.marketing).map((a) => a.key);
+
+// ── On/off switches (cached 60 s; default ON; fail-open) ─────────────────────
+let _autoFlags = null;
+let _autoFlagsAt = 0;
+async function _loadAutomationFlags() {
+  if (_autoFlags && Date.now() - _autoFlagsAt < 60 * 1000) return _autoFlags;
+  try {
+    await _ensureSettingsTable();
+    const rows = await _db().query("SELECT `key` AS k, value FROM whatsapp_settings WHERE `key` LIKE 'automation.%'", { type: QueryTypes.SELECT });
+    _autoFlags = Object.fromEntries(rows.map((r) => [String(r.k).slice('automation.'.length), r.value]));
+  } catch (e) {
+    logger.warn('[WhatsApp] automation switches unreadable — treating all as on: ' + e.message);
+    _autoFlags = _autoFlags || {};
+  }
+  _autoFlagsAt = Date.now();
+  return _autoFlags;
+}
+
+async function isAutomationEnabled(key) {
+  const flags = await _loadAutomationFlags();
+  const v = flags[key];
+  return !(v === '0' || v === 'false' || v === 0 || v === false);
+}
+
+async function setAutomationEnabled(key, enabled) {
+  await setWaSetting(`automation.${key}`, enabled ? '1' : '0');
+  _autoFlags = null;
+}
+
+// ── Phone helpers ────────────────────────────────────────────────────────────
+const _p10 = (p) => String(p == null ? '' : p).replace(/\D/g, '').slice(-10);
+function _phoneVariants(p) {
+  const digits = String(p || '').replace(/\D/g, '');
+  const ten = digits.slice(-10);
+  if (ten.length !== 10) return digits ? [digits] : [];
+  return [...new Set([digits, ten, `91${ten}`, `+91${ten}`, `0${ten}`])];
+}
+
+async function isPhoneOptedOut(phone) {
+  const variants = _phoneVariants(phone);
+  if (!variants.length) return false;
+  const rows = await _db().query(
+    'SELECT 1 FROM whatsapp_conversations WHERE customer_phone IN (:variants) AND opted_out = 1 LIMIT 1',
+    { replacements: { variants }, type: QueryTypes.SELECT });
+  return rows.length > 0;
+}
+
+// Wrap an automatic sender: honour the switch, skip STOP for marketing, and
+// run the send inside a context so the message is saved to the chat with its
+// automation key. Returns { skipped:true, ... } instead of throwing, so the
+// caller's own bookkeeping (mark cart messaged etc.) behaves as "handled".
+function automated(key, fn) {
+  return async function automatedSender(phone, data, brandId = 1, ...rest) {
+    if (!(await isAutomationEnabled(key))) {
+      logger.info(`[WhatsApp] automatic message "${key}" is switched off — not sent`);
+      return { skipped: true, automation_disabled: true, automation_key: key };
+    }
+    if (AUTOMATION_BY_KEY[key]?.marketing) {
+      try {
+        if (await isPhoneOptedOut(phone)) return { skipped: true, opted_out: true, automation_key: key };
+      } catch (_) { /* opt-out lookup failure must not block the send */ }
+    }
+    const customerName = data && (data.name || data.customerName) ? String(data.name || data.customerName) : null;
+    return _autoCtx.run({ automationKey: key, customerName, brandId }, () => fn(phone, data, brandId, ...rest));
+  };
+}
+
+// Run any send inside an automation context (for code that builds its own
+// message, e.g. keyword replies, NDR follow-ups, the away message).
+// gate:false = always send (still saved + tagged).
+async function runAutomation(key, fn, { gate = true, customerName = null, brandId = null } = {}) {
+  if (gate && !(await isAutomationEnabled(key))) return { skipped: true, automation_disabled: true, automation_key: key };
+  return _autoCtx.run({ automationKey: key, customerName, brandId }, fn);
+}
+
+function sendAutoText(key, phone, text, brandId = 1, { gate = true } = {}) {
+  return runAutomation(key, () => sendTextMessage(phone, text, brandId), { gate, brandId });
+}
+
+function _withoutFailureRecord(fn) {
+  const ctx = _autoCtx.getStore();
+  if (!ctx) return fn();
+  return _autoCtx.run({ ...ctx, noFailureRecord: true }, fn);
+}
+
+// ── Template text helpers ────────────────────────────────────────────────────
+function templateBase(name) {
+  const n = String(name || '');
+  if (/^cart_abandoned_(?!v\d+$)[a-z0-9]+_v\d+$/.test(n)) return 'cart_abandoned';
+  return n.replace(/_v\d+$/, '');
+}
+
+async function _templateBodyText(name, brandId = SHARED_WA_BRAND_ID) {
+  try {
+    const list = (await listTemplates(brandId))?.data || [];
+    const t = list.find((x) => x.name === name);
+    const body = t?.components?.find((c) => c.type === 'BODY')?.text;
+    if (body) return body;
+  } catch (_) { /* fall back to our own definition */ }
+  const def = buildTemplates('{{brand}}', 'your-store.in').find((t) => t.name === name || templateBase(t.name) === templateBase(name));
+  return def?.components?.find((c) => c.type === 'BODY')?.text || null;
+}
+
+async function _renderTemplateBody(name, params, brandId) {
+  const text = await _templateBodyText(name, brandId);
+  const p = Array.isArray(params) ? params : [];
+  if (!text) return p.length ? `[${name}] ${p.join(' · ')}` : `[${name}]`;
+  return text.replace(/\{\{(\d+)\}\}/g, (m, i) => (p[i - 1] != null ? String(p[i - 1]) : m));
+}
+
+// ── Save an outbound message to the customer's chat ──────────────────────────
+// Finds the thread by phone (any stored format) or creates one (status
+// 'resolved', no unread — an automatic message must not clutter the open
+// inbox). Exported for other services that send their own messages.
+async function recordOutbound({ to, brandId = 1, type = 'template', body = null, templateName = null, waId = null,
+  status = 'sent', errorReason = null, automationKey = null, customerName = null, sentBy = null }) {
+  const { WhatsappConversation, WhatsappMessage } = _waModels();
+  const digits = String(to || '').replace(/\D/g, '');
+  if (!digits) return null;
+  const variants = _phoneVariants(digits);
+  const now = new Date();
+  const preview = String(body || (templateName ? `[${templateName}]` : '')).slice(0, 1000);
+  let conv = await WhatsappConversation.findOne({ where: { customer_phone: variants }, order: [['last_message_at', 'DESC']] });
+  if (!conv) {
+    [conv] = await WhatsappConversation.findOrCreate({
+      where: { customer_phone: digits },
+      defaults: {
+        brand_id: Number(brandId) || 1, customer_name: customerName && customerName !== 'there' ? customerName : null,
+        wa_contact_id: digits, last_message: preview, last_message_at: now, unread_count: 0, status: 'resolved',
+      },
+    });
+  } else if (status !== 'failed') {
+    await conv.update({ last_message: preview, last_message_at: now });
+  }
+  return WhatsappMessage.create({
+    conversation_id: conv.id, wa_message_id: waId || null, direction: 'outbound', type, body: body || preview,
+    status, sent_at: now, automation_key: automationKey, template_name: templateName,
+    error_reason: errorReason ? String(errorReason).slice(0, 255) : null, sent_by: sentBy,
+  });
+}
+
+async function _recordAutomatic({ to, brandId, type = 'template', templateName = null, params = null, body = null, waId = null, failed = null }) {
+  const ctx = _autoCtx.getStore();
+  if (!ctx || !ctx.automationKey) return null;
+  if (failed && ctx.noFailureRecord) return null;
+  try {
+    const text = body != null ? String(body) : await _renderTemplateBody(templateName, params, brandId);
+    return await recordOutbound({
+      to, brandId: brandId || ctx.brandId || 1, type, body: text, templateName, waId,
+      status: failed ? 'failed' : 'sent', errorReason: failed || null,
+      automationKey: ctx.automationKey, customerName: ctx.customerName,
+    });
+  } catch (e) {
+    logger.warn(`[WhatsApp] could not save automatic message (${ctx.automationKey}) to chat: ${e.message}`);
+    return null;
+  }
+}
+
+// ── Customer ↔ orders matching ───────────────────────────────────────────────
+// Orders for a set of 10-digit phones: shipping / guest phones by keyed hash
+// (they are encrypted), account phones directly. One UNION query per chunk.
+// Returns rows with .p10 = the phone they matched.
+const _hashKeyAvailable = () => !!phoneHash('9999999999');
+
+async function ordersForPhones(phones, { since = null, until = null, brandId = null, excludeCancelled = false } = {}) {
+  const list = [...new Set((phones || []).map(_p10).filter((p) => p.length === 10))];
+  if (!list.length) return [];
+  const out = new Map();
+  for (let i = 0; i < list.length; i += 500) {
+    const chunk = list.slice(i, i + 500);
+    const hashTo = new Map();
+    for (const p of chunk) { const h = phoneHash(p); if (h) hashTo.set(h, p); }
+    const hashes = [...hashTo.keys()];
+    const plain = chunk.flatMap((p) => [p, `91${p}`, `+91${p}`]);
+    const cond = [];
+    if (since) cond.push('o.created_at >= :since');
+    if (until) cond.push('o.created_at <= :until');
+    if (brandId) cond.push('o.brand_id = :brandId');
+    if (excludeCancelled) cond.push("o.status NOT IN ('cancelled','order cancelled') AND (o.payment_status IS NULL OR o.payment_status <> 'failed')");
+    const extra = cond.length ? ` AND ${cond.join(' AND ')}` : '';
+    const cols = 'o.id, o.order_number, o.status, o.payment_type, o.payment_status, o.final_amount, o.created_at, o.brand_id';
+    const parts = [];
+    if (hashes.length) {
+      parts.push(`SELECT ${cols}, a.phone_hash AS h, NULL AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone_hash IN (:hashes)${extra}`);
+      parts.push(`SELECT ${cols}, g.phone_hash AS h, NULL AS up FROM orders o JOIN guest_users g ON g.id = o.guest_user_id WHERE g.phone_hash IN (:hashes)${extra}`);
+    } else {
+      // No DATA_ENCRYPTION_KEY (local/dev): stored phones are plain text.
+      parts.push(`SELECT ${cols}, NULL AS h, a.phone AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone IN (:plain)${extra}`);
+    }
+    parts.push(`SELECT ${cols}, NULL AS h, u.phone AS up FROM orders o JOIN users u ON u.id = o.user_id WHERE u.phone IN (:plain)${extra}`);
+    const rows = await _db().query(parts.join(' UNION ALL '), {
+      replacements: { hashes, plain, since, until, brandId }, type: QueryTypes.SELECT,
+    });
+    for (const r of rows) {
+      if (out.has(r.id)) continue;
+      const p = r.h ? hashTo.get(r.h) : _p10(r.up);
+      if (!p) continue;
+      out.set(r.id, { ...r, h: undefined, up: undefined, p10: p });
+    }
+  }
+  return [...out.values()];
+}
+
+// Latest order per phone → Map(p10 → order row).
+async function latestOrderByPhone(phones) {
+  const rows = await ordersForPhones(phones);
+  const best = new Map();
+  for (const r of rows) {
+    const cur = best.get(r.p10);
+    if (!cur || new Date(r.created_at) > new Date(cur.created_at)) best.set(r.p10, r);
+  }
+  return best;
+}
+
+// Phones (10-digit) of customers whose order number matches a search term.
+async function phonesForOrderSearch(q, limit = 100) {
+  const term = String(q || '').trim();
+  if (term.length < 3) return [];
+  const rows = await _db().query(
+    `SELECT o.id, u.phone AS u_phone, a.phone AS a_phone, g.phone AS g_phone
+       FROM orders o
+       LEFT JOIN users u ON u.id = o.user_id
+       LEFT JOIN shipping_addresses a ON a.id = o.shipping_address_id
+       LEFT JOIN guest_users g ON g.id = o.guest_user_id
+      WHERE o.order_number LIKE :q
+      ORDER BY o.created_at DESC LIMIT ${Number(limit) || 100}`,
+    { replacements: { q: `%${term}%` }, type: QueryTypes.SELECT });
+  const set = new Set();
+  for (const r of rows) {
+    for (const v of [r.u_phone, decrypt(r.a_phone), decrypt(r.g_phone)]) {
+      const p = _p10(v);
+      if (p.length === 10) set.add(p);
+    }
+  }
+  return [...set];
+}
+
+// ── Template status helpers ──────────────────────────────────────────────────
+function normaliseTemplateStatus(s) {
+  const v = String(s || '').toUpperCase();
+  if (v === 'APPROVED') return 'approved';
+  if (['PENDING', 'IN_APPEAL', 'PENDING_DELETION', 'LIMIT_EXCEEDED'].includes(v)) return 'pending';
+  if (['REJECTED', 'DISABLED', 'PAUSED', 'DELETED', 'ARCHIVED'].includes(v)) return 'rejected';
+  return 'missing';
+}
+const _STATUS_RANK = { approved: 3, pending: 2, rejected: 1, missing: 0 };
+
+// Meta template list → Map(name → normalised status). Never throws.
+async function _templateStatusMap(brandId = SHARED_WA_BRAND_ID, { force = false } = {}) {
+  try {
+    const data = await listTemplates(brandId, { force });
+    return { map: new Map((data?.data || []).map((t) => [t.name, normaliseTemplateStatus(t.status)])), list: data?.data || [], error: null };
+  } catch (e) {
+    return { map: new Map(), list: [], error: metaError(e) };
+  }
+}
+
+// Best status among an automation's templates (the sender falls back between
+// them, so one approved template is enough to send).
+function _automationTemplateStatus(auto, statusMap) {
+  if (!auto.templates.length) return { template: null, status: 'approved' };
+  const names = [];
+  for (const base of auto.templates) {
+    names.push(tName(base));
+    if (base === 'cart_abandoned') {
+      names.push(`cart_abandoned${TEMPLATE_VERSION}`);
+      for (const n of statusMap.keys()) if (/^cart_abandoned_(?!v\d+$)[a-z0-9]+_v\d+$/.test(n)) names.push(n);
+    }
+  }
+  let best = { template: tName(auto.templates[0]), status: 'missing' };
+  for (const n of names) {
+    const st = statusMap.get(n) || 'missing';
+    if (_STATUS_RANK[st] > _STATUS_RANK[best.status]) best = { template: n, status: st };
+  }
+  return best;
+}
+
+const _inr = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+
+// ── Automations report ───────────────────────────────────────────────────────
+async function getAutomationReport({ days = 7, brandId = null } = {}) {
+  const sq = _db();
+  const since = new Date(Date.now() - Math.max(1, Math.min(90, Number(days) || 7)) * DAY_MS);
+  const brandJoin = brandId ? 'JOIN whatsapp_conversations bc ON bc.id = m.conversation_id AND bc.brand_id = :brandId' : '';
+  const base = `FROM whatsapp_messages m ${brandJoin}
+    WHERE m.direction = 'outbound' AND m.automation_key IN (:keys) AND m.createdAt >= :since`;
+  const repl = { keys: AUTOMATIONS.map((a) => a.key), since, brandId };
+
+  const [agg, replies, mkt, tpl, flags] = await Promise.all([
+    sq.query(`SELECT m.automation_key AS k, COUNT(*) AS total,
+                     SUM(m.status = 'failed') AS failed,
+                     SUM(m.status IN ('delivered','read')) AS delivered,
+                     SUM(m.status = 'read') AS rd
+                ${base} GROUP BY m.automation_key`, { replacements: repl, type: QueryTypes.SELECT }),
+    // "Acted" = the customer answered (tapped a button or wrote) within a day.
+    sq.query(`SELECT m.automation_key AS k, COUNT(DISTINCT m.conversation_id) AS acted
+                ${base} AND m.status <> 'failed'
+                 AND EXISTS (SELECT 1 FROM whatsapp_messages r
+                              WHERE r.conversation_id = m.conversation_id AND r.direction = 'inbound'
+                                AND r.createdAt > m.createdAt AND r.createdAt <= DATE_ADD(m.createdAt, INTERVAL 1 DAY))
+               GROUP BY m.automation_key`, { replacements: repl, type: QueryTypes.SELECT }),
+    sq.query(`SELECT m.automation_key AS k, m.createdAt AS at, c.customer_phone AS phone
+                FROM whatsapp_messages m JOIN whatsapp_conversations c ON c.id = m.conversation_id
+               WHERE m.direction = 'outbound' AND m.automation_key IN (:mk) AND m.createdAt >= :since
+                 AND m.status <> 'failed' ${brandId ? 'AND c.brand_id = :brandId' : ''}`,
+    { replacements: { mk: MARKETING_KEYS, since, brandId }, type: QueryTypes.SELECT }),
+    _templateStatusMap(SHARED_WA_BRAND_ID),
+    _loadAutomationFlags(),
+  ]);
+
+  const A = Object.fromEntries(agg.map((r) => [r.k, r]));
+  const R = Object.fromEntries(replies.map((r) => [r.k, Number(r.acted) || 0]));
+
+  // Sales: an order placed within 3 days after a marketing message counts for
+  // the most recent such message to that customer.
+  const salesBy = {};
+  if (mkt.length) {
+    const orders = await ordersForPhones(mkt.map((r) => r.phone), { since, excludeCancelled: true });
+    const sendsByPhone = new Map();
+    for (const r of mkt) {
+      const p = _p10(r.phone);
+      if (!sendsByPhone.has(p)) sendsByPhone.set(p, []);
+      sendsByPhone.get(p).push({ k: r.k, at: new Date(r.at).getTime() });
+    }
+    for (const o of orders) {
+      const t = new Date(o.created_at).getTime();
+      let pick = null;
+      for (const s of sendsByPhone.get(o.p10) || []) {
+        if (s.at <= t && t - s.at <= 3 * DAY_MS && (!pick || s.at > pick.at)) pick = s;
+      }
+      if (!pick) continue;
+      salesBy[pick.k] = salesBy[pick.k] || { orders: 0, sales: 0 };
+      salesBy[pick.k].orders++;
+      salesBy[pick.k].sales += Number(o.final_amount) || 0;
+    }
+  }
+
+  const summary = { sent: 0, delivered: 0, read: 0, acted: 0, sales: 0, orders: 0, failed: 0 };
+  const notReady = [];
+  const groups = AUTOMATION_GROUPS.map((g) => ({
+    key: g.key, title: g.title, sub: g.sub,
+    rows: g.rows.map((auto) => {
+      const a = A[auto.key] || {};
+      const failed = Number(a.failed) || 0;
+      const sent = Math.max(0, (Number(a.total) || 0) - failed);
+      const delivered = Number(a.delivered) || 0;
+      const read = Number(a.rd) || 0;
+      const acted = R[auto.key] || 0;
+      const sb = salesBy[auto.key] || { orders: 0, sales: 0 };
+      const enabled = !(['0', 'false'].includes(String(flags[auto.key])));
+      const { template, status } = _automationTemplateStatus(auto, tpl.map);
+      let result = '—';
+      if (auto.marketing && sent) result = sb.orders ? `${sb.orders} order${sb.orders === 1 ? '' : 's'} · ${_inr(sb.sales)}` : 'No orders yet';
+      else if ((auto.key === 'cod_confirm' || auto.key === 'failed_delivery') && sent) result = `${acted} answered (${Math.round((acted / sent) * 100)}%)`;
+      else if (acted && sent) result = `${acted} replied`;
+      if (!sent) {
+        if (!enabled) result = 'Switched off';
+        else if (status === 'missing') result = 'Template not created yet';
+        else if (status === 'pending') result = 'Starts when WhatsApp approves it';
+        else if (status === 'rejected') result = 'Template rejected by WhatsApp';
+      }
+      if (status !== 'approved' && auto.templates.length) notReady.push({ key: auto.key, name: auto.name, templateStatus: status });
+      summary.sent += sent; summary.delivered += delivered; summary.read += read; summary.failed += failed;
+      summary.acted += acted + sb.orders; summary.sales += sb.sales; summary.orders += sb.orders;
+      return {
+        key: auto.key, name: auto.name, desc: auto.desc, when: auto.when,
+        template, templateStatus: status, enabled, marketing: !!auto.marketing,
+        sent, delivered, read, failed, acted,
+        read_pct: sent ? Math.round((read / sent) * 100) : null,
+        orders: sb.orders, sales: Math.round(sb.sales), result,
+      };
+    }),
+  }));
+  summary.sales = Math.round(summary.sales);
+  summary.delivered_pct = summary.sent ? Math.round(((summary.delivered + summary.read) / summary.sent) * 1000) / 10 : null;
+  summary.read_pct = summary.sent ? Math.round((summary.read / summary.sent) * 100) : null;
+  return { days: Number(days) || 7, summary, not_ready: notReady, template_check_error: tpl.error, groups };
+}
+
+// ── Template parameters (labels + auto-fill for a 1:1 send) ──────────────────
+const TEMPLATE_PARAMS = {
+  order_confirmation: ['name', 'brand', 'order', 'amount'],
+  invoice: ['name', 'brand', 'order'],
+  delivered_invoice: ['name', 'brand', 'order'],
+  order_packed: ['name', 'brand', 'order'],
+  order_shipped: ['name', 'brand', 'order', 'awb', 'tracking_link'],
+  order_out_for_delivery: ['name', 'brand', 'order', 'courier'],
+  delivery_failed: ['name', 'brand', 'order', 'reason'],
+  delivery_failed_action: ['name', 'brand', 'order', 'reason'],
+  order_delivered: ['name', 'brand', 'order'],
+  order_cancelled: ['name', 'brand', 'order', 'refund_info'],
+  cod_rto: ['name', 'brand', 'order'],
+  prepaid_rto: ['name', 'brand', 'order', 'amount'],
+  cod_order_confirmation: ['name', 'brand', 'order', 'amount', 'address'],
+  address_request: ['name', 'brand', 'order'],
+  refund_processed: ['name', 'brand', 'order', 'amount', 'refund_mode'],
+  return_requested: ['name', 'return_no', 'brand', 'order'],
+  return_update: ['name', 'return_no', 'return_status', 'note'],
+  review_request: ['name', 'brand', 'review_link'],
+  win_back: ['name', 'brand', 'coupon'],
+  back_in_stock: ['name', 'product', 'brand', 'product_link'],
+  price_drop: ['name', 'product', 'brand', 'new_price', 'old_price', 'product_link'],
+  post_purchase_upsell: ['name', 'product', 'brand', 'suggested_product', 'product_link'],
+  loyalty_points: ['name', 'points', 'brand', 'balance'],
+  popup_coupon: ['brand', 'coupon'],
+  cart_abandoned: ['name', 'items', 'brand', 'coupon'],
+};
+const PARAM_LABELS = {
+  name: 'Customer name', brand: 'Store name', order: 'Order number', amount: 'Amount (₹)',
+  awb: 'Tracking number (AWB)', tracking_link: 'Tracking link', courier: 'Courier', reason: 'Reason',
+  refund_info: 'Refund note', address: 'Delivery address', refund_mode: 'Refund goes to',
+  return_no: 'Return number', return_status: 'Return status', note: 'Note', review_link: 'Review link',
+  coupon: 'Coupon code', product: 'Product', product_link: 'Product link', new_price: 'New price (₹)',
+  old_price: 'Old price (₹)', suggested_product: 'Suggested product', points: 'Points',
+  balance: 'Points balance', items: 'Cart items',
+};
+const TEMPLATE_TITLES = {
+  order_confirmation: 'Order confirmed', invoice: 'Tax invoice', delivered_invoice: 'Delivered + invoice',
+  order_packed: 'Packed', order_shipped: 'Shipped', order_out_for_delivery: 'Out for delivery',
+  delivery_failed: 'Failed delivery (no buttons)', delivery_failed_action: 'Failed delivery',
+  order_delivered: 'Delivered', order_cancelled: 'Order cancelled', cod_rto: 'Returned to us (COD)',
+  prepaid_rto: 'Returned to us (prepaid)', cod_order_confirmation: 'COD confirmation',
+  address_request: 'Ask for the right address', refund_processed: 'Refund sent',
+  return_requested: 'Return requested', return_update: 'Return update', review_request: 'Review request',
+  win_back: 'Win-back offer', back_in_stock: 'Back in stock', price_drop: 'Price drop',
+  post_purchase_upsell: 'After-purchase upsell', loyalty_points: 'Loyalty points',
+  popup_coupon: 'Website pop-up coupon', cart_abandoned: 'Abandoned cart',
+};
+// Templates that need button payloads only their own sender can attach — not
+// offered for a manual 1:1 send.
+const NOT_FOR_MANUAL = new Set(['cod_order_confirmation', 'delivery_failed_action', 'address_request']);
+
+function templateTitle(name) {
+  const base = templateBase(name);
+  if (TEMPLATE_TITLES[base]) {
+    const m = String(name).match(/^cart_abandoned_([a-z0-9]+)_v\d+$/);
+    return m && m[1] !== 'v2' && !/^v\d+$/.test(m[1]) ? `${TEMPLATE_TITLES[base]} (${m[1]})` : TEMPLATE_TITLES[base];
+  }
+  const s = base.replace(/_/g, ' ').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : String(name);
+}
+
+function _bodyVarCount(text) {
+  let max = 0;
+  String(text || '').replace(/\{\{(\d+)\}\}/g, (m, i) => { max = Math.max(max, Number(i)); return m; });
+  return max;
+}
+
+function templateParamKeys(name, bodyText) {
+  const known = TEMPLATE_PARAMS[templateBase(name)];
+  const n = _bodyVarCount(bodyText);
+  if (known && (!n || known.length === n)) return known;
+  return Array.from({ length: n }, (_, i) => (known && known[i]) || `value_${i + 1}`);
+}
+
+// Values we can fill from the chat: customer, store, latest order.
+async function _fillValues(conv, latestOrder) {
+  const brandId = conv.brand_id || SHARED_WA_BRAND_ID;
+  const first = String(conv.customer_name || '').trim().split(/\s+/)[0] || 'there';
+  const v = { name: first, brand: await _brandName(brandId) };
+  if (latestOrder) {
+    const orderNo = latestOrder.orderNumber || latestOrder.order_number;
+    v.order = orderNo;
+    v.amount = String(Math.round(Number(latestOrder.total ?? latestOrder.final_amount) || 0));
+    v.awb = latestOrder.awb || latestOrder.shipping_waybill || '';
+    v.courier = latestOrder.courier || latestOrder.courier_name || 'our courier partner';
+    if (orderNo) v.tracking_link = await _trackingUrl(brandId, orderNo);
+  }
+  v.coupon = (await settingsHelper.getSetting(brandId, 'WINBACK_COUPON_CODE')) || 'CART10';
+  v.review_link = await _brandUrl(brandId);
+  v.refund_mode = 'Original payment method';
+  return v;
+}
+
+// Button parameter for a 1:1 send, by template family.
+function _buttonOpts(name, brandId, orderNo) {
+  const base = templateBase(name);
+  if (['invoice', 'delivered_invoice'].includes(base) && orderNo) {
+    const { invoiceToken } = require('./invoiceService.js');
+    return { urlParam: `${encodeURIComponent(orderNo)}?t=${invoiceToken(orderNo)}` };
+  }
+  if (['order_confirmation', 'order_packed', 'order_shipped', 'order_out_for_delivery', 'order_delivered', 'prepaid_rto', 'delivery_failed'].includes(base) && orderNo) {
+    return { trackOrder: orderNo };
+  }
+  if (/^cart_abandoned_(?!v\d+$)[a-z0-9]+_v\d+$/.test(name)) return { urlParam: 'CART10' };
+  if (base === 'cart_abandoned') return { cartRecover: brandId };
+  return { shopBrandId: brandId };
+}
+
+// Approved templates usable in a chat, with parameters pre-filled.
+async function templateOptionsForConversation(conv, latestOrder) {
+  const { list, error } = await _templateStatusMap(SHARED_WA_BRAND_ID);
+  const values = await _fillValues(conv, latestOrder);
+  const opts = [];
+  for (const t of list) {
+    if (normaliseTemplateStatus(t.status) !== 'approved') continue;
+    if (NOT_FOR_MANUAL.has(templateBase(t.name))) continue;
+    const comps = t.components || [];
+    const body = comps.find((c) => c.type === 'BODY')?.text || '';
+    if (comps.some((c) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format))) {
+      // sendTemplate attaches the brand logo for IMAGE headers; other media can't be filled.
+      if (!comps.some((c) => c.type === 'HEADER' && c.format === 'IMAGE')) continue;
+    }
+    const keys = templateParamKeys(t.name, body);
+    opts.push({
+      name: t.name, title: templateTitle(t.name), category: String(t.category || '').toLowerCase(), language: t.language,
+      body,
+      buttons: (comps.find((c) => c.type === 'BUTTONS')?.buttons || []).map((b) => b.text),
+      params: keys.map((k, i) => ({ key: k, label: PARAM_LABELS[k] || `Value ${i + 1}`, value: values[k] != null ? String(values[k]) : '' })),
+    });
+  }
+  opts.sort((a, b) => a.title.localeCompare(b.title));
+  return { templates: opts, error };
+}
+
+// Resolve + validate a manual template send: exact Meta name, final params,
+// button opts. Throws Error with .status for bad input.
+async function prepareTemplateSend(conv, templateName, params, latestOrder) {
+  const metaName = await resolveApprovedTemplateName(templateName, SHARED_WA_BRAND_ID);
+  if (!metaName) { const e = new Error(`"${templateName}" is not an approved WhatsApp template.`); e.status = 400; throw e; }
+  if (NOT_FOR_MANUAL.has(templateBase(metaName))) { const e = new Error('This template can only be sent automatically.'); e.status = 400; throw e; }
+  const body = (await _templateBodyText(metaName)) || '';
+  const keys = templateParamKeys(metaName, body);
+  let finalParams;
+  if (Array.isArray(params)) {
+    finalParams = params.map((p) => String(p == null ? '' : p).trim());
+  } else {
+    const values = await _fillValues(conv, latestOrder);
+    finalParams = keys.map((k) => (values[k] != null ? String(values[k]) : ''));
+  }
+  const missing = keys.map((k, i) => (!finalParams[i] ? (PARAM_LABELS[k] || `Value ${i + 1}`) : null)).filter(Boolean);
+  if (finalParams.length < keys.length || missing.length) {
+    const e = new Error(`Please fill in: ${missing.join(', ') || 'all values'}`); e.status = 400; throw e;
+  }
+  const brandId = conv.brand_id || SHARED_WA_BRAND_ID;
+  const orderNo = latestOrder ? (latestOrder.orderNumber || latestOrder.order_number) : null;
+  return {
+    metaName, params: finalParams.slice(0, keys.length || finalParams.length), brandId,
+    opts: _buttonOpts(metaName, brandId, orderNo),
+    renderedBody: body.replace(/\{\{(\d+)\}\}/g, (m, i) => (finalParams[i - 1] != null ? finalParams[i - 1] : m)),
+  };
+}
+
+// ── Templates page: Meta list + our defaults, enriched ───────────────────────
+async function listTemplatesEnriched(brandId = null, { force = false } = {}) {
+  const holder = brandId || SHARED_WA_BRAND_ID;
+  const sq = _db();
+  const since30 = new Date(Date.now() - 30 * DAY_MS);
+  const [{ list, error }, defs, reads, bcasts] = await Promise.all([
+    _templateStatusMap(holder, { force }),
+    listBrandTemplateDefs(holder).catch(() => listDefaultTemplateDefs()),
+    sq.query(`SELECT template_name AS n, SUM(status <> 'failed') AS sent, SUM(status = 'read') AS rd
+                FROM whatsapp_messages
+               WHERE direction = 'outbound' AND template_name IS NOT NULL AND createdAt >= :since
+               GROUP BY template_name`, { replacements: { since: since30 }, type: QueryTypes.SELECT }).catch(() => []),
+    sq.query(`SELECT template_name AS n, COUNT(*) AS c FROM whatsapp_broadcasts
+               WHERE createdAt >= :since AND status <> 'cancelled' GROUP BY template_name`,
+    { replacements: { since: since30 }, type: QueryTypes.SELECT }).catch(() => []),
+  ]);
+  const readBy = new Map(reads.map((r) => [r.n, r]));
+  const bcBy = new Map(bcasts.map((r) => [r.n, Number(r.c) || 0]));
+  const usedBy = (name) => {
+    const base = templateBase(name);
+    const autos = AUTOMATIONS.filter((a) => a.templates.includes(base));
+    const parts = autos.map((a) => `Automatic · ${a.when}`);
+    if (bcBy.get(name)) parts.push(`Broadcasts · ${bcBy.get(name)} in 30 days`);
+    return parts.length ? parts.join(' / ') : 'Nothing';
+  };
+  const readRate = (name) => {
+    const r = readBy.get(name);
+    const sent = Number(r?.sent) || 0;
+    return sent ? Math.round(((Number(r.rd) || 0) / sent) * 100) : null;
+  };
+  const enrich = (t, status) => {
+    const comps = t.components || [];
+    const body = comps.find((c) => c.type === 'BODY')?.text || '';
+    const keys = templateParamKeys(t.name, body);
+    return {
+      ...t,
+      meta_status: t.status || null,
+      status,
+      title: templateTitle(t.name),
+      used_by: usedBy(t.name),
+      read_rate: readRate(t.name),
+      body,
+      header: comps.find((c) => c.type === 'HEADER')?.text || '',
+      footer: comps.find((c) => c.type === 'FOOTER')?.text || '',
+      buttons: (comps.find((c) => c.type === 'BUTTONS')?.buttons || []).map((b) => b.text),
+      vars: keys.map((k, i) => PARAM_LABELS[k] || `Value ${i + 1}`),
+      is_default: defs.some((d) => d.name === t.name),
+    };
+  };
+  const rows = list.map((t) => enrich(t, normaliseTemplateStatus(t.status)));
+  const have = new Set(list.map((t) => t.name));
+  const fullDefs = buildTemplates('{{1}}', 'your-store.in');
+  for (const d of defs) {
+    if (have.has(d.name)) continue;
+    const full = fullDefs.find((f) => f.name === d.name || templateBase(f.name) === templateBase(d.name));
+    rows.push(enrich({ name: d.name, category: d.category, language: d.language, components: full ? full.components : [] }, 'missing'));
+  }
+  const order = { approved: 0, pending: 1, rejected: 2, missing: 3 };
+  rows.sort((a, b) => (order[a.status] - order[b.status]) || a.title.localeCompare(b.title));
+  const missing = rows.filter((r) => r.status === 'missing').map((r) => r.name);
+  const blockedAutomations = AUTOMATIONS.filter((a) => a.templates.length
+    && _automationTemplateStatus(a, new Map(list.map((t) => [t.name, normaliseTemplateStatus(t.status)]))).status !== 'approved')
+    .map((a) => a.name);
+  return { templates: rows, missing, blocked_automations: blockedAutomations, error };
+}
+
+async function submitMissingTemplates(brandId = null) {
+  const holder = brandId || SHARED_WA_BRAND_ID;
+  const { templates, error } = await listTemplatesEnriched(holder, { force: true });
+  if (error) { const e = new Error(`Could not read templates from WhatsApp: ${error}`); e.status = 502; throw e; }
+  const names = templates.filter((t) => t.status === 'missing').map((t) => t.name);
+  if (!names.length) return { submitted: [], results: [] };
+  const results = await seedDefaultTemplates(holder, names);
+  return { submitted: names, results };
+}
+
+// ── Sending hours (10:00–20:00 IST) ──────────────────────────────────────────
+const SEND_START_MIN = 10 * 60;
+const SEND_END_MIN = 20 * 60;
+function _istMinutes(d = new Date()) { return (d.getUTCHours() * 60 + d.getUTCMinutes() + 330) % 1440; }
+function isSendingHours(d = new Date()) { const m = _istMinutes(d); return m >= SEND_START_MIN && m < SEND_END_MIN; }
+function nextSendingTime(d = new Date()) {
+  if (isSendingHours(d)) return d;
+  const m = _istMinutes(d);
+  const wait = m < SEND_START_MIN ? SEND_START_MIN - m : 1440 - m + SEND_START_MIN;
+  const t = new Date(d.getTime() + wait * 60 * 1000);
+  t.setUTCSeconds(0, 0);
+  return t;
+}
+
+// ── Broadcast audiences ──────────────────────────────────────────────────────
+const AUDIENCES = {
+  all: { label: 'Everyone who can get messages', desc: 'All customers who messaged or ordered and didn’t reply STOP' },
+  buyers_90: { label: 'Bought in the last 90 days', desc: 'At least one order in the last 90 days' },
+  delivered_happy: { label: 'Happy customers', desc: 'Have a delivered order and no return or RTO' },
+  cart_7d: { label: 'Left a cart this week', desc: 'Reached checkout but didn’t order in the last 7 days' },
+  lapsed_60: { label: 'Haven’t ordered in 60+ days', desc: 'Bought before, quiet since' },
+};
+const _CANCELLED = new Set(['cancelled', 'order cancelled']);
+const _RETURNED = new Set(['rto', 'rto delivered', 'returned_rto', 'return_initiated', 'returned']);
+
+function _custKey(p10) {
+  if (!p10 || p10.length !== 10) return null;
+  return phoneHash(p10) || `p:${p10}`;
+}
+
+// Map(customerKey → { key, p10|null, hashSrc, name, brandId }) for an audience.
+// Counting needs no decryption (keyed hashes); phones are decrypted only for
+// the final recipients when a broadcast actually sends (resolveAudiencePhones).
+async function buildAudience(type, brandId = null) {
+  const sq = _db();
+  const t = AUDIENCES[type] ? type : 'all';
+  const now = Date.now();
+  const hashKey = _hashKeyAvailable();
+  const people = new Map();
+  const add = (key, info) => {
+    if (!key) return;
+    const cur = people.get(key);
+    if (!cur) { people.set(key, { key, p10: null, hashSrc: null, name: null, brandId: null, ...info }); return; }
+    for (const [k, v] of Object.entries(info)) if (cur[k] == null && v != null) cur[k] = v;
+  };
+
+  if (t !== 'cart_7d') {
+    const rows = await sq.query(
+      `SELECT o.brand_id, o.status, o.payment_status, o.created_at,
+              u.phone AS u_phone, u.username AS u_name,
+              a.phone_hash AS a_hash, a.full_name AS a_name, g.phone_hash AS g_hash, g.first_name AS g_name
+              ${hashKey ? '' : ', a.phone AS a_phone, g.phone AS g_phone'}
+         FROM orders o
+         LEFT JOIN users u ON u.id = o.user_id
+         LEFT JOIN shipping_addresses a ON a.id = o.shipping_address_id
+         LEFT JOIN guest_users g ON g.id = o.guest_user_id
+        WHERE ${brandId ? 'o.brand_id = :brandId' : '1=1'}
+        ORDER BY o.created_at ASC`,
+      { replacements: { brandId }, type: QueryTypes.SELECT });
+    const stats = new Map();
+    for (const r of rows) {
+      const up = _p10(r.u_phone);
+      let key = null; let p10 = null; let hashSrc = null;
+      if (r.a_hash) { key = r.a_hash; hashSrc = 'a'; }
+      else if (r.g_hash) { key = r.g_hash; hashSrc = 'g'; }
+      else if (up.length === 10) { key = _custKey(up); p10 = up; }
+      else if (!hashKey) {
+        const ap = _p10(decrypt(r.a_phone)) || _p10(decrypt(r.g_phone));
+        if (ap.length === 10) { key = _custKey(ap); p10 = ap; }
+      }
+      if (!key) continue;
+      if (!p10 && up.length === 10 && _custKey(up) === key) p10 = up;
+      const s = stats.get(key) || { delivered: false, returned: false, lastAt: 0, recent: false, any: false };
+      const cancelled = _CANCELLED.has(String(r.status).toLowerCase()) || r.payment_status === 'failed';
+      const at = new Date(r.created_at).getTime();
+      if (!cancelled) {
+        s.any = true;
+        s.lastAt = Math.max(s.lastAt, at);
+        if (now - at <= 90 * DAY_MS) s.recent = true;
+      }
+      if (String(r.status).toLowerCase() === 'delivered') s.delivered = true;
+      if (_RETURNED.has(String(r.status).toLowerCase())) s.returned = true;
+      stats.set(key, s);
+      const name = r.a_name || r.g_name || r.u_name || null;
+      add(key, { p10, hashSrc: p10 ? null : hashSrc, name: name ? String(name).trim().split(/\s+/)[0] : null, brandId: r.brand_id });
+      // Later rows are newer — keep the latest order's brand.
+      people.get(key).brandId = r.brand_id;
+    }
+    for (const [key, s] of stats) {
+      const keep = t === 'all' ? s.any
+        : t === 'buyers_90' ? s.recent
+          : t === 'delivered_happy' ? (s.delivered && !s.returned)
+            : t === 'lapsed_60' ? (s.any && now - s.lastAt > 60 * DAY_MS)
+              : false;
+      if (!keep) people.delete(key);
+    }
+  }
+
+  if (t === 'all') {
+    const convs = await sq.query(
+      `SELECT customer_phone, customer_name, brand_id FROM whatsapp_conversations
+        WHERE opted_out = 0 ${brandId ? 'AND brand_id = :brandId' : ''}`,
+      { replacements: { brandId }, type: QueryTypes.SELECT });
+    for (const c of convs) {
+      const p = _p10(c.customer_phone);
+      add(_custKey(p), { p10: p, name: c.customer_name ? String(c.customer_name).trim().split(/\s+/)[0] : null, brandId: c.brand_id });
+    }
+  }
+
+  if (t === 'cart_7d') {
+    const carts = await sq.query(
+      `SELECT phone_hash, ${hashKey ? 'NULL AS phone' : 'phone'}, customer_name, brand_id FROM abandoned_carts
+        WHERE created_at >= :since AND status <> 'recovered' ${brandId ? 'AND brand_id = :brandId' : ''}
+        ORDER BY created_at ASC`,
+      { replacements: { since: new Date(now - 7 * DAY_MS), brandId }, type: QueryTypes.SELECT }).catch(() => []);
+    for (const c of carts) {
+      let key = c.phone_hash; let p10 = null;
+      if (!key && !hashKey) { p10 = _p10(decrypt(c.phone)); key = _custKey(p10); }
+      add(key, { p10, hashSrc: p10 ? null : 'c', name: c.customer_name ? String(c.customer_name).trim().split(/\s+/)[0] : null, brandId: c.brand_id });
+    }
+  }
+
+  // STOP is number-wide on the shared number → exclude from every brand.
+  const stopped = await sq.query('SELECT customer_phone FROM whatsapp_conversations WHERE opted_out = 1', { type: QueryTypes.SELECT });
+  let optedOut = 0;
+  for (const s of stopped) {
+    const k = _custKey(_p10(s.customer_phone));
+    if (k && people.delete(k)) optedOut++;
+  }
+  return { type: t, people, optedOut };
+}
+
+const _audienceCache = new Map();
+async function audienceCount(type, brandId = null) {
+  const ck = `${type}|${brandId || 'all'}`;
+  const hit = _audienceCache.get(ck);
+  if (hit && hit.exp > Date.now()) return hit.data;
+  const { people, optedOut } = await buildAudience(type, brandId);
+  const data = { count: people.size, opted_out: optedOut };
+  _audienceCache.set(ck, { data, exp: Date.now() + 60 * 1000 });
+  return data;
+}
+
+// Fill in .p10 for audience members we only know by hash (decrypt the stored
+// phone of a matching shipping / guest / cart row).
+async function resolveAudiencePhones(members) {
+  const need = members.filter((m) => !m.p10);
+  const sq = _db();
+  for (let i = 0; i < need.length; i += 500) {
+    const chunk = need.slice(i, i + 500);
+    const hashes = chunk.map((m) => m.key);
+    const rows = await sq.query(
+      `SELECT phone_hash AS h, phone FROM shipping_addresses WHERE phone_hash IN (:hashes)
+       UNION ALL SELECT phone_hash AS h, phone FROM guest_users WHERE phone_hash IN (:hashes)
+       UNION ALL SELECT phone_hash AS h, phone FROM abandoned_carts WHERE phone_hash IN (:hashes)`,
+      { replacements: { hashes }, type: QueryTypes.SELECT }).catch(() => []);
+    const byHash = new Map();
+    for (const r of rows) {
+      if (byHash.has(r.h)) continue;
+      const p = _p10(decrypt(r.phone));
+      if (p.length === 10) byHash.set(r.h, p);
+    }
+    for (const m of chunk) m.p10 = byHash.get(m.key) || null;
+  }
+  return members.filter((m) => m.p10);
+}
+
+function audienceLabel(filterJson, brandsById = {}) {
+  let f = {};
+  try { f = typeof filterJson === 'string' ? JSON.parse(filterJson || '{}') : (filterJson || {}); } catch (_) { f = {}; }
+  const type = AUDIENCES[f.type] ? f.type : 'all';
+  const brand = f.brandId ? (brandsById[f.brandId] || `Brand ${f.brandId}`) : 'All brands';
+  return { type, brandId: f.brandId || null, label: AUDIENCES[type].label, brand_label: brand };
+}
+
+// ── Broadcast runner ─────────────────────────────────────────────────────────
+// Claims the broadcast atomically (so the API "send now" kick and the worker
+// cron never both run it), sends to the audience minus STOP and minus anyone
+// already messaged by this broadcast (resume after a pause/crash), pauses at
+// 20:00 IST and stops when cancelled. Every send is saved to the chat tagged
+// 'broadcast:<id>' — that is what the Broadcasts page counts.
+const _runningBroadcasts = new Set();
+async function runBroadcastJob(id, { delayMs = 200 } = {}) {
+  const { WhatsappBroadcast } = _waModels();
+  const { Op, fn, col } = require('sequelize');
+  if (_runningBroadcasts.has(Number(id))) return { started: false, reason: 'already_running_here' };
+  const now = new Date();
+  if (!isSendingHours(now)) return { started: false, reason: 'outside_sending_hours', next: nextSendingTime(now) };
+  const [claimed] = await WhatsappBroadcast.update(
+    { status: 'running', started_at: fn('COALESCE', col('started_at'), now) },
+    { where: {
+      id,
+      [Op.and]: [
+        { [Op.or]: [{ scheduled_at: null }, { scheduled_at: { [Op.lte]: now } }] },
+        { [Op.or]: [
+          { status: { [Op.in]: ['scheduled', 'paused'] } },
+          { status: 'running', updatedAt: { [Op.lt]: new Date(now.getTime() - 10 * 60 * 1000) } },
+        ] },
+      ],
+    } });
+  if (!claimed) return { started: false, reason: 'not_due_or_taken' };
+  _runningBroadcasts.add(Number(id));
+  const b = await WhatsappBroadcast.findByPk(id);
+  const key = `broadcast:${id}`;
+  try {
+    let filter = {};
+    try { filter = JSON.parse(b.audience_filter || '{}') || {}; } catch (_) { filter = {}; }
+    const { people, optedOut } = await buildAudience(filter.type || 'all', filter.brandId || null);
+    const already = await _db().query(
+      `SELECT DISTINCT c.customer_phone AS phone FROM whatsapp_messages m
+         JOIN whatsapp_conversations c ON c.id = m.conversation_id
+        WHERE m.automation_key = :key AND m.direction = 'outbound'`,
+      { replacements: { key }, type: QueryTypes.SELECT });
+    const done = new Set(already.map((r) => _custKey(_p10(r.phone))));
+    let members = [...people.values()].filter((m) => !done.has(m.key));
+    members = await resolveAudiencePhones(members);
+    if (!b.total_recipients) {
+      await b.update({ total_recipients: done.size + members.length, skipped_count: optedOut });
+    }
+    const body = (await _templateBodyText(b.template_name)) || '';
+    const keys = templateParamKeys(b.template_name, body);
+    const extra = Array.isArray(filter.params) ? filter.params : [];
+    let sent = Number(b.sent_count) || 0;
+    let failed = Number(b.failed_count) || 0;
+    const brandNames = new Map();
+    for (let i = 0; i < members.length; i++) {
+      if (i % 20 === 0) {
+        if (i > 0) await b.update({ sent_count: sent, failed_count: failed });
+        const fresh = await WhatsappBroadcast.findByPk(id, { attributes: ['status'] });
+        if (!fresh || fresh.status === 'cancelled') {
+          logger.info(`[Broadcast ${id}] cancelled — stopped after ${sent} sent`);
+          return { started: true, stopped: 'cancelled', sent, failed };
+        }
+        if (!isSendingHours()) {
+          await b.update({ status: 'paused', sent_count: sent, failed_count: failed });
+          logger.info(`[Broadcast ${id}] paused at 20:00 IST — resumes 10:00 (${sent} sent so far)`);
+          return { started: true, stopped: 'paused', sent, failed };
+        }
+      }
+      const m = members[i];
+      const brand = Number(m.brandId) || Number(filter.brandId) || SHARED_WA_BRAND_ID;
+      if (!brandNames.has(brand)) brandNames.set(brand, await _brandName(brand));
+      const vals = { name: m.name || 'there', brand: brandNames.get(brand) };
+      const params = keys.map((k, idx) => {
+        const given = extra[idx];
+        if (given != null && String(given) !== '') {
+          return String(given).replace(/\{name\}/g, vals.name).replace(/\{brand\}/g, vals.brand);
+        }
+        return vals[k] != null ? vals[k] : '';
+      });
+      try {
+        const r = await _autoCtx.run({ automationKey: key, customerName: m.name, brandId: brand },
+          () => sendTemplate(`91${m.p10}`, b.template_name, params, brand, { shopBrandId: brand }));
+        if (r && r.rate_limited) failed++; else sent++;
+      } catch (err) {
+        failed++;
+        logger.warn(`[Broadcast ${id}] send to …${m.p10.slice(-4)} failed: ${metaError(err)}`);
+      }
+      if (delayMs > 0 && i < members.length - 1) await new Promise((r) => setTimeout(r, delayMs));
+    }
+    await b.update({ status: 'done', sent_count: sent, failed_count: failed, completed_at: new Date() });
+    logger.info(`[Broadcast ${id}] done: ${sent} sent, ${failed} failed`);
+    return { started: true, sent, failed };
+  } catch (err) {
+    await b.update({ status: 'failed' }).catch(() => {});
+    logger.error(`[Broadcast ${id}] run error: ${err.message}`);
+    return { started: true, error: err.message };
+  } finally {
+    _runningBroadcasts.delete(Number(id));
+  }
+}
+
+// Cron entry: start/resume every due broadcast (scheduled, paused or stale).
+async function runDueBroadcasts() {
+  if (!isSendingHours()) return { ran: 0 };
+  const { WhatsappBroadcast } = _waModels();
+  const { Op } = require('sequelize');
+  const now = new Date();
+  const due = await WhatsappBroadcast.findAll({
+    where: {
+      [Op.or]: [
+        { status: { [Op.in]: ['scheduled', 'paused'] }, [Op.or]: [{ scheduled_at: null }, { scheduled_at: { [Op.lte]: now } }] },
+        { status: 'running', updatedAt: { [Op.lt]: new Date(now.getTime() - 10 * 60 * 1000) } },
+      ],
+    },
+    attributes: ['id'], order: [['scheduled_at', 'ASC']], limit: 5,
+  });
+  let ran = 0;
+  for (const b of due) {
+    const r = await runBroadcastJob(b.id);
+    if (r.started) ran++;
+  }
+  return { ran };
+}
+
+// Results per broadcast: delivered / read from the tagged rows, orders + sales
+// placed by recipients within 3 days after their message.
+async function broadcastResults(ids) {
+  const out = new Map(ids.map((id) => [Number(id), { delivered: 0, read: 0, failed_msgs: 0, orders: 0, sales: 0, stop_replies: 0 }]));
+  if (!ids.length) return out;
+  const keys = ids.map((id) => `broadcast:${id}`);
+  const sq = _db();
+  const [agg, sends, stops] = await Promise.all([
+    sq.query(`SELECT automation_key AS k, SUM(status IN ('delivered','read')) AS delivered, SUM(status = 'read') AS rd,
+                     SUM(status = 'failed') AS failed
+                FROM whatsapp_messages WHERE automation_key IN (:keys) AND direction = 'outbound' GROUP BY automation_key`,
+    { replacements: { keys }, type: QueryTypes.SELECT }),
+    sq.query(`SELECT m.automation_key AS k, m.createdAt AS at, c.customer_phone AS phone
+                FROM whatsapp_messages m JOIN whatsapp_conversations c ON c.id = m.conversation_id
+               WHERE m.automation_key IN (:keys) AND m.direction = 'outbound' AND m.status <> 'failed'`,
+    { replacements: { keys }, type: QueryTypes.SELECT }),
+    sq.query(`SELECT m.automation_key AS k, COUNT(DISTINCT m.conversation_id) AS n
+                FROM whatsapp_messages m
+               WHERE m.automation_key IN (:keys) AND m.direction = 'outbound'
+                 AND EXISTS (SELECT 1 FROM whatsapp_messages r WHERE r.conversation_id = m.conversation_id
+                              AND r.direction = 'inbound' AND r.createdAt > m.createdAt
+                              AND r.createdAt <= DATE_ADD(m.createdAt, INTERVAL 3 DAY)
+                              AND LOWER(TRIM(r.body)) IN ('stop','unsubscribe','opt out','optout'))
+               GROUP BY m.automation_key`, { replacements: { keys }, type: QueryTypes.SELECT }),
+  ]);
+  const idOf = (k) => Number(String(k).split(':')[1]);
+  for (const r of agg) {
+    const o = out.get(idOf(r.k)); if (!o) continue;
+    o.delivered = Number(r.delivered) || 0; o.read = Number(r.rd) || 0; o.failed_msgs = Number(r.failed) || 0;
+  }
+  for (const r of stops) { const o = out.get(idOf(r.k)); if (o) o.stop_replies = Number(r.n) || 0; }
+  if (sends.length) {
+    const earliest = new Date(Math.min(...sends.map((s) => new Date(s.at).getTime())));
+    const orders = await ordersForPhones(sends.map((s) => s.phone), { since: earliest, excludeCancelled: true });
+    const byPhone = new Map();
+    for (const s of sends) {
+      const p = _p10(s.phone);
+      if (!byPhone.has(p)) byPhone.set(p, []);
+      byPhone.get(p).push({ id: idOf(s.k), at: new Date(s.at).getTime() });
+    }
+    for (const o of orders) {
+      const t = new Date(o.created_at).getTime();
+      let pick = null;
+      for (const s of byPhone.get(o.p10) || []) if (s.at <= t && t - s.at <= 3 * DAY_MS && (!pick || s.at > pick.at)) pick = s;
+      if (!pick) continue;
+      const r = out.get(pick.id);
+      r.orders++; r.sales += Number(o.final_amount) || 0;
+    }
+  }
+  for (const r of out.values()) r.sales = Math.round(r.sales);
+  return out;
+}
+
 module.exports = {
   formatE164,
   metaError,
@@ -1736,31 +2786,31 @@ module.exports = {
   sendTemplate,
   testConnection,
   // Order notifications
-  sendOrderConfirmation,
-  sendInvoice,
-  sendOrderPacked,
-  sendAddressRequest,
-  sendOrderShipped,
-  sendOutForDelivery,
-  sendDeliveryFailed,
-  sendOrderDelivered,
-  sendDeliveredWithInvoice,
-  sendOrderCancelled,
-  sendRtoCod,
-  sendRtoPrepaid,
-  sendCodConfirmation,
-  sendRefundProcessed,
-  sendReturnRequested,
-  sendReturnUpdate,
+  sendOrderConfirmation: automated('order_confirmed', sendOrderConfirmation),
+  sendInvoice: automated('delivered_invoice', sendInvoice),
+  sendOrderPacked: automated('order_packed', sendOrderPacked),
+  sendAddressRequest: automated('cod_confirm', sendAddressRequest),
+  sendOrderShipped: automated('order_shipped', sendOrderShipped),
+  sendOutForDelivery: automated('out_for_delivery', sendOutForDelivery),
+  sendDeliveryFailed: automated('failed_delivery', sendDeliveryFailed),
+  sendOrderDelivered: automated('delivered_invoice', sendOrderDelivered),
+  sendDeliveredWithInvoice: automated('delivered_invoice', sendDeliveredWithInvoice),
+  sendOrderCancelled: automated('order_cancelled', sendOrderCancelled),
+  sendRtoCod: automated('rto', sendRtoCod),
+  sendRtoPrepaid: automated('rto', sendRtoPrepaid),
+  sendCodConfirmation: automated('cod_confirm', sendCodConfirmation),
+  sendRefundProcessed: automated('refund_sent', sendRefundProcessed),
+  sendReturnRequested: automated('return_requested', sendReturnRequested),
+  sendReturnUpdate: automated('return_update', sendReturnUpdate),
   // New ecommerce features
-  sendAbandonedCart,
-  sendReviewRequest,
-  sendBackInStock,
-  sendPriceDrop,
-  sendLoyaltyNotification,
-  sendWinBack,
-  sendPostPurchaseUpsell,
-  sendPopupCoupon,
+  sendAbandonedCart: automated('abandoned_cart', sendAbandonedCart),
+  sendReviewRequest: automated('review_request', sendReviewRequest),
+  sendBackInStock: automated('back_in_stock', sendBackInStock),
+  sendPriceDrop: automated('price_drop', sendPriceDrop),
+  sendLoyaltyNotification: automated('loyalty_points', sendLoyaltyNotification),
+  sendWinBack: automated('win_back', sendWinBack),
+  sendPostPurchaseUpsell: automated('upsell', sendPostPurchaseUpsell),
+  sendPopupCoupon: automated('popup_coupon', sendPopupCoupon),
   sendBroadcast,
   resolveApprovedTemplateName,
   // Catalogue & product
@@ -1777,4 +2827,38 @@ module.exports = {
   getTrackingUrl: _trackingUrl,
   getBrandDomain: _brandDomain,
   getProductUrl: _productUrl,
+  // WhatsApp Studio
+  SHARED_WA_BRAND_ID,
+  tName,
+  getWaSetting,
+  setWaSetting,
+  AUTOMATIONS,
+  AUTOMATION_GROUPS,
+  isAutomationEnabled,
+  setAutomationEnabled,
+  automated,
+  runAutomation,
+  sendAutoText,
+  recordOutbound,
+  isPhoneOptedOut,
+  ordersForPhones,
+  latestOrderByPhone,
+  phonesForOrderSearch,
+  getAutomationReport,
+  normaliseTemplateStatus,
+  templateBase,
+  templateTitle,
+  templateOptionsForConversation,
+  prepareTemplateSend,
+  listTemplatesEnriched,
+  submitMissingTemplates,
+  isSendingHours,
+  nextSendingTime,
+  AUDIENCES,
+  buildAudience,
+  audienceCount,
+  audienceLabel,
+  runBroadcastJob,
+  runDueBroadcasts,
+  broadcastResults,
 };
