@@ -473,9 +473,19 @@ module.exports.handleShippingWebhook = async (req, res) => {
     });
 
     if (!order) {
-      logger.debug("❌ Order not found for Shipping waybill/order ID:", waybill || order_id);
+      // Unknown waybill/order — usually the panel's dummy test event (e.g.
+      // waybill 1234567890) or an event for an order that predates us. A 404
+      // makes some courier panels retry or count the webhook as failing, so
+      // acknowledge with 200 and mark the stored event as ignored instead.
+      logger.info(`🔔 Shipping webhook for unknown waybill/order (${waybill || order_id}) — acknowledged and ignored.`);
       await transaction.rollback();
-      return res.status(404).json({ message: "Order not found" });
+      if (webhookEventId) {
+        sequelize.query(
+          "UPDATE shipment_webhook_events SET processed = true, processedAt = NOW(), processing_error = 'ignored: no matching order' WHERE id = ?",
+          { replacements: [webhookEventId] }
+        ).catch(() => {});
+      }
+      return res.status(200).json({ success: true, message: 'No matching order — event ignored' });
     }
 
     logger.debug(`📦 Processing webhook for Order: ${order.order_number}, Current Status: ${order.status}`);
