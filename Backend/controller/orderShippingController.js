@@ -1124,13 +1124,13 @@ module.exports.validateOrderForShipping = (order) => {
     issues.push('Shipping address is missing');
     return issues; // no point checking further
   }
-  if (!addr.full_name || !addr.full_name.trim()) issues.push('Shipping address: full name is missing');
-  if (!addr.address || !addr.address.trim()) issues.push('Shipping address: address is missing');
-  if (!addr.city || !addr.city.trim()) issues.push('Shipping address: city is missing');
-  if (!addr.state || !addr.state.trim()) issues.push('Shipping address: state is missing');
-  if (!addr.pincode || !addr.pincode.trim()) {
+  if (!String(addr.full_name || '').trim()) issues.push('Shipping address: full name is missing');
+  if (!String(addr.address || '').trim()) issues.push('Shipping address: address is missing');
+  if (!String(addr.city || '').trim()) issues.push('Shipping address: city is missing');
+  if (!String(addr.state || '').trim()) issues.push('Shipping address: state is missing');
+  if (!String(addr.pincode || '').trim()) {
     issues.push('Shipping address: pincode is missing');
-  } else if (!/^\d{6}$/.test(addr.pincode.trim())) {
+  } else if (!/^\d{6}$/.test(String(addr.pincode).trim())) {
     issues.push('Shipping address: pincode must be exactly 6 digits');
   }
   if (!addr.phone) {
@@ -2102,7 +2102,10 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
 
       const batchPromises = batch.map(async (order) => {
         // ── Pre-refresh validation ──────────────────────────────────────
-        const issues = module.exports.validateOrderForShipping(order);
+        // A malformed address must not abort the whole batch (Promise.all).
+        let issues;
+        try { issues = module.exports.validateOrderForShipping(order); }
+        catch (e) { issues = [`Could not validate: ${e.message}`]; }
         if (issues.length > 0) {
           results.validation_failed++;
           results.validation_issues.push({

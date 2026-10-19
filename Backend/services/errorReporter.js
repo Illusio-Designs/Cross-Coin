@@ -23,6 +23,12 @@ const _recent = new Map(); // key -> last-sent timestamp
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// Which deploy/process sent the alert — a process that survived a deploy
+// shows an old build, so stale code is obvious from the alert itself.
+function _buildLine() {
+  try { return require('../utils/buildInfo.js').buildLine(); } catch (_) { return ''; }
+}
+
 function _prune() {
   if (_recent.size <= MAX_KEYS) return;
   // Drop the oldest ~100 entries.
@@ -55,6 +61,7 @@ async function report(kind, err, context = {}) {
       context.userId != null ? `user: ${esc(context.userId)}` : null,
       msg ? esc(String(msg).slice(0, 300)) : null,
       stack ? `<pre>${esc(stack.slice(0, 600))}</pre>` : null,
+      `<i>${esc(_buildLine())}</i>`,
     ].filter(Boolean).join('\n');
 
     try {

@@ -92,6 +92,13 @@ jobs:
           find . -name '*.js' -type f ! -path './node_modules/*' -print0 | xargs -0 -n1 node --check || true
           echo "✅ backend .js files syntax OK"
 
+      # Stamp the build so /api/health and Telegram alerts show which commit
+      # each running process has — a process that survived a deploy shows an
+      # old sha.
+      - name: Write build stamp
+        run: |
+          printf '{"sha":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > Backend/BUILD_INFO.json
+          cat Backend/BUILD_INFO.json
       - name: Sync to FTP server (FTPS, port 21)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:

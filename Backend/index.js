@@ -278,6 +278,7 @@ app.get('/api/health', async (req, res) => {
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
         version: process.env.npm_package_version || '1.0.0',
+        build: require('./utils/buildInfo.js').buildInfo(),
         services: {
             database: dbOk ? 'connected' : 'disconnected',
             redis: redisOk ? 'connected' : 'disconnected',
@@ -395,6 +396,7 @@ app.get('/', (req, res) => {
     res.json({
         message: 'CrossCoin API is running',
         version: process.env.npm_package_version || '1.0.0',
+        build: require('./utils/buildInfo.js').buildInfo(),
         environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString()
     });
