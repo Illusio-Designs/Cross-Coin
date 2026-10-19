@@ -938,6 +938,34 @@ export const orderService = {
 
 };
 
+// Failed deliveries (courier NDR cases) — Dashboard → Failed Deliveries
+export const ndrService = {
+  list: async (status = 'open') => {
+    try {
+      const response = await adminApi.get('/api/ndr', { params: { status } });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  sendToCourier: async (id, action, date) => {
+    try {
+      const response = await adminApi.post(`/api/ndr/${id}/courier`, { action, date });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+  resolve: async (id, note) => {
+    try {
+      const response = await adminApi.post(`/api/ndr/${id}/resolve`, { note });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+};
+
 // Payment Services — Dashboard → Payments (admin / order manager)
 export const paymentService = {
   getPayments: async (params = {}) => {

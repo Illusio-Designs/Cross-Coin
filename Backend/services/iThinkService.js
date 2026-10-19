@@ -1000,7 +1000,12 @@ class IThinkService {
 
   // ── NDR (Non-Delivery Report) ───────────────────────────────────────────
 
-  async ndrAction(awbNumber, action = 'reattempt') {
+  // iThink "NDR – Add Reattempt/RTO". NOTE: the exact field names are not
+  // verified against iThink's current API docs (their docs site is not
+  // reachable from our build environment). If iThink rejects a call, the case
+  // stays open in Dashboard → Failed Deliveries for staff to do it in the
+  // iThink panel. extra.reattempt_date: 'YYYY-MM-DD'.
+  async ndrAction(awbNumber, action = 'reattempt', extra = {}) {
     await this.initialize();
     try {
       logger.debug('=== iThink NDR Action ===');
@@ -1009,6 +1014,7 @@ class IThinkService {
           ...this._authData(),
           awb_number: awbNumber,
           action: action, // 'reattempt' or 'rto'
+          ...(extra.reattempt_date ? { reattempt_date: extra.reattempt_date } : {}),
         },
       };
 

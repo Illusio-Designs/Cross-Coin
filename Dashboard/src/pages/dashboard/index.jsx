@@ -17,6 +17,7 @@ import Leads from "./consumers/leads";
 import AbandonedCarts from "./consumers/abandoned-carts";
 import Returns from "./returns/returns";
 import Payments from "./payments/payments";
+import FailedDeliveries from "./ndr/ndr";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
 import WebhookEvents from "./shipping/webhookEvents";
@@ -238,6 +239,7 @@ function Dashboard() {
       case 'consumers':       return <Consumers />;
       case 'returns':         return <Returns />;
       case 'payments':        return <Payments />;
+      case 'ndr':             return <FailedDeliveries />;
       case 'shippingFees':    return <ShippingFees />;
       case 'webhook-events':  return <WebhookEvents />;
       case 'coupons':         return <Coupons />;

@@ -1191,9 +1191,16 @@ exports.receiveWebhook = async (req, res) => {
           //    next text IS the new address → capture it and re-confirm;
           //  • otherwise a text YES/NO or "Confirm Address" button advances the
           //    pending COD order to `confirmed`.
-          if (trusted && msgType === 'text' && text && conv.awaiting_address_for) {
+          if (trusted && msgType === 'text' && text && String(conv.awaiting_address_for || '').startsWith('ndr:')) {
+            // Failed delivery: the customer tapped Change Address; this is it.
+            const _orderNo = conv.awaiting_address_for.slice(4);
+            setImmediate(() => require('../services/ndrService.js').onNewAddress(_orderNo, text, phone, effectiveBrand).catch(e => logger.error('[WhatsApp] NDR address error: ' + e.message)));
+          } else if (trusted && msgType === 'text' && text && conv.awaiting_address_for) {
             const _orderNo = conv.awaiting_address_for;
             setImmediate(() => captureNewAddress(phone, text, _orderNo, effectiveBrand).catch(e => logger.error('[WhatsApp] capture address error: ' + e.message)));
+          } else if (trusted && msgType === 'button' && /^ndr_(retry|address|cancel)_/.test(buttonPayload || '')) {
+            const [, _choice, _orderNo] = buttonPayload.match(/^ndr_(retry|address|cancel)_(.+)$/);
+            setImmediate(() => require('../services/ndrService.js').onCustomerChoice(_orderNo, _choice, phone, effectiveBrand).catch(e => logger.error('[WhatsApp] NDR reply error: ' + e.message)));
           } else if (trusted && msgType === 'text' && text) {
             setImmediate(() => processCodReply(phone, 'text', text, effectiveBrand).catch(e => logger.error('[WhatsApp] COD text reply error: ' + e.message)));
           } else if (trusted && msgType === 'button' && buttonPayload) {

@@ -504,7 +504,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v23';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v24';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -755,6 +755,13 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('order_status_history.status migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: ndr_cases table (v24) ───────────────────
+        try {
+            await require('./services/ndrService.js').ensureTable();
+        } catch (err) {
+            logger.error('ndr_cases table migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: product alert tables (v21) ──────────────

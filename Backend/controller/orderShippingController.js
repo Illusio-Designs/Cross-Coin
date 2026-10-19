@@ -691,6 +691,9 @@ module.exports.handleShippingWebhook = async (req, res) => {
     // so a duplicate/out-of-order webhook never re-pings the customer.
     if (statusAdvanced) setImmediate(async () => {
       try {
+        // Failed-delivery case: open on "undelivered", close on delivered/RTO/cancel.
+        await require('../services/ndrService.js').onStatus(order, orderStatus, rto_reason || remark)
+          .catch((e) => logger.warn(`NDR case update skipped for ${order.order_number}: ${e.message}`));
         const whatsappService = require('../services/whatsappService.js');
         const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
         const phone = addr?.phone || order.GuestUser?.phone;
@@ -1721,6 +1724,9 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
         const _notifyPrev = prevStatusForRto;
         setImmediate(async () => {
           try {
+            await require('../services/ndrService.js')
+              .onStatus(_notifyOrder, _notifyStatus, statusData.remark || statusData.ndr_reason || statusData.reason || null)
+              .catch((e) => logger.warn(`NDR case update skipped for ${_notifyOrder.order_number}: ${e.message}`));
             const whatsappSvc = require('../services/whatsappService.js');
             const addr = await ShippingAddress.findOne({ where: { id: _notifyPhone } });
             const phone = addr?.phone;

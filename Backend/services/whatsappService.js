@@ -567,6 +567,29 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // Failed delivery with action buttons. The sender attaches payloads
+      // ndr_retry_/ndr_address_/ndr_cancel_<orderNumber>; replies are handled
+      // by ndrService (Dashboard → Failed Deliveries).
+      name: tName('delivery_failed_action'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Delivery Attempt Missed' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, our courier tried to deliver your *{{2}}* order *#{{3}}* but couldn't complete it.\n\nReason: {{4}}\n\nWhat should we do next? Tap a button below so we can tell the courier.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'Customer not available']] },
+        },
+        { type: 'FOOTER', text: footer },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Deliver Again' },
+            { type: 'QUICK_REPLY', text: 'Change Address' },
+            { type: 'QUICK_REPLY', text: 'Cancel Order' },
+          ],
+        },
+      ],
+    },
+    {
       name: tName('order_delivered'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Delivered!' },
@@ -1179,6 +1202,47 @@ async function sendOutForDelivery(phone, data, brandId = 1) {
 // Failed delivery attempt (courier NDR) — tells the customer why and that a
 // re-attempt is coming, with the Track Order button.
 async function sendDeliveryFailed(phone, data, brandId = 1) {
+  // Preferred: the version with Deliver Again / Change Address / Cancel
+  // buttons. Until Meta approves it, fall back to the plain notice.
+  try {
+    const { token, phoneNumberId } = await getCredentials(brandId);
+    const to = formatE164(phone);
+    if (!to) throw new Error('Invalid phone number: ' + phone);
+    const rateLimited = await checkRateLimit(to);
+    if (rateLimited) return rateLimited;
+    const orderNumber = String(data.orderNumber);
+    const qr = (index, payload) => ({ type: 'button', sub_type: 'quick_reply', index: String(index), parameters: [{ type: 'payload', payload }] });
+    const res = await WA_HTTP.post(
+      `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: {
+          name: tName('delivery_failed_action'),
+          language: { code: 'en' },
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: String(data.name || 'there') },
+                { type: 'text', text: await _brandName(brandId) },
+                { type: 'text', text: orderNumber },
+                { type: 'text', text: String(data.reason || 'The courier could not reach you').slice(0, 120) },
+              ],
+            },
+            qr(0, `ndr_retry_${orderNumber}`),
+            qr(1, `ndr_address_${orderNumber}`),
+            qr(2, `ndr_cancel_${orderNumber}`),
+          ],
+        },
+      },
+      { headers: authHeader(token) }
+    );
+    return res.data;
+  } catch (e) {
+    logger.warn(`delivery_failed_action not sent (${metaError(e)}) — using plain delivery_failed`);
+  }
   return sendTemplate(phone, tName('delivery_failed'), [
     data.name || 'there',
     await _brandName(brandId),
