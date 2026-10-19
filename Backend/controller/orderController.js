@@ -1275,6 +1275,58 @@
     }),
   };
 
+  // For a page of orders: the customer's latest WhatsApp message, the open
+  // failed-delivery case and the open return — so the Orders table can show
+  // what needs attention without opening each order. Batched (3 queries).
+  async function orderDeskExtras(rows) {
+    const out = new Map();
+    if (!rows.length) return out;
+    const { sequelize: db } = require('../config/db.js');
+    const ids = rows.map((o) => o.id);
+    const phoneOf = (o) => String(o.ShippingAddress?.phone || o.GuestUser?.phone || '').replace(/\D/g, '').slice(-10);
+    const phones = [...new Set(rows.map(phoneOf).filter((p) => p.length === 10))];
+    try {
+      if (phones.length) {
+        const convs = await db.query(
+          `SELECT c.id, RIGHT(c.customer_phone, 10) AS p10, c.unread_count, m.direction, m.body, m.type,
+                  COALESCE(m.sent_at, m.createdAt) AS at
+             FROM whatsapp_conversations c
+             JOIN whatsapp_messages m ON m.id = (SELECT MAX(id) FROM whatsapp_messages WHERE conversation_id = c.id)
+            WHERE RIGHT(c.customer_phone, 10) IN (:phones)`,
+          { replacements: { phones }, type: db.QueryTypes.SELECT }
+        );
+        const byPhone = new Map();
+        for (const c of convs) {
+          const prev = byPhone.get(c.p10);
+          if (!prev || new Date(c.at) > new Date(prev.at)) byPhone.set(c.p10, c);
+        }
+        for (const o of rows) {
+          const c = byPhone.get(phoneOf(o));
+          if (c) {
+            let text = c.body || '';
+            if (/^\s*\{/.test(text)) { try { text = JSON.parse(text).text || `[${c.type}]`; } catch { /* keep */ } }
+            out.set(o.id, { last_whatsapp: { direction: c.direction, text: String(text).slice(0, 160), type: c.type, at: c.at, unread: Number(c.unread_count) || 0, conversation_id: c.id } });
+          }
+        }
+      }
+      const ndr = await db.query(
+        `SELECT order_id, id, status, attempts, reason, customer_action, new_address, reattempt_date
+           FROM ndr_cases WHERE order_id IN (:ids) AND status <> 'closed'`,
+        { replacements: { ids }, type: db.QueryTypes.SELECT }
+      ).catch(() => []);
+      for (const c of ndr) out.set(c.order_id, { ...(out.get(c.order_id) || {}), ndr_case: c });
+      const rets = await db.query(
+        `SELECT order_id, id, return_number, status, is_cod, requested_amount, refund_amount
+           FROM returns WHERE order_id IN (:ids) AND status NOT IN ('refunded','rejected')`,
+        { replacements: { ids }, type: db.QueryTypes.SELECT }
+      ).catch(() => []);
+      for (const r of rets) out.set(r.order_id, { ...(out.get(r.order_id) || {}), open_return: r });
+    } catch (e) {
+      logger.warn('orderDeskExtras skipped: ' + e.message);
+    }
+    return out;
+  }
+
   // GET /api/orders/desk/counts — live counts for the Order Desk tabs.
   module.exports.getDeskCounts = async (req, res) => {
     try {
@@ -1647,11 +1699,13 @@
       });
 
       const { getRtoRiskLevel } = require('../services/orderService.js');
+      const extras = await orderDeskExtras(orders.rows);
 
       res.json({
         orders: orders.rows.map(o => ({
           ...o.toJSON(),
           rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0),
+          ...(extras.get(o.id) || {}),
         })),
         total: orders.count,
         totalPages: totalPages,
