@@ -107,7 +107,7 @@ const setupDatabase = async () => {
       `);
 
       if (ordersTable.length) {
-        const [fshipStatusColumn] = await sequelize.query(`
+        const [shippingStatusColumn] = await sequelize.query(`
           SELECT COLUMN_NAME
           FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE()
@@ -115,7 +115,7 @@ const setupDatabase = async () => {
             AND COLUMN_NAME = 'shipping_sync_status'
         `);
 
-        if (!fshipStatusColumn.length) {
+        if (!shippingStatusColumn.length) {
           await sequelize.query(`
             ALTER TABLE orders
             ADD COLUMN shipping_sync_status ENUM('pending','syncing','synced','failed')
@@ -123,7 +123,7 @@ const setupDatabase = async () => {
           `);
         }
 
-        const [fshipAttemptsColumn] = await sequelize.query(`
+        const [shippingAttemptsColumn] = await sequelize.query(`
           SELECT COLUMN_NAME
           FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE()
@@ -131,14 +131,14 @@ const setupDatabase = async () => {
             AND COLUMN_NAME = 'shipping_sync_attempts'
         `);
 
-        if (!fshipAttemptsColumn.length) {
+        if (!shippingAttemptsColumn.length) {
           await sequelize.query(`
             ALTER TABLE orders
             ADD COLUMN shipping_sync_attempts INT DEFAULT 0
           `);
         }
 
-        const [fshipIndex] = await sequelize.query(`
+        const [shippingIndexRows] = await sequelize.query(`
           SELECT INDEX_NAME
           FROM INFORMATION_SCHEMA.STATISTICS
           WHERE TABLE_SCHEMA = DATABASE()
@@ -146,7 +146,7 @@ const setupDatabase = async () => {
             AND INDEX_NAME = 'idx_shipping_sync_status'
         `);
 
-        if (!fshipIndex.length) {
+        if (!shippingIndexRows.length) {
           await sequelize.query(`
             ALTER TABLE orders
             ADD INDEX idx_shipping_sync_status (shipping_sync_status)
@@ -155,10 +155,10 @@ const setupDatabase = async () => {
       }
 
       console.log("✓ Orders Shipping sync columns ensured pre-sync");
-    } catch (fshipPreSyncError) {
+    } catch (shippingPreSyncError) {
       console.log(
         "⚠️ Pre-sync Shipping orders column fix skipped:",
-        fshipPreSyncError.message
+        shippingPreSyncError.message
       );
     }
 

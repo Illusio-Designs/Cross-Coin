@@ -357,7 +357,7 @@ async function syncOrderToShipping(order) {
       warehouseId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
     }
 
-    const fshipPayload = {
+    const shippingPayload = {
       customer_Name: addr.full_name || user?.username || 'Customer',
       customer_Mobile: String(addr.phone),
       customer_Emailid: user?.email || '',
@@ -394,8 +394,8 @@ async function syncOrderToShipping(order) {
       })),
     };
 
-    const response = await breakers.fship.call(() =>
-      provider.createOrUpdateForwardOrder(fshipPayload)
+    const response = await breakers.shipping.call(() =>
+      provider.createOrUpdateForwardOrder(shippingPayload)
     );
 
     if (response.success) {

@@ -7,8 +7,8 @@ const { logger } = require('../config/logging.js');
  * States: CLOSED (normal) → OPEN (failing) → HALF_OPEN (testing recovery)
  *
  * Usage:
- *   const fshipBreaker = new CircuitBreaker('Shipping', { threshold: 3, timeout: 30000 });
- *   const result = await fshipBreaker.call(() => fshipService.createOrder(data));
+ *   const shippingBreaker = new CircuitBreaker('Shipping', { threshold: 3, timeout: 30000 });
+ *   const result = await shippingBreaker.call(() => shippingService.createOrder(data));
  */
 class CircuitBreaker {
   constructor(name, { threshold = 3, timeout = 30000, resetTimeout = 60000 } = {}) {
@@ -64,7 +64,7 @@ class CircuitBreaker {
 
 // Singleton breakers for external services
 const breakers = {
-  fship:    new CircuitBreaker('Shipping',    { threshold: 3, timeout: 60000 }),
+  shipping: new CircuitBreaker('Shipping',    { threshold: 3, timeout: 60000 }),
   razorpay: new CircuitBreaker('Razorpay', { threshold: 3, timeout: 30000 }),
   whatsapp: new CircuitBreaker('WhatsApp', { threshold: 5, timeout: 60000 }),
 };

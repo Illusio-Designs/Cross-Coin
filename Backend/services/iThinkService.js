@@ -1064,7 +1064,7 @@ class IThinkService {
 
   /**
    * Map iThink status string → CrossCoin order status.
-   * Interface-compatible with fshipService.mapShippingStatusToCrossCoin().
+   * Interface-compatible with the shipping status mapper().
    */
   mapStatusToCrossCoin(iThinkStatus) {
     if (!iThinkStatus) return 'processing';
