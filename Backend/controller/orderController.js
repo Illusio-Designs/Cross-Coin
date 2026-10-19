@@ -1573,6 +1573,103 @@
   };
 
   // Get all orders (admin)
+  // Order Desk work queues → Sequelize where. Returns a fresh object each time.
+  const DESK_STAGES = {
+    // COD orders the team still has to call / the customer has to confirm.
+    to_confirm: () => ({ status: { [Op.in]: ['awaiting_confirmation', 'pending'] }, payment_type: { [Op.in]: ['cod', 'COD'] } }),
+    // Confirmed but not yet picked up by the courier (booking, labels, pickup).
+    to_ship: () => ({ status: { [Op.in]: ['confirmed', 'processing', 'booked', 'pickup initiated', 'manifested'] } }),
+    in_transit: () => ({ status: { [Op.in]: ['shipped', 'in transit', 'out for delivery'] } }),
+    // Courier could not deliver / shipment stuck.
+    problems: () => ({ status: { [Op.in]: ['undelivered', 'exception'] } }),
+    delivered: () => ({ status: 'delivered' }),
+    returns: () => ({ status: { [Op.in]: ['return_initiated', 'returned_rto'] } }),
+    cancelled_rto: () => ({ status: { [Op.in]: ['cancelled', 'order cancelled', 'rto', 'rto delivered'] } }),
+    // Prepaid money still owed to the customer (and no open return — those
+    // are refunded from Returns after the parcel arrives).
+    refund_due: () => ({
+      status: { [Op.in]: ['cancelled', 'order cancelled', 'returned_rto', 'rto delivered'] },
+      payment_status: { [Op.in]: ['paid', 'refund_pending'] },
+      payment_type: { [Op.notIn]: ['cod', 'COD'] },
+    }),
+  };
+
+  // GET /api/orders/desk/counts — live counts for the Order Desk tabs.
+  module.exports.getDeskCounts = async (req, res) => {
+    try {
+      const base = {};
+      if (req.query.brand_id && req.query.brand_id !== 'all') base.brand_id = parseInt(req.query.brand_id, 10);
+      const keys = ['to_confirm', 'to_ship', 'in_transit', 'problems', 'refund_due'];
+      const counts = {};
+      await Promise.all(keys.map(async (k) => {
+        counts[k] = await Order.count({ where: { ...base, ...DESK_STAGES[k]() } });
+      }));
+      // COD orders waiting > 24h for a call / confirmation.
+      counts.to_confirm_overdue = await Order.count({
+        where: { ...base, ...DESK_STAGES.to_confirm(), createdAt: { [Op.lt]: new Date(Date.now() - 24 * 3600 * 1000) } },
+      });
+      const { sequelize: db } = require('../config/db.js');
+      const brandSql = base.brand_id ? ' AND brand_id = :b' : '';
+      const [[ret]] = await db.query(
+        `SELECT SUM(status IN ('requested','under_review')) AS to_review,
+                SUM(status IN ('approved','pickup_scheduled','picked_up')) AS in_pickup,
+                SUM(status = 'received') AS to_refund
+           FROM returns WHERE 1=1${brandSql}`,
+        { replacements: { b: base.brand_id } }
+      ).catch(() => [[{}]]);
+      const [[ndr]] = await db.query(
+        `SELECT SUM(status <> 'closed') AS open_cases,
+                SUM(status IN ('needs_action','address_updated','cancel_requested','reattempt_requested')) AS needs_action
+           FROM ndr_cases WHERE 1=1${brandSql}`,
+        { replacements: { b: base.brand_id } }
+      ).catch(() => [[{}]]);
+      counts.returns_to_review = Number(ret?.to_review) || 0;
+      counts.returns_in_pickup = Number(ret?.in_pickup) || 0;
+      counts.returns_to_refund = Number(ret?.to_refund) || 0;
+      counts.ndr_open = Number(ndr?.open_cases) || 0;
+      counts.ndr_needs_action = Number(ndr?.needs_action) || 0;
+      res.json({ success: true, counts });
+    } catch (error) {
+      logger.error('getDeskCounts error:', error);
+      res.status(500).json({ success: false, message: 'Failed to load counts' });
+    }
+  };
+
+  // GET /api/orders/:id/desk — everything about one order for the side panel:
+  // status history, all payment rows (incl. refunds), returns, failed-delivery
+  // cases and the audit log.
+  module.exports.getOrderDesk = async (req, res) => {
+    try {
+      const { Payment } = require('../model/paymentModel.js');
+      const { Return } = require('../model/returnModel.js');
+      const { sequelize: db } = require('../config/db.js');
+      const order = await Order.findByPk(req.params.id, { attributes: ['id', 'order_number'] });
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+      const [history, payments, returns, ndrCases, audit] = await Promise.all([
+        OrderStatusHistory.findAll({ where: { order_id: order.id }, order: [['createdAt', 'ASC']], limit: 200 }),
+        Payment.findAll({ where: { order_id: order.id }, order: [['createdAt', 'ASC']] }),
+        Return.findAll({ where: { order_id: order.id }, order: [['created_at', 'DESC']] }),
+        db.query(`SELECT * FROM ndr_cases WHERE order_id = ? ORDER BY id DESC`, { replacements: [order.id], type: db.QueryTypes.SELECT }).catch(() => []),
+        db.query(`SELECT * FROM order_audit_logs WHERE order_id = ? ORDER BY id ASC LIMIT 200`, { replacements: [order.id], type: db.QueryTypes.SELECT }).catch(() => []),
+      ]);
+      res.json({
+        success: true,
+        history,
+        payments: payments.map((p) => {
+          const j = p.toJSON();
+          const raw = parseFloat(j.amount_paid) || 0;
+          return { ...j, amount: p.payment_type === 'cod' ? raw : raw / 100, is_refund: raw < 0 };
+        }),
+        returns,
+        ndr: ndrCases,
+        audit,
+      });
+    } catch (error) {
+      logger.error('getOrderDesk error:', error);
+      res.status(500).json({ success: false, message: 'Failed to load order details' });
+    }
+  };
+
   module.exports.getAllOrders = async (req, res) => {
     try {
       const {
@@ -1634,6 +1731,13 @@
         };
         const bucket = STATUS_BUCKETS[String(status).toLowerCase()];
         filter.status = bucket ? { [Op.in]: bucket } : status;
+      }
+
+      // Order Desk stages (work queues). Overrides the status / payment-type
+      // tabs above. Keep in sync with getDeskCounts below.
+      const stage = String(req.query.stage || '').toLowerCase();
+      if (stage && DESK_STAGES[stage]) {
+        Object.assign(filter, DESK_STAGES[stage]());
       }
 
       // Payment status filter

@@ -398,12 +398,29 @@ module.exports.getReturn = async (req, res) => {
 // ── ADMIN: list returns ──────────────────────────────────────────────────
 module.exports.listReturns = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
-    const cappedLimit = Math.min(parseInt(limit) || 20, 200);
+    const { status, page = 1, limit = 100, order_id, search } = req.query;
+    const cappedLimit = Math.min(parseInt(limit) || 100, 200);
     const offset = (parseInt(page) - 1) * cappedLimit;
     const where = {};
     if (req.brandId) where.brand_id = req.brandId;
-    if (status) where.status = status;
+    if (status) {
+      // Grouped filters used by the Dashboard chips.
+      const GROUPS = { review: ['requested', 'under_review'], pickup: ['approved', 'pickup_scheduled', 'picked_up'] };
+      where.status = GROUPS[status] ? { [require('sequelize').Op.in]: GROUPS[status] } : status;
+    }
+    if (order_id) where.order_id = parseInt(order_id, 10) || 0;
+    if (search && String(search).trim()) {
+      const { Op } = require('sequelize');
+      const q = `%${String(search).trim()}%`;
+      where[Op.or] = [{ return_number: { [Op.like]: q } }, { '$Order.order_number$': { [Op.like]: q } }];
+    }
+    // Counts per status for the page tiles (independent of the filter).
+    const statusCounts = {};
+    for (const r of await Return.findAll({
+      where: req.brandId ? { brand_id: req.brandId } : {},
+      attributes: ['status', [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'n']],
+      group: ['status'], raw: true,
+    })) statusCounts[r.status] = Number(r.n) || 0;
     const { count, rows } = await Return.findAndCountAll({
       where,
       include: [
@@ -416,6 +433,7 @@ module.exports.listReturns = async (req, res) => {
     return res.json({
       success: true,
       returns: rows.map(serialize),
+      statusCounts,
       pagination: { total: count, page: parseInt(page), limit: cappedLimit, totalPages: Math.ceil(count / cappedLimit) },
     });
   } catch (error) {

@@ -171,8 +171,9 @@ async function onNewAddress(orderNumber, text, phone, brandId) {
     `Thank you! We've received the new address for order *#${orderNumber}* and will share it with the courier for the next delivery attempt.`, brandId).catch(() => {});
 }
 
-async function listCases({ status = 'open', limit = 100 } = {}) {
-  const where = status === 'open' ? `c.status <> 'closed'` : '1=1';
+async function listCases({ status = 'open', limit = 100, orderId = null } = {}) {
+  let where = status === 'open' ? `c.status <> 'closed'` : '1=1';
+  if (orderId) where += ` AND c.order_id = ${parseInt(orderId, 10) || 0}`;
   const rows = await sequelize.query(
     `SELECT c.*, o.order_number, o.status AS order_status, o.payment_type, o.final_amount, o.courier_name,
             o.shipping_address_id

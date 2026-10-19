@@ -8,7 +8,10 @@ const router = express.Router();
 
 router.get('/', isAuthenticated, isOrderManager, async (req, res) => {
   try {
-    const cases = await ndrService.listCases({ status: req.query.status === 'all' ? 'all' : 'open' });
+    const cases = await ndrService.listCases({
+      status: req.query.status === 'all' ? 'all' : 'open',
+      orderId: req.query.order_id || null,
+    });
     res.json({ success: true, cases });
   } catch (e) {
     logger.error('NDR list failed: ' + e.message);

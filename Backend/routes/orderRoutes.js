@@ -57,6 +57,7 @@ const trackByAwbSchema = z.object({
 
 // ── Admin / Order Manager ─────────────────────────────────────────────────
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
+router.get('/desk/counts',               isAuthenticated, isOrderManager, require('../controller/orderController.js').getDeskCounts);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
@@ -106,6 +107,7 @@ router.post('/fship/webhook',           verifyWebhookSignature('fship'),    hand
 // ── Authenticated user ────────────────────────────────────────────────────
 router.post('/',                        isAuthenticated, createOrder);
 router.get('/my-orders',                isAuthenticated, getUserOrders);
+router.get('/:id/desk',                 isAuthenticated, isOrderManager, require('../controller/orderController.js').getOrderDesk);
 router.get('/:id',                      isAuthenticated, getOrder);
 router.get('/:id/invoice',             isAuthenticated, require('../controller/invoiceController.js').getOrderInvoice);
 router.put('/:id/cancel',              isAuthenticated, validateBody(schemas.cancelOrder), cancelOrder);
