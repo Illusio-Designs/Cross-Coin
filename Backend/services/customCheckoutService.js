@@ -319,10 +319,20 @@ async function ingestCheckoutOrder(brandId, p) {
       lines.push({ product_id: v.productId, variation_id: v.id, quantity: qty, price, discount: 0, subtotal: price * qty });
     }
 
-    const subtotal = Number(p.subtotal_price) || lines.reduce((a, l) => a + l.subtotal, 0);
-    const discount = Number(p.total_discount) || 0;
-    const shippingFee = Number(p.shipping_charges) || 0;
-    const finalAmount = Number(p.total_amount_payable) || Math.max(0, subtotal - discount + shippingFee);
+    // Line prices come from OUR variations; the provider's totals must agree
+    // with them (small tolerance for rounding) or the order is not ingested.
+    const linesTotal = lines.reduce((a, l) => a + l.subtotal, 0);
+    const subtotal = linesTotal;
+    const discount = Math.max(0, Number(p.total_discount) || 0);
+    const shippingFee = Math.max(0, Number(p.shipping_charges) || 0);
+    const expected = Math.max(0, subtotal - discount + shippingFee);
+    const claimed = Number(p.total_amount_payable);
+    if (Number.isFinite(claimed) && Math.abs(claimed - expected) > 2) {
+      const e = new Error(`Amount mismatch for ${platformId}: provider says ₹${claimed}, items come to ₹${expected}`);
+      e.status = 422; throw e;
+    }
+    if (discount > subtotal) { const e = new Error(`Discount larger than the order for ${platformId}`); e.status = 422; throw e; }
+    const finalAmount = expected;
     const isCod = String(p.payment_type || '').toUpperCase() === 'COD';
     const paid = String(p.payment_status || '').toLowerCase() === 'success';
 
