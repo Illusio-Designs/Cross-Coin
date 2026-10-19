@@ -372,7 +372,9 @@ async function save(brandId, body, userId) {
     const row = rows.get(key);
     const field = FIELD_BY_KEY.get(key);
     if (field?.readOnly) continue;
-    if (!field && (!row || OWNED_ELSEWHERE(key, row.category))) { errors[key] = 'Unknown setting.'; continue; }
+    // A key with no form field: an existing "other" setting, or a new custom one.
+    if (!field && OWNED_ELSEWHERE(key, row?.category)) { errors[key] = 'This setting is edited on its own page.'; continue; }
+    if (!field && !row && !/^[A-Z][A-Z0-9_]{1,99}$/.test(key)) { errors[key] = 'Use capital letters, numbers and _ for a new key.'; continue; }
     if (isSecret(key, row) && /^•+/.test(str(raw))) continue; // unchanged mask echoed back
     const v = field ? normalise(field, raw) : str(raw).trim();
     const err = field ? validate(field, v) : null;

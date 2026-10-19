@@ -285,17 +285,30 @@ export const abandonedCartService = {
   },
 };
 
+// Dashboard → Loyalty points (Backend services/loyaltyAdminService.js).
+const loyErr = (error) => new Error(error.response?.data?.message || error.message || 'Something went wrong');
 export const loyaltyService = {
-  getTransactions: async (page = 1, limit = 50) => {
-    const { data } = await adminApi.get('/api/admin/loyalty/transactions', { params: { page, limit } });
-    return data;
+  summary: async (brandId) => {
+    try { return (await adminApi.get('/api/admin/loyalty/summary', { params: { brandId: brandId || undefined } })).data.data; } catch (e) { throw loyErr(e); }
   },
-  // Admin add/deduct a customer's points (points may be negative to deduct).
-  adjustPoints: async ({ userId, points, description }) => {
-    const { data } = await adminApi.post('/api/admin/loyalty/adjust', {
-      userId: Number(userId), points: Number(points), description: description || '',
-    });
-    return data;
+  // { tab: all|earned|spent|staff|expired, q, brandId, page, limit }
+  getTransactions: async (params = {}) => {
+    try { return (await adminApi.get('/api/admin/loyalty/transactions', { params })).data.data; } catch (e) { throw loyErr(e); }
+  },
+  customer: async (userId) => {
+    try { return (await adminApi.get(`/api/admin/loyalty/customer/${userId}`)).data.data; } catch (e) { throw loyErr(e); }
+  },
+  // Give (+) or take (−) points; the reason is saved in the customer's points history.
+  adjustPoints: async ({ userId, points, description, brandId }) => {
+    try {
+      return (await adminApi.post('/api/admin/loyalty/adjust', {
+        userId: Number(userId), points: Number(points), description: description || '', brandId: brandId || undefined,
+      })).data;
+    } catch (e) { throw loyErr(e); }
+  },
+  // { brandId? (absent = every brand), earnRate, redeemRate, maxRedeemPercent, expiryDays } — admin only.
+  saveRules: async (body) => {
+    try { return (await adminApi.put('/api/admin/loyalty/rules', body)).data; } catch (e) { throw loyErr(e); }
   },
 };
 
@@ -991,14 +1004,23 @@ export const exceptionsService = {
 };
 
 // Payment Services — Dashboard → Payments (admin / order manager)
+// Dashboard → Payments (Backend services/paymentsAdminService.js).
+const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
-  getPayments: async (params = {}) => {
-    try {
-      const response = await adminApi.get('/api/payments', { params });
-      return response.data;
-    } catch (error) {
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+  // { period: 1|7|30, tab, q, brandId, page, limit } → { rows, total, pages, … }
+  list: async (params = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/list', { params })).data; } catch (error) { throw payErr(error); }
+  },
+  summary: async (params = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/summary', { params })).data; } catch (error) { throw payErr(error); }
+  },
+  // Payments pending/failed here but captured at Razorpay (cached 10 min; refresh forces a new check).
+  mismatches: async ({ brandId, refresh } = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/mismatches', { params: { brandId: brandId || undefined, refresh: refresh ? 1 : undefined } })).data; } catch (error) { throw payErr(error); }
+  },
+  // { orderId } = "Mark paid & confirm"; { paymentId, action: 'create' | 'refund' } = charged with no order.
+  fixMismatch: async (body) => {
+    try { return (await adminApi.post('/api/payments/admin/mismatches/fix', body)).data; } catch (error) { throw payErr(error); }
   },
 };
 
@@ -1244,14 +1266,6 @@ export const sliderService = {
     }
   },
 
-  getSliderById: async (id) => {
-    try {
-      const response = await adminApi.get(`/api/sliders/${id}`);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 
   updateSlider: async (id, sliderData) => {
     try {
@@ -1292,14 +1306,6 @@ export const sliderService = {
     }
   },
 
-  removeSliderFromBrand: async (sliderId, brandId) => {
-    try {
-      const response = await adminApi.delete(`/api/sliders/${sliderId}/brands/${brandId}`);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 };
 
 // Website area: Photos library, policies list, SEO pages list.
@@ -1548,16 +1554,6 @@ export const productService = {
     }
   },
 
-  deleteImages: async (imagePaths) => {
-    try {
-      const response = await adminApi.delete('/api/products/delete-images', {
-        data: { imagePaths }
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 };
 
 // Coupon Services (admin). Every call throws an Error with the server's message.
@@ -1666,14 +1662,6 @@ export const reviewService = {
 const seoBrandHeader = (brandSlug = 'crosscoin') => ({ 'X-Brand-Name': brandSlug || 'crosscoin' });
 
 export const seoService = {
-  getAllSEOData: async (brandSlug) => {
-    try {
-      const response = await adminApi.get("/api/seo/all", { headers: seoBrandHeader(brandSlug) });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 
   getSEOData: async (pageName, brandSlug) => {
     try {
@@ -1842,14 +1830,6 @@ export const policyService = {
   createPolicy: async (data) => {
     try {
       const response = await adminApi.post("/api/policies", data);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-  getAllPolicies: async () => {
-    try {
-      const response = await adminApi.get("/api/policies");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -2299,15 +2279,6 @@ export const blogService = {
     }
   },
 
-  // Tags
-  getAllTags: async () => {
-    try {
-      const response = await adminApi.get("/api/blogs/tags");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 };
 
 // ─── WhatsApp Service ─────────────────────────────────────────────────────────

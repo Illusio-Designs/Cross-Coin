@@ -203,31 +203,33 @@ function toPayload(f) {
   };
 }
 
-// The sentence a shopper would read.
+// The sentence a shopper would read, e.g.
+// "30% off orders over ₹799 on Cross Coin and Soxbae, till Sun, 26 Oct. Once per customer."
 function customerSees(f, brands) {
-  let gives;
-  if (f.type === 'percentage') gives = `${Number(f.value) || '…'}% off${f.maxDiscount ? ` (up to ${inr(f.maxDiscount)})` : ''}`;
-  else if (f.type === 'fixed') gives = `${f.value ? inr(f.value) : '₹…'} off`;
-  else {
-    const rows = f.tiers.filter((t) => t.min !== '' && t.discount !== '').sort((a, b) => Number(a.min) - Number(b.min));
-    gives = rows.length
-      ? rows.map((t, i) => (f.type === 'tiered'
-        ? `${inr(t.discount)}${i === 0 ? ' off' : ''} when you spend ${inr(t.min)}`
-        : `${inr(t.discount)}${i === 0 ? ' off' : ''} when you buy ${t.min}${i === rows.length - 1 ? ' or more' : ''}`)).join(', ')
-      : 'a discount (add the steps)';
-  }
-  const bits = [gives];
-  if (f.minPurchase && Number(f.minPurchase) > 0) bits.push(`on orders over ${inr(f.minPurchase)}`);
   const items = [];
   if (f.worksOn === 'categories' || f.worksOn === 'both') items.push(...f.categories.map((c) => c.name));
   if (f.worksOn === 'products' || f.worksOn === 'both') items.push(...f.products.map((p) => p.name));
-  if (items.length) bits.push(`when your cart has ${items.length > 3 ? `one of ${items.length} chosen items` : `something from ${listText(items)}`}${f.type === 'percentage' || f.type === 'quantity_based' ? ' (counted on those items)' : ''}`);
-  const names = f.brandIds.map((id) => brands.find((b) => String(b.id) === String(id))?.display_name || brands.find((b) => String(b.id) === String(id))?.name).filter(Boolean);
-  bits.push(names.length ? `on ${listText(names)}` : 'on every store');
+  const itemText = items.length > 3 ? `${items.length} chosen items` : listText(items);
+  let s;
+  if (f.type === 'percentage' || f.type === 'fixed') {
+    s = f.type === 'percentage' ? `${Number(f.value) || '…'}% off` : `${f.value ? inr(f.value) : '₹…'} off`;
+    if (itemText) s += ` ${itemText}`;
+    if (f.minPurchase && Number(f.minPurchase) > 0) s += `${itemText ? ' on' : ''} orders over ${inr(f.minPurchase)}`;
+    if (f.type === 'percentage' && f.maxDiscount) s += ` (up to ${inr(f.maxDiscount)})`;
+  } else {
+    const rows = f.tiers.filter((t) => t.min !== '' && t.discount !== '').sort((a, b) => Number(a.min) - Number(b.min));
+    s = rows.length
+      ? rows.map((t, i) => `${inr(t.discount)} off when you ${f.type === 'tiered' ? `spend ${inr(t.min)}` : `buy ${t.min}${i === rows.length - 1 && rows.length > 1 ? ' or more' : ''}`}`).join(', ')
+      : 'A discount (add the steps)';
+    if (itemText) s += ` ${f.type === 'tiered' ? 'on' : 'of'} ${itemText}`;
+    if (f.minPurchase && Number(f.minPurchase) > 0) s += ` (orders over ${inr(f.minPurchase)})`;
+  }
+  const names = f.brandIds.map((id) => { const b = brands.find((x) => String(x.id) === String(id)); return b ? b.display_name || b.name : null; }).filter(Boolean);
+  s += names.length ? ` on ${listText(names)}` : ' on every store';
   const today = istDay();
   let when = f.noEnd ? '' : `till ${ymdText(f.endDate)}`;
   if (f.startDate > today) when = `from ${ymdText(f.startDate)}${when ? ` ${when}` : ''}`;
-  let s = bits.join(' ') + (when ? `, ${when}` : '') + '.';
+  s += `${when ? `, ${when}` : ''}.`;
   const extra = [];
   if (f.paymentModeRestriction === 'prepaid') extra.push('Prepaid orders only.');
   if (f.paymentModeRestriction === 'cod') extra.push('Cash on delivery only.');
@@ -345,8 +347,10 @@ function CouponPanel({ open, initial, brands, onClose, onSaved }) {
 
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const isEdit = !!f.id;
-  const automations = (f.usedBy || []).filter((u) => u.enabled);
+  // Automations that would break (the exit pop-up just picks another code).
+  const automations = (f.usedBy || []).filter((u) => u.enabled && !u.soft);
   const usesText = automations.length ? listText(automations.map((u) => u.text)) : '';
+  const sends = automations.length > 1 ? 'send' : 'sends';
   const brandOpts = brands.map((b) => ({ id: Number(b.id), name: b.display_name || b.name }));
 
   const save = async (skipConfirm = false) => {
@@ -382,12 +386,12 @@ function CouponPanel({ open, initial, brands, onClose, onSaved }) {
   const fieldErr = (k) => (errors[k] ? <span className="cpn-err">{errors[k]}</span> : null);
   const footer = confirm === 'off' ? (
     <ConfirmBar
-      message={<>{usesText} sends <b>{f.code}</b>. Switched off, those messages hand out a code that fails (win-back skips the store). Switch it off anyway?</>}
+      message={<>{usesText} {sends} <b>{f.code}</b>. Switched off, those messages hand out a code that fails (win-back skips the store). Switch it off anyway?</>}
       confirmLabel="Switch off" cancelLabel="Keep it on" busy={saving}
       onConfirm={() => save(true)} onCancel={() => setConfirm(null)} />
   ) : confirm === 'delete' ? (
     <ConfirmBar
-      message={<>Delete coupon <b>{f.code}</b>?{usesText ? ` ${usesText} sends it — they would hand out a code that doesn’t exist.` : ' It was never used.'}</>}
+      message={<>Delete coupon <b>{f.code}</b>?{usesText ? ` ${usesText} ${sends} it — that would hand out a code that doesn’t exist.` : ' It was never used.'}</>}
       confirmLabel="Delete" cancelLabel="Keep" busy={saving}
       onConfirm={remove} onCancel={() => setConfirm(null)} />
   ) : (

@@ -1,571 +1,624 @@
 // When accessed directly as a Next.js page, redirect to dashboard shell
 export { default } from './index';
-import React, { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService } from '../../services';
-import { Modal, Button, Input } from '../../components/ui';
-import Dropdown from '../../components/ui/Dropdown';
-import Loader from '../../components/common/Loader';
-import { ConfirmModal } from '../../components/common/AlertModal';
-import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from '../../components/Dashboard/primitives';
+import { PageHeader, StatusPill, EmptyState, ErrorState, SkeletonRows, ConfirmBar } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, PencilEdit02Icon, Delete02Icon, ToggleOnIcon, ToggleOffIcon, Building01Icon, Copy01Icon, ArrowRight01Icon, FloppyDiskIcon,
-  CreditCardIcon, DeliveryTruck01Icon, Analytics01Icon, Mail01Icon, Message01Icon, Share08Icon, SquareLock02Icon, Key01Icon, Settings01Icon, MetaIcon } from '@hugeicons/core-free-icons';
 
-const IC = {
-  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
-  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
-  trash: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
-  toggle: <HugeiconsIcon icon={ToggleOnIcon} size={20} strokeWidth={2} />,
-  toggleOff: <HugeiconsIcon icon={ToggleOffIcon} size={20} strokeWidth={2} />,
-  brand: <HugeiconsIcon icon={Building01Icon} size={20} strokeWidth={2} />,
-  copy: <HugeiconsIcon icon={Copy01Icon} size={16} strokeWidth={2} />,
-  chevron: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
-  save: <HugeiconsIcon icon={FloppyDiskIcon} size={16} strokeWidth={2} />,
+/* ──────────────────────────────────────────────────────────────
+   Brands — each store's name, contact, tax, keys and links as plain
+   labelled forms (instead of a KEY = VALUE list).
+
+   Admin:  GET  /api/admin/brand-settings/overview  (list + health dot)
+           GET  /api/admin/brand-settings/form       (fields, secrets masked)
+           PUT  /api/admin/brand-settings/form       (validated, logged)
+   Others with the Brands view (product managers): brand record only,
+           via the existing /api/admin/brands endpoints.
+   The field catalogue (labels, tabs, rules) lives on the server
+   (services/brandSettingsAdminService.js); unknown keys show under
+   "Other settings". Styles: opsSettings.css (.oss-*).
+   ────────────────────────────────────────────────────────────── */
+
+const TABS_FALLBACK = [{ key: 'store', title: 'Store', help: 'How the store appears to shoppers.' }];
+const BRAND_FIELDS = [
+  { key: 'display_name', label: 'Store name', rule: 'required', hint: 'Shown to shoppers and in messages.' },
+  { key: 'name', label: 'Internal name', rule: 'required' },
+  { key: 'domain', label: 'Website address', rule: 'host', hint: 'e.g. mystore.in — used for message links and feeds.' },
+  { key: 'contact_email', label: 'Support email', rule: 'email' },
+  { key: 'contact_phone', label: 'Support phone', rule: 'phone' },
+  { key: 'logo_url', label: 'Logo link', rule: 'url' },
+  { key: 'primary_color', label: 'Main colour', rule: 'color', type: 'color' },
+  { key: 'secondary_color', label: 'Second colour', rule: 'color', type: 'color' },
+];
+const NEW_BRAND = { name: '', display_name: '', slug: '', domain: '' };
+
+// Same rules the server applies (services/brandSettingsAdminService.js) — for
+// instant feedback; the server re-checks everything.
+const STATES = ['andhra pradesh', 'arunachal pradesh', 'assam', 'bihar', 'chhattisgarh', 'goa', 'gujarat', 'haryana', 'himachal pradesh',
+  'jharkhand', 'karnataka', 'kerala', 'madhya pradesh', 'maharashtra', 'manipur', 'meghalaya', 'mizoram', 'nagaland', 'odisha', 'punjab',
+  'rajasthan', 'sikkim', 'tamil nadu', 'telangana', 'tripura', 'uttar pradesh', 'uttarakhand', 'west bengal', 'andaman and nicobar islands',
+  'chandigarh', 'dadra and nagar haveli and daman and diu', 'delhi', 'jammu and kashmir', 'ladakh', 'lakshadweep', 'puducherry', 'new delhi',
+  'j&k', 'jammu & kashmir', 'a&n islands', 'dadra and nagar haveli', 'daman and diu', 'pondicherry'];
+const RULES = {
+  required: (v) => (v ? null : 'This can’t be empty.'),
+  digits: (v) => (/^\d+$/.test(v) ? null : 'Numbers only.'),
+  pincode: (v) => (/^[1-9]\d{5}$/.test(v) ? null : 'Enter a 6-digit PIN code.'),
+  gstin: (v) => (/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v.toUpperCase()) ? null : 'A GSTIN is 15 characters, like 24ABCDE1234F1Z5.'),
+  state: (v) => (STATES.includes(v.toLowerCase()) ? null : 'Enter an Indian state name, e.g. Gujarat.'),
+  list: (v) => (/^[a-z0-9 ,._-]*$/i.test(v) ? null : 'Use courier names separated by commas.'),
+  razorpayKey: (v) => (/^rzp_(live|test)_[A-Za-z0-9]{6,}$/.test(v) ? null : 'Razorpay key IDs start with rzp_live_ or rzp_test_.'),
+  ga: (v) => (/^G-[A-Z0-9]{4,}$/i.test(v) ? null : 'Google Analytics IDs look like G-XXXXXXX.'),
+  gtm: (v) => (/^GTM-[A-Z0-9]{4,}$/i.test(v) ? null : 'Tag Manager IDs look like GTM-XXXXXX.'),
+  aw: (v) => (/^AW-\d{6,}$/i.test(v) ? null : 'Google Ads IDs look like AW-123456789.'),
+  code: (v) => (/^[A-Z0-9_-]{2,40}$/i.test(v) ? null : 'Letters and numbers only, no spaces.'),
+  host: (v) => (/^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i.test(v) ? null : 'Enter a website address like mystore.in.'),
+  url: (v) => (/^https?:\/\/\S+$/i.test(v) ? null : 'Enter a full link starting with https://'),
+  email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? null : 'Enter a valid email address.'),
+  phone: (v) => (/^(\+?91)?[6-9]\d{9}$/.test(v.replace(/[\s()-]/g, '')) ? null : 'Enter a 10-digit Indian mobile number.'),
+  color: (v) => (/^#[0-9a-f]{6}$/i.test(v) ? null : 'Use a colour like #1A2B3C.'),
 };
+function check(f, raw) {
+  const v = String(raw ?? '').trim();
+  if (v === '') return f.rule === 'required' ? RULES.required(v) : null;
+  if (f.type === 'number') {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 'Enter a number.';
+    if (f.min != null && n < f.min) return `Must be ${f.min} or more.`;
+    if (f.max != null && n > f.max) return `Must be ${f.max} or less.`;
+    return null;
+  }
+  return f.rule && RULES[f.rule] ? RULES[f.rule](v) : null;
+}
 
-// Category cards for the per-brand settings drill-down. Each category opens on
-// click and shows only its own fields. 'meta' is a virtual category for the
-// Meta Conversions API test. Hugeicons, matching the rest of the dashboard.
-const CAT_META = {
-  payment:      { label: 'Payment',   icon: CreditCardIcon },
-  shipping:     { label: 'Shipping',  icon: DeliveryTruck01Icon },
-  analytics:    { label: 'Analytics', icon: Analytics01Icon },
-  email:        { label: 'Email',     icon: Mail01Icon },
-  sms:          { label: 'SMS',       icon: Message01Icon },
-  social:       { label: 'Social',    icon: Share08Icon },
-  social_media: { label: 'Social',    icon: Share08Icon },
-  security:     { label: 'Security',  icon: SquareLock02Icon },
-  api:          { label: 'API Keys',  icon: Key01Icon },
-  general:      { label: 'General',   icon: Settings01Icon },
-};
-const catIcon = (cat, size = 20) => <HugeiconsIcon icon={(CAT_META[cat] || CAT_META.general).icon} size={size} strokeWidth={1.9} />;
-const catLabel = (cat) => (CAT_META[cat] || { label: cat }).label;
+const cleanHost = (d) => String(d || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+const fmtWhen = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
+const brandLabel = (b) => b.display_name || b.name;
 
-const CATEGORY_LABEL = { general: 'General', payment: 'Payment', shipping: 'Shipping', email: 'Email', sms: 'SMS', social: 'Social', social_media: 'Social', analytics: 'Analytics', security: 'Security', api: 'API Keys' };
-const EMPTY_FORM = { name: '', slug: '', display_name: '', domain: '', logo_url: '', primary_color: '#4CAF50', secondary_color: '#2196F3', contact_email: '', contact_phone: '', status: 'active' };
-const IGNORED_KEY = /fship/i; // deprecated Fship shipping keys — not part of the canonical set
-// Settings that must NOT appear in the Brand Settings key/value UI:
-//  • SEO_* (category 'seo')      → owned by the dedicated SEO Settings page.
-//  • company_gstin / 'legal'     → owned by the Policies page's "Company GSTIN".
-//  • internal one-time markers   → cleanup/seed/migration flags the backend
-//    writes to record that a boot task ran (e.g. dpdp_policy_cleanup_done,
-//    *_cleanup_done, seo-init-*, schema_version). Not user-editable config.
-const INTERNAL_MARKER = /cleanup_done|^dpdp_|_seed(_|$)|schema[_-]?version|_migrated|seo-init/i;
-const SEO_SETTING = (s) => {
-  const key = s.key || '';
-  const cat = s.category || '';
-  return cat === 'seo' || /^SEO_/i.test(key)        // SEO Settings page owns these
-      || cat === 'legal' || key === 'company_gstin' // Policies page owns the GSTIN
-      || /^WHATSAPP_/i.test(key)                    // WhatsApp config — set once on Crosscoin, used globally
-      || key === 'PICKUP_SCHEDULE'                  // shared pickup schedule — managed from Orders → Pickup Schedule (all brands together)
-      || INTERNAL_MARKER.test(key);                 // internal boot/migration flags
-};
-
-const safeDate = (d) => { const t = d ? new Date(d) : null; return t && !isNaN(t) ? t.toLocaleDateString() : '—'; };
-const cell = { padding: '13px 16px', borderBottom: '1px solid var(--ds-color-border-soft)', fontSize: 13, verticalAlign: 'middle' };
-const th = { padding: '11px 16px', textAlign: 'left', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ds-color-text-muted)', fontWeight: 600, background: 'var(--ds-color-surface-soft)', fontFamily: 'var(--ds-font-mono, ui-monospace, monospace)', borderBottom: '1px solid var(--ds-color-border)' };
-const brandMono = (b) => (b.display_name || b.name || '?').trim().slice(0, 2).toUpperCase();
-
-// Normalise a brand's domain into a bare host for favicon lookup.
-const brandHost = (d) => (d || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
-const faviconUrl = (b) => {
-  if (b.logo_url) return b.logo_url;
-  const host = brandHost(b.domain);
-  return host ? `https://${host}/favicon.ico` : null;
-};
-
-// Brand mark: shows the brand's favicon (its own logo_url, else the site's
-// /favicon.ico), falling back to the monogram initials if the image can't load.
-function BrandFavicon({ brand }) {
-  const [broken, setBroken] = useState(false);
-  const src = faviconUrl(brand);
-  const showImg = src && !broken;
-  const dot = { position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--ds-color-surface)', background: brand.primary_color || 'var(--ds-color-text-faint)' };
+// ── One input, by field type ───────────────────────────────────────────────
+function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled }) {
+  const id = `bf-${f.key}`;
+  if (f.type === 'toggle') {
+    const on = String(value) === 'true';
+    return (
+      <div className="oss-field oss-field--toggle">
+        <span id={`${id}-l`}>{f.label}</span>
+        <button type="button" role="switch" aria-checked={on} aria-labelledby={`${id}-l`} className={`oss-switch${on ? ' is-on' : ''}`}
+          disabled={disabled} onClick={() => onChange(on ? 'false' : 'true')}><span /></button>
+        {f.hint && <small>{f.hint}</small>}
+      </div>
+    );
+  }
+  let control;
+  if (f.secret && !f.readOnly) {
+    control = secretState === 'replace' ? (
+      <span className="oss-inline">
+        <input id={id} type="password" autoComplete="new-password" value={value ?? ''} onChange={(e) => onChange(e.target.value)}
+          placeholder="Paste the new value" aria-invalid={!!error} disabled={disabled} />
+        <button type="button" className="oss-btn oss-btn--sm oss-btn--quiet" onClick={() => onSecret(null)}>Cancel</button>
+      </span>
+    ) : (
+      <span className="oss-inline">
+        <input id={id} value={secretState === 'remove' ? 'Will be removed on save' : (f.isSet ? f.value : 'Not set')} readOnly className="oss-masked" />
+        <button type="button" className="oss-btn oss-btn--sm" disabled={disabled} onClick={() => onSecret('replace')}>{f.isSet ? 'Replace' : 'Add'}</button>
+        {f.isSet && f.source === 'brand' && (secretState === 'remove'
+          ? <button type="button" className="oss-btn oss-btn--sm oss-btn--quiet" onClick={() => onSecret(null)}>Keep</button>
+          : <button type="button" className="oss-btn oss-btn--sm oss-btn--quiet" disabled={disabled} onClick={() => onSecret('remove')}>Remove</button>)}
+      </span>
+    );
+  } else if (f.readOnly) {
+    control = <input id={id} readOnly value={f.isSet ? f.value : 'Not set'} className="oss-masked" />;
+  } else if (f.type === 'select') {
+    control = (
+      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
+        {!f.options.some(([o]) => o === value) && <option value="">{f.default ? `Default (${f.default})` : 'Not set'}</option>}
+        {f.options.map(([o, l]) => <option key={o} value={o}>{l}</option>)}
+      </select>
+    );
+  } else if (f.type === 'textarea') {
+    control = <textarea id={id} rows={3} value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error} disabled={disabled} />;
+  } else if (f.type === 'color') {
+    control = (
+      <span className="oss-inline">
+        <input type="color" aria-label={`${f.label} picker`} value={/^#[0-9a-f]{6}$/i.test(value || '') ? value : '#000000'} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
+        <input id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} placeholder="#1A2B3C" aria-invalid={!!error} disabled={disabled} />
+      </span>
+    );
+  } else {
+    control = (
+      <input id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error} disabled={disabled}
+        inputMode={f.type === 'number' || f.rule === 'digits' || f.rule === 'pincode' ? 'decimal' : undefined}
+        placeholder={f.source === 'server' ? f.value : f.default ? `Default: ${f.default}` : undefined} />
+    );
+  }
+  const note = error
+    || (f.source === 'server' && !f.secret ? `Using the shared server value${f.hint ? ` · ${f.hint}` : ''}` : null)
+    || (f.secret && f.source === 'server' ? 'Using the shared server value (Cross Coin’s)' : null)
+    || (f.readOnly ? 'Managed on WhatsApp → Settings' : null)
+    || f.hint;
   return (
-    <span style={{ position: 'relative', width: 38, height: 38, borderRadius: 9, overflow: 'hidden', background: showImg ? 'var(--ds-color-surface)' : 'var(--ds-color-brand)', color: 'var(--ds-color-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0, border: showImg ? '1px solid var(--ds-color-border)' : 'none' }}>
-      {showImg
-        ? <img src={src} alt="" width={24} height={24} loading="lazy" onError={() => setBroken(true)} style={{ width: 24, height: 24, objectFit: 'contain', display: 'block' }} />
-        : brandMono(brand)}
-      <span style={dot} title={brand.primary_color || ''} />
-    </span>
+    <div className={`oss-field${error ? ' is-bad' : ''}${f.type === 'textarea' ? ' oss-field--wide' : ''}`}>
+      <label htmlFor={id}>{f.label}</label>
+      {control}
+      {note && <small>{note}</small>}
+    </div>
   );
 }
-const feedChip = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: 'var(--ds-color-text-muted)', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 7, padding: '4px 9px', cursor: 'pointer' };
+
+// ── Test buttons (only where a backend check exists) ───────────────────────
+function SectionTest({ tab, brand, form }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [phone, setPhone] = useState('');
+  useEffect(() => { setResult(null); }, [tab, brand?.id]);
+
+  const run = async (fn) => {
+    setBusy(true); setResult(null);
+    try { setResult(await fn()); } catch (e) { setResult({ ok: false, message: e?.message || 'The check failed.' }); }
+    finally { setBusy(false); }
+  };
+  let button = null;
+  if (tab === 'payments') {
+    button = <button type="button" className="oss-btn" disabled={busy} onClick={() => run(() => brandSettingsService.testRazorpay(brand.id))}>{busy ? 'Checking…' : 'Test Razorpay keys'}</button>;
+  } else if (tab === 'store') {
+    const has = form?.fields?.some((f) => f.key === 'ITHINK_PICKUP_ADDRESS_ID' && f.isSet);
+    if (has) button = (
+      <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
+        const r = await brandSettingsService.listIThinkWarehouses(brand.id);
+        return { ok: !!r?.success, message: r?.success ? `iThink found pickup warehouse ${r.warehouse_id} for these keys.` : (r?.message || 'iThink didn’t find the warehouse.') };
+      })}>{busy ? 'Checking…' : 'Check pickup warehouse'}</button>
+    );
+  } else if (tab === 'whatsapp') {
+    button = (
+      <span className="oss-inline oss-inline--test">
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your WhatsApp number" inputMode="tel" aria-label="Phone number for the test message" />
+        <button type="button" className="oss-btn" disabled={busy || phone.replace(/\D/g, '').length < 10}
+          onClick={() => run(async () => {
+            const r = await brandSettingsService.sendWhatsAppTest(brand.id, phone);
+            return { ok: !!r?.success, message: r?.success ? `Test sent to ${r.sent_to || phone}.` : (r?.message || 'WhatsApp didn’t accept the test.') };
+          })}>{busy ? 'Sending…' : 'Send me a test'}</button>
+      </span>
+    );
+  } else if (tab === 'tracking') {
+    button = (
+      <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
+        const r = await facebookCapiService.runTest(brand.slug);
+        const got = r?.result?.events_received;
+        return { ok: !!got, message: got ? `Meta received the test event — the pixel and token work.` : (r?.error || r?.message || 'Meta didn’t confirm the test event — check the pixel ID and token.') };
+      })}>{busy ? 'Checking…' : 'Check Meta pixel'}</button>
+    );
+  }
+  if (!button) return null;
+  return (
+    <div className="oss-test">
+      {button}
+      {result && <span role="status" className={result.ok ? 'oss-ok' : 'oss-bad'}>{result.ok ? '✓ ' : ''}{result.message}</span>}
+    </div>
+  );
+}
+
+// ── "Other settings": stored keys with no form field ───────────────────────
+function OtherSettings({ form, draft, setDraft, removed, setRemoved, errors }) {
+  const [adding, setAdding] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newVal, setNewVal] = useState('');
+  const [confirmKey, setConfirmKey] = useState(null);
+  const other = form?.other || [];
+  const added = Object.keys(draft).filter((k) => k.startsWith('new:'));
+  return (
+    <details className="oss-card oss-other">
+      <summary><b>Other settings</b> <span className="mut">· {other.length} saved · advanced</span></summary>
+      <p className="mut oss-small">Settings this store has that aren’t in the forms above. SEO, the company GSTIN and the pickup schedule are edited on their own pages.</p>
+      {other.length === 0 && added.length === 0 && <p className="mut oss-small">Nothing else is saved for this store.</p>}
+      <div className="oss-grid">
+        {other.map((o) => (
+          <div key={o.key} className={`oss-field${errors[o.key] ? ' is-bad' : ''}`}>
+            <label htmlFor={`of-${o.key}`}>{o.label || <span className="oss-mono">{o.key}</span>}</label>
+            {o.secret ? (
+              <input id={`of-${o.key}`} readOnly value={o.value} className="oss-masked" />
+            ) : (
+              <input id={`of-${o.key}`} value={draft[o.key] ?? o.value} onChange={(e) => setDraft((d) => ({ ...d, [o.key]: e.target.value }))} disabled={removed.has(o.key)} />
+            )}
+            <small>
+              {errors[o.key] || (o.label ? <span className="oss-mono">{o.key}</span> : o.description) || ''}
+              {' '}
+              {removed.has(o.key)
+                ? <button type="button" className="oss-link" onClick={() => setRemoved((s) => { const n = new Set(s); n.delete(o.key); return n; })}>Keep it</button>
+                : <button type="button" className="oss-link" onClick={() => setConfirmKey(o.key)}>Remove</button>}
+            </small>
+            {confirmKey === o.key && (
+              <ConfirmBar message={<>Remove <b>{o.key}</b> when you save? The backend falls back to its default.</>} confirmLabel="Remove" cancelLabel="Keep"
+                onCancel={() => setConfirmKey(null)} onConfirm={() => { setRemoved((s) => new Set(s).add(o.key)); setConfirmKey(null); }} />
+            )}
+          </div>
+        ))}
+        {added.map((k) => (
+          <div key={k} className="oss-field">
+            <label><span className="oss-mono">{k.slice(4)}</span> <StatusPill tone="progress" size="sm">new</StatusPill></label>
+            <input value={draft[k]} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} />
+            <small><button type="button" className="oss-link" onClick={() => setDraft((d) => { const n = { ...d }; delete n[k]; return n; })}>Don’t add</button></small>
+          </div>
+        ))}
+      </div>
+      {adding ? (
+        <div className="oss-inline oss-add">
+          <input value={newKey} onChange={(e) => setNewKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))} placeholder="KEY, e.g. GTM_ID" aria-label="New setting key" className="oss-mono" />
+          <input value={newVal} onChange={(e) => setNewVal(e.target.value)} placeholder="Value" aria-label="New setting value" />
+          <button type="button" className="oss-btn oss-btn--sm" disabled={!newKey || other.some((o) => o.key === newKey) || (form?.fields || []).some((f) => f.key === newKey)}
+            onClick={() => { setDraft((d) => ({ ...d, [`new:${newKey}`]: newVal })); setNewKey(''); setNewVal(''); setAdding(false); }}>Add</button>
+          <button type="button" className="oss-btn oss-btn--sm oss-btn--quiet" onClick={() => setAdding(false)}>Cancel</button>
+        </div>
+      ) : (
+        <button type="button" className="oss-btn oss-btn--sm" onClick={() => setAdding(true)}>+ Add a setting</button>
+      )}
+    </details>
+  );
+}
+
+// ── Recent changes ─────────────────────────────────────────────────────────
+function RecentChanges({ brandId, initial }) {
+  // page 0 = the latest 8 that came with the form; "Show older" pages through 20 at a time.
+  const [rows, setRows] = useState(initial || []);
+  const [page, setPage] = useState(0);
+  const [more, setMore] = useState((initial || []).length >= 8);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => { setRows(initial || []); setPage(0); setMore((initial || []).length >= 8); }, [initial]);
+  const loadMore = async () => {
+    setLoading(true);
+    try {
+      const next = page + 1;
+      const list = (await brandSettingsService.getAudit(brandId, next))?.rows || [];
+      setRows((prev) => (next === 1 ? list : [...prev, ...list]));
+      setPage(next);
+      setMore(list.length >= 20);
+    } catch (e) { showError('auditFailed', e?.message || 'Couldn’t load older changes.'); }
+    finally { setLoading(false); }
+  };
+  if (!rows.length) return <p className="mut oss-small">No changes recorded yet. Every save from now on is logged with who made it.</p>;
+  return (
+    <>
+      <ul className="oss-audit">
+        {rows.map((r) => (
+          <li key={r.id}>
+            <span className="mut oss-nowrap">{fmtWhen(r.created_at)}</span>
+            <span><b>{r.user_name || 'Someone'}</b> {r.action === 'delete' ? 'removed' : r.action === 'create' ? 'set' : 'changed'} <span className="oss-mono">{r.setting_key}</span>
+              {r.action !== 'delete' && r.new_value != null && <> to <q>{r.new_value}</q></>}
+              {r.action === 'update' && r.old_value != null && <span className="mut"> (was <q>{r.old_value}</q>)</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {more && <button type="button" className="oss-btn oss-btn--sm oss-btn--quiet" disabled={loading} onClick={loadMore}>{loading ? 'Loading…' : 'Show older changes'}</button>}
+    </>
+  );
+}
 
 export function BrandManager() {
   const queryClient = useQueryClient();
-  const [confirmState, setConfirmState] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingBrand, setEditingBrand] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [expanded, setExpanded] = useState(null);   // brand id whose settings are open
-  const [openCat, setOpenCat] = useState(null);     // "<brandId>:<category>" of the open category card
-  const [draft, setDraft] = useState({});           // `${brandId}:${key}` -> value being edited
-  const [savingKey, setSavingKey] = useState(null);
-  const [addRowFor, setAddRowFor] = useState(null); // brand id showing the add-setting row
-  const [capi, setCapi] = useState({});             // brandId -> { loading, testing, status, result, error }
+  const { isAdmin } = useAuth();
+  const [selectedId, setSelectedId] = useState(null);
+  const [tab, setTab] = useState('store');
+  const [draft, setDraft] = useState({});           // settings KEY -> value (and 'new:KEY' for added "other" keys)
+  const [brandDraft, setBrandDraft] = useState({}); // brand record field -> value
+  const [secrets, setSecrets] = useState({});       // KEY -> 'replace' | 'remove'
+  const [removed, setRemoved] = useState(new Set()); // "other" keys to remove
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [confirm, setConfirm] = useState(null);     // 'delete' | 'discard:<id>'
+  const [creating, setCreating] = useState(false);
+  const [newBrand, setNewBrand] = useState(NEW_BRAND);
+  const [newErrors, setNewErrors] = useState({});
 
-  const brandSlug = (brand) => (brand.slug || brand.name || '').toLowerCase();
+  // Brand list: admins get health from the settings overview; others the plain list.
+  const listQuery = useQuery({
+    queryKey: isAdmin ? ['brandSettingsOverview'] : queryKeys.brandsAdmin,
+    queryFn: async () => {
+      if (isAdmin) return (await brandSettingsService.getOverview()).brands || [];
+      const r = await brandService.getAllBrands(true);
+      return r?.success ? r.data : [];
+    },
+    staleTime: 30 * 1000,
+  });
+  const brands = listQuery.data || [];
+  const brand = brands.find((b) => b.id === selectedId) || brands[0] || null;
+  useEffect(() => { if (!selectedId && brands[0]) setSelectedId(brands[0].id); }, [brands, selectedId]);
 
-  const loadCapiStatus = async (brand) => {
-    setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: true, error: null } }));
+  const formQuery = useQuery({
+    queryKey: ['brandSettingsForm', brand?.id],
+    queryFn: () => brandSettingsService.getForm(brand.id),
+    enabled: !!brand && isAdmin,
+    staleTime: 30 * 1000,
+  });
+  const form = formQuery.data;
+  const sections = isAdmin ? (form?.sections || TABS_FALLBACK) : TABS_FALLBACK;
+  const warnings = isAdmin ? (form?.warnings || brand?.warnings || []) : [];
+  const fieldsByTab = useMemo(() => {
+    const m = {};
+    for (const f of form?.fields || []) (m[f.tab] = m[f.tab] || []).push(f);
+    return m;
+  }, [form]);
+  const brandRecord = form?.brand || brand || {};
+
+  const resetDrafts = () => { setDraft({}); setBrandDraft({}); setSecrets({}); setRemoved(new Set()); setErrors({}); };
+  const dirtyCount = Object.keys(draft).length + Object.keys(brandDraft).length
+    + Object.values(secrets).filter((v) => v === 'remove').length + removed.size;
+
+  const pickBrand = (id) => {
+    if (id === brand?.id) return;
+    if (dirtyCount) { setConfirm(`discard:${id}`); return; }
+    resetDrafts(); setConfirm(null); setSelectedId(id);
+  };
+
+  const fieldValue = (f) => (f.key in draft ? draft[f.key] : (f.source === 'brand' ? f.value : ''));
+  const setField = (key, v) => {
+    setDraft((d) => ({ ...d, [key]: v }));
+    setErrors((e) => { if (!e[key]) return e; const n = { ...e }; delete n[key]; return n; });
+  };
+  const brandValue = (k) => (k in brandDraft ? brandDraft[k] : (brandRecord[k] ?? ''));
+  const setBrandField = (k, v) => {
+    setBrandDraft((d) => ({ ...d, [k]: v }));
+    setErrors((e) => { if (!e[`brand.${k}`]) return e; const n = { ...e }; delete n[`brand.${k}`]; return n; });
+  };
+
+  const save = async () => {
+    // Client-side checks first.
+    const errs = {};
+    const values = {};
+    for (const [k, v] of Object.entries(draft)) {
+      const key = k.startsWith('new:') ? k.slice(4) : k;
+      const f = (form?.fields || []).find((x) => x.key === key);
+      if (f?.secret && !String(v).trim()) continue; // "Replace" opened but left empty = keep
+      const err = f ? check(f, v) : null;
+      if (err) errs[key] = err; else values[key] = v;
+    }
+    const brandIn = {};
+    for (const [k, v] of Object.entries(brandDraft)) {
+      const f = BRAND_FIELDS.find((x) => x.key === k);
+      const err = f ? check(f, v) : null;
+      if (err) errs[`brand.${k}`] = err; else brandIn[k] = v;
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length) { showError('fixFields', 'Some fields need fixing — they’re marked in orange.'); return; }
+    const remove = [...removed, ...Object.entries(secrets).filter(([, s]) => s === 'remove').map(([k]) => k)];
+
+    setSaving(true);
     try {
-      const status = await facebookCapiService.getStatus(brandSlug(brand));
-      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: false, status } }));
+      if (isAdmin) {
+        const res = await brandSettingsService.saveForm(brand.id, { values, remove, brand: Object.keys(brandIn).length ? brandIn : undefined });
+        queryClient.setQueryData(['brandSettingsForm', brand.id], res);
+      } else {
+        await brandService.updateBrand(brand.id, { ...brandIn, ...(brandIn.domain !== undefined ? { domain: cleanHost(brandIn.domain) } : {}), slug: brand.slug });
+      }
+      resetDrafts();
+      showSuccess('brandSaved', `Saved ${brandLabel(brandRecord)}`);
+      queryClient.invalidateQueries({ queryKey: isAdmin ? ['brandSettingsOverview'] : queryKeys.brandsAdmin });
+      if (isAdmin) queryClient.invalidateQueries({ queryKey: queryKeys.brandsAdmin });
     } catch (e) {
-      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), loading: false, error: e?.response?.data?.message || e.message } }));
+      if (e?.errors) setErrors(e.errors);
+      showError('brandSaveFailed', e?.message || 'Couldn’t save — try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const runCapiTest = async (brand) => {
-    setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: true, result: null, error: null } }));
+  const toggleStatus = async () => {
     try {
-      const result = await facebookCapiService.runTest(brandSlug(brand));
-      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: false, result } }));
-      const got = result?.result?.events_received;
-      if (got) showSuccess(`Meta received ${got} event — Conversions API works.`);
-      else showError('Meta did not confirm the event — see the report below.');
-    } catch (e) {
-      setCapi(p => ({ ...p, [brand.id]: { ...(p[brand.id] || {}), testing: false, error: e?.response?.data?.error || e?.response?.data?.message || e.message } }));
-      showError('Test failed — see the report below.');
-    }
+      await brandService.toggleBrandStatus(brand.id);
+      showSuccess('brandStatusUpdated', brand.status === 'active' ? `${brandLabel(brand)} is now hidden from shoppers` : `${brandLabel(brand)} is live again`);
+      queryClient.invalidateQueries({ queryKey: isAdmin ? ['brandSettingsOverview'] : queryKeys.brandsAdmin });
+      queryClient.invalidateQueries({ queryKey: ['brandSettingsForm', brand.id] });
+    } catch (e) { showError('updateFailed', e?.message || 'Couldn’t change the status.'); }
   };
-  const [newSetting, setNewSetting] = useState({ key: '', value: '', category: 'analytics' });
-
-  const { data: brands = [], isLoading: loading } = useQuery({
-    queryKey: queryKeys.brandsAdmin,
-    queryFn: async () => { const r = await brandService.getAllBrands(true); return r.success ? r.data : []; },
-    staleTime: 60 * 1000,
-  });
-
-  const refetchBrands = () => queryClient.invalidateQueries({ queryKey: queryKeys.brandsAdmin });
-  const fetchBrands = refetchBrands;
-
-  const referenceBrand = brands.find(b => b.slug?.toLowerCase() === 'crosscoin' || b.name?.toLowerCase() === 'crosscoin');
-
-  // Settings load ON DEMAND — the initial page load fetches ONLY the brand
-  // list. We then fetch the reference brand's settings (for the canonical key
-  // list) and the currently-expanded brand's settings — never every brand's.
-  const fetchSettings = (id) => brandSettingsService.getAllSettings(id).then(r => r?.success ? (r.data || []) : (Array.isArray(r) ? r : []));
-  const { data: refSettings = [] } = useQuery({
-    queryKey: ['brandSettings', referenceBrand?.id ?? 'none'],
-    enabled: !!referenceBrand?.id && expanded != null,
-    staleTime: 30 * 1000,
-    queryFn: () => fetchSettings(referenceBrand.id),
-  });
-  const { data: expandedSettings = [] } = useQuery({
-    queryKey: ['brandSettings', expanded ?? 'none'],
-    enabled: expanded != null,
-    staleTime: 30 * 1000,
-    queryFn: () => fetchSettings(expanded),
-  });
-  const settingsByBrand = {};
-  if (referenceBrand?.id) settingsByBrand[referenceBrand.id] = refSettings;
-  if (expanded != null) settingsByBrand[expanded] = expandedSettings;
-
-  // Canonical, predefined key list = Crosscoin's settings (minus deprecated
-  // Fship keys). Every brand is filled against this same set of names.
-  const predefinedKeys = referenceBrand
-    ? (settingsByBrand[referenceBrand.id] || [])
-        .filter(s => !IGNORED_KEY.test(s.key) && !SEO_SETTING(s))
-        .map(s => ({ key: s.key, category: s.category || 'general', description: s.description || '' }))
-        .sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.key.localeCompare(b.key))
-    : [];
-
-  const valueMap = (brandId) => new Map((settingsByBrand[brandId] || []).map(s => [s.key, s]));
-  const pendingFor = (brand) => {
-    if (!referenceBrand || predefinedKeys.length === 0 || brand.id === referenceBrand.id) return null;
-    if (!settingsByBrand[brand.id]) return null; // this brand's settings aren't loaded yet (loads on expand)
-    const have = valueMap(brand.id);
-    return predefinedKeys.filter(k => { const s = have.get(k.key); return !s || s.value === '' || s.value == null; }).length;
+  const deleteBrand = async () => {
+    setSaving(true);
+    try {
+      await brandService.deleteBrand(brand.id);
+      showSuccess('brandDeleted', `${brandLabel(brand)} deleted`);
+      setConfirm(null); resetDrafts(); setSelectedId(null);
+      queryClient.invalidateQueries({ queryKey: isAdmin ? ['brandSettingsOverview'] : queryKeys.brandsAdmin });
+    } catch (e) { showError('deleteFailed', e?.message || 'Couldn’t delete the brand.'); }
+    finally { setSaving(false); }
   };
-
-  const cleanDomain = (dom) => (dom || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  const brandUrl = (brand, path) => { const d = cleanDomain(brand.domain); return d ? `https://${d}${path}` : null; };
-  const feedUrl = (brand) => brandUrl(brand, '/google-merchant.xml');
-  // Meta accepts the same product feed, served under a Facebook-friendly URL.
-  const fbFeedUrl = (brand) => brandUrl(brand, '/facebook-catalog.xml');
-  const sitemapUrlOf = (brand) => brandUrl(brand, '/sitemap.xml');
-  const copyText = (t) => { if (!t) return; try { navigator.clipboard?.writeText(t); showSuccess('Copied to clipboard'); } catch { /* ignore */ } };
-
-  // ── Brand CRUD ────────────────────────────────────────────────────
-  const handleInputChange = (e) => { const { name, value, type, checked } = e.target; setFormData(p => ({ ...p, [name]: type === 'checkbox' ? checked : value })); };
-  const handleSubmit = async (e) => {
+  const createBrand = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) { showError('fieldRequired', 'Brand name is required.'); return; }
+    const errs = {};
+    if (!newBrand.name.trim()) errs.name = 'Give the brand a name.';
+    if (newBrand.domain.trim() && RULES.host(newBrand.domain.trim())) errs.domain = RULES.host('');
+    if (newBrand.slug && !/^[a-z0-9-]+$/.test(newBrand.slug)) errs.slug = 'Lowercase letters, numbers and dashes only.';
+    setNewErrors(errs);
+    if (Object.keys(errs).length) return;
     try {
-      if (editingBrand) { await brandService.updateBrand(editingBrand.id, formData); showSuccess('brandUpdated'); }
-      else { await brandService.createBrand(formData); showSuccess('brandCreated'); }
-      resetForm(); fetchBrands();
-    } catch (error) { showError('saveFailed', error.message); }
-  };
-  const handleEdit = (brand) => {
-    setEditingBrand(brand);
-    setFormData({ name: brand.name, slug: brand.slug, display_name: brand.display_name || brand.name, domain: brand.domain || '', logo_url: brand.logo_url || '', primary_color: brand.primary_color || '#4CAF50', secondary_color: brand.secondary_color || '#2196F3', contact_email: brand.contact_email || '', contact_phone: brand.contact_phone || '', status: brand.status || 'active' });
-    setShowForm(true);
-  };
-  const handleDelete = (id) => setConfirmState({ message: 'Delete this brand? This cannot be undone.', onConfirm: async () => {
-    setConfirmState(null);
-    try { await brandService.deleteBrand(id); showSuccess('brandDeleted'); fetchBrands(); } catch { showError('deleteFailed'); }
-  }});
-  const handleToggleStatus = async (id) => { try { await brandService.toggleBrandStatus(id); showSuccess('brandStatusUpdated'); fetchBrands(); } catch { showError('updateFailed'); } };
-  const resetForm = () => { setFormData(EMPTY_FORM); setEditingBrand(null); setShowForm(false); };
-
-  // ── Settings inline save ──────────────────────────────────────────
-  const saveSetting = async (brand, keyObj) => {
-    const dk = `${brand.id}:${keyObj.key}`;
-    const existing = valueMap(brand.id).get(keyObj.key);
-    const value = draft[dk] ?? existing?.value ?? '';
-    setSavingKey(dk);
-    try {
-      if (existing) await brandSettingsService.updateSetting(brand.id, keyObj.key, { value, is_encrypted: existing.is_encrypted });
-      else await brandSettingsService.createSetting({ brand_id: brand.id, key: keyObj.key, value, category: keyObj.category, description: keyObj.description || null, is_encrypted: false });
-      showSuccess('Setting saved');
-      setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
-      queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
-    } catch { showError('Failed to save setting'); }
-    finally { setSavingKey(null); }
+      const r = await brandService.createBrand({ ...newBrand, display_name: newBrand.display_name || newBrand.name, domain: cleanHost(newBrand.domain) || undefined, slug: newBrand.slug || undefined, status: 'active' });
+      showSuccess('brandCreated', `${newBrand.name} added`);
+      setCreating(false); setNewBrand(NEW_BRAND);
+      await queryClient.invalidateQueries({ queryKey: isAdmin ? ['brandSettingsOverview'] : queryKeys.brandsAdmin });
+      if (r?.data?.id) { resetDrafts(); setSelectedId(r.data.id); setTab('store'); }
+    } catch (err) { showError('saveFailed', err?.message || 'Couldn’t add the brand.'); }
   };
 
-  // Add a brand-new custom setting (a key not in the predefined set — e.g.
-  // GTM_ID, GOOGLE_ADS_LABEL_PURCHASE, a new pixel token, etc.).
-  const addCustomSetting = async (brand) => {
-    const key = newSetting.key.trim();
-    if (!key) { showError('Enter a setting key'); return; }
-    setSavingKey(`add:${brand.id}`);
-    try {
-      await brandSettingsService.createSetting({
-        brand_id: brand.id, key, value: newSetting.value.trim(),
-        category: newSetting.category, description: null, is_encrypted: false,
-      });
-      showSuccess('Setting added');
-      setNewSetting({ key: '', value: '', category: 'analytics' });
-      setAddRowFor(null);
-      queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
-    } catch { showError('Failed to add setting'); }
-    finally { setSavingKey(null); }
-  };
-
-  // ── Settings inline delete ────────────────────────────────────────
-  // Lets an admin remove a stored setting entirely (e.g. the GA4 service
-  // account keys they no longer want kept). Only offered when a value
-  // actually exists for the key.
-  const deleteSetting = (brand, keyObj) => {
-    const existing = valueMap(brand.id).get(keyObj.key);
-    if (!existing) return;
-    setConfirmState({
-      message: `Delete the setting "${keyObj.key}" for ${brand.display_name || brand.name}? Its stored value will be removed.`,
-      onConfirm: async () => {
-        setConfirmState(null);
-        const dk = `${brand.id}:${keyObj.key}`;
-        setSavingKey(dk);
-        try {
-          await brandSettingsService.deleteSetting(brand.id, keyObj.key);
-          showSuccess('Setting deleted');
-          setDraft(p => { const n = { ...p }; delete n[dk]; return n; });
-          queryClient.invalidateQueries({ queryKey: ['brandSettings'] });
-        } catch { showError('Failed to delete setting'); }
-        finally { setSavingKey(null); }
-      },
-    });
-  };
-
-  const filteredBrands = brands.filter(b =>
-    b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (b.domain && b.domain.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const copy = (t) => { try { navigator.clipboard?.writeText(t); showSuccess('copied', 'Copied'); } catch { /* clipboard blocked */ } };
+  const host = cleanHost(brandRecord.domain);
+  const tabWarn = (k) => warnings.filter((w) => w.tab === k);
+  const section = sections.find((s) => s.key === tab) || sections[0];
+  const tabFields = fieldsByTab[section.key] || [];
+  const groups = [];
+  for (const f of tabFields) {
+    const g = f.group || '';
+    let entry = groups.find((x) => x.name === g);
+    if (!entry) groups.push(entry = { name: g, fields: [] });
+    entry.fields.push(f);
+  }
+  const warnFor = (key) => warnings.find((w) => w.field === key)?.text;
 
   return (
-    <>
-    <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
-    <div className="dashboard-page">
+    <div className="dashboard-sections obz-rep oss">
       <PageHeader
-        title="Brands & Settings"
-        subtitle={`${brands.length} brand${brands.length !== 1 ? 's' : ''} · ${predefinedKeys.length} predefined settings`}
-        actions={<Button variant="primary" onClick={() => setShowForm(true)}>+ Add Brand</Button>}
+        title="Brands"
+        description="Each store’s name, contact, tax and keys — plain forms instead of key = value lists."
+        actions={<button type="button" className="oss-btn oss-btn--main" onClick={() => setCreating((v) => !v)}>{creating ? 'Close' : '+ Add brand'}</button>}
       />
 
-      <StatGrid>
-        <StatTile label="Total brands" value={brands.length} />
-        <StatTile label="Active" value={brands.filter(b => b.status === 'active').length} />
-        <StatTile label="Inactive" value={brands.filter(b => b.status !== 'active').length} />
-      </StatGrid>
-
-      <Panel style={{ marginBottom: 16 }}>
-        <FilterBar search={searchQuery} onSearchChange={setSearchQuery} placeholder="Search brands by name, slug, or domain…" />
-      </Panel>
-
-      {/* Add/Edit Brand Modal */}
-      <Modal isOpen={showForm} onClose={resetForm} title={editingBrand ? 'Edit Brand' : 'Add New Brand'}>
-        <form onSubmit={handleSubmit} className="seo-form">
-          <div className="modal-body">
-            <div className="dm-2col">
-              <Input label="Brand Name" required type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g., CrossCoin" />
-              <Input label="Display Name" required type="text" name="display_name" value={formData.display_name} onChange={handleInputChange} placeholder="e.g., CrossCoin Store" />
-              <Input label="Slug" type="text" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="e.g., crosscoin" />
-              <Input label="Domain" type="text" name="domain" value={formData.domain} onChange={handleInputChange} placeholder="e.g., crosscoin.in" />
-              <Input label="Contact Email" type="email" name="contact_email" value={formData.contact_email} onChange={handleInputChange} placeholder="contact@example.com" />
-              <Input label="Contact Phone" type="tel" name="contact_phone" value={formData.contact_phone} onChange={handleInputChange} placeholder="+1234567890" />
-            </div>
-            {formData.domain?.trim() && (
-              <div className="dm-field">
-                <label className="dm-label">Sitemap URL <span style={{ fontWeight: 400, color: 'var(--ds-color-text-muted)' }}>— submit this in Google Search Console</span></label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="dm-input" readOnly value={`https://${cleanDomain(formData.domain)}/sitemap.xml`} style={{ flex: 1 }} onFocus={(e) => e.target.select()} />
-                  <Button type="button" variant="secondary" onClick={() => copyText(`https://${cleanDomain(formData.domain)}/sitemap.xml`)}>Copy</Button>
-                </div>
+      {creating && (
+        <form className="oss-card oss-create" onSubmit={createBrand}>
+          <b className="oss-h2">New brand</b>
+          <div className="oss-grid">
+            {[['name', 'Brand name', 'e.g. Soxbae'], ['display_name', 'Store name shoppers see', 'Empty = brand name'], ['domain', 'Website address', 'e.g. soxbaesocks.com'], ['slug', 'Short code', 'Empty = made from the name. The storefront uses it to find its brand.']].map(([k, label, hint]) => (
+              <div key={k} className={`oss-field${newErrors[k] ? ' is-bad' : ''}`}>
+                <label htmlFor={`nb-${k}`}>{label}</label>
+                <input id={`nb-${k}`} value={newBrand[k]} onChange={(e) => setNewBrand((b) => ({ ...b, [k]: e.target.value }))} />
+                <small>{newErrors[k] || hint}</small>
               </div>
-            )}
-            <Input label="Logo URL" type="text" name="logo_url" value={formData.logo_url} onChange={handleInputChange} placeholder="https://example.com/logo.png" />
-            <div className="dm-field"><label className="dm-label">Status</label>
-              <Dropdown value={formData.status} onChange={val => handleInputChange({ target: { name: 'status', value: val } })} options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
-            </div>
-            <div className="dm-section-title">Brand Colors</div>
-            <div className="dm-color-row">
-              <div className="dm-field"><label className="dm-label">Primary Color</label><div className="dm-color-input-wrap"><input type="color" name="primary_color" value={formData.primary_color} onChange={handleInputChange} className="dm-color-picker" /><input type="text" value={formData.primary_color} onChange={e => setFormData(p => ({ ...p, primary_color: e.target.value }))} className="dm-color-text" placeholder="#4CAF50" /></div></div>
-              <div className="dm-field"><label className="dm-label">Secondary Color</label><div className="dm-color-input-wrap"><input type="color" name="secondary_color" value={formData.secondary_color} onChange={handleInputChange} className="dm-color-picker" /><input type="text" value={formData.secondary_color} onChange={e => setFormData(p => ({ ...p, secondary_color: e.target.value }))} className="dm-color-text" placeholder="#2196F3" /></div></div>
-            </div>
+            ))}
           </div>
-          <div className="modal-footer"><Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button><Button type="submit" variant="primary">{editingBrand ? 'Update Brand' : 'Create Brand'}</Button></div>
+          <div className="oss-row-end">
+            <button type="button" className="oss-btn oss-btn--quiet" onClick={() => setCreating(false)}>Cancel</button>
+            <button type="submit" className="oss-btn oss-btn--main">Add brand</button>
+          </div>
         </form>
-      </Modal>
+      )}
 
-      {/* Combined Brands + Settings table */}
-      {loading ? (
-        <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
-      ) : filteredBrands.length === 0 ? (
-        <EmptyState icon={IC.brand} title={searchQuery ? 'No brands match your search' : 'No brands yet'} message={searchQuery ? 'Try a different search term.' : 'Add your first brand to start selling under it.'} action={!searchQuery && <Button variant="primary" onClick={() => setShowForm(true)}>+ Add Brand</Button>} />
+      {listQuery.isLoading ? (
+        <SkeletonRows rows={6} label="Loading brands…" />
+      ) : listQuery.error && !brands.length ? (
+        <ErrorState message={`Couldn’t load brands — ${listQuery.error?.message || 'the server didn’t answer'}.`} onRetry={listQuery.refetch} retrying={listQuery.isFetching} />
+      ) : !brand ? (
+        <EmptyState title="No brands yet" description="Add your first brand to start selling under it." action={<button type="button" className="oss-btn oss-btn--main" onClick={() => setCreating(true)}>+ Add brand</button>} />
       ) : (
-        <Panel style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ ...th, width: 32 }} />
-                  <th style={th}>Brand</th>
-                  <th style={th}>Domain</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Settings</th>
-                  <th style={th}>Feeds</th>
-                  <th style={{ ...th, textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBrands.map(brand => {
-                  const pending = pendingFor(brand);
-                  const isOpen = expanded === brand.id;
-                  const url = feedUrl(brand);
-                  // Settings this brand has that aren't in the predefined set (custom-added keys).
-                  const extraSettings = (settingsByBrand[brand.id] || [])
-                    .filter(s => !IGNORED_KEY.test(s.key) && !SEO_SETTING(s) && !predefinedKeys.some(k => k.key === s.key))
-                    .sort((a, b) => a.key.localeCompare(b.key));
-                  // Drill-down: group this brand's settings by category into cards;
-                  // one category opens at a time (openName). 'meta' is a virtual
-                  // card for the Conversions API test.
-                  const vmap = valueMap(brand.id);
-                  const isSet = (key) => { const s = vmap.get(key); return !!(s && s.value !== '' && s.value != null); };
-                  const settingRows = [
-                    ...predefinedKeys.map(k => ({ key: k.key, category: k.category || 'general', description: k.description || '', custom: false })),
-                    ...extraSettings.map(s => ({ key: s.key, category: s.category || 'general', description: s.description || '', custom: true })),
-                  ];
-                  const byCat = {};
-                  for (const r of settingRows) (byCat[r.category] = byCat[r.category] || []).push(r);
-                  const cats = Object.keys(byCat).sort((a, b) => catLabel(a).localeCompare(catLabel(b)));
-                  const openName = (openCat && openCat.startsWith(brand.id + ':')) ? openCat.slice(String(brand.id).length + 1) : null;
-                  const toggleCat = (cat) => setOpenCat(openName === cat ? null : `${brand.id}:${cat}`);
-                  return (
-                    <React.Fragment key={brand.id}>
-                      <tr style={{ cursor: 'pointer', background: isOpen ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)' }} onClick={() => { setExpanded(isOpen ? null : brand.id); setOpenCat(null); }}>
-                        <td style={{ ...cell, textAlign: 'center' }}><span style={{ display: 'inline-flex', width: 16, height: 16, color: 'var(--ds-color-text-faint)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>{IC.chevron}</span></td>
-                        <td style={cell}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                            <BrandFavicon brand={brand} />
-                            <div><div style={{ fontWeight: 600, fontSize: 13.5 }}>{brand.display_name || brand.name}</div><div style={{ fontSize: 11, color: 'var(--ds-color-text-faint)', fontFamily: 'var(--ds-font-mono, monospace)' }}>{brand.slug}</div></div>
-                          </div>
-                        </td>
-                        <td style={{ ...cell, color: 'var(--ds-color-text-muted)', fontFamily: 'var(--ds-font-mono, monospace)', fontSize: 12 }}>{brand.domain || '—'}</td>
-                        <td style={cell}><span className={`sl-status-badge sl-status-${brand.status}`}>{brand.status}</span></td>
-                        <td style={cell}>
-                          {pending === null ? (
-                            <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>{isOpen ? 'Loading…' : '—'}</span>
-                          ) : (
-                            <div style={{ minWidth: 128 }}>
-                              <div style={{ fontSize: 11, color: 'var(--ds-color-text-muted)', fontWeight: 600, marginBottom: 5, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                                <span>{pending === 0 ? 'All set' : 'Filled'}</span>
-                                <b style={{ color: 'var(--ds-color-text)', fontVariantNumeric: 'tabular-nums' }}>{predefinedKeys.length - pending}/{predefinedKeys.length}</b>
-                              </div>
-                              <div style={{ height: 5, borderRadius: 99, background: 'var(--ds-color-border)', overflow: 'hidden' }}>
-                                <span style={{ display: 'block', height: '100%', width: `${predefinedKeys.length ? Math.round((predefinedKeys.length - pending) / predefinedKeys.length * 100) : 0}%`, background: 'var(--ds-color-brand)', borderRadius: 99 }} />
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td style={cell} onClick={(e) => e.stopPropagation()}>
-                          {url ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                              <button type="button" onClick={() => copyText(url)} title="Copy Google product feed URL" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Google</button>
-                              <button type="button" onClick={() => copyText(fbFeedUrl(brand))} title="Copy Facebook/Meta catalog feed URL (same product data, Meta-friendly URL)" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Facebook</button>
-                              <button type="button" onClick={() => copyText(sitemapUrlOf(brand))} title="Copy sitemap URL (for Search Console)" style={feedChip}><span style={{ width: 12, height: 12 }}>{IC.copy}</span> Sitemap</button>
-                            </div>
-                          ) : <span style={{ color: 'var(--ds-color-text-faint)', fontStyle: 'italic', fontSize: 12 }}>add domain</span>}
-                        </td>
-                        <td style={{ ...cell, textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                          <div className="sl-actions" style={{ justifyContent: 'flex-end' }}>
-                            <button className={`sl-btn-toggle ${brand.status === 'active' ? 'active' : ''}`} title={brand.status === 'active' ? 'Active' : 'Inactive'} onClick={() => handleToggleStatus(brand.id)}>{brand.status === 'active' ? IC.toggle : IC.toggleOff}</button>
-                            <button className="sl-btn-edit" title="Edit brand" onClick={() => handleEdit(brand)}>{IC.edit}</button>
-                            <button className="sl-btn-delete" title="Delete brand" onClick={() => handleDelete(brand.id)}>{IC.trash}</button>
-                          </div>
-                        </td>
-                      </tr>
+        <div className="oss-split">
+          <nav aria-label="Brands" className="oss-card oss-brandlist">
+            {brands.map((b) => {
+              const n = b.warnings?.length || 0;
+              return (
+                <button key={b.id} type="button" aria-current={b.id === brand.id ? 'true' : undefined} className={`oss-brand${b.id === brand.id ? ' is-on' : ''}`} onClick={() => pickBrand(b.id)}>
+                  <span className="oss-brand-name">{brandLabel(b)}{b.status !== 'active' && <span className="mut"> · hidden</span>}</span>
+                  {isAdmin && <span className={`oss-dot ${n ? 'is-warn' : 'is-ok'}`} title={n ? `${n} thing${n === 1 ? '' : 's'} need attention` : 'All set'} aria-label={n ? `${n} warnings` : 'All set'} />}
+                </button>
+              );
+            })}
+          </nav>
 
-                      {isOpen && (
-                        <tr>
-                          <td colSpan={7} style={{ padding: 0, background: 'var(--ds-color-surface-soft)', borderBottom: '2px solid var(--ds-color-border)' }}>
-                            <div style={{ padding: '10px 16px 16px' }}>
-                              <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', margin: '4px 2px 8px', fontWeight: 600 }}>
-                                {`Settings for ${brand.display_name || brand.name}. Keys are fixed; only values are added.`}
-                              </div>
-                              {settingRows.length === 0 ? (
-                                <div style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, padding: 8 }}>No predefined keys yet — add settings to Crosscoin first.</div>
-                              ) : (
-                                <>
-                                  {/* Category cards — click one to edit only its fields */}
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-                                    {cats.map(cat => {
-                                      const total = byCat[cat].length;
-                                      const setN = byCat[cat].filter(r => isSet(r.key)).length;
-                                      const on = openName === cat;
-                                      return (
-                                        <button key={cat} type="button" onClick={() => toggleCat(cat)}
-                                          style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 13, borderRadius: 10,
-                                            background: on ? 'var(--ds-color-brand-soft)' : 'var(--ds-color-surface)',
-                                            border: `1px solid ${on ? 'var(--ds-color-brand)' : 'var(--ds-color-border)'}` }}>
-                                          <span style={{ display: 'inline-flex', color: 'var(--ds-color-text)' }}>{catIcon(cat)}</span>
-                                          <div style={{ fontWeight: 700, fontSize: 13, marginTop: 7 }}>{catLabel(cat)}</div>
-                                          <div style={{ fontSize: 11, fontWeight: 700, marginTop: 5, color: setN === total ? 'var(--ds-color-success, #16a34a)' : 'var(--ds-color-text-muted)' }}>{setN} / {total} set</div>
-                                        </button>
-                                      );
-                                    })}
-                                    {/* Meta Conversions API — virtual category card */}
-                                    <button type="button" onClick={() => toggleCat('meta')}
-                                      style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 13, borderRadius: 10,
-                                        background: openName === 'meta' ? 'var(--ds-color-brand-soft)' : 'var(--ds-color-surface)',
-                                        border: `1px solid ${openName === 'meta' ? 'var(--ds-color-brand)' : 'var(--ds-color-border)'}` }}>
-                                      <span style={{ display: 'inline-flex', color: 'var(--ds-color-text)' }}><HugeiconsIcon icon={MetaIcon} size={20} strokeWidth={1.9} /></span>
-                                      <div style={{ fontWeight: 700, fontSize: 13, marginTop: 7 }}>Meta CAPI</div>
-                                      <div style={{ fontSize: 11, fontWeight: 600, marginTop: 5, color: 'var(--ds-color-text-muted)' }}>Conversions API test</div>
-                                    </button>
-                                  </div>
+          <div className="oss-main">
+            {confirm?.startsWith('discard:') && (
+              <ConfirmBar
+                message={<>You have {dirtyCount} unsaved change{dirtyCount === 1 ? '' : 's'} for <b>{brandLabel(brandRecord)}</b>. Switch brand and lose them?</>}
+                confirmLabel="Discard changes" cancelLabel="Keep editing"
+                onCancel={() => setConfirm(null)}
+                onConfirm={() => { const id = Number(confirm.slice(8)); resetDrafts(); setConfirm(null); setSelectedId(id); }}
+              />
+            )}
 
-                                  {/* Open category → only its fields */}
-                                  {openName && openName !== 'meta' && byCat[openName] && (
-                                    <div style={{ marginTop: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: 16 }}>
-                                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>{catIcon(openName, 16)} {catLabel(openName)}</div>
-                                      {byCat[openName].map(r => {
-                                        const s = vmap.get(r.key);
-                                        const dk = `${brand.id}:${r.key}`;
-                                        const val = draft[dk] ?? s?.value ?? '';
-                                        const keyObj = { key: r.key, category: r.category, description: r.description };
-                                        return (
-                                          <div key={r.key} style={{ marginBottom: 14 }}>
-                                            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
-                                              <span style={{ fontFamily: 'monospace' }}>{r.key}</span>
-                                              {r.custom && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, background: 'var(--ds-color-surface-soft)', borderRadius: 4, padding: '1px 5px' }}>custom</span>}
-                                              {!isSet(r.key) && <span style={{ marginLeft: 6, width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-text-faint)', display: 'inline-block', verticalAlign: 'middle' }} title="Not set" />}
-                                            </label>
-                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                              <input className="dm-input" style={{ flex: 1, fontSize: 13 }} value={val} placeholder={r.description || 'Enter value…'} onChange={e => setDraft(p => ({ ...p, [dk]: e.target.value }))} />
-                                              <button className="sl-btn-edit" title="Save value" disabled={savingKey === dk} onClick={() => saveSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.save}</span></button>
-                                              {s && <button className="sl-btn-delete" title="Delete setting" disabled={savingKey === dk} onClick={() => deleteSetting(brand, keyObj)}><span style={{ width: 16, height: 16, display: 'inline-block' }}>{IC.trash}</span></button>}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </>
-                              )}
+            <div className="oss-brandhead">
+              <div>
+                <b className="oss-h1">{brandLabel(brandRecord)}</b>
+                <span className="mut oss-small">{host || 'no website address'} · code <span className="oss-mono">{brandRecord.slug}</span></span>
+              </div>
+              <div className="oss-inline">
+                <StatusPill tone={brand.status === 'active' ? 'done' : 'neutral'} dot>{brand.status === 'active' ? 'Live' : 'Hidden'}</StatusPill>
+                <button type="button" className="oss-btn oss-btn--sm" onClick={toggleStatus}>{brand.status === 'active' ? 'Hide store' : 'Make live'}</button>
+                <button type="button" className="oss-btn oss-btn--sm oss-btn--danger" onClick={() => setConfirm('delete')}>Delete</button>
+              </div>
+            </div>
+            {confirm === 'delete' && (
+              <ConfirmBar
+                message={<>Delete <b>{brandLabel(brand)}</b>? Its settings and delivery fees are removed too. This can’t be undone — hiding the store is usually enough.</>}
+                confirmLabel="Delete brand" cancelLabel="Keep" busy={saving}
+                onCancel={() => setConfirm(null)} onConfirm={deleteBrand}
+              />
+            )}
 
-                              {/* Add a custom setting (a key beyond the predefined set) */}
-                              <div style={{ marginTop: 12 }}>
-                                {addRowFor === brand.id ? (
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 10 }}>
-                                    <input className="dm-input" style={{ flex: '1 1 200px', fontSize: 13, fontFamily: 'monospace' }} placeholder="KEY — e.g. GTM_ID" value={newSetting.key} onChange={e => setNewSetting(p => ({ ...p, key: e.target.value }))} />
-                                    <div style={{ flex: '0 0 150px' }}>
-                                      <Dropdown value={newSetting.category} onChange={val => setNewSetting(p => ({ ...p, category: val }))} options={[{ value: 'analytics', label: 'Analytics' }, { value: 'general', label: 'General' }, { value: 'payment', label: 'Payment' }, { value: 'shipping', label: 'Shipping' }, { value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }, { value: 'social', label: 'Social' }, { value: 'security', label: 'Security' }, { value: 'api', label: 'API Keys' }]} />
-                                    </div>
-                                    <input className="dm-input" style={{ flex: '2 1 220px', fontSize: 13 }} placeholder="Value" value={newSetting.value} onChange={e => setNewSetting(p => ({ ...p, value: e.target.value }))} />
-                                    <Button type="button" variant="primary" disabled={savingKey === `add:${brand.id}`} onClick={() => addCustomSetting(brand)}>Save</Button>
-                                    <Button type="button" variant="secondary" onClick={() => { setAddRowFor(null); setNewSetting({ key: '', value: '', category: 'analytics' }); }}>Cancel</Button>
-                                  </div>
-                                ) : (
-                                  <Button type="button" variant="secondary" onClick={() => { setAddRowFor(brand.id); setNewSetting({ key: '', value: '', category: 'analytics' }); }}>+ Add setting</Button>
-                                )}
-                              </div>
+            <div role="tablist" aria-label="Section" className="oss-tabs">
+              {sections.map((s) => {
+                const n = tabWarn(s.key).length;
+                return (
+                  <button key={s.key} type="button" role="tab" aria-selected={section.key === s.key} className={`oss-tab${section.key === s.key ? ' is-on' : ''}`} onClick={() => setTab(s.key)}>
+                    {s.title}{n > 0 && <span className="oss-tabwarn" aria-label={`${n} warning${n === 1 ? '' : 's'}`}>!</span>}
+                  </button>
+                );
+              })}
+            </div>
 
-                              {/* Conversions API (Meta) — opens only from the Meta card above */}
-                              {openName === 'meta' && (
-                              <div style={{ marginTop: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: 16 }}>
-                                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: 13, fontWeight: 700 }}>Conversions API (Meta)</span>
-                                  <Button type="button" variant="secondary" disabled={capi[brand.id]?.loading} onClick={() => loadCapiStatus(brand)}>
-                                    {capi[brand.id]?.loading ? 'Checking…' : 'Check status'}
-                                  </Button>
-                                  <Button type="button" variant="primary" disabled={capi[brand.id]?.testing} onClick={() => runCapiTest(brand)}>
-                                    {capi[brand.id]?.testing ? 'Sending…' : 'Send test event'}
-                                  </Button>
-                                </div>
+            <section className="oss-card oss-section" aria-label={section.title}>
+              <div className="oss-section-head">
+                <b className="oss-h2">{section.title}</b>
+                <span className="mut oss-small">{section.help}</span>
+              </div>
 
-                                {capi[brand.id]?.status && (
-                                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', marginTop: 8 }}>
-                                    Pixel: <b>{capi[brand.id].status.pixel_id || '—'}</b> · Token:{' '}
-                                    <b style={{ color: capi[brand.id].status.access_token_set ? '#16a34a' : '#dc2626' }}>
-                                      {capi[brand.id].status.access_token_set ? 'set ✓' : 'NOT set ✗'}
-                                    </b>
-                                    {capi[brand.id].status.test_event_code ? <> · Test code: <b>{capi[brand.id].status.test_event_code}</b></> : null}
-                                  </div>
-                                )}
+              {isAdmin && formQuery.isLoading ? (
+                <SkeletonRows rows={4} label="Loading settings…" />
+              ) : isAdmin && formQuery.error && !form ? (
+                <ErrorState message={`Couldn’t load this brand’s settings — ${formQuery.error?.message || 'the server didn’t answer'}.`} onRetry={formQuery.refetch} retrying={formQuery.isFetching} />
+              ) : (
+                <>
+                  {tabWarn(section.key).length > 0 && (
+                    <ul className="oss-warnings">
+                      {tabWarn(section.key).map((w) => <li key={w.text}>{w.text}</li>)}
+                    </ul>
+                  )}
 
-                                {capi[brand.id]?.result && (
-                                  <div style={{ marginTop: 8, fontSize: 12, background: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', borderRadius: 8, padding: 10 }}>
-                                    {capi[brand.id].result?.result?.events_received ? (
-                                      <div style={{ color: '#16a34a', fontWeight: 700 }}>✓ Meta received {capi[brand.id].result.result.events_received} event — Conversions API is working.</div>
-                                    ) : (
-                                      <div style={{ color: '#dc2626', fontWeight: 700 }}>✗ Meta did not confirm the event — check the token / details below.</div>
-                                    )}
-                                    <pre style={{ marginTop: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 11, color: 'var(--ds-color-text-muted)', maxHeight: 180, overflow: 'auto', margin: '6px 0 0' }}>
-                                      {JSON.stringify(capi[brand.id].result.result || capi[brand.id].result, null, 2)}
-                                    </pre>
-                                  </div>
-                                )}
-
-                                {capi[brand.id]?.error && (
-                                  <div style={{ marginTop: 8, fontSize: 12, color: '#dc2626' }}>{String(capi[brand.id].error)}</div>
-                                )}
-
-                                <div style={{ fontSize: 11, color: 'var(--ds-color-text-faint, #9ca3af)', marginTop: 6 }}>
-                                  Set <b>FB_ACCESS_TOKEN</b> (and <b>FB_PIXEL_ID</b>) in the Analytics card, then “Send test event”. Add <b>FB_TEST_EVENT_CODE</b> to also see it live in Meta → Events Manager → Test Events.
-                                </div>
-                              </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                  {section.key === 'store' && (
+                    <>
+                      <div className="oss-grid">
+                        {BRAND_FIELDS.map((f) => (
+                          <FieldInput key={f.key} f={{ ...f, hint: (f.key === 'domain' && warnFor('domain')) ? null : f.hint }}
+                            value={brandValue(f.key)} onChange={(v) => setBrandField(f.key, v)} error={errors[`brand.${f.key}`]} />
+                        ))}
+                      </div>
+                      {host && (
+                        <div className="oss-feeds">
+                          <span className="mut oss-small">Links for Google, Meta and Search Console:</span>
+                          {[['Google feed', '/google-merchant.xml'], ['Facebook catalogue', '/facebook-catalog.xml'], ['Sitemap', '/sitemap.xml']].map(([l, p]) => (
+                            <button key={p} type="button" className="oss-btn oss-btn--sm" onClick={() => copy(`https://${host}${p}`)} title={`https://${host}${p}`}>Copy {l} link</button>
+                          ))}
+                        </div>
                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                      {!isAdmin && <p className="mut oss-small">Payment keys, tax, courier and tracking settings can only be changed by an admin.</p>}
+                    </>
+                  )}
+
+                  {groups.map((g) => (
+                    <div key={g.name || 'main'} className="oss-group">
+                      {g.name && <span className="oss-label">{g.name}</span>}
+                      <div className="oss-grid">
+                        {g.fields.map((f) => (
+                          <FieldInput key={f.key} f={f} value={fieldValue(f)} onChange={(v) => setField(f.key, v)}
+                            secretState={secrets[f.key]} error={errors[f.key]}
+                            onSecret={(st) => {
+                              setSecrets((s) => { const n = { ...s }; if (st) n[f.key] = st; else delete n[f.key]; return n; });
+                              if (st !== 'replace') setDraft((d) => { const n = { ...d }; delete n[f.key]; return n; });
+                            }} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="oss-section-foot">
+                    <SectionTest tab={section.key} brand={brandRecord.id ? brandRecord : brand} form={form} />
+                    <span className="oss-inline">
+                      {dirtyCount > 0 && <button type="button" className="oss-btn oss-btn--quiet" onClick={resetDrafts} disabled={saving}>Undo changes</button>}
+                      <button type="button" className="oss-btn oss-btn--main" onClick={save} disabled={saving || !dirtyCount}>
+                        {saving ? 'Saving…' : dirtyCount ? `Save ${dirtyCount} change${dirtyCount === 1 ? '' : 's'}` : 'Saved'}
+                      </button>
+                    </span>
+                  </div>
+                </>
+              )}
+            </section>
+
+            {isAdmin && form && (
+              <>
+                <OtherSettings form={form} draft={draft} setDraft={setDraft} removed={removed} setRemoved={setRemoved} errors={errors} />
+                <section className="oss-card">
+                  <b className="oss-h2">Recent changes</b>
+                  <RecentChanges brandId={brand.id} initial={form.audit} />
+                </section>
+              </>
+            )}
+            <span className="mut oss-small">Secret keys are never shown again after saving — only the last 4 characters. Changes are logged with who made them.</span>
           </div>
-        </Panel>
+        </div>
       )}
     </div>
-    </>
   );
 }

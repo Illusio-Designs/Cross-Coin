@@ -177,28 +177,21 @@ async function automationRefs(brands) {
   return refs;
 }
 
-// code -> ["Abandoned-cart WhatsApp", "Win-back WhatsApp · Soxbae", …]
+// (code, home store) -> [{ key, text, enabled }] e.g. "Abandoned-cart WhatsApp",
+// "Win-back WhatsApp · Soxbae". Win-back only counts the row whose home store is
+// that store (what the cron looks up); the others match by code.
 function usedByIndex(refs, brands) {
-  const groups = new Map(); // `${code}|${key}` -> { label, enabled, brandIds }
-  for (const r of refs) {
-    const k = `${r.code}|${r.key}`;
-    if (!groups.has(k)) groups.set(k, { code: r.code, key: r.key, label: r.label, enabled: r.enabled, brandIds: [] });
-    if (r.brandId) groups.get(k).brandIds.push(r.brandId);
-  }
-  const activeCount = [...brands.values()].filter((b) => b.active).length;
-  const out = new Map();
-  for (const g of groups.values()) {
-    let text = g.label;
-    if (g.brandIds.length) {
-      text += g.brandIds.length === activeCount && activeCount > 2 ? ' · every store'
-        : g.brandIds.length > 2 ? ` · ${g.brandIds.length} stores`
-          : ` · ${g.brandIds.map((id) => brands.get(id)?.name || `store ${id}`).join(', ')}`;
+  return (code, homeBrandId) => {
+    const c = String(code).toUpperCase();
+    const out = [];
+    for (const r of refs) {
+      if (r.code !== c) continue;
+      if (r.key === 'win_back' && r.brandId !== Number(homeBrandId)) continue;
+      const text = `${r.label}${r.brandId ? ` · ${brands.get(r.brandId)?.name || `store ${r.brandId}`}` : ''}${r.enabled ? '' : ' (switched off)'}`;
+      out.push({ key: r.key, text, enabled: r.enabled, soft: !!r.soft, brandId: r.brandId || null });
     }
-    if (!g.enabled) text += ' (switched off)';
-    if (!out.has(g.code)) out.set(g.code, []);
-    out.get(g.code).push({ key: g.key, text, enabled: g.enabled, brandIds: g.brandIds });
-  }
-  return out;
+    return out;
+  };
 }
 
 // ── List with per-coupon stats ───────────────────────────────────────────────
@@ -280,7 +273,7 @@ async function listCoupons({ tab = 'live', search = '', brandId = null, page = 1
       brands: restricted.map((id) => ({ id, name: brands.get(id)?.name || `Store ${id}` })),
       categories: idList(r.applicableCategories).map((id) => ({ id, name: catNames.get(id) || `Category ${id}` })),
       products: idList(r.applicableProducts).map((id) => ({ id, name: prodNames.get(id) || `Product ${id}` })),
-      usedBy: usedBy.get(String(r.code).toUpperCase()) || [],
+      usedBy: usedBy(r.code, r.brand_id),
       stats: { used: Number(r.used), discount: Math.round(Number(r.discountGiven)), sales: Math.round(Number(r.sales)) },
     };
   });
@@ -341,7 +334,19 @@ async function dependencies() {
   const refs = (await automationRefs(brands)).filter((r) => r.enabled && !r.soft);
   const codes = [...new Set(refs.map((r) => r.code))];
   const coupons = codes.length ? await Coupon.findAll({ where: { code: codes } }) : [];
-  const byCode = new Map(coupons.map((c) => [String(c.code).toUpperCase(), c]));
+  // A code can exist more than once (one per store). Win-back looks for the
+  // store's own row, like the cron; elsewhere prefer a row that is on.
+  const byCode = new Map();
+  for (const c of coupons) {
+    const k = String(c.code).toUpperCase();
+    if (!byCode.has(k)) byCode.set(k, []);
+    byCode.get(k).push(c);
+  }
+  const pick = (code, brandId) => {
+    const rows = byCode.get(code) || [];
+    return (brandId && rows.find((c) => Number(c.brand_id) === brandId))
+      || rows.find((c) => statusOf(c, now) === 'live') || rows[0] || null;
+  };
   const restrictions = await brandIdsFor(coupons.map((c) => c.id));
   const activeBrands = [...brands.values()].filter((b) => b.active);
   const bName = (id) => brands.get(Number(id))?.name || `store ${id}`;
@@ -363,7 +368,7 @@ async function dependencies() {
 
   for (const ref of refs) {
     if (ref.key === 'win_back' && !winBrands.has(ref.brandId)) continue;
-    const c = byCode.get(ref.code);
+    const c = pick(ref.code, ref.key === 'win_back' ? ref.brandId : null);
     const B = ref.brandId ? bName(ref.brandId) : '';
     const lead = ref.key === 'win_back' ? `Win-back is skipping ${B}` : ref.key === 'abandoned_cart' ? 'Abandoned-cart messages' : 'Website pop-up';
     const subject = ref.key === 'win_back' ? `its offer code ${ref.code}` : ref.key === 'abandoned_cart' ? `the code they send, ${ref.code},` : `the code it gives visitors, ${ref.code},`;
