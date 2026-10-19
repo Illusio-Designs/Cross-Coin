@@ -25,13 +25,8 @@ exports.sendPhoneOtp = async (req, res) => {
 
 /**
  * POST /api/auth/otp/verify
- * Verifies the MSG91 access token (JWT) returned by the widget.
- *
- * Strategy:
- *  1. Try server-side verification via MSG91 verifyAccessToken API.
- *  2. If that fails (already-verified, network issue, wrong authkey), fall back
- *     to decoding the JWT — if it's a valid JWT signed by MSG91 with the
- *     correct company/request IDs, we trust it.
+ * Verifies the MSG91 access token returned by the widget with MSG91 and checks
+ * it was issued for THIS phone number (utils/msg91Verify.js).
  */
 exports.verifyPhoneOtp = async (req, res) => {
   try {
@@ -45,59 +40,8 @@ exports.verifyPhoneOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid phone number.' });
     }
 
-    // ── Attempt 1: MSG91 verifyAccessToken API ──────────────────────────
-    const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
-    let tokenValid = false;
-
-    if (MSG91_AUTH_KEY) {
-      try {
-        const verifyResponse = await axios.post(
-          'https://control.msg91.com/api/v5/widget/verifyAccessToken',
-          { authkey: MSG91_AUTH_KEY, 'access-token': access_token },
-          { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
-        );
-        logger.info(`[Checkout OTP] MSG91 verifyAccessToken response: ${JSON.stringify(verifyResponse.data)}`);
-
-        if (verifyResponse.data?.type === 'success') {
-          tokenValid = true;
-        } else {
-          const msg = String(verifyResponse.data?.message || '').toLowerCase();
-          if (msg.includes('already verif') || verifyResponse.data?.code === 703) {
-            tokenValid = true;
-          }
-        }
-      } catch (verifyErr) {
-        const errData = verifyErr.response?.data;
-        logger.warn(`[Checkout OTP] MSG91 API verify failed: status=${verifyErr.response?.status}, data=${JSON.stringify(errData)}`);
-
-        const errMsg = String(errData?.message || '').toLowerCase();
-        const errCode = errData?.code;
-        if (errCode === 703 || errMsg.includes('already verif') || errMsg.includes('token already used') || errMsg.includes('verified')) {
-          tokenValid = true;
-        }
-      }
-    } else {
-      logger.warn('[Checkout OTP] MSG91_AUTH_KEY not set — skipping API verification');
-    }
-
-    // ── Attempt 2: Decode the JWT as fallback (only when MSG91 is configured) ─
-    if (!tokenValid && MSG91_AUTH_KEY) {
-      try {
-        // MSG91 widget returns a JWT — decode it (without signature verification
-        // since we don't have MSG91's signing secret, but the JWT structure itself
-        // proves it came from the widget after successful OTP entry)
-        const decoded = jwt.decode(access_token);
-        logger.info(`[Checkout OTP] JWT decode fallback: ${JSON.stringify(decoded)}`);
-
-        if (decoded && (decoded.requestId || decoded.reqId || decoded.companyId)) {
-          // Valid MSG91 JWT structure — the widget already verified the OTP
-          tokenValid = true;
-          logger.info('[Checkout OTP] JWT fallback accepted — valid MSG91 token structure');
-        }
-      } catch (decodeErr) {
-        logger.error(`[Checkout OTP] JWT decode failed: ${decodeErr.message}`);
-      }
-    }
+    const check = await require('../utils/msg91Verify.js').verifyMsg91Token(access_token, normalised, 'Checkout OTP');
+    const tokenValid = check.ok;
 
     if (!tokenValid) {
       return res.status(401).json({ success: false, message: 'OTP verification failed. Please try again.' });
