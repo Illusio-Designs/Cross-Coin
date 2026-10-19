@@ -3,12 +3,14 @@ const { decrypt } = require('../utils/encryption');
 
 // Per-brand account credentials. The shared server (.env) values belong to the
 // primary brand (1, Cross Coin) — another brand without its own keys must NOT
-// silently take payments on, or send Purchase events to, Cross Coin's account.
+// silently send Purchase events to Cross Coin's pixel.
+// Razorpay is deliberately NOT in this list: stores without their own keys keep
+// taking payments on the shared account (the Brands page warns about it) —
+// cutting them off would stop online payments on those stores.
 // WhatsApp is one shared number by design: its env values also serve the shared
 // WhatsApp brand (whatsappService then lends that brand's creds to the others).
 const PRIMARY_BRAND_ID = 1;
 const BRAND_CREDENTIAL_KEYS = new Set([
-    'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET',
     'FB_PIXEL_ID', 'FB_ACCESS_TOKEN', 'FB_TEST_EVENT_CODE',
     'CUSTOM_CHECKOUT_API_KEY', 'CUSTOM_CHECKOUT_HMAC_SECRET',
     'WHATSAPP_API_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_BUSINESS_ACCOUNT_ID',

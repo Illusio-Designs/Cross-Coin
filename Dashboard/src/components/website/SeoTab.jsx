@@ -24,7 +24,7 @@ const Editor = dynamic(() => import('../common/Editor'), {
 const SUBS = [
   { id: 'pages', label: 'Pages', view: 'seo-pages' },
   { id: 'faqs', label: 'FAQs', view: 'faqs', adminOnly: true },
-  { id: 'settings', label: 'Settings', view: 'seo-global' },
+  { id: 'settings', label: 'Settings', view: 'seo-global', adminOnly: true }, // brand settings API is admin-only
 ];
 
 export default function SeoTab(props) {

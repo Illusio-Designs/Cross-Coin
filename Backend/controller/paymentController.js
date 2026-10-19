@@ -342,7 +342,7 @@ module.exports.handlePaymentFailure = async (req, res) => {
         notes: errorDescription ? `${errorCode || 'PAYMENT_FAILED'}: ${errorDescription}` : 'Payment failed',
       });
     } else {
-      // Create a failed record if none exists (e.g. createRazorpayOrder was called without orderId)
+      // Create a failed record if none exists (an older checkout that never stored one)
       await Payment.create({
         order_id: orderId,
         user_id: order.user_id || null,
@@ -467,7 +467,7 @@ module.exports.razorpayWebhook = async (req, res) => {
           let paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
 
           // ── FALLBACK: If no payment record, find order by amount + time ──
-          // This handles cases where createRazorpayOrder was called without orderId
+          // This handles older checkouts that never stored a payment row
           if (!paymentRecord) {
             const rzpPayment = event.payload?.payment?.entity;
             const amountInRupees = rzpPayment ? parseFloat(rzpPayment.amount) / 100 : null;

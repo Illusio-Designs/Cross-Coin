@@ -4,18 +4,12 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import StatusPill from '../ui/StatusPill';
 import ErrorState from '../ui/ErrorState';
+import FilterChips from '../ui/FilterChips';
 import { brandLabel } from './webUtil';
 
+// Status filter chips (shared FilterChips) — chips: [{ id, label, count }].
 export function WebChips({ chips, value, onChange, label = 'Filter' }) {
-  return (
-    <div className="web-chips" role="group" aria-label={label}>
-      {chips.map((c) => (
-        <button key={c.id} type="button" className={`web-chip${value === c.id ? ' is-on' : ''}`} aria-pressed={value === c.id} onClick={() => onChange(c.id)}>
-          {c.label}{c.count != null && <b>{Number(c.count).toLocaleString('en-IN')}</b>}
-        </button>
-      ))}
-    </div>
-  );
+  return <FilterChips ariaLabel={label} items={chips.map((c) => ({ value: c.id, label: c.label, count: c.count }))} value={value} onChange={onChange} />;
 }
 
 // Card grid + side panel, the same on every tab.

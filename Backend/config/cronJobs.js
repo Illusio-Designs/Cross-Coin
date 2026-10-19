@@ -157,10 +157,13 @@ async function paymentReconciliation() {
   const useQueue = process.env.RECON_USE_QUEUE !== 'false';
   const s = await reconcileRecentPayments({ sinceHours: 48, limit: 500, useQueue });
   if (s.mode === 'queue') {
-    if (!s.total) return 'No unpaid online payments to check';
+    // Payments charged at Razorpay with no order yet are handled inline.
+    const o = s.orphans || {};
+    const orphanParts = [[o.corrected || 0, 'charged-without-order fixed'], [o.skipped || 0, 'charged-without-order left for an admin'], [o.errors || 0, "charged-without-order couldn't be checked"]];
+    if (!s.total && !o.checked) return 'No unpaid online payments to check';
     return {
-      status: statusFor(s.enqueued, s.total - s.enqueued),
-      summary: countLine(`${plural(s.enqueued, 'unpaid online payment', 'unpaid online payments')} sent for checking with Razorpay`, [[s.total - s.enqueued, "couldn't be queued"]]),
+      status: statusFor(s.enqueued + (o.corrected || 0), (s.total - s.enqueued) + (o.errors || 0)),
+      summary: countLine(`${plural(s.enqueued, 'unpaid online payment', 'unpaid online payments')} sent for checking with Razorpay`, [[s.total - s.enqueued, "couldn't be queued"], ...orphanParts]),
     };
   }
   if (!s.checked) return 'No unpaid online payments to check';

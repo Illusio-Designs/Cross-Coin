@@ -346,7 +346,7 @@ function Posts({ brands, brand, brandId, q, registerAction }) {
                   title={p.title}
                   pill={postPill(p)}
                   meta={p.seo_missing ? 'No meta description' : [p.author_name, p.status === 'published' ? `Published ${fmtDay(p.published_at, true)}` : null].filter(Boolean).join(' · ') || ' '}
-                  sub={[p.BlogCategory?.name, !brand ? (p.Brands || []).map(brandLabel).join(', ') : null].filter(Boolean).join(' · ') || null}
+                  sub={[p.BlogCategory?.name, !brand ? (p.Brands || []).map((b) => brandLabel(brands.find((x) => Number(x.id) === Number(b.id)) || b)).join(', ') : null].filter(Boolean).join(' · ') || null}
                 />
               ))}
             </div>

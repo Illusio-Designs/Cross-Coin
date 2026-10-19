@@ -1,6 +1,6 @@
 // Website → Photos: every picture the site stores, where it is used, and
 // which ones are used nowhere (safe to delete).
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { websiteService } from '../../services';
 import { showSuccess, showError, showWarning } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
@@ -34,7 +34,6 @@ export default function PhotosTab({ q, registerAction }) {
   const [confirm, setConfirm] = useState(null); // 'one' | 'page'
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const inputRef = useRef(null);
 
   useEffect(() => { setPage(1); }, [q, usage]);
   const list = useLoad(() => websiteService.listMedia({ search: q || undefined, usage, page, limit: LIMIT }), [q, usage, page]);
@@ -158,7 +157,7 @@ export default function PhotosTab({ q, registerAction }) {
 
   return (
     <>
-      <input ref={inputRef} id={INPUT_ID} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="web-hidden-input" onChange={onFiles} disabled={uploading} />
+      <input id={INPUT_ID} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="web-hidden-input" onChange={onFiles} disabled={uploading} />
       <WebChips chips={chips} value={usage} onChange={setUsage} />
       {!complete && <p className="web-warn" role="status">Some places could not be checked just now, so deleting is paused. Reload in a minute.</p>}
       {usage === 'unused' && unusedOnPage.length > 1 && complete && (

@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { User } = require('../model/userModel');
 const { LoyaltyTransaction } = require('../model/loyaltyTransactionModel');

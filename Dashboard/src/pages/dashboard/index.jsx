@@ -18,13 +18,8 @@ import CustomerProfile from "./consumers/customer";
 import Payments from "./payments/payments";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
-import WebhookEvents from "./shipping/webhookEvents";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
-import SEO from "./seo/seo";
-import FaqsManager from "./seo/faqs";
-import GlobalSeoSettings from "./seo/global";
-import SeoHealth from "./seo/health";
 import SeoHub from "./seo/hub";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
@@ -215,7 +210,7 @@ function Dashboard() {
       case 'payments':        return <Payments />;
       case 'ndr':             return <Orders key="ndr" initialTab="problems" />;
       case 'shippingFees':    return <ShippingFees />;
-      case 'webhook-events':  return <WebhookEvents />;
+      case 'webhook-events':  return <ShippingFees focus="log" />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
       // The new unified SEO hub. Legacy seo-* views still work as

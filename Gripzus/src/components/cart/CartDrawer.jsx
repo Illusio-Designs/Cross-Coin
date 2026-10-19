@@ -216,10 +216,6 @@ export default function CartDrawer() {
   const totalQty = items.reduce((s, i) => s + (i.qty || 1), 0);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
-  const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
-  /* Waive the COD fee in the displayed total once the free-shipping threshold is
-     met (prepaid is already free). Mirrors the server-side enforcement. */
-  const shippingFee = (isCod && freeShipQualifies) ? 0 : Number(selectedFee?.fee || 0);
 
   /* ── Bundle-tier DISPLAY repricing, by PACK GROUP (server-authoritative) ──
      "Buy More, Save More" groups the primary line and any added variations
@@ -263,6 +259,13 @@ export default function CartDrawer() {
     if (!allRepriced) displaySubtotal = cartTotal - groupContribution + Number(packMatchedTier.price);
   }
   displaySubtotal = Math.max(0, displaySubtotal);
+
+  /* Free shipping: same base as the server — items after pack pricing, before
+     coupons (displaySubtotal). */
+  const freeShipQualifies = freeShipThreshold > 0 && displaySubtotal >= freeShipThreshold;
+  /* Waive the COD fee in the displayed total once the free-shipping threshold is
+     met (prepaid is already free). Mirrors the server-side enforcement. */
+  const shippingFee = (isCod && freeShipQualifies) ? 0 : Number(selectedFee?.fee || 0);
 
   // Set the whole pack group's total to P pairs by nudging the anchor line (via
   // the existing qty path → the server reprices the group). Used by the

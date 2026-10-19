@@ -50,7 +50,7 @@
 }
 .web .web-tab:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
 .web .web-tab.is-on { background: var(--ds-color-text); border-color: var(--ds-color-text); color: var(--ds-color-surface); }
-.web .web-tab:focus-visible, .web .web-chip:focus-visible, .web .web-seg-btn:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
+.web .web-tab:focus-visible, .web .web-seg-btn:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
 .web .web-bar-right { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-width: 0; }
 .web .web-dd { min-width: 170px; max-width: 240px; }
 .web .web-dd .dropdown-trigger { height: 38px; border-radius: 10px; background: var(--ds-color-surface); }
@@ -74,17 +74,6 @@
 .web .web-seg-btn { border: 0; background: transparent; color: var(--ds-color-text-muted); font: inherit; font-size: 13px; font-weight: 600; min-height: 32px; padding: 0 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
 .web .web-seg-btn.is-on { background: var(--ds-color-surface); color: var(--ds-color-text); box-shadow: var(--ds-shadow-sm); }
 .web .web-score { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ds-color-text-muted); }
-
-/* Filter chips */
-.web .web-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.web .web-chip {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px;
-  border: 1px solid var(--ds-color-border); background: transparent; color: var(--ds-color-text-muted);
-  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
-}
-.web .web-chip b { color: var(--ds-color-text); font-variant-numeric: tabular-nums; }
-.web .web-chip.is-on { background: var(--ds-color-text); border-color: var(--ds-color-text); color: var(--ds-color-surface); }
-.web .web-chip.is-on b { color: var(--ds-color-surface); }
 
 /* Cards + panel layout */
 .web .web-body { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }

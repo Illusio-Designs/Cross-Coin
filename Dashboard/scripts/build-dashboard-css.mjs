@@ -54,6 +54,7 @@ const FILES = [
   'opsSettings.css',
   'website.css',
   'coupons.css',
+  'payLoyalty.css',
   'ui-kit.css',
   'editor.css',
 ];

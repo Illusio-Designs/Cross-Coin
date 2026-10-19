@@ -15,7 +15,7 @@ export const getPageTitle = (view) => {
     'consumers': 'Customers',
     'customer': 'Customer',
     'shippingFees': 'Shipping & courier',
-    'webhook-events': 'Courier updates',
+    'webhook-events': 'Shipping & courier',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',

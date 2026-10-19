@@ -410,14 +410,6 @@ export default function CartDrawer() {
     } catch { setServiceability(null); }
   };
 
-  // Free-shipping progress (COD ships free at/above the threshold; prepaid is always free).
-  const freeShipQualifies = freeShipThreshold > 0 && subtotal >= freeShipThreshold;
-  const freeShipRemaining = Math.max(0, freeShipThreshold - subtotal);
-  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
-  // Waive the COD shipping fee in the displayed total once the threshold is met
-  // (prepaid is already 0). Checkout enforces this server-side.
-  const shippingFee = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
-
   // ── Bundle-tier DISPLAY repricing, by PACK GROUP (server-authoritative) ─────
   // "Buy More, Save More" groups the primary line and added variations under one
   // pack_id. The backend prices a pack group by its TOTAL pairs (cartController /
@@ -458,6 +450,15 @@ export default function CartDrawer() {
     if (!allRepriced) displaySubtotal = subtotal - groupContribution + Number(packMatchedTier.price);
   }
   displaySubtotal = Math.max(0, displaySubtotal);
+
+  // Free-shipping progress (COD ships free at/above the threshold; prepaid is always free).
+  // Base = items after pack pricing, before coupons (same as the server).
+  const freeShipQualifies = freeShipThreshold > 0 && displaySubtotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - displaySubtotal);
+  const rawShippingFee = parseFloat(selectedFee?.fee || 0);
+  // Waive the COD shipping fee in the displayed total once the threshold is met
+  // (prepaid is already 0). Checkout enforces this server-side.
+  const shippingFee = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
 
   // Set the whole pack group's total to P pairs by nudging the anchor line (the
   // existing qty path → the server reprices the group). Used by milestone taps.
@@ -507,7 +508,7 @@ export default function CartDrawer() {
     setCouponLoading(true);
     try {
       const paymentMode = isCod ? 'cod' : 'prepaid';
-      const data = await validateCoupon({ code, cartTotal: subtotal, paymentMode, cartItems: items });
+      const data = await validateCoupon({ code, cartTotal: displaySubtotal, paymentMode, cartItems: items });
       if (data?.success && data?.coupon) {
         const amount = parseFloat(data.discountAmount) || 0;
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, paymentModeRestriction: data.coupon.paymentModeRestriction });

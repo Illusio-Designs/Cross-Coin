@@ -738,8 +738,10 @@ const CartDrawer = ({ isOpen, onClose }) => {
   // ── Computed totals ─────────────────────────────────────────────────────
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
-  const freeShipQualifies = freeShipThreshold > 0 && cartTotal >= freeShipThreshold;
-  const freeShipRemaining = Math.max(0, freeShipThreshold - cartTotal);
+  // Base = the items being ordered (buy-now item or cart), before coupons — the
+  // same subtotal the server compares against the threshold.
+  const freeShipQualifies = freeShipThreshold > 0 && activeTotal >= freeShipThreshold;
+  const freeShipRemaining = Math.max(0, freeShipThreshold - activeTotal);
   // Waive the COD shipping fee in the displayed total once the free-shipping
   // threshold is met (prepaid is already free). Mirrors server-side enforcement.
   const shippingFeeAmount = (selectedFee?.orderType === 'cod' && freeShipQualifies)
@@ -1578,12 +1580,12 @@ const CartDrawer = ({ isOpen, onClose }) => {
                     role="progressbar"
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-valuenow={Math.round(Math.min(100, (cartTotal / freeShipThreshold) * 100))}
+                    aria-valuenow={Math.round(Math.min(100, (activeTotal / freeShipThreshold) * 100))}
                     aria-label="Free shipping progress"
                   >
                     <div
                       className="cd-freeship-fill"
-                      style={{ width: `${Math.min(100, (cartTotal / freeShipThreshold) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (activeTotal / freeShipThreshold) * 100)}%` }}
                     />
                   </div>
                 </div>

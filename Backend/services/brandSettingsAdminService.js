@@ -228,21 +228,27 @@ function domainWarnings(brand) {
   return [];
 }
 
-async function couponWarning(brandId, code) {
-  const Coupon = require('../model/couponModel.js').Coupon;
-  const c = await Coupon.findOne({
-    where: { code, [Op.or]: [{ brand_id: brandId }, { brand_id: null }] },
-    order: [['brand_id', 'DESC']],
-  }).catch(() => null);
-  if (!c) return `Coupon ${code} doesn’t exist — win-back messages offer a code that won’t work.`;
-  if (c.status !== 'active') return `Coupon ${code} is switched off — win-back messages offer a code that won’t work.`;
-  if (c.endDate && new Date(c.endDate) < new Date()) return `Coupon ${code} has expired — win-back messages offer a code that won’t work.`;
-  if (c.usageLimit && c.usageCount >= c.usageLimit) return `Coupon ${code} has been used up — win-back messages offer a code that won’t work.`;
-  return null;
+// Win-back coupon problems come from the Coupons page's own check
+// (couponAdminService.dependencies — missing / off / ended / used up / wrong
+// store) so both pages always agree. One call covers every brand.
+async function winBackWarnings() {
+  try {
+    const { dependencies } = require('./couponAdminService.js');
+    const { warnings } = await dependencies();
+    const byBrand = new Map();
+    for (const w of warnings || []) {
+      if (w.automation !== 'win_back' || !w.brandId) continue;
+      if (!byBrand.has(w.brandId)) byBrand.set(w.brandId, []);
+      byBrand.get(w.brandId).push({ tab: 'whatsapp', field: 'WINBACK_COUPON_CODE', text: w.message });
+    }
+    return byBrand;
+  } catch (_) {
+    return new Map(); // coupon check unavailable — never block the page
+  }
 }
 
 // Cheap, no-network warnings for one brand.
-async function brandWarnings(brand, rows) {
+async function brandWarnings(brand, rows, winBack = new Map()) {
   const get = (key) => effective(FIELD_BY_KEY.get(key) || { key }, rows.get(key), brand.id).value;
   const out = [...domainWarnings(brand)];
   if (!get('ITHINK_ACCESS_TOKEN') || !get('ITHINK_SECRET_KEY')) out.push({ tab: 'store', field: 'ITHINK_ACCESS_TOKEN', text: 'Courier account not connected — orders for this store can’t be booked with iThink.' });
@@ -256,9 +262,7 @@ async function brandWarnings(brand, rows) {
   if (!get('RAZORPAY_KEY_ID') || !get('RAZORPAY_KEY_SECRET')) out.push({ tab: 'payments', field: 'RAZORPAY_KEY_ID', text: 'This store has no Razorpay keys of its own — shoppers can’t pay online until they’re added.' });
   else if (/^rzp_test_/.test(get('RAZORPAY_KEY_ID'))) out.push({ tab: 'payments', field: 'RAZORPAY_KEY_ID', text: 'These are Razorpay test keys — real payments won’t go through.' });
 
-  const coupon = get('WINBACK_COUPON_CODE') || 'CART10';
-  const cw = await couponWarning(brand.id, coupon);
-  if (cw) out.push({ tab: 'whatsapp', field: 'WINBACK_COUPON_CODE', text: cw });
+  out.push(...(winBack.get(Number(brand.id)) || []));
 
   if (!get('FB_PIXEL_ID')) out.push({ tab: 'tracking', field: 'FB_PIXEL_ID', text: 'No Meta pixel of its own — purchases on this store aren’t reported to Meta.' });
   else if (!get('FB_ACCESS_TOKEN')) out.push({ tab: 'tracking', field: 'FB_ACCESS_TOKEN', text: 'Meta pixel is set but the Conversions API token is missing — Meta only sees browser events.' });
@@ -286,9 +290,10 @@ async function reachability(host) {
 async function overview() {
   const brands = await Brand.findAll({ order: [['id', 'ASC']] });
   const rowsBy = await loadRows(brands.map((b) => b.id));
+  const winBack = await winBackWarnings();
   const out = [];
   for (const b of brands) {
-    const warnings = await brandWarnings(b, rowsBy.get(b.id) || new Map());
+    const warnings = await brandWarnings(b, rowsBy.get(b.id) || new Map(), winBack);
     out.push({
       id: b.id, name: b.name, display_name: b.display_name, slug: b.slug, domain: b.domain, status: b.status,
       logo_url: b.logo_url, warnings, health: warnings.length ? 'warn' : 'ok',
@@ -326,7 +331,7 @@ async function form(brandId, { checkSite = true } = {}) {
   }
   other.sort((a, b) => a.key.localeCompare(b.key));
 
-  const warnings = await brandWarnings(brand, rows);
+  const warnings = await brandWarnings(brand, rows, await winBackWarnings());
   if (checkSite && !warnings.some((w) => w.field === 'domain')) {
     const t = await reachability(normalizeHost(brand.domain));
     if (t) warnings.unshift({ tab: 'store', field: 'domain', text: t });

@@ -409,7 +409,9 @@ const getPublicSliders = async (req, res) => {
 
         // If brand is specified, filter by brand
         if (brandName) {
-            includeOptions[1].where = { name: brandName };
+            // Storefronts send their slug (e.g. 'crosscoin'); the name ('Cross
+            // Coin') never matched it, so those stores got no slides.
+            includeOptions[1].where = { [Op.or]: [{ slug: brandName }, { name: brandName }] };
             includeOptions[1].required = true; // Only get sliders for this brand
         }
 

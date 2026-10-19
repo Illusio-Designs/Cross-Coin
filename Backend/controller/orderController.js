@@ -318,6 +318,23 @@
       for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
       const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
 
+      // "Build Your Pack" (cross-product mix): lines sharing a `pack_group` get
+      // the store-wide % off for the group's TOTAL item count — the same rule
+      // prepaid checkout (checkoutController) applies, so COD charges the
+      // amount the cart showed.
+      const _bundleCtrl = require('./bundleController.js');
+      const mixQtyByGroup = {};
+      for (const it of items) { if (it.pack_group) mixQtyByGroup[it.pack_group] = (mixQtyByGroup[it.pack_group] || 0) + (Number(it.quantity) || 0); }
+      const mixPctByGroup = {};
+      for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(req.brand?.id || 1, mixQtyByGroup[g]); }
+      const linePrice = async (item, product_id, basePrice) => {
+        if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
+          return Math.round(parseFloat(basePrice) * (1 - mixPctByGroup[item.pack_group] / 100) * 100) / 100;
+        }
+        const _bu = await _bundleCtrl.bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item));
+        return _bu != null ? _bu : basePrice;
+      };
+
       // Validate items using pre-fetched data
       for (const item of items) {
         const { product_id, quantity } = item;
@@ -359,8 +376,7 @@
               .status(404)
               .json({ message: `Invalid variation for product ${product_id}` });
           }
-          price = variation.price;
-          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
+          price = await linePrice(item, product_id, variation.price);
           stockAvailable = variation.stock;
           logger.debug(
             "createOrder: Variation validated, price:",
@@ -375,8 +391,7 @@
             // Default to the first variation
             variation = variations[0];
             variation_id = variation.id;
-            price = variation.price;
-            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
+            price = await linePrice(item, product_id, variation.price);
             stockAvailable = variation.stock;
           } else {
             // No variations exist
