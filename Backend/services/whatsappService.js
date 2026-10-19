@@ -717,6 +717,45 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // Meta rejects a body that starts or ends with a variable, so every
+      // body below closes with plain text after its last {{n}}.
+      name: tName('back_in_stock'), category: 'MARKETING', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Back in Stock!' },
+        {
+          type: 'BODY',
+          text: `Good news, {{1}}! 🎉\n\n*{{2}}* from your wishlist is back in stock at *{{3}}*.\n\n👉 Grab yours here: {{4}}\n\nPopular sizes sell out fast, so don't wait too long!`,
+          example: { body_text: [['Rushikesh', 'Classic Crew Socks', storeName, `https://${storeUrl}/products/sample-product`]] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      name: tName('post_purchase_upsell'), category: 'MARKETING', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Picked Just for You' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}! 😊 We hope you're loving your *{{2}}* from *{{3}}*.\n\nWe think you'll like *{{4}}* too.\n\n👉 Take a look: {{5}}\n\nHappy shopping!`,
+          example: { body_text: [['Rushikesh', 'Classic Crew Socks', storeName, 'Ankle Sports Socks', `https://${storeUrl}/products/sample-product`]] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      // Transactional: points credited for a specific order → UTILITY.
+      name: tName('loyalty_points'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Reward Points Credited' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, *{{2}} reward points* have been added to your *{{3}}* account for your recent order.\n\nYour balance is now *{{4}} points*, which you can redeem at checkout on your next order.`,
+          example: { body_text: [['Rushikesh', '50', storeName, '120']] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
       name: tName('popup_coupon'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Exclusive Offer Just for You!' },
@@ -1323,18 +1362,24 @@ async function sendReviewRequest(phone, data, brandId = 1) {
   ], brandId);
 }
 
+// Back-in-stock, loyalty and upsell are business-initiated, so they go out as
+// approved templates — free-form text is rejected outside the 24-hour window.
 async function sendBackInStock(phone, data, brandId = 1) {
-  const storeName = await _brandName(brandId);
-  const link = await _productUrl(brandId, data.productSlug);
-  const text = `🎉 Good news! *${data.productName}* is back in stock at *${storeName}*.\n\nGrab it before it sells out again!\n👉 ${link}`;
-  return sendTextMessage(phone, text, brandId);
+  return sendTemplate(phone, tName('back_in_stock'), [
+    data.customerName || 'there',
+    data.productName,
+    await _brandName(brandId),
+    await _productUrl(brandId, data.productSlug),
+  ], brandId);
 }
 
 async function sendLoyaltyNotification(phone, data, brandId = 1) {
-  const storeName = await _brandName(brandId);
-  const link = await _brandUrl(brandId);
-  const text = `🌟 *${storeName} Rewards*\n\nHi ${data.customerName || 'there'}! You just earned *${data.points} points* for your order.\n\nYour balance: *${data.balance} points*\n\nRedeem at checkout 👉 ${link}`;
-  return sendTextMessage(phone, text, brandId);
+  return sendTemplate(phone, tName('loyalty_points'), [
+    data.customerName || 'there',
+    data.points,
+    await _brandName(brandId),
+    data.balance,
+  ], brandId);
 }
 
 // Win-back (business-initiated, so it must be an approved template — free-form
@@ -1348,10 +1393,13 @@ async function sendWinBack(phone, data, brandId = 1) {
 }
 
 async function sendPostPurchaseUpsell(phone, data, brandId = 1) {
-  const storeName = await _brandName(brandId);
-  const link = await _productUrl(brandId, data.suggestedSlug);
-  const text = `Hi ${data.customerName || 'there'}! 😊\n\nLoved your *${data.purchasedProduct}* from *${storeName}*?\n\nYou might also like: *${data.suggestedProduct}*\n\n👉 ${link}`;
-  return sendTextMessage(phone, text, brandId);
+  return sendTemplate(phone, tName('post_purchase_upsell'), [
+    data.customerName || 'there',
+    data.purchasedProduct,
+    await _brandName(brandId),
+    data.suggestedProduct,
+    await _productUrl(brandId, data.suggestedSlug),
+  ], brandId);
 }
 
 async function sendPopupCoupon(phone, data, brandId = 1) {

@@ -448,9 +448,11 @@ function initializeCronJobs() {
         const purchasedProduct = order.OrderItems[0]?.Product;
         if (!purchasedProduct) continue;
 
-        // Simple upsell: suggest a different product (in real use, plug in recommendation engine)
+        // Suggest the newest active product of the SAME brand that isn't in
+        // this order (the link is built on that brand's domain).
+        const boughtIds = order.OrderItems.map((i) => i.Product?.id).filter(Boolean);
         const suggestedProduct = await Product.findOne({
-          where: { id: { [Op.ne]: purchasedProduct.id }, status: 'active' },
+          where: { id: { [Op.notIn]: boughtIds }, status: 'active', brand_id: order.brand_id || 1 },
           order: [['createdAt', 'DESC']],
         });
         if (!suggestedProduct) continue;

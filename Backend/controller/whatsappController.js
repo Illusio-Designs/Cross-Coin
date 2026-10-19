@@ -2054,7 +2054,7 @@ exports.notifyBackInStock = async (req, res) => {
       const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${phone.slice(-10)}` }, brand_id: brandId } });
       if (conv?.opted_out) continue;
       try {
-        await whatsappService.sendBackInStock(phone, { productName: product.name, productSlug: product.slug }, brandId);
+        await whatsappService.sendBackInStock(phone, { customerName: item.User?.username, productName: product.name, productSlug: product.slug }, brandId);
         sent++;
       } catch (e) { logger.warn('Back-in-stock WA failed: ' + e.message); }
     }
