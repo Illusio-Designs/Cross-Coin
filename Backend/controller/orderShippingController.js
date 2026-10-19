@@ -2105,32 +2105,6 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Validate order for shipping — returns detailed errors & warnings
-// GET /api/orders/:id/shipping/validate
-// Optional query: ?logistics=delhivery&s_type=surface
-// ══════════════════════════════════════════════════════════════════════════════
-module.exports.validateOrderForShipping = async (req, res) => {
-  try {
-    const orderId = req.params.id;
-    const { logistics, s_type, order_type } = req.query;
-
-    const { validateOrderForShipping } = require('../services/shippingValidationService');
-    const result = await validateOrderForShipping(orderId, { logistics, s_type, orderType: order_type });
-
-    return res.json({
-      success: true,
-      valid: result.valid,
-      errors: result.errors,
-      warnings: result.warnings,
-      data: result.data,
-    });
-  } catch (error) {
-    logger.error('validateOrderForShipping error:', error.message);
-    return res.status(500).json({ success: false, message: 'Validation failed', error: error.message });
-  }
-};
-
-// ══════════════════════════════════════════════════════════════════════════════
 // Get available couriers for an order (rate check)
 // GET /api/orders/:id/shipping/couriers
 // Returns list of couriers with rates and ETAs for admin to pick from
