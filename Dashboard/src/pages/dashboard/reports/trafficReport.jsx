@@ -102,9 +102,10 @@ export default function TrafficReport() {
     } finally { setLoading(false); }
   }, [from, to, brandId]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  // Reload as soon as a complete range is picked — no Apply button.
+  useEffect(() => { if (from && to) load(); /* eslint-disable-next-line */ }, [from, to]);
 
-  // Changing the brand reloads immediately (date changes still apply on "Apply").
+  // Changing the brand or the dates reloads immediately.
   const onBrandChange = (val) => { const v = val === 'all' ? '' : val; setBrandId(v); load(v); };
 
   const t = data?.totals;
@@ -137,7 +138,7 @@ export default function TrafficReport() {
               className="bset-brand-select"
             />
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
-              onStartChange={setFrom} onEndChange={setTo} onApply={() => load()} maxDate={istDate()} />
+              onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
             <Button variant="ghost" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
           </>
         }

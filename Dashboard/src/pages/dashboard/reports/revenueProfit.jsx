@@ -88,7 +88,8 @@ export default function RevenueProfitReport() {
     } finally { setLoading(false); }
   }, [from, to]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  // Reload as soon as a complete range is picked — no Apply button.
+  useEffect(() => { if (from && to) load(); /* eslint-disable-next-line */ }, [from, to]);
 
   const shipN = Number(shipping) || 0;
   const svcN = Number(service) || 0;
@@ -186,7 +187,7 @@ export default function RevenueProfitReport() {
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
-              onStartChange={setFrom} onEndChange={setTo} onApply={load} maxDate={istDate()} />
+              onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
             <Button variant="secondary" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
           </>
         }

@@ -42,10 +42,15 @@ const IC = {
 // roles: array of roles that can see this item. null/undefined = all staff
 const ALL_MENU = [
   { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
-  { label: 'Orders',       icon: IC.orders,    view: 'orders',    roles: ['admin','order_manager'] },
-  { label: 'Returns',      icon: IC.shipping,  view: 'returns',   roles: ['admin','order_manager'] },
-  { label: 'Failed Deliveries', icon: IC.shipping, view: 'ndr',  roles: ['admin','order_manager'] },
-  { label: 'Payments',     icon: IC.payments,  view: 'payments',  roles: ['admin','order_manager'] },
+  {
+    label: 'Orders', icon: IC.orders, roles: ['admin','order_manager'],
+    submenu: [
+      { label: 'All Orders',        view: 'orders' },
+      { label: 'Failed Deliveries', view: 'ndr' },
+      { label: 'Returns & Refunds', view: 'returns' },
+      { label: 'Payments',          view: 'payments' },
+    ],
+  },
   {
     label: 'Reports', icon: IC.reports, roles: ['admin','order_manager'],
     submenu: [
@@ -90,11 +95,11 @@ const ALL_MENU = [
       { label: 'Brands & Settings', view: 'brands' },
       { label: 'Shipping Fees',  view: 'shippingFees' },
       { label: 'Courier Webhooks', view: 'webhook-events' },
+      { label: 'Staff Users',    view: 'staff-users' },
     ],
   },
   { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'] },
   { label: 'WhatsApp',     icon: IC.wa,         view: 'whatsapp',    roles: ['admin','whatsapp_manager'] },
-  { label: 'Staff Users',  icon: IC.staffUsers, view: 'staff-users', roles: ['admin'] },
   // Logout moved to the header profile menu (see DashboardHeader → ProfileMenu).
 ];
 
@@ -143,6 +148,13 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
 
   const handleTooltipEnter = () => { if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current); };
   const handleTooltipLeave = () => { hideTimeoutRef.current = setTimeout(() => setTooltip(null), 80); };
+
+  // Keep the group that holds the current page expanded (e.g. opening
+  // Returns shows the Orders group open).
+  React.useEffect(() => {
+    const idx = MENU.findIndex((item) => item.submenu && item.submenu.some((s) => s.view === currentView));
+    if (idx >= 0) setOpenMenu(idx);
+  }, [currentView, MENU]);
 
   const isActive = (item) => {
     if (item.view && currentView === item.view) return true;
