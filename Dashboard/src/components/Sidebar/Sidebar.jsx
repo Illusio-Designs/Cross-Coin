@@ -45,9 +45,7 @@ const ALL_MENU = [
   {
     label: 'Orders', icon: IC.orders, roles: ['admin','order_manager'],
     submenu: [
-      { label: 'All Orders',        view: 'orders' },
-      { label: 'Failed Deliveries', view: 'ndr' },
-      { label: 'Returns & Refunds', view: 'returns' },
+      { label: 'All Orders',        view: 'orders', also: ['returns', 'ndr'] },
       { label: 'Payments',          view: 'payments' },
     ],
   },
@@ -150,13 +148,16 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
   // Keep the group that holds the current page expanded (e.g. opening
   // Returns shows the Orders group open).
   React.useEffect(() => {
-    const idx = MENU.findIndex((item) => item.submenu && item.submenu.some((s) => s.view === currentView));
+    const idx = MENU.findIndex((item) => item.submenu && item.submenu.some((s) => onView(s)));
     if (idx >= 0) setOpenMenu(idx);
   }, [currentView, MENU]);
 
+  // A sub-item is current for its own view and any old views folded into it.
+  const onView = (s) => s.view === currentView || (s.also || []).includes(currentView);
+
   const isActive = (item) => {
     if (item.view && currentView === item.view) return true;
-    if (item.submenu) return item.submenu.some(s => s.view === currentView);
+    if (item.submenu) return item.submenu.some(onView);
     return false;
   };
 
@@ -254,8 +255,8 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
                     {item.submenu.map(s => (
                       <button
                         key={s.label}
-                        className={`sb-sub-link${currentView === s.view ? ' sb-sub-link--active' : ''}`}
-                        aria-current={currentView === s.view ? 'page' : undefined}
+                        className={`sb-sub-link${onView(s) ? ' sb-sub-link--active' : ''}`}
+                        aria-current={onView(s) ? 'page' : undefined}
                         onClick={() => handleSubClick(s.view)}
                       >
                         {s.label}
@@ -275,7 +276,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
                     {item.submenu.map(s => (
                       <button
                         key={s.label}
-                        className={`sb-tooltip-link${currentView === s.view ? ' sb-tooltip-link--active' : ''}`}
+                        className={`sb-tooltip-link${onView(s) ? ' sb-tooltip-link--active' : ''}`}
                         onClick={() => handleSubClick(s.view)}
                       >
                         {s.label}

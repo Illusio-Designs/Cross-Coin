@@ -417,7 +417,7 @@ function CardGrid() {
       {/* ═══ 3. KPI ROW ═══ */}
       <div className="kpis">
         <div className="kpi">
-          <div className="kl">Revenue (earned)</div>
+          <div className="kl" title="Delivered orders minus refunds paid">Net sales</div>
           <div className="kv num">₹{fmt(revenue.earned)}</div>
           <div className="kf"><Delta pct={deltas.revenue?.pct} /> <span className="mut">vs prev 30d</span></div>
         </div>
@@ -444,7 +444,7 @@ function CardGrid() {
           <div className="panel-h">
             <h3>Revenue</h3>
             <span className="h-hint">
-              Total ₹{fmt(revenue.total)} · Earned ₹{fmt(revenue.earned)} · Active ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
+              Booked ₹{fmt(revenue.total)} · Net ₹{fmt(revenue.earned)}{revenue.refunds ? ` (after ₹${fmt(revenue.refunds)} refunds)` : ''} · In pipeline ₹{fmt(revenue.active)} · Lost ₹{fmt((revenue.breakdown?.rto || 0) + (revenue.breakdown?.cancelled || 0))}
             </span>
           </div>
           <RevenueTrend data={stats.revenueTrend} />

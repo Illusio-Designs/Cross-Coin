@@ -14,10 +14,7 @@ import PackPricing from "./products/pack-pricing";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
-import AbandonedCarts from "./consumers/abandoned-carts";
-import Returns from "./returns/returns";
 import Payments from "./payments/payments";
-import FailedDeliveries from "./ndr/ndr";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
 import WebhookEvents from "./shipping/webhookEvents";
@@ -27,7 +24,6 @@ import SEO from "./seo/seo";
 import FaqsManager from "./seo/faqs";
 import GlobalSeoSettings from "./seo/global";
 import SeoHealth from "./seo/health";
-import SeoBulkEditor from "./seo/bulk";
 import SeoHub from "./seo/hub";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
@@ -235,11 +231,13 @@ function Dashboard() {
       case 'categories':      return <Categories />;
       case 'attributes':      return <Attributes />;
       case 'pack-pricing':    return <PackPricing />;
-      case 'orders':          return <Orders />;
+      case 'orders':          return <Orders key="orders" />;
       case 'consumers':       return <Consumers />;
-      case 'returns':         return <Returns />;
+      // Returns and failed deliveries live inside Orders as tabs now; the old
+      // views open Orders on that tab so bookmarks and notifications still work.
+      case 'returns':         return <Orders key="returns" initialTab="returns" />;
       case 'payments':        return <Payments />;
-      case 'ndr':             return <FailedDeliveries />;
+      case 'ndr':             return <Orders key="ndr" initialTab="problems" />;
       case 'shippingFees':    return <ShippingFees />;
       case 'webhook-events':  return <WebhookEvents />;
       case 'coupons':         return <Coupons />;
@@ -250,7 +248,7 @@ function Dashboard() {
       case 'seo':             return <SeoHub />;
       case 'seo-global':      return <SeoHub initialTab="settings" />;
       case 'seo-health':      return <SeoHub initialTab="overview" />;
-      case 'seo-bulk':        return <SeoHub initialTab="products" />;
+      case 'seo-bulk':        return <SeoHub initialTab="pages" />;
       case 'seo-pages':       return <SeoHub initialTab="pages" />;
       case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;
@@ -266,7 +264,6 @@ function Dashboard() {
       case 'traffic-report':  return <TrafficReport />;
       case 'revenue-profit':  return <RevenueProfitReport />;
       case 'leads':           return <Leads />;
-      case 'abandoned-carts': return <AbandonedCarts />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;
       // Error/uptime monitoring now lives in Sentry + UptimeRobot, so the

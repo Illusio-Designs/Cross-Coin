@@ -4,16 +4,19 @@ import { Button, DateRangePicker, Input, Table } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 
 /**
- * Revenue & Gross Profit — per-brand margin after the real per-order costs.
+ * Revenue & Gross Profit — per brand, on orders that were DELIVERED in the
+ * period (customer returns included, refunds subtracted). Same basis as the
+ * Reports overview's net sales.
  *
- *   Gross profit (before CPP) = Revenue − COGS − Shipping − Service charge
- *   Gross profit (after CPP)  = (before CPP) − CPP × orders
+ *   Revenue        = delivered value − refunds paid
+ *   Revenue ex-GST = revenue ÷ (1 + brand GST %)   ← GST isn't your money
+ *   Costs          = COGS (cost price × kept units)
+ *                  + shipping × shipped orders + return shipping × RTO orders
+ *                  + service charge × delivered orders
+ *                  + gateway % of prepaid revenue + COD fee % of COD revenue
+ *   Profit before ads = revenue ex-GST − costs;  after ads = − ad spend/unit × units
  *
- * COGS = Σ(variation cost_price × qty); units with no cost price count as ₹0, so
- * the profit is an UPPER bound until those cost prices are filled in. Shipping
- * (₹90) and Service (₹30) default to the business's standard costs; CPP (cost per
- * purchase / ad spend per order) varies per campaign, so it's a live input — type
- * it and both profit figures recalculate instantly, no reload.
+ * Every cost knob and each brand's ad spend is remembered in this browser.
  */
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
@@ -48,14 +51,18 @@ export default function RevenueProfitReport() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  // Per-order cost knobs. Shipping ₹90 + Service ₹30 are the business defaults;
-  // CPP starts at 0 and is typed per run (it varies every campaign).
-  const [shipping, setShipping] = useState('90');
-  const [service, setService] = useState('30');
-  // CPP (ad spend per order) is PER BRAND — each brand runs its own ads — edited
-  // inline in the table. Keyed by brandId; the brand's total ad spend is then
-  // CPP × that brand's orders.
-  const [cppByBrand, setCppByBrand] = useState({});
+  // Cost knobs, remembered in this browser between visits.
+  const [knobs, setKnobs] = useState(() => {
+    const base = { shipping: '90', rtoShipping: '90', service: '30', gatewayPct: '2', codPct: '2' };
+    try { return { ...base, ...JSON.parse(localStorage.getItem('rp_knobs') || '{}') }; } catch { return base; }
+  });
+  const setKnob = (k) => (e) => setKnobs((m) => ({ ...m, [k]: e.target.value }));
+  // Ad spend per UNIT, per brand (each brand runs its own ads). Keyed by brandId.
+  const [cppByBrand, setCppByBrand] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rp_cpp') || '{}'); } catch { return {}; }
+  });
+  useEffect(() => { try { localStorage.setItem('rp_knobs', JSON.stringify(knobs)); } catch { /* private mode */ } }, [knobs]);
+  useEffect(() => { try { localStorage.setItem('rp_cpp', JSON.stringify(cppByBrand)); } catch { /* private mode */ } }, [cppByBrand]);
 
   // "Missing cost price" finder (loaded on demand).
   const [missing, setMissing] = useState(null);
@@ -78,10 +85,6 @@ export default function RevenueProfitReport() {
       const res = await trafficReportService.getRevenueProfit(from, to);
       if (res?.success) {
         setData(res);
-        if (res.defaults) {
-          setShipping((s) => (s === '90' ? String(res.defaults.shippingPerOrder ?? 90) : s));
-          setService((s) => (s === '30' ? String(res.defaults.servicePerOrder ?? 30) : s));
-        }
       } else setError(res?.message || 'Failed to load report');
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Failed to load report');
@@ -91,42 +94,43 @@ export default function RevenueProfitReport() {
   // Reload as soon as a complete range is picked — no Apply button.
   useEffect(() => { if (from && to) load(); /* eslint-disable-next-line */ }, [from, to]);
 
-  const shipN = Number(shipping) || 0;
-  const svcN = Number(service) || 0;
-  // Each brand's ad spend PER UNIT (typed in the table). Total spend = per-unit × units.
+  const k = (name) => Number(knobs[name]) || 0;
   const cppPerUnit = (brandId) => Number(cppByBrand[brandId] ?? '') || 0;
 
-  // Apply the knobs to a raw brand row → profit figures. Shipping/service are per
-  // order; ad spend is per UNIT, and the brand's total spend = per-unit × units.
+  // Apply the knobs to a raw brand row → cost lines and profit.
   const withProfit = (r) => {
     const brandId = r.brandId;
     const orders = Number(r.orders) || 0;
     const units = Number(r.units) || 0;
     const revenue = Number(r.revenue) || 0;
+    const revenueExGst = Number(r.revenueExGst ?? revenue) || 0;
     const cogs = Number(r.cogs) || 0;
-    const shipTotal = shipN * orders;
-    const svcTotal = svcN * orders;
-    const beforeAds = revenue - cogs - shipTotal - svcTotal;
+    const shipTotal = k('shipping') * (Number(r.shippedOrders) || 0) + k('rtoShipping') * (Number(r.rtoOrders) || 0);
+    const svcTotal = k('service') * orders;
+    const feeTotal = (k('gatewayPct') / 100) * (Number(r.prepaidRevenue) || 0) + (k('codPct') / 100) * (Number(r.codRevenue) || 0);
+    const beforeAds = revenueExGst - cogs - shipTotal - svcTotal - feeTotal;
     const adPerUnit = cppPerUnit(brandId);
-    const adSpend = adPerUnit * units;              // calculated total spend
+    const adSpend = adPerUnit * units;
     const afterAds = beforeAds - adSpend;
-    const marginAfter = revenue > 0 ? (afterAds / revenue) * 100 : 0;
-    return { ...r, brandId, orders, units, revenue, cogs, shipTotal, svcTotal, beforeAds, adPerUnit, adSpend, afterAds, marginAfter };
+    const marginAfter = revenueExGst > 0 ? (afterAds / revenueExGst) * 100 : 0;
+    return { ...r, brandId, orders, units, revenue, revenueExGst, refunds: Number(r.refunds) || 0, rtoOrders: Number(r.rtoOrders) || 0,
+      cogs, shipTotal, svcTotal, feeTotal, beforeAds, adPerUnit, adSpend, afterAds, marginAfter };
   };
 
-  const brands = useMemo(() => (data?.brands || []).map(withProfit), [data, shipN, svcN, cppByBrand]);
+  const brands = useMemo(() => (data?.brands || []).map(withProfit), [data, knobs, cppByBrand]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Totals aggregate the per-brand rows so each brand's own ad spend flows up.
   const totals = useMemo(() => {
     if (!brands.length) return null;
     const t = brands.reduce((a, r) => {
-      a.orders += r.orders; a.units += r.units; a.revenue += r.revenue; a.cogs += r.cogs;
-      a.shipTotal += r.shipTotal; a.svcTotal += r.svcTotal;
+      a.orders += r.orders; a.units += r.units; a.revenue += r.revenue; a.revenueExGst += r.revenueExGst; a.cogs += r.cogs;
+      a.refunds += r.refunds; a.rtoOrders += r.rtoOrders;
+      a.shipTotal += r.shipTotal; a.svcTotal += r.svcTotal; a.feeTotal += r.feeTotal;
       a.beforeAds += r.beforeAds; a.adSpend += r.adSpend; a.afterAds += r.afterAds;
       return a;
-    }, { orders: 0, units: 0, revenue: 0, cogs: 0, shipTotal: 0, svcTotal: 0, beforeAds: 0, adSpend: 0, afterAds: 0 });
+    }, { orders: 0, units: 0, revenue: 0, revenueExGst: 0, refunds: 0, rtoOrders: 0, cogs: 0, shipTotal: 0, svcTotal: 0, feeTotal: 0, beforeAds: 0, adSpend: 0, afterAds: 0 });
     t.adPerUnit = t.units > 0 ? t.adSpend / t.units : 0; // blended ad spend / unit
-    t.marginAfter = t.revenue > 0 ? (t.afterAds / t.revenue) * 100 : 0;
+    t.marginAfter = t.revenueExGst > 0 ? (t.afterAds / t.revenueExGst) * 100 : 0;
     return t;
   }, [brands]);
 
@@ -143,12 +147,17 @@ export default function RevenueProfitReport() {
 
   const columns = useMemo(() => [
     { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand },
-    { header: 'Orders', accessor: 'orders', align: 'right', cell: ({ value }) => num(value) },
-    { header: 'Units', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
-    { header: 'Revenue', accessor: 'revenue', align: 'right', cell: ({ value }) => inr(value) },
+    { header: 'Delivered', accessor: 'orders', align: 'right', cell: ({ value }) => num(value) },
+    { header: 'RTO', accessor: 'rtoOrders', align: 'right', cell: ({ value }) => num(value) },
+    { header: 'Units kept', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
+    { header: 'Revenue', accessor: 'revenue', align: 'right', cell: ({ value, refunds }) => (
+      <span title={refunds ? `after ${inr(refunds)} refunds` : undefined}>{inr(value)}</span>
+    ) },
+    { header: 'Ex-GST', accessor: 'revenueExGst', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'COGS', accessor: 'cogs', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'Shipping', accessor: 'shipTotal', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'Service', accessor: 'svcTotal', align: 'right', cell: ({ value }) => inr(value) },
+    { header: 'Fees', accessor: 'feeTotal', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'Profit (before ads)', accessor: 'beforeAds', align: 'right', cell: ({ value }) => ProfitCell(value) },
     { header: 'Ad spend / unit', accessor: 'adPerUnit', align: 'right', cell: ({ brandId, _isTotal, value }) => (_isTotal ? inr(value) : (
       <input
@@ -166,24 +175,28 @@ export default function RevenueProfitReport() {
 
   const doExport = () => exportCsv(`revenue-profit_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
-    { label: 'Orders', value: (r) => r.orders },
-    { label: 'Units', value: (r) => r.units },
-    { label: 'Revenue', value: (r) => r.revenue },
+    { label: 'Delivered orders', value: (r) => r.orders },
+    { label: 'RTO orders', value: (r) => r.rtoOrders },
+    { label: 'Units kept', value: (r) => r.units },
+    { label: 'Refunds', value: (r) => r.refunds },
+    { label: 'Revenue (after refunds)', value: (r) => r.revenue },
+    { label: 'Revenue ex-GST', value: (r) => r.revenueExGst },
     { label: 'COGS (cost price)', value: (r) => r.cogs },
-    { label: `Shipping (@${shipN}/order)`, value: (r) => r.shipTotal },
-    { label: `Service (@${svcN}/order)`, value: (r) => r.svcTotal },
+    { label: `Shipping (@${k('shipping')}/shipped, @${k('rtoShipping')}/RTO)`, value: (r) => Math.round(r.shipTotal) },
+    { label: `Service (@${k('service')}/order)`, value: (r) => r.svcTotal },
+    { label: `Fees (${k('gatewayPct')}% prepaid, ${k('codPct')}% COD)`, value: (r) => Math.round(r.feeTotal) },
     { label: 'Gross profit (before ads)', value: (r) => Math.round(r.beforeAds) },
     { label: 'Ad spend / unit', value: (r) => Math.round(r.adPerUnit) },
     { label: 'Total ad spend', value: (r) => Math.round(r.adSpend) },
     { label: 'Gross profit (after ads)', value: (r) => Math.round(r.afterAds) },
-    { label: 'Margin % (after ads)', value: (r) => r.marginAfter.toFixed(1) },
+    { label: 'Margin % (after ads, of ex-GST revenue)', value: (r) => r.marginAfter.toFixed(1) },
   ], brands);
 
   return (
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Gross profit = Revenue − cost price (COGS) − shipping − service charge, then minus ad spend. Shipping & service default to ₹90 / ₹30 per order. Ad spend is PER BRAND: type each brand's spend per unit in the table and its total spend (per-unit × units) and after-ads profit recalculate live. Units with no cost price count as ₹0, so profit is an upper bound until cost prices are filled in."
+        subtitle="Orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (incl. RTO return legs) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -195,11 +208,14 @@ export default function RevenueProfitReport() {
 
       {error ? <Panel><span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{error}</span></Panel> : null}
 
-      {/* ── Cost knobs (shipping & service are flat per-order costs) ── */}
-      <Panel title="Cost assumptions" subtitle="Flat per-order costs. Ad spend is set per brand in the table below (per unit).">
+      {/* ── Cost knobs ── */}
+      <Panel title="Cost assumptions" subtitle="Shipping is charged on every shipped order; RTO orders also pay the return leg. Fees are a % of prepaid and COD revenue.">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
-          <Input label="Shipping / order" type="number" min="0" value={shipping} onChange={(e) => setShipping(e.target.value)} />
-          <Input label="Service charge / order" type="number" min="0" value={service} onChange={(e) => setService(e.target.value)} />
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Shipping / shipped order (₹)" type="number" min="0" value={knobs.shipping} onChange={setKnob('shipping')} /></div>
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="RTO return shipping (₹)" type="number" min="0" value={knobs.rtoShipping} onChange={setKnob('rtoShipping')} /></div>
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Service charge / order (₹)" type="number" min="0" value={knobs.service} onChange={setKnob('service')} /></div>
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Payment gateway % (prepaid)" type="number" min="0" step="0.1" value={knobs.gatewayPct} onChange={setKnob('gatewayPct')} /></div>
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="COD fee % (courier)" type="number" min="0" step="0.1" value={knobs.codPct} onChange={setKnob('codPct')} /></div>
         </div>
       </Panel>
 
@@ -216,13 +232,15 @@ export default function RevenueProfitReport() {
       {/* ── KPI tiles ── */}
       {totals ? (
         <StatGrid>
-          <StatTile label="Revenue" value={inr(totals.revenue)} />
+          <StatTile label="Revenue (after refunds)" value={inr(totals.revenue)} />
+          <StatTile label="Revenue ex-GST" value={inr(totals.revenueExGst)} />
           <StatTile label="COGS (cost price)" value={inr(totals.cogs)} />
+          <StatTile label="Shipping + fees" value={inr(totals.shipTotal + totals.feeTotal + totals.svcTotal)} />
           <StatTile label="Gross profit · before ads" value={inr(totals.beforeAds)} tone={totals.beforeAds >= 0 ? 'good' : 'danger'} />
           <StatTile label="Total ad spend" value={inr(totals.adSpend)} />
           <StatTile label="Gross profit · after ads" value={inr(totals.afterAds)} tone={totals.afterAds >= 0 ? 'good' : 'danger'} />
           <StatTile label="Margin · after ads" value={`${totals.marginAfter.toFixed(1)}%`} />
-          <StatTile label="Orders" value={num(totals.orders)} />
+          <StatTile label="Delivered orders" value={num(totals.orders)} />
         </StatGrid>
       ) : null}
 

@@ -1,259 +1,233 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import Loader from '../../../components/common/Loader';
-import { useDashboardStats } from '../../../hooks/queries/useDashboard';
-import { orderService } from '../../../services';
+import { orderService, trafficReportService, brandService } from '../../../services';
 import { DateRangePicker } from '../../../components/ui';
+import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Download04Icon } from '@hugeicons/core-free-icons';
 
 /* ──────────────────────────────────────────────────────────────
-   Reports — a date-ranged, exportable view of store performance.
-   Monochrome Obzus treatment: grayscale share bars + segmented
-   revenue bar (no rainbow donuts), KPI compare arrows, and a
-   revenue-trend area chart. Reuses the dashboard stats API and
-   adds one-click CSV export per table + a delivered-orders export.
+   Reports — sales on the same pipeline the Orders page uses.
+   Every number comes from GET /api/reports/sales-summary:
+     · Net sales  = delivered order value − refunds paid out
+     · Booked     = placed − cancelled
+     · RTO rate   = courier returns ÷ orders that reached an outcome
+     · Return rate = customer returns ÷ delivered
+   Days are India days. The brand dropdown scopes every section.
    ────────────────────────────────────────────────────────────── */
 
-const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 const num = (n) => (Number(n) || 0).toLocaleString('en-IN');
-/* Compact ₹ for legends: 12,10,400 → ₹12.1L */
-const moneyShort = (n) => {
-  const v = Number(n) || 0;
-  if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
-  if (v >= 1e5) return `₹${(v / 1e5).toFixed(2)}L`;
-  if (v >= 1e3) return `₹${(v / 1e3).toFixed(1)}K`;
-  return `₹${Math.round(v)}`;
-};
+const pctTxt = (n) => `${Number(n) || 0}%`;
+const label = (s) => String(s || '—').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-/* Grayscale ramp (flips for dark via the CSS vars on .obz-rep) */
+const istDate = (d = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
 const RAMP = ['var(--rr1)', 'var(--rr2)', 'var(--rr3)', 'var(--rr4)', 'var(--rr5)'];
 
-/* Build a CSV string from rows + column defs, then trigger a download. */
 function exportCsv(filename, columns, rows) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const head = columns.map((c) => esc(c.label)).join(',');
   const body = rows.map((r) => columns.map((c) => esc(c.value(r))).join(',')).join('\n');
-  const csv = head + '\n' + body;
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['﻿' + head + '\n' + body], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
-const DlIcon = () => (
-  <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
-);
+const DlIcon = () => <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />;
 
-/* KPI delta arrow (▲/▼ %) — green up, red down (matches dashboard home).
-   No previous-period baseline (null) or an off-the-charts jump (>=1000%) shows
-   "New" instead of a fake/absurd percentage; absent data shows nothing. */
-function Delta({ pct }) {
+/* ▲/▼ vs the previous period of the same length. null = no baseline. */
+function Delta({ pct, invert = false }) {
   if (pct === undefined) return null;
-  if (pct === null || !Number.isFinite(pct) || Math.abs(pct) >= 1000) {
-    return <span className="delta up">▲ New</span>;
-  }
+  if (pct === null || !Number.isFinite(pct)) return <span className="delta">no earlier data</span>;
   const up = pct >= 0;
-  return <span className={`delta ${up ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
+  const good = invert ? !up : up;
+  return <span className={`delta ${good ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
 }
 
-/* Revenue area chart — daily revenue, smooth monochrome line + soft fill */
-function RevenueTrend({ data }) {
-  if (!Array.isArray(data) || data.length < 2 || data.every((v) => !v)) {
-    return <div className="rep-ph"><span className="hint">Not enough revenue history yet for a trend.</span></div>;
+/* Daily booked value (line) with delivered orders shown under it. Missing days
+   are filled with 0 so the line spans the whole range. */
+function DailyTrend({ daily, from, to }) {
+  const series = useMemo(() => {
+    const byDay = new Map((daily || []).map((d) => [d.day, d]));
+    const out = [];
+    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1)) {
+      const r = byDay.get(d) || {};
+      out.push({ day: d, value: Number(r.bookedValue) || 0, booked: Number(r.booked) || 0, delivered: Number(r.delivered) || 0 });
+    }
+    return out;
+  }, [daily, from, to]);
+
+  if (series.length < 2 || series.every((p) => !p.value)) {
+    return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
   }
-  const W = 720, H = 180, PAD = 8;
-  const max = Math.max(1, ...data);
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * W;
-    const y = H - PAD - ((v || 0) / max) * (H - PAD * 2);
-    return [x, y];
-  });
-  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-  }
-  const area = `${d} L${W} ${H} L0 ${H} Z`;
-  const last = pts[pts.length - 1];
+  const W = 720, H = 180, PAD = 10;
+  const max = Math.max(1, ...series.map((p) => p.value));
+  const pts = series.map((p, i) => [(i / (series.length - 1)) * W, H - PAD - (p.value / max) * (H - PAD * 2)]);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const best = series.reduce((a, b) => (b.value > a.value ? b : a), series[0]);
   return (
-    <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="180" preserveAspectRatio="none" role="img" aria-label="Daily revenue trend">
-      <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-      <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-      <path d={area} fill="var(--ds-color-surface-soft)" />
-      <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--ds-color-text)" />
-    </svg>
+    <>
+      <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="180" preserveAspectRatio="none" role="img" aria-label="Booked value per day">
+        <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+        <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+        <path d={`${d} L${W} ${H} L0 ${H} Z`} fill="var(--ds-color-surface-soft)" />
+        <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      </svg>
+      <div className="rep-legend">
+        <div className="rep-leg"><div><b className="num">{money(series.reduce((s, p) => s + p.value, 0))}</b><small>booked in {series.length} days</small></div></div>
+        <div className="rep-leg"><div><b className="num">{num(series.reduce((s, p) => s + p.delivered, 0))}</b><small>delivered (by order date)</small></div></div>
+        <div className="rep-leg"><div><b className="num">{money(best.value)}</b><small>best day · {best.day}</small></div></div>
+      </div>
+    </>
   );
 }
 
+/* One horizontal bar row. */
+const Bar = ({ name, right, pct, color = RAMP[0] }) => (
+  <div className="rep-bar-row">
+    <div className="rep-bar-top">
+      <span className="rep-bar-name"><span className="lbl">{name}</span></span>
+      <span className="rep-sb-pct num">{right}</span>
+    </div>
+    <div className="rep-track"><div className="rep-fill" style={{ width: `${Math.min(100, Math.max(pct > 0 ? 1 : 0, pct))}%`, background: color }} /></div>
+  </div>
+);
+
+const Empty = ({ cols, text }) => (
+  <tr><td colSpan={cols} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>{text}</td></tr>
+);
+
 export default function Reports() {
-  const [dateFilter, setDateFilter] = useState({});
-  const { data: stats, isLoading, error } = useDashboardStats(dateFilter);
-  const [exportingGst, setExportingGst] = useState(false);
-  const [exportingDelivered, setExportingDelivered] = useState(false);
+  const [from, setFrom] = useState(shiftDay(istDate(), -29));
+  const [to, setTo] = useState(istDate());
+  const [brandId, setBrandId] = useState('');
+  const [brandList, setBrandList] = useState([]);
+  const [exporting, setExporting] = useState('');
 
-  const setDate = (field, value) =>
-    setDateFilter((prev) => {
-      const next = { ...prev, [field]: value || undefined };
-      if (!next.start_date) delete next.start_date;
-      if (!next.end_date) delete next.end_date;
-      return next;
-    });
-  const clearDates = () => setDateFilter({});
-  const hasDateFilter = !!(dateFilter.start_date || dateFilter.end_date);
-  const periodLabel = hasDateFilter
-    ? `${dateFilter.start_date || '…'} → ${dateFilter.end_date || '…'}`
-    : 'All time';
+  useEffect(() => {
+    let off = false;
+    brandService.getAllBrands(true)
+      .then((r) => { if (!off && r?.success) setBrandList(r.data || []); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, []);
 
-  const revenue = stats?.revenue || {};
-  const orders = stats?.orders || {};
-  const brandSales = stats?.brandSales || [];
-  const topProducts = stats?.topProducts || [];
-  const breakdown = revenue.breakdown || {};
-  const payment = stats?.paymentDistribution || {};
-  const sd = orders.statusDistribution || {};
-  const deltas = stats?.deltas || {};
+  // Loads as soon as both dates are set — no Apply button.
+  const { data, isLoading, isFetching, error } = useQuery({
+    queryKey: ['reports', 'sales-summary', from, to, brandId],
+    queryFn: () => trafficReportService.getSalesSummary(from, to, brandId || undefined),
+    enabled: !!(from && to),
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+  });
 
-  /* Revenue-by-status segments (earned / active / lost) */
-  const earned = Number(revenue.earned) || 0;
-  const active = Number(revenue.active) || 0;
-  const lost = Number(revenue.lost) || 0;
-  const segTotal = earned + active + lost || 1;
+  const s = data?.summary || {};
+  const rates = s.rates || {};
+  const deltas = data?.deltas || {};
+  const byBrand = data?.byBrand || [];
+  const topProducts = data?.topProducts || [];
+  const rtoByCourier = data?.rtoByCourier || [];
+  const rtoByState = data?.rtoByState || [];
+  const returnsByReason = data?.returnsByReason || [];
+  const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name) : 'All brands';
+  const period = `${from}_to_${to}`;
+  const placed = Number(s.placed) || 0;
+  const share = (v) => (placed > 0 ? Math.round((v / placed) * 1000) / 10 : 0);
 
-  /* ── Exports ── */
-  const exportBrandSales = () =>
-    exportCsv(`sales-by-brand_${periodLabel}.csv`,
-      [
-        { label: 'Brand', value: (b) => b.name },
-        { label: 'Orders', value: (b) => b.orders },
-        { label: 'Revenue', value: (b) => b.revenue },
-        { label: 'Earned', value: (b) => b.earned },
-        { label: 'Lost', value: (b) => b.lost },
-        { label: 'Avg Order Value', value: (b) => b.avgOrderValue },
-        { label: 'Share %', value: (b) => b.share },
-      ], brandSales);
-
-  const exportTopProducts = () =>
-    exportCsv(`top-products_${periodLabel}.csv`,
-      [
-        { label: 'Product', value: (p) => p.name },
-        { label: 'Units Sold', value: (p) => p.totalSold },
-        { label: 'Orders', value: (p) => p.orderCount },
-        { label: 'Revenue', value: (p) => p.totalRevenue },
-      ], topProducts);
-
-  const exportSummary = () => {
-    const rows = [
-      { k: 'Period', v: periodLabel },
-      { k: 'Total Revenue', v: revenue.total },
-      { k: 'Earned (delivered)', v: revenue.earned },
-      { k: 'Active (in pipeline)', v: revenue.active },
-      { k: 'Lost (cancelled + RTO)', v: revenue.lost },
-      { k: 'Average Order Value', v: revenue.average },
-      { k: 'Total Orders', v: orders.total },
-      { k: 'Delivered Orders', v: orders.completed },
-      { k: 'Cancelled Orders', v: orders.cancelled },
-      { k: 'COD Orders', v: payment.cod?.count },
-      { k: 'Prepaid Orders', v: payment.prepaid?.count },
-    ];
-    exportCsv(`sales-summary_${periodLabel}.csv`,
-      [{ label: 'Metric', value: (r) => r.k }, { label: 'Value', value: (r) => r.v }], rows);
-  };
-
-  const exportGstReport = async () => {
-    if (!dateFilter.start_date || !dateFilter.end_date) {
-      showError('selectDates', 'Pick a start and end date to export the GST report.');
-      return;
-    }
-    setExportingGst(true);
+  const runExport = async (kind) => {
+    setExporting(kind);
     try {
-      const r = await orderService.exportGstReport(dateFilter.start_date, dateFilter.end_date);
-      if (r?.success) showSuccess('exported', 'GST report downloaded.');
-      else showError('exportFailed', r?.message || 'No delivered orders in that range.');
-    } catch (e) {
-      showError('exportFailed', e.message || 'Failed to export GST report');
-    } finally {
-      setExportingGst(false);
-    }
-  };
-
-  const exportDeliveredOrders = async () => {
-    if (!dateFilter.start_date || !dateFilter.end_date) {
-      showError('selectDates', 'Pick a start and end date to export delivered orders.');
-      return;
-    }
-    setExportingDelivered(true);
-    try {
-      const r = await orderService.exportDeliveredOrders(dateFilter.start_date, dateFilter.end_date);
-      if (r?.success) showSuccess('exported', 'Delivered orders downloaded.');
+      const r = kind === 'gst'
+        ? await orderService.exportGstReport(from, to)
+        : await orderService.exportDeliveredOrders(from, to);
+      if (r?.success) showSuccess('exported', kind === 'gst' ? 'GST report downloaded.' : 'Delivered orders downloaded.');
       else showError('exportFailed', r?.message || 'No delivered orders in that range.');
     } catch (e) {
       showError('exportFailed', e?.message || 'No delivered orders in that range.');
-    } finally {
-      setExportingDelivered(false);
-    }
+    } finally { setExporting(''); }
   };
 
-  const totalOrders = Number(orders.total) || 0;
-  const pct = (v) => (totalOrders > 0 ? Math.round((v / totalOrders) * 1000) / 10 : 0);
-  const statusRows = [
-    { label: 'Delivered', value: (sd['delivered'] || 0) + (sd['completed'] || 0), c: RAMP[0] },
-    { label: 'Shipped / In transit', value: (sd['shipped'] || 0) + (sd['in transit'] || 0) + (sd['out for delivery'] || 0), c: RAMP[1] },
-    { label: 'Confirmed / Processing', value: (sd['confirmed'] || 0) + (sd['processing'] || 0), c: RAMP[2] },
-    { label: 'Pending', value: (sd['pending'] || 0) + (sd['awaiting_confirmation'] || 0), c: RAMP[3] },
-    { label: 'RTO / Returned', value: (sd['rto'] || 0) + (sd['rto delivered'] || 0) + (sd['return_initiated'] || 0) + (sd['returned_rto'] || 0), c: RAMP[3] },
-    { label: 'Cancelled', value: (sd['cancelled'] || 0) + (sd['order cancelled'] || 0), c: RAMP[4] },
-  ].filter((r) => r.value > 0);
+  const exportSummary = () => exportCsv(`sales-summary_${period}.csv`,
+    [{ label: 'Metric', value: (r) => r[0] }, { label: 'Value', value: (r) => r[1] }],
+    [
+      ['Brand', brandName], ['From', from], ['To', to],
+      ['Orders placed', s.placed], ['Cancelled', s.cancelled], ['Booked orders', s.booked],
+      ['Delivered orders', s.delivered], ['Delivered value', s.deliveredValue],
+      ['Refunds paid', s.refunds], ['Net sales', s.netSales], ['Average order (delivered)', s.aov],
+      ['Still in pipeline', s.inPipeline], ['Pipeline value', s.pipelineValue], ['Delivery problems', s.problems],
+      ['Customer returns', s.returned], ['Courier RTO', s.rto], ['RTO value', s.rtoValue],
+      ['Delivery rate %', rates.delivery], ['RTO rate %', rates.rto], ['COD RTO %', rates.codRto],
+      ['Prepaid RTO %', rates.prepaidRto], ['Return rate %', rates.return], ['Cancellation rate %', rates.cancellation],
+      ['COD share %', rates.codShare],
+    ]);
+
+  const exportBrands = () => exportCsv(`sales-by-brand_${period}.csv`, [
+    { label: 'Brand', value: (b) => b.brand },
+    { label: 'Placed', value: (b) => b.placed },
+    { label: 'Booked', value: (b) => b.booked },
+    { label: 'Delivered', value: (b) => b.delivered },
+    { label: 'Refunds', value: (b) => b.refunds },
+    { label: 'Net sales', value: (b) => b.netSales },
+    { label: 'AOV', value: (b) => b.aov },
+    { label: 'In pipeline', value: (b) => b.pipelineValue },
+    { label: 'RTO %', value: (b) => b.rtoRate },
+    { label: 'Return %', value: (b) => b.returnRate },
+    { label: 'Cancel %', value: (b) => b.cancellationRate },
+    { label: 'COD %', value: (b) => b.codShare },
+  ], byBrand);
+
+  const exportProducts = () => exportCsv(`top-products_${period}.csv`, [
+    { label: 'Product', value: (p) => p.name },
+    { label: 'Units booked', value: (p) => p.units },
+    { label: 'Booked value', value: (p) => p.value },
+    { label: 'Units delivered', value: (p) => p.deliveredUnits },
+    { label: 'Units returned', value: (p) => p.returnedUnits },
+    { label: 'Units RTO', value: (p) => p.rtoUnits },
+  ], topProducts);
+
+  const flow = [
+    { name: 'Waiting for COD call', v: s.toConfirm, c: RAMP[3] },
+    { name: 'To ship / in transit', v: (s.inPipeline || 0) - (s.toConfirm || 0) - (s.problems || 0), c: RAMP[2] },
+    { name: 'Delivery problem (NDR)', v: s.problems, c: RAMP[3] },
+    { name: 'Delivered & kept', v: (s.delivered || 0) - (s.returned || 0), c: RAMP[0] },
+    { name: 'Delivered, then returned', v: s.returned, c: RAMP[1] },
+    { name: 'Courier RTO', v: s.rto, c: RAMP[4] },
+    { name: 'Cancelled', v: s.cancelled, c: RAMP[4] },
+  ];
 
   return (
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Reports"
-        subtitle={hasDateFilter ? `Period: ${periodLabel}` : 'All-time performance — pick a date range to narrow it'}
+        subtitle={`${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Net sales = delivered orders minus refunds.`}
         actions={
           <div className="obz-rep-head">
-            <DateRangePicker
-              label=""
-              startDate={dateFilter.start_date || ''}
-              endDate={dateFilter.end_date || ''}
-              onStartChange={(v) => setDate('start_date', v)}
-              onEndChange={(v) => setDate('end_date', v)}
-              onClear={clearDates}
-              inline
+            <Dropdown
+              value={brandId || 'all'}
+              onChange={(v) => setBrandId(v === 'all' ? '' : v)}
+              options={[{ value: 'all', label: 'All brands' }, ...brandList.map((b) => ({ value: b.id, label: b.display_name || b.name }))]}
+              className="bset-brand-select"
             />
-            <button type="button" className="order-sync-main-btn" onClick={exportSummary} disabled={!stats}>
-              <DlIcon /> Export summary
+            <DateRangePicker label="" inline startDate={from} endDate={to}
+              onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
+            <button type="button" className="order-sync-main-btn" onClick={exportSummary} disabled={!data}>
+              <DlIcon /> Summary CSV
             </button>
-            <button
-              type="button"
-              className="order-sync-main-btn"
-              onClick={exportDeliveredOrders}
-              disabled={exportingDelivered || !dateFilter.start_date || !dateFilter.end_date}
-              title={(!dateFilter.start_date || !dateFilter.end_date)
-                ? 'Pick a start and end date to export delivered orders'
-                : 'Download an Excel of delivered orders for the selected range'}
-            >
-              <DlIcon /> {exportingDelivered ? 'Exporting…' : 'Export delivered orders'}
+            <button type="button" className="order-sync-main-btn" onClick={() => runExport('delivered')} disabled={!!exporting}
+              title="Excel of orders delivered in this range (all brands)">
+              <DlIcon /> {exporting === 'delivered' ? 'Exporting…' : 'Delivered orders'}
             </button>
-            <button
-              type="button"
-              className="order-sync-main-btn"
-              onClick={exportGstReport}
-              disabled={exportingGst || !dateFilter.start_date || !dateFilter.end_date}
-              title={(!dateFilter.start_date || !dateFilter.end_date)
-                ? 'Pick a start and end date to export the GST report'
-                : 'Export the GST sales report (delivered orders, per line item) for the selected range'}
-            >
-              <DlIcon /> {exportingGst ? 'Exporting…' : 'Export GST report'}
+            <button type="button" className="order-sync-main-btn" onClick={() => runExport('gst')} disabled={!!exporting}
+              title="GST sales report: delivered orders by invoice date, per line item (all brands)">
+              <DlIcon /> {exporting === 'gst' ? 'Exporting…' : 'GST report'}
             </button>
           </div>
         }
@@ -262,67 +236,74 @@ export default function Reports() {
       {isLoading ? (
         <div className="rep-state"><Loader /></div>
       ) : error ? (
-        <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Failed to load report data.</div>
-      ) : !stats ? null : (
+        <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Couldn't load the report: {error.message || 'try again'}</div>
+      ) : !data ? null : (
         <>
-          {/* ── KPI strip with compare arrows ── */}
           <div className="rep-kpis">
             <div className="rep-kpi">
-              <div className="rep-kl">Total Revenue</div>
-              <div className="rep-kv num">{money(revenue.total)}</div>
-              <div className="rep-kf"><Delta pct={deltas.revenue?.pct} /> vs prev 30d</div>
+              <div className="rep-kl">Net sales</div>
+              <div className="rep-kv num">{money(s.netSales)}</div>
+              <div className="rep-kf"><Delta pct={deltas.netSales} /> · {money(s.deliveredValue)} delivered − {money(s.refunds)} refunds</div>
             </div>
             <div className="rep-kpi">
-              <div className="rep-kl">Earned</div>
-              <div className="rep-kv num">{money(revenue.earned)}</div>
-              <div className="rep-kf">Delivered revenue</div>
+              <div className="rep-kl">Orders booked</div>
+              <div className="rep-kv num">{num(s.booked)}</div>
+              <div className="rep-kf"><Delta pct={deltas.booked} /> · {num(s.placed)} placed, {num(s.cancelled)} cancelled</div>
             </div>
             <div className="rep-kpi">
-              <div className="rep-kl">Orders</div>
-              <div className="rep-kv num">{num(orders.total)}</div>
-              <div className="rep-kf"><Delta pct={deltas.orders?.pct} /> · {num(orders.completed)} delivered</div>
+              <div className="rep-kl">Delivered</div>
+              <div className="rep-kv num">{num(s.delivered)}</div>
+              <div className="rep-kf"><Delta pct={deltas.delivered} /> · {pctTxt(rates.delivery)} delivery rate</div>
             </div>
             <div className="rep-kpi">
-              <div className="rep-kl">Avg Order</div>
-              <div className="rep-kv num">{money(revenue.average)}</div>
-              <div className="rep-kf"><Delta pct={deltas.aov?.pct} /> vs prev 30d</div>
+              <div className="rep-kl">Avg order (delivered)</div>
+              <div className="rep-kv num">{money(s.aov)}</div>
+              <div className="rep-kf"><Delta pct={deltas.aov} /> vs previous {`${Math.round((new Date(to) - new Date(from)) / 864e5) + 1}`} days</div>
             </div>
           </div>
 
-          {/* ── Revenue trend ── */}
           <div className="rep-panel">
-            <div className="rep-ph">
-              <h3>Revenue Trend</h3>
-              <span className="hint">Daily revenue · last 30 days</span>
-            </div>
-            <RevenueTrend data={stats.revenueTrend} />
+            <div className="rep-ph"><h3>Booked value per day</h3><span className="hint">orders placed (not cancelled), India days</span></div>
+            <DailyTrend daily={data.daily} from={from} to={to} />
           </div>
 
-          {/* ── Analytics cards — masonry so short + tall cards flow and fill
-               without leaving big blank gaps beside a taller neighbour ── */}
           <div className="rep-masonry">
-            <div className="rep-panel rep-panel--flush">
-              <div className="rep-ph">
-                <h3>Sales by Brand</h3>
-                <button type="button" className="order-sync-main-btn" onClick={exportBrandSales} disabled={!brandSales.length}>
-                  <DlIcon /> Export CSV
-                </button>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Where the orders are now</h3><span className="hint">{num(placed)} placed in this period</span></div>
+              <div className="rep-bars">
+                {placed === 0 ? <span className="hint">No orders in this period</span>
+                  : flow.filter((f) => f.v > 0).map((f) => (
+                    <Bar key={f.name} name={f.name} right={`${num(f.v)} · ${share(f.v)}%`} pct={share(f.v)} color={f.c} />
+                  ))}
               </div>
+            </div>
+
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Rates</h3></div>
+              <div className="rep-tiles">
+                <div className="rep-tile"><div className="rep-tl">RTO rate</div><div className="rep-tv num">{pctTxt(rates.rto)}</div><div className="rep-ts bad">{num(s.rto)} came back · {money(s.rtoValue)}</div></div>
+                <div className="rep-tile"><div className="rep-tl">Return rate</div><div className="rep-tv num">{pctTxt(rates.return)}</div><div className="rep-ts">{num(s.returned)} of {num(s.delivered)} delivered</div></div>
+                <div className="rep-tile"><div className="rep-tl">COD RTO</div><div className="rep-tv num">{pctTxt(rates.codRto)}</div><div className="rep-ts bad">{num(s.cod?.rto)} orders</div></div>
+                <div className="rep-tile"><div className="rep-tl">Prepaid RTO</div><div className="rep-tv num">{pctTxt(rates.prepaidRto)}</div><div className="rep-ts">{num(s.prepaid?.rto)} orders</div></div>
+                <div className="rep-tile"><div className="rep-tl">Cancelled</div><div className="rep-tv num">{pctTxt(rates.cancellation)}</div><div className="rep-ts">{num(s.cancelled)} orders</div></div>
+                <div className="rep-tile"><div className="rep-tl">Still open</div><div className="rep-tv num">{money(s.pipelineValue)}</div><div className="rep-ts">{num(s.inPipeline)} orders not delivered yet</div></div>
+              </div>
+            </div>
+
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph"><h3>COD vs prepaid</h3><span className="hint">COD is {pctTxt(rates.codShare)} of orders</span></div>
               <div className="rep-tbl-wrap">
                 <table className="rep-table">
-                  <thead>
-                    <tr><th>Brand</th><th className="r">Orders</th><th className="r">Revenue</th><th className="r">Earned</th><th className="r">Share</th></tr>
-                  </thead>
+                  <thead><tr><th></th><th className="r">Orders</th><th className="r">Delivered</th><th className="r">Delivered value</th><th className="r">RTO</th><th className="r">RTO %</th></tr></thead>
                   <tbody>
-                    {brandSales.length === 0 ? (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>No brand sales in this period</td></tr>
-                    ) : brandSales.map((b, i) => (
-                      <tr key={b.brandId ?? b.name}>
-                        <td className="strong"><span className="rep-dot" style={{ background: RAMP[i % RAMP.length] }} />{b.name}</td>
-                        <td className="r num">{num(b.orders)}</td>
-                        <td className="r strong num">{money(b.revenue)}</td>
-                        <td className="r num">{money(b.earned)}</td>
-                        <td className="r num">{b.share || 0}%</td>
+                    {[['COD', s.cod, rates.codRto], ['Prepaid', s.prepaid, rates.prepaidRto]].map(([n, p, r]) => (
+                      <tr key={n}>
+                        <td className="strong">{n}</td>
+                        <td className="r num">{num(p?.orders)}</td>
+                        <td className="r num">{num(p?.delivered)}</td>
+                        <td className="r strong num">{money(p?.deliveredValue)}</td>
+                        <td className="r num">{num(p?.rto)}</td>
+                        <td className="r num">{pctTxt(r)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -330,47 +311,68 @@ export default function Reports() {
               </div>
             </div>
 
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Revenue Share</h3><span className="hint">of {moneyShort(revenue.total)} total</span></div>
-              <div className="rep-bars">
-                {brandSales.length === 0 ? (
-                  <span className="hint">No data</span>
-                ) : brandSales.map((b, i) => (
-                  <div className="rep-bar-row" key={b.brandId ?? b.name}>
-                    <div className="rep-bar-top">
-                      <span className="rep-bar-name">
-                        <span className="rep-dot" style={{ background: RAMP[i % RAMP.length] }} />
-                        <span className="lbl">{b.name}</span>
-                      </span>
-                      <span className="rep-bar-val num">{b.share || 0}%</span>
-                    </div>
-                    <div className="rep-track"><div className="rep-fill" style={{ width: `${b.share || 0}%`, background: RAMP[i % RAMP.length] }} /></div>
-                  </div>
-                ))}
+            {!brandId && (
+              <div className="rep-panel rep-panel--flush">
+                <div className="rep-ph">
+                  <h3>By brand</h3>
+                  <button type="button" className="order-sync-main-btn" onClick={exportBrands} disabled={!byBrand.length}><DlIcon /> CSV</button>
+                </div>
+                <div className="rep-tbl-wrap">
+                  <table className="rep-table">
+                    <thead><tr><th>Brand</th><th className="r">Booked</th><th className="r">Delivered</th><th className="r">Net sales</th><th className="r">RTO %</th><th className="r">Return %</th></tr></thead>
+                    <tbody>
+                      {byBrand.length === 0 ? <Empty cols={6} text="No orders in this period" /> : byBrand.map((b, i) => (
+                        <tr key={b.brandId ?? b.brand}>
+                          <td className="strong"><span className="rep-dot" style={{ background: RAMP[i % RAMP.length] }} />{b.brand}</td>
+                          <td className="r num">{num(b.booked)}</td>
+                          <td className="r num">{num(b.delivered)}</td>
+                          <td className="r strong num">{money(b.netSales)}</td>
+                          <td className="r num">{pctTxt(b.rtoRate)}</td>
+                          <td className="r num">{pctTxt(b.returnRate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="rep-panel rep-panel--flush">
               <div className="rep-ph">
-                <h3>Top Products</h3>
-                <button type="button" className="order-sync-main-btn" onClick={exportTopProducts} disabled={!topProducts.length}>
-                  <DlIcon /> Export CSV
-                </button>
+                <h3>Top products</h3>
+                <button type="button" className="order-sync-main-btn" onClick={exportProducts} disabled={!topProducts.length}><DlIcon /> CSV</button>
               </div>
               <div className="rep-tbl-wrap">
                 <table className="rep-table">
-                  <thead>
-                    <tr><th style={{ width: 36 }}>#</th><th>Product</th><th className="r">Units</th><th className="r">Revenue</th></tr>
-                  </thead>
+                  <thead><tr><th style={{ width: 32 }}>#</th><th>Product</th><th className="r">Units</th><th className="r">Value</th><th className="r">Delivered</th><th className="r">Back</th></tr></thead>
                   <tbody>
-                    {topProducts.length === 0 ? (
-                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>No products sold in this period</td></tr>
-                    ) : topProducts.slice(0, 10).map((p, i) => (
+                    {topProducts.length === 0 ? <Empty cols={6} text="No products sold in this period" /> : topProducts.slice(0, 10).map((p, i) => (
                       <tr key={p.id ?? i}>
                         <td className="rank">{i + 1}</td>
                         <td className="strong rep-prod">{p.name}</td>
-                        <td className="r num">{num(p.totalSold)}</td>
-                        <td className="r strong num">{money(p.totalRevenue)}</td>
+                        <td className="r num">{num(p.units)}</td>
+                        <td className="r strong num">{money(p.value)}</td>
+                        <td className="r num">{num(p.deliveredUnits)}</td>
+                        <td className="r num" title="returned + RTO units">{num((p.returnedUnits || 0) + (p.rtoUnits || 0))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph"><h3>RTO by courier</h3><span className="hint">of orders that reached an outcome</span></div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead><tr><th>Courier</th><th className="r">Delivered</th><th className="r">RTO</th><th className="r">RTO %</th></tr></thead>
+                  <tbody>
+                    {rtoByCourier.length === 0 ? <Empty cols={4} text="Nothing delivered or returned yet" /> : rtoByCourier.map((c) => (
+                      <tr key={c.courier}>
+                        <td className="strong">{c.courier}</td>
+                        <td className="r num">{num(c.delivered)}</td>
+                        <td className="r num">{num(c.rto)}</td>
+                        <td className="r strong num">{pctTxt(c.rtoRate)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -379,49 +381,34 @@ export default function Reports() {
             </div>
 
             <div className="rep-panel">
-              <div className="rep-ph"><h3>Order Status Breakdown</h3><span className="hint">{num(orders.total)} orders</span></div>
+              <div className="rep-ph"><h3>RTO by state</h3><span className="hint">states with the most courier returns</span></div>
               <div className="rep-bars">
-                {statusRows.length === 0 ? (
-                  <span className="hint">No orders in this period</span>
-                ) : statusRows.map((r) => (
-                  <div className="rep-bar-row" key={r.label}>
-                    <div className="rep-bar-top">
-                      <span className="rep-bar-name"><span className="lbl">{r.label}</span></span>
-                      <span className="rep-sb-pct num">{num(r.value)} · {pct(r.value)}%</span>
-                    </div>
-                    <div className="rep-track"><div className="rep-fill" style={{ width: `${Math.max(pct(r.value), 1)}%`, background: r.c }} /></div>
-                  </div>
-                ))}
+                {rtoByState.length === 0 ? <span className="hint">No RTO in this period</span>
+                  : rtoByState.slice(0, 8).map((r) => (
+                    <Bar key={r.state} name={r.state || 'Unknown'} right={`${num(r.rto)} of ${num((r.delivered || 0) + (r.rto || 0))} · ${pctTxt(r.rtoRate)}`} pct={r.rtoRate} color={RAMP[4]} />
+                  ))}
               </div>
             </div>
 
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Revenue by Status</h3><span className="hint">where the money sits</span></div>
-              <div className="rep-seg">
-                <span style={{ width: `${(earned / segTotal) * 100}%`, background: RAMP[0] }} />
-                <span style={{ width: `${(active / segTotal) * 100}%`, background: RAMP[2] }} />
-                <span style={{ width: `${(lost / segTotal) * 100}%`, background: RAMP[4] }} />
-              </div>
-              <div className="rep-legend">
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[0] }} /><div><b className="num">{moneyShort(earned)}</b><small>Earned · delivered</small></div></div>
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[2] }} /><div><b className="num">{moneyShort(active)}</b><small>Active · in pipeline</small></div></div>
-                <div className="rep-leg"><span className="d" style={{ background: RAMP[4] }} /><div><b className="num">{moneyShort(lost)}</b><small>Lost · cancelled + RTO</small></div></div>
-              </div>
-            </div>
-
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Payment &amp; Fulfilment</h3></div>
-              <div className="rep-tiles">
-                <div className="rep-tile"><div className="rep-tl">COD Orders</div><div className="rep-tv num">{num(payment.cod?.count)}</div><div className="rep-ts">to be collected</div></div>
-                <div className="rep-tile"><div className="rep-tl">COD Revenue</div><div className="rep-tv num">{money(payment.cod?.revenue)}</div><div className="rep-ts">cash on delivery</div></div>
-                <div className="rep-tile"><div className="rep-tl">Prepaid Orders</div><div className="rep-tv num">{num(payment.prepaid?.count)}</div><div className="rep-ts good">already paid</div></div>
-                <div className="rep-tile"><div className="rep-tl">Prepaid Revenue</div><div className="rep-tv num">{money(payment.prepaid?.revenue)}</div><div className="rep-ts good">collected</div></div>
-                <div className="rep-tile"><div className="rep-tl">RTO Rate</div><div className="rep-tv num">{stats.rtoStats?.rtoRate || 0}%</div><div className="rep-ts bad">returns</div></div>
-                <div className="rep-tile"><div className="rep-tl">RTO Value</div><div className="rep-tv num">{money(breakdown.rto)}</div><div className="rep-ts bad">at risk</div></div>
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph"><h3>Returns by reason</h3><span className="hint">customer returns raised in this period</span></div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead><tr><th>Reason</th><th className="r">Returns</th><th className="r">Refunded</th><th className="r">Refund value</th></tr></thead>
+                  <tbody>
+                    {returnsByReason.length === 0 ? <Empty cols={4} text="No returns in this period" /> : returnsByReason.map((r) => (
+                      <tr key={r.reason}>
+                        <td className="strong">{label(r.reason)}</td>
+                        <td className="r num">{num(r.returns)}</td>
+                        <td className="r num">{num(r.refunded)}</td>
+                        <td className="r strong num">{money(r.refundValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-
         </>
       )}
     </div>

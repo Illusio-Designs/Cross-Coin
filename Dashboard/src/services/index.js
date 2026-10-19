@@ -307,6 +307,12 @@ export const trafficReportService = {
     const { data } = await adminApi.get('/api/reports/brand-traffic', { params });
     return data;
   },
+  // Reports Overview — pipeline-based sales summary (net sales, rates, RTO…).
+  getSalesSummary: async (startDate, endDate, brandId) => {
+    const { data } = await adminApi.get('/api/reports/sales-summary', { params: { startDate, endDate, brandId } });
+    if (!data?.success) throw new Error(data?.message || 'Failed to load the sales report');
+    return data;
+  },
   getRevenueProfit: async (startDate, endDate) => {
     const { data } = await adminApi.get('/api/reports/revenue-profit', { params: { startDate, endDate } });
     return data;
@@ -879,16 +885,6 @@ export const orderService = {
   getLabelDownloadStats: async () => {
     try {
       const response = await adminApi.get('/api/orders/labels/stats');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  // Admin manual order creation
-  createManualOrder: async (orderData) => {
-    try {
-      const response = await adminApi.post('/api/orders/manual', orderData, { timeout: 30000 });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

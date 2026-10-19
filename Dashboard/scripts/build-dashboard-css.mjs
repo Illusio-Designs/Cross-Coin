@@ -28,7 +28,6 @@ const versionFile = join(root, 'src', 'dashboardCssVersion.js');
 // Modal from components/ui — do NOT move those here.
 const FILES = [
   'dashboard-home.css',
-  'manualOrder.css',
   'layout.css',
   'tables.css',
   'Card.css',
@@ -37,7 +36,6 @@ const FILES = [
   'orders.css',
   'reports.css',
   'media.css',
-  'utmAnalytics.css',
   'attributes.css',
   'slider.css',
   'pages.css',
@@ -46,9 +44,7 @@ const FILES = [
   'brandTags.css',
   'brandAssignment.css',
   'seo.css',
-  'social.css',
   'whatsapp.css',
-  'analytics.css',
 ];
 
 const parts = [];

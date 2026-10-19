@@ -7,15 +7,14 @@ export const getPageTitle = (view) => {
     'pack-pricing': 'Pack pricing',
     'attributes': 'Attributes',
     'orders': 'Orders',
-    'returns': 'Returns & Refunds',
+    'returns': 'Orders · Returns',
     'payments': 'Payments',
-    'ndr': 'Failed Deliveries',
+    'ndr': 'Orders · Delivery problems',
     'consumers': 'Consumers',
     'shippingFees': 'Shipping Fees',
     'webhook-events': 'Courier Webhooks',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
-    'abandoned-carts': 'Abandoned carts',
     'seo': 'SEO',
     // Legacy deep-link views — all open the unified SEO hub on the
     // matching tab. Titles describe the tab so the browser title stays

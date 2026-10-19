@@ -128,7 +128,7 @@ export default function TrafficReport() {
     <div style={S.wrap}>
       <PageHeader
         title="Traffic & Conversion"
-        subtitle="Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders & revenue are the real store sales in this window (they match the Overview report). Per-channel orders below count only orders we can attribute to a tracked visit."
+        subtitle="Visits → views → cart → checkout → orders per brand. Visits/views/cart/checkout are first-party tracked events; orders & revenue are orders placed in this window that weren't cancelled (the same as “Orders booked” on the Overview, not net sales). Per-channel orders below count only orders we can attribute to a tracked visit."
         actions={
           <>
             <Dropdown

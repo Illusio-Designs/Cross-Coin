@@ -15,7 +15,6 @@ import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
-import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
 import OrderStory from '../../../components/orders/OrderStory';
 import Returns from '../returns/returns';
 import FailedDeliveries from '../ndr/ndr';
@@ -107,7 +106,7 @@ function OverflowMenu({ items }) {
     );
 }
 
-const Orders = () => {
+const Orders = ({ initialTab } = {}) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -119,7 +118,7 @@ const Orders = () => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
-    const [statusFilter, setStatusFilter] = useState("to_confirm");
+    const [statusFilter, setStatusFilter] = useState(initialTab || "to_confirm");
     const [deskCounts, setDeskCounts] = useState({});
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [refundDueFilter, setRefundDueFilter] = useState(false);
@@ -146,7 +145,6 @@ const Orders = () => {
     const [labelStats, setLabelStats] = useState({ totalLabels: 0, downloadedLabels: 0, pendingLabels: 0, downloadRate: 0 });
     const [statsStartDate, setStatsStartDate] = useState('');
     const [statsEndDate, setStatsEndDate] = useState('');
-    const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
     const [brandFilter, setBrandFilter] = useState('all');
     const [brands, setBrands] = useState([]);
     const [generatingLabel, setGeneratingLabel] = useState(new Set());
@@ -523,17 +521,37 @@ const Orders = () => {
     };
 
     const selectAllOrdersWithLabels = () => {
-        const ordersWithLabels = orders.filter(order => order.shipping_label_url);
-        if (selectedOrders.size === ordersWithLabels.length) setSelectedOrders(new Set());
-        else setSelectedOrders(new Set(ordersWithLabels.map(order => order.id)));
+        if (orders.length && orders.every((o) => selectedOrders.has(o.id))) setSelectedOrders(new Set());
+        else setSelectedOrders(new Set(orders.map((o) => o.id)));
+    };
+
+    // Bulk actions apply to the selected orders they make sense for.
+    const selectedRows = orders.filter((o) => selectedOrders.has(o.id));
+    const selectedWithLabel = selectedRows.filter((o) => o.shipping_label_url);
+    const selectedToConfirm = selectedRows.filter((o) => ['awaiting_confirmation', 'pending'].includes((o.status || '').toLowerCase()));
+    const [bulkConfirming, setBulkConfirming] = useState(false);
+    const handleBulkConfirm = async () => {
+        if (!selectedToConfirm.length) return;
+        setBulkConfirming(true);
+        let ok = 0; const failed = [];
+        for (const o of selectedToConfirm) {
+            try {
+                const r = await orderService.confirmOrder(o.id);
+                if (r?.success === false) failed.push(o.order_number); else ok++;
+            } catch { failed.push(o.order_number); }
+        }
+        setBulkConfirming(false);
+        if (ok) showSuccess('orderConfirmed', `Confirmed ${ok} order${ok === 1 ? '' : 's'} — courier booking started.`);
+        if (failed.length) showError('confirmFailed', `Couldn't confirm ${failed.join(', ')}`);
+        setSelectedOrders(new Set()); fetchOrders(currentPage, { silent: true }); fetchDeskCounts(); fetchAllOrdersForStats();
     };
 
     const handleBulkDownload = async () => {
-        if (selectedOrders.size === 0) { showError('fieldRequired', 'Please select orders to download labels'); return; }
+        if (selectedWithLabel.length === 0) { showError('fieldRequired', 'None of the selected orders has a label yet'); return; }
         setIsDownloadingBulk(true);
         try {
-            await orderService.bulkDownloadLabels(Array.from(selectedOrders));
-            showSuccess('exported', `Downloaded ${selectedOrders.size} labels successfully!`);
+            await orderService.bulkDownloadLabels(selectedWithLabel.map((o) => o.id));
+            showSuccess('exported', `Downloaded ${selectedWithLabel.length} labels.`);
             setSelectedOrders(new Set()); fetchOrders(currentPage); fetchLabelStats();
         } catch (error) { showError('exportFailed', error.message || 'Failed to download labels');
         } finally { setIsDownloadingBulk(false); }
@@ -569,6 +587,9 @@ const Orders = () => {
         setCurrentPage(1);
     }, [statusFilter, paymentTypeFilter, paymentStatusFilter, refundDueFilter, brandFilter, sortBy, sortOrder, itemsPerPage, debouncedSearch, statsStartDate, statsEndDate]);
 
+    // A selection only makes sense on the page/tab it was made on.
+    useEffect(() => { setSelectedOrders(new Set()); }, [statusFilter, currentPage, debouncedSearch]);
+
     // Single source of truth for fetching the orders list.
     // fetchOrders depends on every filter, so this effect re-runs whenever any of them change.
     useEffect(() => { fetchOrders(currentPage); }, [fetchOrders, currentPage]);
@@ -603,8 +624,8 @@ const Orders = () => {
         if (!order || !order.OrderItems || order.OrderItems.length === 0) return parseFloat(order.final_amount || 0);
         return calculateOrderTotal(calculateOrderSubtotal(order.OrderItems), order.shipping_fee || 0, order.discount_amount || 0);
     };
-    const getPaymentStatusDisplay = (order) => ({ pending: 'Pending', paid: 'Paid', failed: 'Failed', refunded: 'Refunded', cancelled: 'Cancelled', refund_pending: 'Refund Pending' }[order.payment_status?.toLowerCase()] || 'Unknown');
-    const getPaymentStatusClass = (order) => ({ pending: 'pending', paid: 'paid', failed: 'failed', refunded: 'refunded', cancelled: 'cancelled', refund_pending: 'refund-pending' }[order.payment_status?.toLowerCase()] || 'unknown');
+    const getPaymentStatusDisplay = (order) => ({ pending: 'Pending', paid: 'Paid', failed: 'Failed', refunded: 'Refunded', partial_refund: 'Part refunded', cancelled: 'Cancelled', refund_pending: 'Refund Pending' }[order.payment_status?.toLowerCase()] || 'Unknown');
+    const getPaymentStatusClass = (order) => ({ pending: 'pending', paid: 'paid', failed: 'failed', refunded: 'refunded', partial_refund: 'refunded', cancelled: 'cancelled', refund_pending: 'refund-pending' }[order.payment_status?.toLowerCase()] || 'unknown');
     const formatPaymentType = (paymentType) => {
         const type = String(paymentType || '').toLowerCase();
         if (type === 'cod') return 'COD';
@@ -618,201 +639,274 @@ const Orders = () => {
     const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
     const currentItemsWithSN = orders.map((item, idx) => ({ ...item, serial_number: indexOfFirstItem + idx + 1 }));
 
+    // ── Order Desk table ────────────────────────────────────────────────────
+    // One row = the whole order: who, money, pipeline stage, shipment + label,
+    // the last WhatsApp message with this customer, the one thing that needs
+    // doing, and a single contextual primary action (the rest sit in ⋯).
+    const TONE = {
+        ok: ['var(--ds-color-success-bg)', 'var(--ds-color-success)'],
+        info: ['var(--ds-color-info-bg)', 'var(--ds-color-info)'],
+        warn: ['var(--ds-color-warn-bg)', 'var(--ds-color-warn)'],
+        bad: ['var(--ds-color-danger-bg)', 'var(--ds-color-danger)'],
+        violet: ['var(--ds-color-accent2-bg)', 'var(--ds-color-accent2)'],
+    };
+    const Pill = ({ tone = 'info', children, title }) => (
+        <span title={title} style={{ display: 'inline-block', background: TONE[tone][0], color: TONE[tone][1], padding: '2px 8px', borderRadius: 999, fontSize: '.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{children}</span>
+    );
+    const muted = { color: 'var(--ds-color-text-muted)', fontSize: '.76rem', lineHeight: 1.35 };
+    const ageHours = (d) => Math.floor((Date.now() - new Date(d).getTime()) / 3600000);
+    const shortWhen = (d) => {
+        if (!d) return '';
+        const t = new Date(d);
+        const sameDay = t.toDateString() === new Date().toDateString();
+        return sameDay
+            ? t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+            : t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' ' + t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    };
+    const openChat = (conversationId) => {
+        try { sessionStorage.setItem('obz-wa-open', String(conversationId)); } catch { /* storage blocked */ }
+        window.history.pushState({}, '', '/dashboard/whatsapp-chat');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+    const customerName = (row) => String(row.ShippingAddress?.full_name || row.User?.username
+        || [row.GuestUser?.firstName, row.GuestUser?.lastName].filter(Boolean).join(' ') || 'Guest')
+        .replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim();
+
+    // Everything the row needs to decide its pill, issue and primary action.
+    const rowState = (row) => {
+        const st = (row.status || '').toLowerCase();
+        const pmt = (row.payment_status || '').toLowerCase();
+        const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
+        const waybill = row.Shipment?.waybill || row.shipping_waybill;
+        const syncError = row.Shipment?.sync_error || row.shipping_sync_error;
+        const canConfirm = ['awaiting_confirmation', 'pending'].includes(st);
+        const isFinal = ['delivered', 'cancelled', 'order cancelled'].includes(st);
+        const pendingSync = !waybill && !isFinal && !canConfirm && !['rto', 'rto delivered', 'returned_rto', 'return_initiated'].includes(st);
+        const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes(st);
+        const refundableStatus = ['cancelled', 'order cancelled', 'returned_rto', 'rto delivered'].includes(st);
+        const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmt);
+        const ndr = row.ndr_case;
+        const ret = row.open_return;
+        const wa = row.last_whatsapp;
+
+        let issue = null;
+        if (syncError && pendingSync) issue = { tone: 'bad', tag: 'Booking', text: `Booking failed: ${syncError}` };
+        else if (ndr) {
+            const a = ndr.customer_action;
+            issue = a === 'reattempt' ? { tone: 'info', tag: 'NDR', text: `Customer chose deliver again${ndr.reattempt_date ? ` (${ndr.reattempt_date})` : ''}` }
+                : a === 'new_address' ? { tone: 'bad', tag: 'NDR', text: `New address sent: ${ndr.new_address || '—'}` }
+                : a === 'cancel' ? { tone: 'bad', tag: 'NDR', text: 'Customer wants to cancel — RTO it' }
+                : { tone: 'bad', tag: 'NDR', text: `Delivery failed${ndr.reason ? `: ${ndr.reason}` : ''} — waiting for the customer` };
+        } else if (ret) {
+            issue = { tone: 'violet', tag: 'Return', text: ret.status === 'received'
+                ? `${ret.return_number} received — enter the refund amount`
+                : `${ret.return_number}: ${String(ret.status).replace(/_/g, ' ')}${ret.is_cod ? ' · COD (UPI refund)' : ''}` };
+        } else if (canRefund) {
+            issue = { tone: 'bad', tag: 'Refund', text: pmt === 'refund_pending' ? 'Refund pending — retry it' : 'Refund owed to the customer' };
+        } else if (canConfirm && ageHours(row.createdAt) >= 24) {
+            issue = { tone: 'warn', tag: 'Call', text: `Waiting ${ageHours(row.createdAt)} h — call the customer, then confirm or cancel` };
+        } else if (['rto', 'rto delivered', 'returned_rto'].includes(st)) {
+            issue = { tone: 'warn', tag: 'RTO', text: st === 'rto' ? 'Coming back to us — stock restores on receipt' : 'Returned to us' };
+        } else if (wa && wa.direction === 'inbound' && wa.unread > 0) {
+            issue = { tone: 'info', tag: 'Reply', text: 'Unread WhatsApp reply' };
+        }
+
+        // The one button that moves this order forward.
+        let primary = { label: 'View', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } };
+        if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
+        else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
+        else if (ndr) primary = { label: 'Resolve NDR', onClick: () => { setStatusFilter('problems'); setCurrentPage(1); } };
+        else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => { setStatusFilter('returns'); setCurrentPage(1); } };
+        else if (canRefund) primary = { label: pmt === 'refund_pending' ? 'Retry refund' : 'Refund', onClick: () => refundOrder(row.id, row.order_number) };
+        else if (waybill && !row.shipping_label_url && !isFinal) primary = { label: generatingLabel.has(row.id) ? 'Getting…' : 'Get label', disabled: generatingLabel.has(row.id), onClick: () => generateLabelForOrder(row.id) };
+        else if (st === 'delivered') primary = { label: 'Invoice', onClick: () => downloadInvoice(row.id, row.order_number) };
+
+        return { st, pmt, isPrepaid, waybill, syncError, canConfirm, pendingSync, canCancel, canRefund, issue, primary, wa };
+    };
+
+    const allOnPageSelected = orders.length > 0 && orders.every((o) => selectedOrders.has(o.id));
+
     const columns = [
         {
             header: (
-                <input type="checkbox" className="bulk-select-checkbox"
-                    checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.shipping_label_url).length}
-                    onChange={selectAllOrdersWithLabels} title="Select all orders with labels" />
+                <input type="checkbox" className="bulk-select-checkbox" checked={allOnPageSelected}
+                    onChange={selectAllOrdersWithLabels} aria-label="Select every order on this page" />
             ),
-            // Always render a checkbox so the column is consistent on every row.
-            // Only orders that already have a shipping label are selectable (bulk
-            // label download); the rest show a faded, disabled box with a hint —
-            // instead of the checkbox appearing on some rows and vanishing on
-            // others, which read as a bug.
-            cell: (row) => {
-                const hasLabel = !!row.shipping_label_url;
-                return (
-                    <input type="checkbox" className="order-select-checkbox"
-                        checked={hasLabel && selectedOrders.has(row.id)}
-                        onChange={() => hasLabel && toggleOrderSelection(row.id)}
-                        disabled={!hasLabel}
-                        title={hasLabel ? 'Select for bulk label download' : 'No shipping label yet — generate one to select this order'}
-                        style={hasLabel ? undefined : { opacity: 0.3, cursor: 'not-allowed' }} />
-                );
-            }
+            cell: (row) => (
+                <input type="checkbox" className="order-select-checkbox" checked={selectedOrders.has(row.id)}
+                    onChange={() => toggleOrderSelection(row.id)} aria-label={`Select ${row.order_number}`}
+                    onClick={(e) => e.stopPropagation()} />
+            ),
+            width: '34px',
         },
-        { header: "Order ID", cell: (row) => <span style={{ fontFamily: 'var(--ds-font-mono)', fontWeight: 600, color: 'var(--ds-color-text)', whiteSpace: 'nowrap' }}>{row.order_number}</span>, width: "140px" },
         {
-            header: "Customer",
+            header: 'Order',
             cell: (row) => {
-                const rawName = row.User?.username || row.ShippingAddress?.full_name || 'N/A';
-                // The name sometimes carries a trailing "(phone)" — strip it so the
-                // cell shows only the name (no number, no email).
-                const name = String(rawName).replace(/\s*\(\+?[\d\s-]{6,}\)\s*$/, '').trim() || 'N/A';
-                // Stacked: name (wraps instead of forcing a wide column) with the
-                // RTO risk badge below it.
+                const s = rowState(row);
+                const h = ageHours(row.createdAt);
                 return (
-                    <div className="customer-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
-                        <div className="customer-name" style={{ lineHeight: 1.25, whiteSpace: 'normal', wordBreak: 'break-word' }}>{name}</div>
-                        {row.rto_risk_level && (
-                            <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`}>
-                                <span className="rto-dot" />
-                                <span className="rto-level">{row.rto_risk_level}</span>
-                                {row.rto_risk_score != null && <span className="rto-score">{row.rto_risk_score}</span>}
+                    <div style={{ display: 'grid', gap: 2 }}>
+                        <span style={{ fontFamily: 'var(--ds-font-mono)', fontWeight: 700, whiteSpace: 'nowrap' }}>{row.order_number}</span>
+                        <span style={muted}>
+                            {row.Brand?.display_name || row.Brand?.name || '—'} · {shortWhen(row.createdAt)}
+                            {s.canConfirm && h >= 1 && <b style={{ color: h >= 24 ? 'var(--ds-color-danger)' : 'var(--ds-color-warn)' }}> · {h} h</b>}
+                        </span>
+                    </div>
+                );
+            },
+            width: '150px',
+        },
+        {
+            header: 'Customer',
+            cell: (row) => (
+                <div style={{ display: 'grid', gap: 2, alignItems: 'start' }}>
+                    <span style={{ lineHeight: 1.25, wordBreak: 'break-word' }}>{customerName(row)}</span>
+                    <span style={muted}>{[row.ShippingAddress?.phone || row.GuestUser?.phone, row.ShippingAddress?.city].filter(Boolean).join(' · ') || '—'}</span>
+                    {row.rto_risk_level && (
+                        <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`} style={{ justifySelf: 'start' }}>
+                            <span className="rto-dot" />
+                            <span className="rto-level">{row.rto_risk_level}</span>
+                            {row.rto_risk_score != null && <span className="rto-score">{row.rto_risk_score}</span>}
+                        </span>
+                    )}
+                </div>
+            ),
+            width: '160px',
+        },
+        {
+            header: 'Payment',
+            cell: (row) => {
+                const label = formatPaymentType(row.payment_type);
+                return (
+                    <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}>
+                        <b style={{ whiteSpace: 'nowrap' }}>{formatCurrency(getOrderTotal(row))}</b>
+                        <span style={muted}>{label} · {getPaymentStatusDisplay(row)}</span>
+                        {label === 'COD' && row.cod_address_confirmed && (
+                            <span title="Customer confirmed their address on WhatsApp"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--ds-color-success)', background: 'var(--ds-color-success-bg)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                                <HugeiconsIcon icon={WhatsappIcon} size={11} strokeWidth={2} /> address ok
                             </span>
                         )}
                     </div>
                 );
             },
-            width: "150px"
+            width: '110px',
         },
         {
-            header: "Brand",
-            cell: (row) => {
-                if (row.Brand) {
-                    return <BrandTags brands={[row.Brand]} />;
-                }
-                return <span className="sl-na">—</span>;
-            }
-        },
-        { header: "Date", cell: (row) => formatDate(row.createdAt), width: "130px" },
-        { header: "Payment", cell: (row) => {
-            const label = formatPaymentType(row.payment_type);
-            // Stacked (chip over status) so the column stays narrow.
-            return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                    <span className={`pay-chip ${label === 'COD' ? 'pay-cod' : 'pay-prepaid'}`}>{label}</span>
-                    <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>
-                    {label === 'COD' && row.cod_address_confirmed && (
-                      <span title={`Customer confirmed their address on WhatsApp${row.cod_address_confirmed_at ? ' · ' + new Date(row.cod_address_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}`}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--ds-color-success)', background: 'var(--ds-color-success-bg)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                        <HugeiconsIcon icon={WhatsappIcon} size={11} strokeWidth={2} /> confirmed
-                      </span>
-                    )}
+            header: 'Stage',
+            cell: (row) => (
+                <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}>
+                    <OrderStatusBadge status={row.status} />
+                    <span style={{ ...muted, fontFamily: 'var(--ds-font-mono)', fontSize: '.7rem' }}>{row.status}</span>
                 </div>
-            );
-        }, width: "104px" },
-        { header: "Total", cell: (row) => formatCurrency(getOrderTotal(row)), width: "88px" },
-        { header: "Order Status", cell: (row) => <OrderStatusBadge status={row.status} />, width: "128px" },
+            ),
+            width: '130px',
+        },
         {
-            // Consolidated shipment column — status + AWB/courier + label, so the
-            // table reads clean like the prototype. All shipment ACTIONS (sync,
-            // refresh, edit AWB, generate/download label) still live in the
-            // Actions column, so nothing is lost by merging these display cells.
-            header: "Shipment",
+            header: 'Shipment & label',
             cell: (row) => {
-                const s = row.Shipment || {};
-                const waybill = s.waybill || row.shipping_waybill;
-                const courier = s.courier_name || row.courier_name;
-                const orderStatus = (row.status || '').toLowerCase();
-                // Cancelled orders never ship — don't show a "Pending Sync" chip.
-                if ((orderStatus === 'cancelled' || orderStatus === 'order cancelled') && !waybill) {
-                    return <span style={{ color: 'var(--ds-color-text-faint)', fontSize: '12px' }}>—</span>;
+                const s = rowState(row);
+                const courier = row.Shipment?.courier_name || row.courier_name;
+                if (!s.waybill && !s.pendingSync && !s.canConfirm) return <span style={muted}>—</span>;
+                if (s.canConfirm) return <span style={muted}>Books when confirmed</span>;
+                if (!s.waybill) {
+                    return s.syncError
+                        ? <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}><Pill tone="bad">Booking failed</Pill><span style={{ ...muted, maxWidth: 180 }}>{s.syncError}</span></div>
+                        : <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}><ShipmentStatusBadge status={row.Shipment?.sync_status || row.shipping_sync_status || 'pending'} syncError={s.syncError} /><span style={muted}>Not booked yet</span></div>;
                 }
-                const status = s.sync_status || row.shipping_sync_status || (row.shipping_order_id || waybill ? 'synced' : 'pending');
-                const syncError = s.sync_error || row.shipping_sync_error;
-                // Stacked: status on top, then AWB, then courier — keeps the row
-                // narrow instead of one long horizontal line.
                 return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
-                        <ShipmentStatusBadge status={status} syncError={syncError} />
-                        {waybill && (
-                            <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: '11.5px', color: 'var(--ds-color-text)', whiteSpace: 'nowrap' }}>{waybill}</span>
-                        )}
-                        {waybill && courier && (
-                            <span style={{ fontSize: '11px', color: 'var(--ds-color-text-muted)', whiteSpace: 'nowrap' }}>{courier}</span>
+                    <div style={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+                        <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: '.76rem', whiteSpace: 'nowrap' }}>{s.waybill}</span>
+                        {courier && <span style={muted}>{courier}</span>}
+                        {row.shipping_label_url ? (
+                            <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" style={{ padding: '3px 8px', fontSize: '.74rem', marginTop: 3 }}
+                                onClick={(e) => { e.stopPropagation(); handleLabelDownload(row.id, row.shipping_label_url); }}
+                                title={row.label_downloaded ? 'Label already downloaded — download again' : 'Download the shipping label'}>
+                                <HugeiconsIcon icon={Download04Icon} size={13} strokeWidth={2} /> Label{row.label_downloaded ? ' ✓' : ''}
+                            </button>
+                        ) : !['delivered', 'cancelled', 'order cancelled'].includes(s.st) && (
+                            <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" style={{ padding: '3px 8px', fontSize: '.74rem', marginTop: 3 }}
+                                disabled={generatingLabel.has(row.id)}
+                                onClick={(e) => { e.stopPropagation(); generateLabelForOrder(row.id); }}>
+                                {generatingLabel.has(row.id) ? 'Getting…' : 'Get label'}
+                            </button>
                         )}
                     </div>
                 );
             },
-            width: "140px"
+            width: '150px',
         },
         {
-            header: "Actions",
+            header: 'Last WhatsApp',
             cell: (row) => {
-                const isFinal = row.status === 'delivered' || row.status === 'cancelled';
-                const isSyncing = syncingOrders.has(row.id);
-                // Once an order has a waybill it's already booked with a courier —
-                // hide the Sync button — courier webhooks keep its status current.
-                const isSynced = !!(row.Shipment?.waybill || row.shipping_waybill);
-                const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
-                // Confirming an order now books the courier automatically, so the
-                // Sync button is no longer shown on unconfirmed rows. It only stays
-                // as a RETRY for orders that were confirmed but whose booking hasn't
-                // landed yet (the "Pending Sync" state) — e.g. no serviceable
-                // courier on the first attempt.
-                const pendingSync = !isSynced && !isFinal && !canConfirm;
-                // Admin can cancel any non-dispatched order (COD or prepaid),
-                // including confirmed / processing / synced-&-booked ones — the
-                // backend restores stock, refunds prepaid, and cancels the
-                // courier booking (iThink) so both sides stay in sync. Matches
-                // the server's admin-cancellable statuses; dispatched/final
-                // orders (shipped, delivered, cancelled…) never show it.
-                const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
-                const hasWaybill = !!(row.Shipment?.waybill || row.shipping_waybill);
-                // Refund: a PREPAID order whose money is still owed to the customer
-                // (paid / refund_pending) and the order is in a refundable state
-                // (cancelled or returned). Covers refunding after a cancel that
-                // didn't auto-refund, and retrying a refund stuck at refund_pending.
-                const pmtStatus = (row.payment_status || '').toLowerCase();
-                const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
-                // return_initiated is refunded from the Returns page after the parcel arrives.
-                const refundableStatus = ['cancelled', 'order cancelled', 'returned_rto', 'rto delivered'].includes((row.status || '').toLowerCase());
-                const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmtStatus);
-                // Everything that isn't View + the one contextual button moves into
-                // the ⋯ menu, so the Actions column stays narrow.
+                const wa = row.last_whatsapp;
+                if (!wa) return <span style={muted}>No chat yet</span>;
+                const inbound = wa.direction === 'inbound';
+                return (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); openChat(wa.conversation_id); }}
+                        title="Open this chat" style={{ all: 'unset', cursor: 'pointer', display: 'grid', gap: 2, maxWidth: 220 }}>
+                        <span style={{
+                            fontSize: '.76rem', padding: '4px 8px', borderRadius: 9, lineHeight: 1.35,
+                            background: inbound ? 'var(--ds-color-success-bg)' : 'var(--ds-color-surface-soft)',
+                            border: `1px solid ${inbound ? 'transparent' : 'var(--ds-color-border)'}`, color: 'var(--ds-color-text)',
+                            overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                        }}>
+                            {inbound ? '↩ ' : ''}{wa.text || `[${wa.type || 'message'}]`}
+                        </span>
+                        <span style={{ ...muted, fontSize: '.7rem', display: 'flex', gap: 5, alignItems: 'center' }}>
+                            {wa.unread > 0 && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ds-color-success)' }} />}
+                            {inbound ? 'Customer' : 'Sent'} · {shortWhen(wa.at)}
+                        </span>
+                    </button>
+                );
+            },
+            width: '200px',
+        },
+        {
+            header: 'Needs attention',
+            cell: (row) => {
+                const { issue } = rowState(row);
+                if (!issue) return <span style={muted}>—</span>;
+                return (
+                    <div style={{ display: 'grid', gap: 3, justifyItems: 'start', maxWidth: 210 }}>
+                        <Pill tone={issue.tone}>{issue.tag}</Pill>
+                        <span style={{ fontSize: '.78rem', lineHeight: 1.35 }}>{issue.text}</span>
+                    </div>
+                );
+            },
+            width: '190px',
+        },
+        {
+            header: 'Actions',
+            cell: (row) => {
+                const s = rowState(row);
                 const menu = [
+                    { icon: <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />, label: 'View full order', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } },
                     { icon: <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />, label: 'Edit address', onClick: () => openAddressEditor(row) },
-                    ...(pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, row.Shipment?.waybill || row.shipping_waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
-                    ...(hasWaybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Generate label', onClick: () => generateLabelForOrder(row.id) }] : []),
-                    ...(canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
-                    ...(canRefund ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: pmtStatus === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
+                    ...(s.pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, s.waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
+                    ...(s.waybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Regenerate label', onClick: () => generateLabelForOrder(row.id) }] : []),
+                    ...(s.wa ? [{ icon: <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} />, label: 'Open WhatsApp chat', onClick: () => openChat(s.wa.conversation_id) }] : []),
+                    ...(s.canRefund && s.primary.label !== 'Refund' && s.primary.label !== 'Retry refund' ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: s.pmt === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
                     { icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Download invoice', onClick: () => downloadInvoice(row.id, row.order_number) },
+                    ...(s.canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
                     { icon: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />, label: 'Delete order', tone: 'danger', onClick: () => deleteOrder(row.id, row.order_number) },
                 ];
                 return (
-                    <div className="sl-actions">
-                        <Tooltip text="View order details and customer information" position="top">
-                            <button className="sl-btn-edit"
-                                onClick={() => { setSelectedOrder(row); setIsViewModalOpen(true); }}>
-                                <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />
-                            </button>
-                        </Tooltip>
-                        {canConfirm && (
-                            <Tooltip text="Confirm order & book courier" position="top">
-                                <button className="order-action-btn order-confirm-btn" onClick={() => confirmOrder(row.id, row.order_number)}>
-                                    ✓
-                                </button>
-                            </Tooltip>
-                        )}
-                        {!canConfirm && pendingSync && (
-                            <Tooltip text="Pending sync — retry booking this order with the best available courier" position="top">
-                                <button className={`order-action-btn order-sync-btn${isSyncing ? ' disabled' : ''}`}
-                                    onClick={() => syncSingleOrder(row.id, row.order_number)}
-                                    disabled={isSyncing}>
-                                    {isSyncing ? (
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    ) : (
-                                        <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
-                                    )}
-                                </button>
-                            </Tooltip>
-                        )}
+                    <div className="sl-actions" style={{ flexWrap: 'nowrap' }}>
+                        <button type="button" className={`order-sync-main-btn${s.primary.label === 'View' ? '' : ' order-sync-main-btn--primary'}`} style={{ height: 'auto', padding: '6px 10px', fontSize: '.78rem' }}
+                            disabled={s.primary.disabled} onClick={(e) => { e.stopPropagation(); s.primary.onClick(); }}>
+                            {s.primary.label}
+                        </button>
                         <OverflowMenu items={menu} />
                     </div>
                 );
-            }
-        }
+            },
+            width: '140px',
+        },
     ];
 
     return (
         <>
-            <ManualOrderModal
-                isOpen={isManualOrderOpen}
-                onClose={() => setIsManualOrderOpen(false)}
-                onOrderCreated={() => { fetchOrders(1); fetchAllOrdersForStats(); }}
-            />
             <PromptModal
                 message={cancelPrompt ? `Enter a cancellation reason for order ${cancelPrompt.orderNumber} (at least 5 characters):` : null}
                 placeholder="Cancellation reason (min. 5 characters)..."
@@ -923,10 +1017,6 @@ const Orders = () => {
                             ))}
                         </div>
                         <div className="ord-toolbar-right">
-                            <button type="button" className="order-sync-main-btn" onClick={() => setIsManualOrderOpen(true)}>
-                                <HugeiconsIcon icon={Package01Icon} size={16} strokeWidth={2} />
-                                New order
-                            </button>
                             <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost"
                                 onClick={() => setLiveUpdates((v) => !v)}
                                 title={liveUpdates ? 'Live updates on — the table auto-refreshes' : 'Live updates paused — the table won’t move under you'}>
@@ -934,13 +1024,21 @@ const Orders = () => {
                                 {liveUpdates ? 'Live' : 'Paused'}
                             </button>
                             {selectedOrders.size > 0 && (
-                                <button className={`sl-add-btn${isDownloadingBulk ? ' sl-add-btn--disabled' : ''}`}
-                                    onClick={handleBulkDownload} disabled={isDownloadingBulk}>
-                                    <span className="sl-add-btn-icon">
+                                <>
+                                    <span style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--ds-color-text-muted)' }}>{selectedOrders.size} selected</span>
+                                    <button type="button" className="order-sync-main-btn" onClick={handleBulkDownload}
+                                        disabled={isDownloadingBulk || !selectedWithLabel.length}
+                                        title={selectedWithLabel.length ? 'One PDF with every selected label' : 'None of the selected orders has a label yet'}>
                                         <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
-                                    </span>
-                                    {isDownloadingBulk ? 'Downloading...' : `Download ${selectedOrders.size} Labels`}
-                                </button>
+                                        {isDownloadingBulk ? 'Downloading…' : `Labels (${selectedWithLabel.length})`}
+                                    </button>
+                                    {selectedToConfirm.length > 0 && (
+                                        <button type="button" className="order-sync-main-btn order-sync-main-btn--primary" onClick={handleBulkConfirm} disabled={bulkConfirming}>
+                                            {bulkConfirming ? 'Confirming…' : `Confirm ${selectedToConfirm.length}`}
+                                        </button>
+                                    )}
+                                    <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setSelectedOrders(new Set())}>Clear</button>
+                                </>
                             )}
                             <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setFilterOpen(true)}>
                                 <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />
@@ -1010,7 +1108,7 @@ const Orders = () => {
                 <section className="sl-table-wrap" aria-label="Orders table">
                     {loading ? (
                         <div style={{ padding: '20px' }} role="status" aria-label="Loading orders">
-                            <TableSkeleton rows={itemsPerPage} columns={8} />
+                            <TableSkeleton rows={itemsPerPage} columns={9} />
                         </div>
                     ) : orders.length === 0 ? (
                         <div className="sl-empty" role="status" aria-label="No orders">

@@ -7,6 +7,8 @@ import Dropdown from '../../components/ui/Dropdown';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, whatsappService } from '../../services';
 import AbandonedCarts from './consumers/abandoned-carts';
+import { ConfirmModal } from '../../components/common/AlertModal';
+import { useAuth } from '../../context/AuthContext';
 import { inlineHtml } from '../../utils/sanitizeHtml';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -670,7 +672,16 @@ function MsgContent({ msg, brandId = 1 }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function WhatsAppManager() {
+  // Seeding/re-submitting templates, the test ping, running broadcasts, seeding
+  // canned responses and abandoned-cart recovery are admin-only on the backend
+  // (whatsappRoutes.js → isAdmin); a whatsapp_manager gets a 403 for them, so
+  // those controls are only shown to admins.
+  const { isAdmin } = useAuth();
   const [page, setPage] = useState('dashboard');
+  // In-page confirmation (replaces window.confirm, which Chrome can suppress).
+  // { title, message, confirmLabel, tone, onConfirm }
+  const [confirmState, setConfirmState] = useState(null);
+  const askConfirm = (opts) => setConfirmState(opts);
   const [brands, setBrands] = useState([]);
   // One shared verified number serves every brand, so there is no brand filter.
   // brandId 0 = "all brands" for the inbox; template/stats calls coerce 0 -> the
@@ -716,11 +727,13 @@ export function WhatsAppManager() {
   const [sending, setSending] = useState(false);
   const [statusFilter, setStatusFilter] = useState('open');
   const [convSearch, setConvSearch] = useState('');
+  // Inbox pagination — the conversations API pages 20 at a time.
+  const [convTotal, setConvTotal] = useState(0);
+  const [convLoadingMore, setConvLoadingMore] = useState(false);
   // Test
   const [testPhone, setTestPhone] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
-  const [syncCatalogLoading, setSyncCatalogLoading] = useState(false);
   // Canned Responses
   const [cannedResponses, setCannedResponses] = useState([]);
   const [cannedLoading, setCannedLoading] = useState(false);
@@ -730,7 +743,7 @@ export function WhatsAppManager() {
   // Broadcasts
   const [broadcasts, setBroadcasts] = useState([]);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
-  const [broadcastForm, setBroadcastForm] = useState({ name: '', templateName: '', audienceFilter: '' });
+  const [broadcastForm, setBroadcastForm] = useState({ name: '', templateName: '' });
   const [broadcastModal, setBroadcastModal] = useState(false);
   const [broadcastRunning, setBroadcastRunning] = useState(null);
   // SLA Analytics
@@ -883,10 +896,19 @@ export function WhatsAppManager() {
   };
 
   // Re-submit one/selected templates to Meta (delete + recreate → PENDING).
-  const updateNames = async (names) => {
+  const updateNames = (names) => {
     const arr = (Array.isArray(names) ? names : [names]).filter(Boolean);
     if (!arr.length) return;
-    if (!window.confirm(`Re-submit ${arr.length} template${arr.length>1?'s':''} to Meta for approval? The current version is replaced and re-enters review (usually approved within minutes).`)) return;
+    askConfirm({
+      title: 'Re-submit templates',
+      message: `Re-submit ${arr.length} template${arr.length>1?'s':''} to Meta for approval? The current version is replaced and re-enters review (usually approved within minutes).`,
+      confirmLabel: 'Re-submit',
+      tone: 'primary',
+      onConfirm: () => doUpdateNames(arr),
+    });
+  };
+
+  const doUpdateNames = async (arr) => {
     markBusy(arr, true);
     try {
       const data = await whatsappService.syncAllTemplates(brandId || 1, arr);
@@ -905,8 +927,14 @@ export function WhatsAppManager() {
     markBusy(arr, false);
   };
 
-  const deleteOneTpl = async (name) => {
-    if (!window.confirm(`Delete template "${name}" from Meta? You can seed it again afterwards.`)) return;
+  const deleteOneTpl = (name) => askConfirm({
+    title: 'Delete template',
+    message: `Delete template "${name}" from Meta? You can seed it again afterwards.`,
+    confirmLabel: 'Delete',
+    onConfirm: () => doDeleteOneTpl(name),
+  });
+
+  const doDeleteOneTpl = async (name) => {
     markBusy([name], true);
     try {
       await whatsappService.deleteTemplate(name, brandId || 1);
@@ -919,24 +947,6 @@ export function WhatsAppManager() {
   const toggleTplSelect = (name) => setSelectedTpls(prev => {
     const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s;
   });
-
-  const syncProductsCatalog = async () => {
-    setSyncCatalogLoading(true);
-    try {
-      const data = await whatsappService.syncProductsCatalog(brandId || 1);
-      if (data.success) {
-        const { synced, skipped, errors } = data;
-        if (errors.length > 0) {
-          showError('syncFailed', `Synced: ${synced} · Skipped: ${skipped} · Failed: ${errors.length}`);
-        } else {
-          showSuccess('synced', `Synced: ${synced} · Skipped: ${skipped}`);
-        }
-      } else {
-        showError('syncFailed', data.message || 'Failed to sync products');
-      }
-    } catch (e) { showError('syncFailed', e.message || 'Failed to sync products to WhatsApp catalog'); }
-    setSyncCatalogLoading(false);
-  };
 
   const createTemplate = async (e) => {
     e.preventDefault();
@@ -988,13 +998,37 @@ export function WhatsAppManager() {
   const fetchConversations = async () => {
     setConvLoading(true);
     try {
-      const data = await whatsappService.getConversations(brandId, statusFilter);
-      if (data.success) setConversations(data.conversations || []);
-      else setConversations([]);
+      const data = await whatsappService.getConversations(brandId, statusFilter, 1);
+      if (data.success) { setConversations(data.conversations || []); setConvTotal(data.total || 0); }
+      else { setConversations([]); setConvTotal(0); }
     } catch (err) {
-      setConversations([]);
+      setConversations([]); setConvTotal(0);
     }
     setConvLoading(false);
+  };
+
+  // "Load more" at the bottom of the thread list. The API pages 20 at a time;
+  // the live stream may already have pulled in more than one page, so derive the
+  // next page from how many are loaded and de-dupe by id when appending.
+  const CONV_PAGE_SIZE = 20;
+  const loadMoreConversations = async () => {
+    if (convLoadingMore) return;
+    setConvLoadingMore(true);
+    const nextPage = Math.floor(conversations.length / CONV_PAGE_SIZE) + 1;
+    const filterAtStart = statusFilter;
+    try {
+      const data = await whatsappService.getConversations(brandId, filterAtStart, nextPage);
+      if (data.success) {
+        setConvTotal(data.total || 0);
+        setConversations(prev => {
+          const seen = new Set(prev.map(c => c.id));
+          return [...prev, ...(data.conversations || []).filter(c => !seen.has(c.id))];
+        });
+      }
+    } catch (err) {
+      showError('loadingFailed', 'Failed to load more conversations');
+    }
+    setConvLoadingMore(false);
   };
 
   // Warm the message cache in the background (on hover) so opening the chat is
@@ -1050,6 +1084,9 @@ export function WhatsAppManager() {
         setHasMoreMsgs(!!data.hasMore);
         isNearBottomRef.current = true; // jump to newest on open
         setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count:0 } : c));
+        // Opened from elsewhere (e.g. the Orders table) with only an id — fill in
+        // the name/phone/brand from the server's copy.
+        if (data.conversation && !conv.customer_phone) setActiveConv(prev => (prev && prev.id === conv.id ? { ...data.conversation, ...prev, ...data.conversation } : prev));
       } else if (!cached) {
         setMessages([]); setHasMoreMsgs(false);
         showError('loadingFailed', 'Failed to load messages');
@@ -1285,6 +1322,14 @@ export function WhatsAppManager() {
     }
   }, [messages]);
   useEffect(() => { if (page === 'inbox') fetchConversations(); }, [page, statusFilter, brandId]);
+
+  // Deep link from the Orders table's "Last WhatsApp" cell: open that chat.
+  useEffect(() => {
+    let id = null;
+    try { id = sessionStorage.getItem('obz-wa-open'); sessionStorage.removeItem('obz-wa-open'); } catch { /* storage blocked */ }
+    if (id && Number(id)) { setPage('inbox'); fetchMessages({ id: Number(id) }); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (page === 'library') { fetchTemplates(); fetchDefaultTemplates(); }
   }, [page, brandId]);
@@ -1334,11 +1379,20 @@ export function WhatsAppManager() {
           setConversations(prev => {
             const prevById = new Map(prev.map(c => [c.id, c]));
             const activeId = activeConvRef.current?.id;
-            return convs.map(c => {
+            const fresh = convs.map(c => {
               const old = prevById.get(c.id);
               if (c.id === activeId) return { ...c, unread_count: 0, agent_notes: (c.agent_notes ?? old?.agent_notes) };
               return c;
             });
+            // The stream only returns the newest window (40). Keep older
+            // conversations the agent paged in with "Load more" — anything
+            // older than the window's last row that the window didn't include.
+            const STREAM_WINDOW = 40;
+            if (convs.length < STREAM_WINDOW) return fresh;
+            const freshIds = new Set(convs.map(c => c.id));
+            const floor = new Date(convs[convs.length - 1]?.last_message_at || 0);
+            const older = prev.filter(c => !freshIds.has(c.id) && new Date(c.last_message_at || 0) <= floor);
+            return [...fresh, ...older];
           });
         }
         reconnect(); // wait out the floor (if any) before reconnecting
@@ -1388,8 +1442,14 @@ export function WhatsAppManager() {
     } catch (err) { showError('saveFailed', err.message); }
   };
 
-  const deleteCannedResponse = async (id) => {
-    if (!window.confirm('Delete this canned response? This cannot be undone.')) return;
+  const deleteCannedResponse = (id) => askConfirm({
+    title: 'Delete canned response',
+    message: 'Delete this canned response? This cannot be undone.',
+    confirmLabel: 'Delete',
+    onConfirm: () => doDeleteCannedResponse(id),
+  });
+
+  const doDeleteCannedResponse = async (id) => {
     try {
       await whatsappService.deleteCannedResponse(id);
       showSuccess('deleted', 'Canned response deleted');
@@ -1415,16 +1475,24 @@ export function WhatsAppManager() {
     if (!broadcastForm.name?.trim()) { showError('fieldRequired', 'Campaign name is required'); return; }
     if (!broadcastForm.templateName?.trim()) { showError('fieldRequired', 'Template name is required'); return; }
     try {
-      await whatsappService.createBroadcast({ ...broadcastForm, brandId });
+      // No audience filter: the backend sends to every customer who hasn't opted out.
+      await whatsappService.createBroadcast({ name: broadcastForm.name, templateName: broadcastForm.templateName, brandId });
       showSuccess('broadcastCreated', 'Broadcast campaign created. You can now run it.');
       setBroadcastModal(false);
-      setBroadcastForm({ name: '', templateName: '', audienceFilter: '' });
+      setBroadcastForm({ name: '', templateName: '' });
       fetchBroadcasts();
     } catch (err) { showError('saveFailed', err.message || 'Failed to create broadcast'); }
   };
 
-  const runBroadcast = async (id) => {
-    if (!window.confirm('Start this broadcast? It will be sent to all opted-in customers.')) return;
+  const runBroadcast = (id) => askConfirm({
+    title: 'Start broadcast',
+    message: "Start this broadcast? It will be sent to every customer who hasn't opted out (replied STOP).",
+    confirmLabel: 'Start broadcast',
+    tone: 'primary',
+    onConfirm: () => doRunBroadcast(id),
+  });
+
+  const doRunBroadcast = async (id) => {
     setBroadcastRunning(id);
     try {
       const data = await whatsappService.runBroadcast(id);
@@ -1623,10 +1691,10 @@ export function WhatsAppManager() {
     { k:'library',    label:'Templates',         icon: IC.tpl,     badge: templateList.length || null, section: 'Messaging' },
     { k:'canned',     label:'Canned Responses',  icon: IC.tag },
     { k:'broadcast',  label:'Broadcast',         icon: IC.send },
-    { k:'test',       label:'Test Message',      icon: IC.phone },
-    { k:'abandoned',  label:'Abandoned Carts',   icon: IC.cart_abandon, section: 'Recovery' },
+    { k:'test',       label:'Test Message',      icon: IC.phone, adminOnly: true },
+    { k:'abandoned',  label:'Abandoned Carts',   icon: IC.cart_abandon, section: 'Recovery', adminOnly: true },
     { k:'analytics',  label:'Analytics',         icon: IC.bar,     section: 'Account' },
-  ];
+  ].filter(n => !n.adminOnly || isAdmin);
 
   return (
     <div className="was-studio">
@@ -1659,7 +1727,7 @@ export function WhatsAppManager() {
       <div className="was-main">
 
         {/* ── ABANDONED CARTS (shared dashboard primitives) ── */}
-        {page === 'abandoned' && (
+        {page === 'abandoned' && isAdmin && (
           <div className="was-scroll">
             <div className="was-content-pad"><AbandonedCarts /></div>
           </div>
@@ -1672,16 +1740,14 @@ export function WhatsAppManager() {
               <div className="was-page-head">
                 <h2 className="was-page-title">Dashboard</h2>
                 <span className="was-page-sub">CrossCoin  · WhatsApp Overview</span>
-                <div style={{display:'flex', gap:8}}>
-                  <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
-                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
-                    {seedLoading ? 'Seeding...' : 'Seed Templates'}
-                  </button>
-                  <button className="was-btn-secondary" onClick={syncProductsCatalog} disabled={syncCatalogLoading} title="Sync all active products to WhatsApp catalog">
-                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
-                    {syncCatalogLoading ? 'Syncing...' : 'Sync Products'}
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div style={{display:'flex', gap:8}}>
+                    <button className="was-btn-secondary" onClick={seedTemplates} disabled={seedLoading}>
+                      <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>
+                      {seedLoading ? 'Seeding...' : 'Seed Templates'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Seed result — stays on screen so Meta's rejection reasons are readable */}
@@ -1849,6 +1915,13 @@ export function WhatsAppManager() {
                     </div>
                   );
                 })}
+                {!convLoading && conversations.length > 0 && conversations.length < convTotal && (
+                  <div className="was-load-older was-load-more-convs">
+                    <button type="button" onClick={loadMoreConversations} disabled={convLoadingMore}>
+                      {convLoadingMore ? 'Loading…' : 'Load more'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2215,10 +2288,12 @@ export function WhatsAppManager() {
                   <button className="was-btn-secondary" onClick={() => { fetchTemplates(); fetchDefaultTemplates(); }} disabled={listLoading}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>{listLoading?'Loading...':'Refresh'}
                   </button>
-                  <button className="was-btn-secondary" title="Delete + recreate every default template with the latest copy — use this to replace old versions (e.g. that still show CrossCoin)"
-                    onClick={() => updateNames(defaultTpls.map(d => d.name))}>
-                    Re-submit all
-                  </button>
+                  {isAdmin && (
+                    <button className="was-btn-secondary" title="Delete + recreate every default template with the latest copy — use this to replace old versions (e.g. that still show CrossCoin)"
+                      onClick={() => updateNames(defaultTpls.map(d => d.name))}>
+                      Re-submit all
+                    </button>
+                  )}
                   <button className="was-btn-primary" onClick={() => { setForm(EMPTY_FORM); setFormResponse(null); setCreateModal(true); }}>
                     <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Template
                   </button>
@@ -2240,7 +2315,8 @@ export function WhatsAppManager() {
                 <span className="was-tpl-count">{filteredManager.length} template{filteredManager.length!==1?'s':''}</span>
               </div>
 
-              {/* Bulk action bar */}
+              {/* Bulk action bar — seeding / re-submitting is admin-only */}
+              {isAdmin && (
               <div className="was-tpl-bulkbar">
                 <label className="was-tpl-checkall">
                   <input type="checkbox" checked={allSelected}
@@ -2257,6 +2333,7 @@ export function WhatsAppManager() {
                   Re-submit selected
                 </button>
               </div>
+              )}
 
               {listLoading && !managerRows.length ? <div style={{padding:40,textAlign:'center'}}><WaLoad /></div> : (
                 <div className="was-tpl-grid">
@@ -2276,9 +2353,11 @@ export function WhatsAppManager() {
                     return (
                       <div key={t.name} className={`was-tpl-card${selected?' selected':''}`}>
                         <div className="was-tpl-card-top">
-                          <label className="was-tpl-check">
-                            <input type="checkbox" checked={selected} onChange={() => toggleTplSelect(t.name)} />
-                          </label>
+                          {isAdmin && (
+                            <label className="was-tpl-check">
+                              <input type="checkbox" checked={selected} onChange={() => toggleTplSelect(t.name)} />
+                            </label>
+                          )}
                           <span className={`was-cat-badge was-cat--${cat}`}>{catLabel(t.category)}</span>
                           <span className={`was-status-badge was-status--${t.status}`}>
                             <span className="was-status-dot" />{label}
@@ -2307,14 +2386,14 @@ export function WhatsAppManager() {
                           {busy ? (
                             <button className="was-btn-secondary" style={{flex:1,justifyContent:'center'}} disabled>Working…</button>
                           ) : !created ? (
-                            <button className="was-btn-primary" style={{flex:1,justifyContent:'center'}}
+                            isAdmin && <button className="was-btn-primary" style={{flex:1,justifyContent:'center'}}
                               onClick={() => seedNames(t.name)} disabled={!t.isDefault}
                               title={t.isDefault ? 'Create this template on Meta' : ''}>
                               Seed
                             </button>
                           ) : (
                             <>
-                              {t.isDefault && (
+                              {t.isDefault && isAdmin && (
                                 <button className="was-btn-secondary" style={{flex:1,justifyContent:'center'}}
                                   onClick={() => updateNames(t.name)} title="Delete + recreate for approval">
                                   Re-submit
@@ -2337,7 +2416,7 @@ export function WhatsAppManager() {
         )}
 
         {/* ── TEST ── */}
-        {page === 'test' && (
+        {page === 'test' && isAdmin && (
           <div className="was-scroll">
             <div className="was-content-pad">
               <div className="was-page-head">
@@ -2392,9 +2471,11 @@ export function WhatsAppManager() {
                 <button className="was-btn-primary" onClick={() => { setCannedEditId(null); setCannedForm({ shortcut:'', title:'', body:'' }); setCannedModal(true); }}>
                   <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Response
                 </button>
-                <button className="was-btn-secondary" onClick={seedCannedResponses} title="Load 20 default ecommerce responses">
-                  <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>Seed Defaults
-                </button>
+                {isAdmin && (
+                  <button className="was-btn-secondary" onClick={seedCannedResponses} title="Load 20 default ecommerce responses">
+                    <span style={{width:14,height:14,display:'flex'}}>{IC.refresh}</span>Seed Defaults
+                  </button>
+                )}
               </div>
               {cannedLoading ? <div style={{padding:40,textAlign:'center'}}><WaLoad /></div> : (
                 <div className="was-tpl-grid">
@@ -2429,9 +2510,9 @@ export function WhatsAppManager() {
               <div className="was-page-head">
                 <div>
                   <h2 className="was-page-title">Broadcast Campaigns</h2>
-                  <span className="was-page-sub">Send a template to all opted-in customers</span>
+                  <span className="was-page-sub">Send a template to every customer who hasn't opted out{isAdmin ? '' : ' · only admins can start a campaign'}</span>
                 </div>
-                <button className="was-btn-primary" onClick={() => { setBroadcastForm({ name:'', templateName:'', audienceFilter:'' }); setBroadcastModal(true); }}>
+                <button className="was-btn-primary" onClick={() => { setBroadcastForm({ name:'', templateName:'' }); setBroadcastModal(true); }}>
                   <span style={{width:14,height:14,display:'flex'}}>{IC.add}</span>New Campaign
                 </button>
               </div>
@@ -2455,7 +2536,7 @@ export function WhatsAppManager() {
                           Recipients: {b.total_recipients}  · Sent: {b.sent_count}  · Failed: {b.failed_count}
                         </div>
                         <div className="was-tpl-foot">
-                          {(b.status === 'draft' || b.status === 'failed') && (
+                          {isAdmin && (b.status === 'draft' || b.status === 'failed') && (
                             <button className="was-btn-primary" style={{fontSize:11,padding:'4px 12px'}} disabled={broadcastRunning === b.id} onClick={() => runBroadcast(b.id)}>
                               {broadcastRunning === b.id ? 'Starting...' : '▶ Run'}
                             </button>
@@ -2620,7 +2701,7 @@ export function WhatsAppManager() {
       <Modal isOpen={broadcastModal} onClose={() => setBroadcastModal(false)} title="New Broadcast Campaign" closeOnOverlayClick={false}>
         <form onSubmit={createBroadcast} className="seo-form">
           <div className="modal-body">
-            <div className="was-modal-notice">Broadcasts are sent to all opted-in customers. Only use approved templates.</div>
+            <div className="was-modal-notice">Sent to every customer who hasn't opted out (replied STOP). Only use approved templates.</div>
             <Input
               label="Campaign Name"
               required
@@ -2634,12 +2715,6 @@ export function WhatsAppManager() {
               value={broadcastForm.templateName}
               onChange={e => setBroadcastForm(p => ({...p, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'')}))}
               placeholder="cart_abandoned"
-            />
-            <Input
-              label="Audience Filter (optional)"
-              value={broadcastForm.audienceFilter}
-              onChange={e => setBroadcastForm(p => ({...p, audienceFilter: e.target.value}))}
-              placeholder='e.g. {"tags":"vip"}'
             />
           </div>
           <div className="modal-footer">
@@ -2816,12 +2891,12 @@ export function WhatsAppManager() {
                 </div>
               </div>
               <div className="modal-footer">
-                {viewTpl.isDefault && viewTpl.status !== 'not_created' && (
+                {isAdmin && viewTpl.isDefault && viewTpl.status !== 'not_created' && (
                   <button className="was-btn-secondary" onClick={() => { updateNames(viewTpl.name); setViewTpl(null); }} title="Delete + recreate for approval">
                     Re-submit
                   </button>
                 )}
-                {viewTpl.isDefault && viewTpl.status === 'not_created' && (
+                {isAdmin && viewTpl.isDefault && viewTpl.status === 'not_created' && (
                   <button className="was-btn-primary" onClick={() => { seedNames(viewTpl.name); setViewTpl(null); }}>
                     Seed
                   </button>
@@ -2832,6 +2907,20 @@ export function WhatsAppManager() {
           );
         })()}
       </Modal>
+
+      {/* ── In-page confirmation (replaces window.confirm) ── */}
+      <ConfirmModal
+        message={confirmState?.message || null}
+        title={confirmState?.title}
+        confirmLabel={confirmState?.confirmLabel}
+        tone={confirmState?.tone}
+        onConfirm={async () => {
+          const run = confirmState?.onConfirm;
+          setConfirmState(null);
+          if (run) await run();
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
 
     </div>
   );
