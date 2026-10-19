@@ -22,16 +22,6 @@ export const getPublicSliders = async () => {
   } catch (error) { throw error.response?.data || error.message; }
 };
 
-export const getPublicLookbooks = async () => {
-  try { const r = await axios.get(`${API_URL}/api/lookbooks`, addBrandHeader()); return r.data; }
-  catch (error) { throw error.response?.data || error.message; }
-};
-
-export const getPublicLookbookBySlug = async (slug) => {
-  try { const r = await axios.get(`${API_URL}/api/lookbooks/${encodeURIComponent(slug)}`, addBrandHeader()); return r.data; }
-  catch (error) { throw error.response?.data || error.message; }
-};
-
 export const getPublicProductBySlug = async (slug) => {
   try { const r = await axios.get(`${API_URL}/api/products/by-slug/${slug}`, addBrandHeader()); return r.data; }
   catch (error) { throw error.response?.data || error.message; }

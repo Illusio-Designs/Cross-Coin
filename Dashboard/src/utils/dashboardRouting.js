@@ -32,7 +32,6 @@ export const getPageTitle = (view) => {
     'traffic-report': 'Traffic & Conversion',
     'leads': 'Leads',
     'loyalty': 'Loyalty',
-    'lookbooks': 'Lookbooks',
     'staff-users': 'Staff Users',
   };
   return titles[view] || 'Dashboard';

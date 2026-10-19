@@ -32,7 +32,6 @@ import MediaGallery from "./media/gallery";
 import { Policies } from "./policies";
 import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
-import AdminLookbooks from "./social/lookbooks";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
 import Reports from "./reports/reports";
@@ -252,7 +251,6 @@ function Dashboard() {
       case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;
       case 'blogs':           return <Blogs />;
-      case 'lookbooks':       return <AdminLookbooks />;
       case 'whatsapp':        return <WhatsAppManager />;
       case 'whatsapp-chat':   return <WhatsAppManager />;
       // Brands and settings are now one combined page — both menu items open it.

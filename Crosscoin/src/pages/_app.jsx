@@ -94,7 +94,6 @@ import "../styles/dashboard/dateRangePicker.css";
 // components/ui, which those styles back.
 import "../styles/components/WhatsAppChat.css";
 // Additional page CSS
-import "../styles/pages/Lookbook.css";
 
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";

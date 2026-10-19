@@ -94,7 +94,7 @@ const mediumLimiter = rateLimit({
 // still go through the limiter.
 const PUBLIC_READ_PREFIXES = [
   '/api/sliders', '/api/categories', '/api/products', '/api/seo',
-  '/api/public', '/api/blogs', '/api/reviews', '/api/lookbooks',
+  '/api/public', '/api/blogs', '/api/reviews',
   '/api/reels', '/api/policies', '/api/faqs',
 ];
 const isPublicReadGet = (req) => {
@@ -494,7 +494,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v13';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v14';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1714,6 +1714,28 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('coupon_usage cleanup failed: ' + err.message);
+        }
+
+        // ── Remove the retired lookbook feature's tables (v14). The feature
+        // (models, controllers, routes, dashboard page, storefront showcase)
+        // is deleted from the codebase; these drops clear its DB footprint.
+        // Child tables first so the foreign keys don't block the drops.
+        try {
+            await sequelize.query('DROP TABLE IF EXISTS lookbook_hotspots');
+            await sequelize.query('DROP TABLE IF EXISTS lookbook_images');
+            await sequelize.query('DROP TABLE IF EXISTS lookbooks');
+            logger.info('✓ Lookbook tables removed');
+        } catch (err) {
+            logger.error('Lookbook table removal failed: ' + err.message);
+        }
+
+        // ── Remove the retired Instagram-gallery / reels feature's tables.
+        try {
+            await sequelize.query('DROP TABLE IF EXISTS instagram_post_products');
+            await sequelize.query('DROP TABLE IF EXISTS reels');
+            logger.info('✓ Instagram gallery tables removed');
+        } catch (err) {
+            logger.error('Instagram gallery table removal failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future

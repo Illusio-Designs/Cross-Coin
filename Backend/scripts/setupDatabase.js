@@ -683,7 +683,6 @@ const setupDatabase = async () => {
         ['wishlist',       '/Wishlist',        'Your Wishlist — CrossCoin',                     "Items you've saved on CrossCoin.",                                                                                          '/Wishlist'],
         ['search',         '/SearchResults',   'Search Results — CrossCoin',                    'Search results on CrossCoin.',                                                                                             null],
         ['profile',        '/profile',         'My Account — CrossCoin',                        'Manage your orders, addresses and preferences.',                                                                           '/profile'],
-        ['instagram',      '/Instagram',       'Shop the Look — CrossCoin Instagram',           'Browse our Instagram feed and shop the looks directly.',                                                                   '/Instagram'],
         ['order-tracking', '/OrderTracking',   'Track Your Order — CrossCoin',                  'Track your CrossCoin order by order number or AWB.',                                                                       '/OrderTracking'],
         ['thank-you',      '/ThankYou',        'Thank You — CrossCoin',                         'Thanks for your order!',                                                                                                   null],
       ];
@@ -908,62 +907,6 @@ const setupDatabase = async () => {
       );
     }
 
-    // Ensure lookbook tables exist.
-    console.log("Ensuring lookbook tables...");
-    try {
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS lookbooks (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          title VARCHAR(255) NOT NULL,
-          slug VARCHAR(255) NOT NULL UNIQUE,
-          description TEXT NULL,
-          status ENUM('active','draft') NOT NULL DEFAULT 'draft',
-          brand_id INT NOT NULL,
-          display_order INT NOT NULL DEFAULT 0,
-          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          INDEX idx_lookbooks_brand_id (brand_id),
-          INDEX idx_lookbooks_status (status),
-          INDEX idx_lookbooks_display_order (display_order),
-          CONSTRAINT fk_lookbooks_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-      `);
-
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS lookbook_images (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          lookbook_id INT NOT NULL,
-          image_url VARCHAR(500) NOT NULL,
-          display_order INT NOT NULL DEFAULT 0,
-          alt_text VARCHAR(255) NULL,
-          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          INDEX idx_lookbook_images_lookbook_id (lookbook_id),
-          INDEX idx_lookbook_images_display_order (display_order),
-          CONSTRAINT fk_lookbook_images_lookbook FOREIGN KEY (lookbook_id) REFERENCES lookbooks(id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-      `);
-
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS lookbook_hotspots (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          lookbook_image_id INT NOT NULL,
-          product_id INT NOT NULL,
-          position_x DECIMAL(5,2) NOT NULL,
-          position_y DECIMAL(5,2) NOT NULL,
-          label VARCHAR(100) NULL,
-          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          INDEX idx_lookbook_hotspots_image_id (lookbook_image_id),
-          INDEX idx_lookbook_hotspots_product_id (product_id),
-          CONSTRAINT fk_lookbook_hotspots_image FOREIGN KEY (lookbook_image_id) REFERENCES lookbook_images(id) ON DELETE CASCADE ON UPDATE CASCADE,
-          CONSTRAINT fk_lookbook_hotspots_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-      `);
-      console.log("✓ Lookbook tables ensured");
-    } catch (lookbookError) {
-      console.log("⚠️ Lookbook table creation skipped:", lookbookError.message);
-    }
 
     // Drop the removed Reels / Instagram-Feed feature tables (idempotent).
     // Child tables first so foreign keys don't block the drop.

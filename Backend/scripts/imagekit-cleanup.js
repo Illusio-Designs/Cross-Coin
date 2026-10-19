@@ -6,7 +6,7 @@
  * HOW IT WORKS
  *   1. Collects every image basename referenced in the DB, across ALL models
  *      that store an image (products, categories, sliders, users, brands,
- *      blog, SEO, lookbook, reviews, returns).
+ *      blog, SEO, reviews, returns).
  *   2. Lists every file in ImageKit.
  *   3. An ImageKit file is an "orphan" only if its filename appears in NONE of
  *      those references AND it is older than --age days (default 7, so an
@@ -68,7 +68,6 @@ async function collectReferenced() {
     ['Brand.logo_url',          async () => (await M('../model/brandModel.js').findAll({ attributes: ['logo_url'], raw: true })).map((r) => r.logo_url)],
     ['ProductSEO.ogImage',      async () => (await M('../model/productSEOModel.js').ProductSEO.findAll({ attributes: ['ogImage'], raw: true })).map((r) => r.ogImage)],
     ['SeoMetadata.meta_image',  async () => (await M('../model/seoMetadataModel.js').SeoMetadata.findAll({ attributes: ['meta_image'], raw: true })).map((r) => r.meta_image)],
-    ['LookbookImage.image_url', async () => (await M('../model/lookbookImageModel.js').LookbookImage.findAll({ attributes: ['image_url'], raw: true })).map((r) => r.image_url)],
     ['BlogPost.hero_image',     async () => (await M('../model/blogPostModel.js').BlogPost.findAll({ attributes: ['hero_image'], raw: true })).map((r) => r.hero_image)],
     ['ReviewImage.fileName',    async () => (await M('../model/reviewImageModel.js').ReviewImage.findAll({ attributes: ['fileName'], raw: true })).map((r) => r.fileName)],
     ['Return.photos+proof',     async () => {

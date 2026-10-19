@@ -38,9 +38,6 @@ const { BlogBrand } = require("./blogBrandModel.js");
 const { BlogFeaturedProduct } = require("./blogFeaturedProductModel.js");
 const { BlogSEO } = require("./blogSeoModel.js");
 const { LoyaltyTransaction } = require("./loyaltyTransactionModel.js");
-const { Lookbook } = require("./lookbookModel.js");
-const { LookbookImage } = require("./lookbookImageModel.js");
-const { LookbookHotspot } = require("./lookbookHotspotModel.js");
 const { WhatsappConversation, WhatsappMessage } = require("./whatsappConversationModel.js");
 const { OrderShipment } = require("./orderShipmentModel.js");
 const { Faq } = require("./faqModel.js");
@@ -90,9 +87,6 @@ module.exports = {
   BlogFeaturedProduct,
   BlogSEO,
   LoyaltyTransaction,
-  Lookbook,
-  LookbookImage,
-  LookbookHotspot,
   WhatsappConversation,
   WhatsappMessage,
   OrderShipment,
@@ -548,51 +542,6 @@ Brand.hasMany(LoyaltyTransaction, {
 LoyaltyTransaction.belongsTo(Brand, {
   foreignKey: "brand_id",
   as: "Brand",
-  onDelete: "CASCADE",
-});
-
-// Lookbook Associations
-Brand.hasMany(Lookbook, {
-  foreignKey: "brand_id",
-  as: "Lookbooks",
-  onDelete: "CASCADE",
-});
-Lookbook.belongsTo(Brand, {
-  foreignKey: "brand_id",
-  as: "Brand",
-  onDelete: "CASCADE",
-});
-
-Lookbook.hasMany(LookbookImage, {
-  foreignKey: "lookbook_id",
-  as: "Images",
-  onDelete: "CASCADE",
-});
-LookbookImage.belongsTo(Lookbook, {
-  foreignKey: "lookbook_id",
-  as: "Lookbook",
-  onDelete: "CASCADE",
-});
-
-LookbookImage.hasMany(LookbookHotspot, {
-  foreignKey: "lookbook_image_id",
-  as: "Hotspots",
-  onDelete: "CASCADE",
-});
-LookbookHotspot.belongsTo(LookbookImage, {
-  foreignKey: "lookbook_image_id",
-  as: "LookbookImage",
-  onDelete: "CASCADE",
-});
-
-Product.hasMany(LookbookHotspot, {
-  foreignKey: "product_id",
-  as: "LookbookHotspots",
-  onDelete: "CASCADE",
-});
-LookbookHotspot.belongsTo(Product, {
-  foreignKey: "product_id",
-  as: "Product",
   onDelete: "CASCADE",
 });
 

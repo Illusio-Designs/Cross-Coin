@@ -229,7 +229,6 @@ const QUICK_LINKS = [
   { view: 'brands',        label: 'Brands',     hint: 'Brand pages & settings',    tone: 'info',    icon: ic(Building01Icon) },
   { view: 'slider',        label: 'Sliders',    hint: 'Homepage banners',          tone: 'info',    icon: ic(SlidersHorizontalIcon) },
   { view: 'blogs',         label: 'Blogs',      hint: 'Articles & content',        tone: 'info',    icon: ic(News01Icon) },
-  { view: 'lookbooks',     label: 'Lookbooks',  hint: 'Social commerce',           tone: 'info',    icon: ic(Share08Icon) },
   { view: 'seo',           label: 'SEO',        hint: 'Search optimization',       tone: 'info',    icon: ic(Search01Icon) },
 ];
 
