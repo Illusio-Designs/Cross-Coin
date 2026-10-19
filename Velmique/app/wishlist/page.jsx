@@ -1,262 +1,82 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Heart, ArrowUpRight, X } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getProductBySlug } from '@/lib/api/products';
-import PageHeader from '@/components/layout/PageHeader';
-import SeoWrapper from '@/components/SeoWrapper';
 
-export default function WishlistPage() {
-  const { wishlist, wishlistLoading, toggleWishlist, addToCart, updateWishlistItem } = useStore();
+const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
+const Heart = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg>
+);
 
-  // Cache: wishlist item id → full product (with variations)
-  const [products, setProducts] = useState({});
+export default function TestWishlist() {
+  const { wishlist, wishlistLoading, toggleWishlist, addToCart } = useStore();
+  const [busy, setBusy] = useState({});
 
-  // Fetch the full product for each wishlist item once so we can render
-  // size/colour selectors. Already-fetched ones are skipped.
-  useEffect(() => {
-    let alive = true;
-    const missing = wishlist.filter(w => w.slug && !products[w.id]);
-    if (!missing.length) return;
-
-    Promise.all(
-      missing.map(w => getProductBySlug(w.slug).then(p => [w.id, p]).catch(() => [w.id, null]))
-    ).then(pairs => {
-      if (!alive) return;
-      setProducts(prev => {
-        const next = { ...prev };
-        for (const [id, p] of pairs) if (p) next[id] = p;
-        return next;
+  // Wishlist rows carry only {id,name,price,image,slug}; fetch the product on
+  // demand so the bag line gets a real variation for checkout.
+  const addToBag = async (w) => {
+    setBusy((b) => ({ ...b, [w.id]: true }));
+    try {
+      const p = w.slug ? await getProductBySlug(w.slug).catch(() => null) : null;
+      const v = p?.variations?.find((x) => String(x.id) === String(p.defaultVariationId)) || p?.variations?.[0] || null;
+      addToCart({
+        id: `${w.id}:${v?.id || 'v'}`,
+        productId: w.id,
+        variationId: v?.id || p?.defaultVariationId || null,
+        name: w.name,
+        price: Number(v?.price ?? w.price) || 0,
+        size: v?.size || '',
+        image: w.image || p?.images?.[0] || '',
+        slug: w.slug,
+        quantity: 1,
       });
-    });
-
-    return () => { alive = false; };
-  }, [wishlist]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Build variation lookup: pick the variation that matches the chosen size/colour
-  const findVariation = (product, { size, color }) => {
-    if (!product?.variations?.length) return null;
-    return product.variations.find(v =>
-      (!size  || v.sizes.includes(size)) &&
-      (!color || v.colors.includes(color))
-    ) || product.variations.find(v => v.id === product.defaultVariationId) || product.variations[0];
-  };
-
-  const onPickSize = (item, size) => {
-    const product = products[item.id];
-    const variation = findVariation(product, { size, color: item.color });
-    updateWishlistItem(item.id, {
-      size,
-      variationId: variation?.id || item.variationId,
-      price: variation?.price ?? item.price,
-      image: variation?.images?.[0]?.url || item.image,
-    });
-  };
-
-  const onPickColor = (item, color) => {
-    const product = products[item.id];
-    const variation = findVariation(product, { size: item.size, color });
-    updateWishlistItem(item.id, {
-      color,
-      variationId: variation?.id || item.variationId,
-      price: variation?.price ?? item.price,
-      image: variation?.images?.[0]?.url || item.image,
-    });
+    } finally {
+      setBusy((b) => ({ ...b, [w.id]: false }));
+    }
   };
 
   return (
-    <SeoWrapper pageName="wishlist">
-    <div className="bg-[var(--bg)] min-h-screen">
-      <PageHeader
-        eyebrow="Saved Items"
-        title="YOUR"
-        accent="WISHLIST"
-        intro="Fragrances you've saved to revisit. Move them to your bag whenever the moment is right."
-      />
-
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
-        {wishlistLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white border border-[var(--border)] overflow-hidden">
-                <div className="aspect-[3/4] bg-[#E6DED0] animate-pulse" />
-                <div className="p-5 space-y-2">
-                  <div className="h-3 w-1/3 rounded bg-[#E6DED0] animate-pulse" />
-                  <div className="h-4 w-3/4 rounded bg-[#E6DED0] animate-pulse" />
-                  <div className="h-9 w-full  bg-[#E6DED0] animate-pulse mt-3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : wishlist.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-5 bg-white border border-[var(--border)]">
-            <Heart size={52} className="text-[var(--ink-muted)]" />
-            <p className="font-display text-3xl text-[var(--ink)] uppercase tracking-tight">Your wishlist is empty</p>
-            <p className="text-[var(--ink-soft)] text-sm font-body">Save fragrances you love to revisit them later.</p>
-            <Link href="/shop" className="pill-cta mt-2">
-              Browse the Shop <ArrowUpRight size={14} strokeWidth={1.6} />
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {wishlist.map((item, index) => {
-              const product = products[item.id];
-              const sizes  = product?.sizes?.filter(s => s && s !== 'One Size') || [];
-              const colors = product?.colors || [];
-              const hasOptions = sizes.length > 0 || colors.length > 0;
-
-              // Pick the safest image source. The wishlist API's `image` is
-              // unreliable (returns a non-existent /assets/demo-product path
-              // when no ProductImage row is flagged is_primary), so we prefer
-              // the freshly-fetched product gallery and fall back hard.
-              const primaryImg = product?.images?.find(Boolean);
-              const itemImgOk  = item.image && !item.image.includes('/assets/demo-product');
-              const safeSrc    = primaryImg || (itemImgOk ? item.image : '/perfumehero.webp');
-
-              return (
-                <motion.div
-                  key={item.id}
-                  className="group bg-white border border-[var(--border)] overflow-hidden flex flex-col"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {/* ── Image — natural aspect, full picture visible ───────── */}
-                  <Link href={`/product/${item.slug}`} className="relative block bg-[#E6DED0] aspect-[4/5]">
-                    <img
-                      src={safeSrc}
-                      alt={item.name}
-                      onError={(e) => {
-                        if (e.currentTarget.src.indexOf('/perfumehero.webp') === -1) {
-                          e.currentTarget.src = '/perfumehero.webp';
-                        }
-                      }}
-                      className="block w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.03]"
-                    />
-
-                    {/* Remove (X) — top-right */}
-                    <button
-                      onClick={(e) => { e.preventDefault(); toggleWishlist(item); }}
-                      className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-[#B89A63] text-[#11100E] hover:bg-[#b8983e] transition-colors "
-                      aria-label="Remove from wishlist"
-                    >
-                      <X size={12} />
-                    </button>
-
-                    {/* Torn-paper bottom edge */}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-3 bg-white pointer-events-none"
-                      style={{
-                        clipPath: 'polygon(0 40%, 4% 85%, 9% 50%, 15% 90%, 22% 55%, 30% 92%, 38% 48%, 46% 88%, 54% 55%, 62% 92%, 70% 48%, 78% 88%, 86% 55%, 93% 92%, 100% 55%, 100% 100%, 0 100%)',
-                      }}
-                    />
-                  </Link>
-
-                  {/* ── Body ────────────────────────────────────────────────── */}
-                  <div className="p-3.5 flex-1 flex flex-col gap-2.5">
-
-                    {/* Title row + price */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        {product?.collection && (
-                          <p className="text-[#777168] text-[8px] tracking-[0.3em] uppercase font-body mb-1 truncate">
-                            {product.collection}
-                          </p>
-                        )}
-                        <Link href={`/product/${item.slug}`}>
-                          <h3 className="font-serif text-[#11100E] text-sm md:text-base leading-tight hover:italic hover:text-[#8F7548] transition-all line-clamp-2">
-                            {item.name}
-                          </h3>
-                        </Link>
-                      </div>
-                      <span className="font-serif text-[#11100E] text-base italic shrink-0">
-                        ₹{Number(item.price).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-
-                    {/* Variation selectors — fed by the fetched product. Only
-                        rendered when the product has real options to choose. */}
-                    {hasOptions && (
-                      <div className="space-y-2">
-                        {colors.length > 0 && (
-                          <div>
-                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#777168] font-body mb-1 truncate">
-                              Colour: <span className="text-[#11100E]">{item.color || '—'}</span>
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {colors.map(c => (
-                                <button
-                                  key={c}
-                                  onClick={() => onPickColor(item, c)}
-                                  className={`px-2 h-6 text-[9px] font-body border  transition-all ${
-                                    item.color === c
-                                      ? 'border-[#11100E] bg-[#11100E] text-white'
-                                      : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'
-                                  }`}
-                                >
-                                  {c}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {sizes.length > 0 && (
-                          <div>
-                            <p className="text-[8px] tracking-[0.25em] uppercase text-[#777168] font-body mb-1 truncate">
-                              Size: <span className="text-[#11100E]">{item.size || '—'}</span>
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {sizes.map(s => (
-                                <button
-                                  key={s}
-                                  onClick={() => onPickSize(item, s)}
-                                  className={`px-2 h-6 text-[9px] font-body border  transition-all ${
-                                    item.size === s
-                                      ? 'border-[#11100E] bg-[#11100E] text-white'
-                                      : 'border-[#D8D3C9] text-[#49423A] hover:border-[#B89A63]'
-                                  }`}
-                                >
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Add to Bag */}
-                    <button
-                      onClick={() =>
-                        addToCart({
-                          id: `${item.id}:${item.variationId || 'default'}`,
-                          productId:   item.id,
-                          variationId: item.variationId || null,
-                          name: item.name,
-                          price: item.price,
-                          image: item.image,
-                          slug: item.slug,
-                          size: item.size,
-                          color: item.color,
-                        })
-                      }
-                      className="mt-auto pill-cta justify-center w-full !py-2 !text-[9px]"
-                    >
-                      Add to Bag
-                      <ArrowUpRight size={11} strokeWidth={1.6} />
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+    <section className="m-section"><div className="m-wrap">
+      <div className="m-ph" style={{ paddingTop: 0 }}>
+        <span className="m-eyebrow">Saved for later</span>
+        <h1>Your Wishlist.</h1>
+        <p>{wishlist.length ? `${wishlist.length} fragrance${wishlist.length === 1 ? '' : 's'} waiting for you.` : 'Keep the scents you love within reach.'}</p>
       </div>
-    </div>
-    </SeoWrapper>
+
+      {wishlistLoading ? (
+        <p style={{ textAlign: 'center', color: 'var(--m-ink-soft)' }}>Loading your wishlist…</p>
+      ) : wishlist.length === 0 ? (
+        <div className="m-wlempty">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg>
+          <p>Your wishlist is empty.</p>
+          <Link className="m-btn m-btn--fill" href="/test/shop">Explore the collection <span className="m-arrow">→</span></Link>
+        </div>
+      ) : (
+        <div className="m-pgrid">
+          {wishlist.map((w) => (
+            <article className="m-card" key={w.id}>
+              <div className="m-card__fig">
+                <Link className="m-card__imglink" href={`/test/product/${w.slug}`} aria-label={w.name}>
+                  <span className="m-card__tile">{w.image ? <img src={w.image} alt={w.name} loading="lazy" /> : null}</span>
+                  <span className="m-card__shade" />
+                </Link>
+                <button className="m-card__wish on" aria-label={`Remove ${w.name} from wishlist`} onClick={() => toggleWishlist(w)}>{Heart}</button>
+              </div>
+              <div className="m-card__body">
+                <div className="m-card__top">
+                  <Link className="m-card__name" href={`/test/product/${w.slug}`}>{w.name}</Link>
+                  <span className="m-card__price"><b>{inr(w.price)}</b></span>
+                </div>
+                <button type="button" className="m-wladd" onClick={() => addToBag(w)} disabled={!!busy[w.id]}>
+                  {busy[w.id] ? 'Adding…' : 'Add to bag'}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div></section>
   );
 }

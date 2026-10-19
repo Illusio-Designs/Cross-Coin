@@ -1,18 +1,20 @@
-import { Suspense } from 'react';
-import ShopView from '@/components/shop/ShopView';
-import { buildMetadata } from '@/lib/api/seo';
+import ShopGrid from '../_components/ShopGrid';
 
-// Server component so SEO is server-rendered and dashboard-driven. The full
-// catalogue UI lives in components/shop/ShopView (a client component), reused by
-// /collections/<slug>.
-export async function generateMetadata() {
-  return buildMetadata('products', { title: 'Shop — Velmique' });
-}
+export const metadata = {
+  title: 'Shop — Velmique Maison de Parfum',
+  description: 'Explore the full VELMIQUE fragrance collection — handcrafted eau de parfum for every you.',
+};
 
-export default function ShopPage() {
+export default function MaisonShop({ searchParams }) {
+  const note = (searchParams?.note || '').toString();
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
-      <ShopView />
-    </Suspense>
+    <>
+      <section className="m-wrap m-ph">
+        <span className="m-eyebrow">The collection</span>
+        <h1>{note ? <>Scents with <em style={{ color: 'var(--m-accent-deep)' }}>{note}</em>.</> : 'Signature Scents.'}</h1>
+        <p>{note ? `Every VELMIQUE fragrance carrying a ${note} note.` : 'Distinctly crafted, unmistakably you — explore every VELMIQUE fragrance.'}</p>
+      </section>
+      <ShopGrid note={note} />
+    </>
   );
 }

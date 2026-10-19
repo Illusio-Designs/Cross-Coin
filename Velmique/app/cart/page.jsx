@@ -1,110 +1,59 @@
 'use client';
+
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ArrowUpRight, ShoppingBag } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import PageHeader from '@/components/layout/PageHeader';
 
-export default function CartPage() {
-  const { cart, cartTotal, removeFromCart, updateQuantity, setCartOpen } = useStore();
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-  if (cart.length === 0) return (
-    <div className="bg-[var(--bg)] min-h-screen flex flex-col items-center justify-center gap-6 px-4 py-24">
-      <ShoppingBag size={64} className="text-[var(--ink-muted)]" />
-      <h1 className="font-display text-[var(--ink)] uppercase text-4xl tracking-tight">Your bag is empty</h1>
-      <p className="text-[var(--ink-soft)] text-base font-body text-center max-w-sm">
-        Discover the fragrances that will make every entrance unforgettable.
-      </p>
-      <Link href="/shop" className="pill-cta">
-        Explore the Shop <ArrowUpRight size={14} strokeWidth={1.6} />
-      </Link>
-    </div>
-  );
-
-  const fmt = (n) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+export default function MaisonCart() {
+  const { cart, cartTotal, updateQuantity, removeFromCart } = useStore();
 
   return (
-    <div className="bg-[var(--bg)] min-h-screen">
-      <PageHeader
-        eyebrow="Review"
-        title="YOUR"
-        accent="BAG"
-      />
+    <>
+      <section className="m-wrap m-ph">
+        <span className="m-eyebrow">Your selection</span>
+        <h1>The Bag.</h1>
+      </section>
 
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-20 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {cart.map((item, i) => (
-              <div key={`${item.id}-${item.size}-${i}`}
-                className="bg-white border border-[var(--border)] p-5 flex gap-5">
-                <Link href={`/product/${item.slug}`}>
-                  <img src={item.image} alt={item.name} className="w-24 h-32 object-cover bg-[var(--surface-2)]" />
-                </Link>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Link href={`/product/${item.slug}`}>
-                        <h3 className="font-serif italic text-[var(--ink)] text-xl">{item.name}</h3>
-                      </Link>
-                      {item.size && <p className="text-[var(--ink-muted)] text-xs font-body mt-1">Size: {item.size}</p>}
-                      {item.color && <p className="text-[var(--ink-muted)] text-xs font-body">Color: {item.color}</p>}
-                    </div>
-                    <button onClick={() => removeFromCart(item.id, item.size)} className="text-[var(--ink-muted)] hover:text-red-500 transition-colors">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center border border-[var(--border)] ">
-                      <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
-                        className="px-3 py-2 text-[var(--ink-soft)] hover:text-[var(--gold-deep)]">
-                        <Minus size={12} />
-                      </button>
-                      <span className="px-5 text-[var(--ink)] text-sm font-body">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
-                        className="px-3 py-2 text-[var(--ink-soft)] hover:text-[var(--gold-deep)]">
-                        <Plus size={12} />
-                      </button>
-                    </div>
-                    <span className="font-serif italic text-[var(--ink)] text-xl">{fmt(item.price * item.quantity)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+      <div className="m-wrap m-section" style={{ paddingTop: 0 }}>
+        {cart.length === 0 ? (
+          <div className="m-empty">
+            <h3>Your bag is empty</h3>
+            <p style={{ marginBottom: 20 }}>Discover a scent worth remembering.</p>
+            <Link className="m-btn m-btn--fill" href="/test/shop" style={{ justifyContent: 'center' }}>Explore the collection</Link>
           </div>
-
-          {/* Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white border border-[var(--border)] p-7 sticky top-28">
-              <p className="text-[var(--gold-deep)] text-[10px] tracking-[0.45em] uppercase font-body mb-3">Summary</p>
-              <h2 className="font-display text-[var(--ink)] text-2xl uppercase tracking-tight mb-6">Order Total</h2>
-
-              <div className="space-y-3 text-sm font-body">
-                <div className="flex justify-between text-[var(--ink-soft)]">
-                  <span>Subtotal</span>
-                  <span>{fmt(cartTotal)}</span>
+        ) : (
+          <div className="m-cartgrid">
+            <div className="m-crows">
+              {cart.map((it) => (
+                <div className="m-crow" key={`${it.id}-${it.size}`}>
+                  {it.image ? <img className="m-crow__img" src={it.image} alt={it.name} style={{ gridArea: 'img' }} /> : <span className="m-crow__img" style={{ gridArea: 'img' }} />}
+                  <div style={{ gridArea: 'body' }}>
+                    <div className="m-crow__n">{it.name}</div>
+                    {it.size ? <div className="m-crow__m">{it.size}</div> : null}
+                    <div className="m-line__q" style={{ marginTop: 10 }}>
+                      <button aria-label="Decrease" onClick={() => updateQuantity(it.id, it.quantity - 1, it.size)}>−</button>
+                      <span>{it.quantity}</span>
+                      <button aria-label="Increase" onClick={() => updateQuantity(it.id, it.quantity + 1, it.size)}>+</button>
+                    </div>
+                    <button className="m-line__rm" onClick={() => removeFromCart(it.id, it.size)}>Remove</button>
+                  </div>
+                  <div className="m-crow__n" style={{ gridArea: 'price', textAlign: 'right' }}>{inr(it.price * it.quantity)}</div>
                 </div>
-                <div className="flex justify-between text-[var(--ink-soft)]">
-                  <span>Shipping</span>
-                  <span className="text-[var(--ink-muted)]">Calculated at checkout</span>
-                </div>
-                <p className="text-[var(--ink-muted)] text-xs">Promo codes, shipping &amp; GST are applied at checkout.</p>
-                <div className="h-px bg-[var(--border)] my-2" />
-                <div className="flex justify-between items-baseline">
-                  <span className="font-display text-[var(--ink)] text-xl uppercase">Subtotal</span>
-                  <span className="font-serif italic text-[var(--ink)] text-2xl">{fmt(cartTotal)}</span>
-                </div>
-              </div>
-
-              <button onClick={() => setCartOpen(true)} className="pill-cta w-full justify-center !py-4 mt-6">
-                Checkout <ArrowUpRight size={14} strokeWidth={1.6} />
-              </button>
-              <Link href="/shop" className="block text-center text-[var(--ink-muted)] text-[10px] tracking-[0.3em] uppercase font-body mt-4 hover:text-[var(--gold-deep)] transition-colors">
-                Continue Shopping
-              </Link>
+              ))}
             </div>
+
+            <aside className="m-summary">
+              <h3>Order Summary</h3>
+              <div className="m-sumrow"><span>Subtotal</span><span>{inr(cartTotal)}</span></div>
+              <div className="m-sumrow"><span>Shipping</span><span>Free</span></div>
+              <div className="m-sumrow tot"><span>Total</span><b>{inr(cartTotal)}</b></div>
+              <Link className="m-btn m-btn--fill" href="/checkout" style={{ justifyContent: 'center', width: '100%', marginTop: 16 }}>Proceed to checkout</Link>
+              <Link className="m-btn m-btn--ghost" href="/test/shop" style={{ justifyContent: 'center', width: '100%', marginTop: 10 }}>Continue shopping</Link>
+            </aside>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }

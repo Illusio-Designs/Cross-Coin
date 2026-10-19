@@ -1076,7 +1076,10 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
 
   // Rate limit: max 10 messages per phone per hour
   const rateLimited = await checkRateLimit(to);
-  if (rateLimited) return rateLimited;
+  if (rateLimited) {
+    await _recordAutomatic({ to, brandId, type: 'text', body: text, failed: RATE_LIMIT_REASON });
+    return rateLimited;
+  }
 
   // Sanitize user input in message text
   const sanitizedText = text.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
@@ -1087,11 +1090,20 @@ async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null
     logger.info(`[WhatsApp] Sending reply with context message_id: ${contextMessageId}`);
   }
 
-  const res = await waPostWithRetry(
-    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    payload,
-    { headers: authHeader(token) }
-  );
+  let res;
+  try {
+    res = await waPostWithRetry(
+      `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+      payload,
+      { headers: authHeader(token) }
+    );
+  } catch (err) {
+    if (err.response) await _recordAutomatic({ to, brandId, type: 'text', body: sanitizedText, failed: metaError(err) });
+    throw err;
+  }
+  // Automatic texts (keyword auto-replies, NDR follow-ups…) are saved to the
+  // chat here. Staff replies are NOT — sendReply saves its own row.
+  await _recordAutomatic({ to, brandId, type: 'text', body: sanitizedText, waId: res.data?.messages?.[0]?.id });
   return res.data;
 }
 
@@ -1112,7 +1124,10 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
 
   // Rate limit: max 10 messages per phone per hour
   const rateLimited = await checkRateLimit(to);
-  if (rateLimited) return rateLimited;
+  if (rateLimited) {
+    await _recordAutomatic({ to, brandId, templateName, params: bodyParams, failed: RATE_LIMIT_REASON });
+    return rateLimited;
+  }
 
   const shape = await _templateShape(templateName, brandId);
   const components = [];
@@ -1143,16 +1158,26 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
     }
   }
 
-  const res = await waPostWithRetry(
-    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    {
-      messaging_product: 'whatsapp',
-      to,
-      type: 'template',
-      template: { name: templateName, language: { code: 'en' }, components },
-    },
-    { headers: authHeader(token) }
-  );
+  let res;
+  try {
+    res = await waPostWithRetry(
+      `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: { name: templateName, language: { code: 'en' }, components },
+      },
+      { headers: authHeader(token) }
+    );
+  } catch (err) {
+    if (err.response) await _recordAutomatic({ to, brandId, templateName, params: bodyParams, failed: metaError(err) });
+    throw err;
+  }
+  // Automatic messages + broadcasts are saved to the customer's chat (tagged
+  // with their automation key) so the inbox shows them and the Automations /
+  // Broadcasts pages can count sent / delivered / read from real rows.
+  await _recordAutomatic({ to, brandId, templateName, params: bodyParams, waId: res.data?.messages?.[0]?.id });
   return res.data;
 }
 
@@ -1236,6 +1261,7 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
     if (rateLimited) return rateLimited;
     const orderNumber = String(data.orderNumber);
     const qr = (index, payload) => ({ type: 'button', sub_type: 'quick_reply', index: String(index), parameters: [{ type: 'payload', payload }] });
+    const ndrParams = [String(data.name || 'there'), await _brandName(brandId), orderNumber, String(data.reason || 'The courier could not reach you').slice(0, 120)];
     const res = await WA_HTTP.post(
       `${GRAPH_API_URL}/${phoneNumberId}/messages`,
       {
@@ -1263,6 +1289,7 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
       },
       { headers: authHeader(token) }
     );
+    await _recordAutomatic({ to, brandId, templateName: tName('delivery_failed_action'), params: ndrParams, waId: res.data?.messages?.[0]?.id });
     return res.data;
   } catch (e) {
     logger.warn(`delivery_failed_action not sent (${metaError(e)}) — using plain delivery_failed`);
@@ -1280,11 +1307,13 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
 async function sendDeliveredWithInvoice(phone, data, brandId = 1) {
   const { invoiceToken } = require('./invoiceService.js');
   try {
-    return await sendTemplate(phone, tName('delivered_invoice'), [
+    // A failure here is followed by the fallback below, so don't save it as a
+    // failed message in the chat.
+    return await _withoutFailureRecord(async () => sendTemplate(phone, tName('delivered_invoice'), [
       data.name || 'there',
       await _brandName(brandId),
       data.orderNumber,
-    ], brandId, { urlParam: `${encodeURIComponent(data.orderNumber)}?t=${invoiceToken(data.orderNumber)}` });
+    ], brandId, { urlParam: `${encodeURIComponent(data.orderNumber)}?t=${invoiceToken(data.orderNumber)}` }));
   } catch (e) {
     logger.warn(`delivered_invoice not sent (${metaError(e)}) — using plain order_delivered`);
     return sendOrderDelivered(phone, data, brandId);
@@ -1358,6 +1387,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
   if (rateLimited) return rateLimited;
 
   const orderNumber = String(data.orderNumber);
+  const codParams = [String(data.name || 'there'), await _brandName(brandId), orderNumber, String(data.amount), String(data.fullAddress || data.address || 'your address')];
 
   // Build template with body params + Quick Reply button payloads keyed to the order number.
   // When customer taps "Confirm Address" → webhook receives payload "confirm_cod_<orderNumber>"
@@ -1399,6 +1429,7 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
     },
     { headers: authHeader(token) }
   );
+  await _recordAutomatic({ to, brandId, templateName: tName('cod_order_confirmation'), params: codParams, waId: res.data?.messages?.[0]?.id });
   return res.data;
 }
 

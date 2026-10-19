@@ -67,22 +67,33 @@ router.get('/shop/:brandId', async (req, res) => {
 // the WhatsApp in-app browser (or another phone) has no localStorage cart.
 // A plain number is the legacy form (brand id) from messages sent before the
 // token existed: it still opens the right store, just without the items.
+//
+// Opening the link stamps abandoned_carts.link_opened_at (first open only) so
+// WhatsApp Studio → Abandoned carts can show "Opened the link". Only the token
+// form identifies a cart; the legacy brand-id form can't be tied to one.
+// The coupon defaults to the one set in the cart rules (CART10 out of the box).
 const CART_RECOVER_COUPON = 'CART10';
 router.get('/cart-recover/:key', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.set('Referrer-Policy', 'no-referrer');
   // Tolerate a stray trailing slash / encoded junk WhatsApp may add.
   const key = String(req.params.key || '').trim().replace(/[/\s]+$/, '');
-  const coupon = String(req.query.coupon || CART_RECOVER_COUPON).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || CART_RECOVER_COUPON;
+  const recovery = require('../services/cartRecoveryService.js');
+  let ruleCoupon = CART_RECOVER_COUPON;
+  try { ruleCoupon = (await recovery.getCartRules()).coupon || CART_RECOVER_COUPON; } catch (_) { /* defaults */ }
+  const coupon = String(req.query.coupon || ruleCoupon).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || ruleCoupon;
   let brandId = 1;
   let token = null;
   try {
     if (/^\d{1,9}$/.test(key)) {
       brandId = Number(key) || 1;
     } else {
-      const recovery = require('../services/cartRecoveryService.js');
       const row = await recovery.findByToken(key);
-      if (row) { brandId = row.brandId || 1; token = row.recoverToken; }
+      if (row) {
+        brandId = row.brandId || 1; token = row.recoverToken;
+        // Fire-and-forget: the shopper's redirect never waits on this write.
+        recovery.markLinkOpened(row.id).catch(() => {}); // first open only (guarded in SQL)
+      }
     }
     const domain = await whatsappService.getBrandDomain(brandId);
     const qs = `recover=1&coupon=${encodeURIComponent(coupon)}${token ? `&cart=${encodeURIComponent(token)}` : ''}`;

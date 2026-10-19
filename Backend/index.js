@@ -506,7 +506,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v26';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v27';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1375,6 +1375,73 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('phone_hash backfill failed: ' + err.message);
+        }
+
+        // ── WhatsApp Studio (v27): settings table, automation tagging, inbox
+        // filter columns, quick-reply categories, broadcast states ──────────
+        // All additive + guarded: CREATE TABLE IF NOT EXISTS / ADD COLUMN only
+        // when missing / ENUM widened only when the new values are absent.
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS whatsapp_settings (
+                \`key\` VARCHAR(64) NOT NULL PRIMARY KEY,
+                value TEXT NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+        } catch (err) {
+            logger.error('whatsapp_settings table ensure failed: ' + err.message);
+        }
+        await ensureColumn('whatsapp_messages', 'automation_key', 'automation_key VARCHAR(64) NULL');
+        await ensureColumn('whatsapp_messages', 'template_name', 'template_name VARCHAR(100) NULL');
+        await ensureColumn('whatsapp_messages', 'sent_by', 'sent_by INT NULL');
+        await ensureColumn('whatsapp_messages', 'error_reason', 'error_reason VARCHAR(255) NULL');
+        await ensureIndex('whatsapp_messages', 'idx_wa_msg_auto_created', 'automation_key, createdAt');
+        await ensureColumn('whatsapp_conversations', 'phone_hash', 'phone_hash VARCHAR(64) NULL');
+        await ensureColumn('whatsapp_conversations', 'last_inbound_at', 'last_inbound_at DATETIME NULL');
+        await ensureColumn('whatsapp_conversations', 'last_reply_at', 'last_reply_at DATETIME NULL');
+        await ensureIndex('whatsapp_conversations', 'idx_wa_conv_phone_hash', 'phone_hash');
+        await ensureColumn('whatsapp_canned_responses', 'category', "category VARCHAR(20) NOT NULL DEFAULT 'other'");
+        await ensureColumn('whatsapp_canned_responses', 'uses', 'uses INT NOT NULL DEFAULT 0');
+        await ensureColumn('whatsapp_broadcasts', 'skipped_count', 'skipped_count INT NOT NULL DEFAULT 0');
+        try {
+            const [[col]] = await sequelize.query(
+                `SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_broadcasts' AND COLUMN_NAME = 'status' LIMIT 1`
+            );
+            if (col && !String(col.t).includes("'cancelled'")) {
+                logger.info('Migrating: widening whatsapp_broadcasts.status…');
+                await sequelize.query(`ALTER TABLE whatsapp_broadcasts MODIFY COLUMN status
+                    ENUM('draft','scheduled','running','paused','done','failed','cancelled') NOT NULL DEFAULT 'draft'`);
+            }
+        } catch (err) {
+            logger.error('whatsapp_broadcasts.status migration failed: ' + err.message);
+        }
+        try {
+            // Fill the new inbox columns once from existing data (only rows
+            // still NULL, so re-running is a no-op).
+            await sequelize.query(`UPDATE whatsapp_conversations c
+                JOIN (SELECT conversation_id, MAX(createdAt) AS at FROM whatsapp_messages
+                       WHERE direction = 'inbound' GROUP BY conversation_id) m ON m.conversation_id = c.id
+                 SET c.last_inbound_at = m.at
+               WHERE c.last_inbound_at IS NULL`);
+            await sequelize.query(`UPDATE whatsapp_conversations c
+                JOIN (SELECT conversation_id, MAX(createdAt) AS at FROM whatsapp_messages
+                       WHERE direction = 'outbound' AND automation_key IS NULL GROUP BY conversation_id) m ON m.conversation_id = c.id
+                 SET c.last_reply_at = m.at
+               WHERE c.last_reply_at IS NULL`);
+            const { phoneHash } = require('./utils/encryption.js');
+            const [convs] = await sequelize.query(
+                `SELECT id, customer_phone FROM whatsapp_conversations WHERE phone_hash IS NULL LIMIT 20000`
+            );
+            let filled = 0;
+            for (const c of convs) {
+                const h = phoneHash(c.customer_phone);
+                if (!h) continue;
+                await sequelize.query(`UPDATE whatsapp_conversations SET phone_hash = ? WHERE id = ?`, { replacements: [h, c.id] });
+                filled++;
+            }
+            if (filled) logger.info(`✓ backfilled phone_hash for ${filled} whatsapp_conversations rows`);
+        } catch (err) {
+            logger.error('whatsapp inbox backfill failed: ' + err.message);
         }
 
         // ── Idempotent migration: abandoned_carts table (WhatsApp recovery) ──

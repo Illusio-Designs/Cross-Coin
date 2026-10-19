@@ -247,7 +247,145 @@ async function buildRestoreLines(row) {
   return lines;
 }
 
+// ─── Cart recovery rules (WhatsApp Studio → Abandoned carts → Rules) ─────────
+// Admins tune the recovery message in the dashboard; the rules live as JSON in
+// whatsapp_settings under `cart_rules` (written by whatsappInsightsService).
+// The defaults reproduce the behaviour from before the rules existed: message
+// right away (the capture endpoint sends immediately, the 5-minute cron is the
+// backstop after ABANDONED_CART_DELAY_MIN), any time of day, code CART10, no
+// minimum cart value.
+const CART_RULES_KEY = 'cart_rules';
+const DEFAULT_CART_RULES = Object.freeze({ waitHours: 0, quietStart: null, quietEnd: null, coupon: 'CART10', minValue: 0 });
+const RULES_TTL_MS = 60 * 1000;
+const IST_MS = 330 * 60000;
+const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+let _rulesCache = null; // { at, rules }
+
+function normaliseCartRules(raw) {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const out = { ...DEFAULT_CART_RULES };
+  const wh = Number(r.waitHours);
+  if (Number.isFinite(wh) && wh >= 0 && wh <= 23) out.waitHours = Math.round(wh * 4) / 4; // quarter-hour steps
+  const qs = typeof r.quietStart === 'string' && HHMM_RE.test(r.quietStart) ? r.quietStart : null;
+  const qe = typeof r.quietEnd === 'string' && HHMM_RE.test(r.quietEnd) ? r.quietEnd : null;
+  if (qs && qe && qs !== qe) { out.quietStart = qs; out.quietEnd = qe; }
+  const coupon = String(r.coupon == null ? '' : r.coupon).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32);
+  if (coupon) out.coupon = coupon;
+  const mv = Number(r.minValue);
+  if (Number.isFinite(mv) && mv >= 0 && mv <= 1000000) out.minValue = Math.round(mv);
+  return out;
+}
+
+// Never throws: a missing table / bad JSON just means "defaults".
+async function getCartRules({ fresh = false } = {}) {
+  if (!fresh && _rulesCache && Date.now() - _rulesCache.at < RULES_TTL_MS) return _rulesCache.rules;
+  let rules = { ...DEFAULT_CART_RULES };
+  try {
+    const { sequelize } = require('../config/db.js');
+    const { QueryTypes } = require('sequelize');
+    const rows = await sequelize.query('SELECT `value` FROM whatsapp_settings WHERE `key` = :k LIMIT 1',
+      { replacements: { k: CART_RULES_KEY }, type: QueryTypes.SELECT });
+    if (rows[0] && rows[0].value) rules = normaliseCartRules(JSON.parse(rows[0].value));
+  } catch (_) { /* table not created yet / unreadable → defaults */ }
+  _rulesCache = { at: Date.now(), rules };
+  return rules;
+}
+
+function clearCartRulesCache() { _rulesCache = null; }
+
+function backstopDelayMin() {
+  const n = parseInt(process.env.ABANDONED_CART_DELAY_MIN || '5', 10);
+  return Number.isFinite(n) && n >= 0 ? n : 5;
+}
+
+const _mins = (hhmm) => { const m = HHMM_RE.exec(hhmm || ''); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const _istMinuteOfDay = (d) => { const x = new Date(d.getTime() + IST_MS); return x.getUTCHours() * 60 + x.getUTCMinutes(); };
+
+// True when `date` falls inside the quiet hours (IST). Handles overnight
+// windows such as 21:00 → 09:00.
+function isQuietAt(date, rules) {
+  const s = _mins(rules && rules.quietStart);
+  const e = _mins(rules && rules.quietEnd);
+  if (s == null || e == null || s === e) return false;
+  const m = _istMinuteOfDay(date);
+  return s < e ? (m >= s && m < e) : (m >= s || m < e);
+}
+
+// First moment at or after `date` that is outside the quiet hours.
+function afterQuietHours(date, rules) {
+  if (!isQuietAt(date, rules)) return date;
+  const e = _mins(rules.quietEnd);
+  const m = _istMinuteOfDay(date);
+  let delta = e - m;
+  if (delta <= 0) delta += 24 * 60;
+  const out = new Date(date.getTime() + delta * 60000);
+  out.setUTCSeconds(0, 0);
+  return out;
+}
+
+// When the recovery message for a cart left at `leftAt` is due under `rules`.
+// waitHours 0 = "right away" (sent on capture; the cron backstop retries after
+// ABANDONED_CART_DELAY_MIN), otherwise leftAt + waitHours. Quiet hours push it
+// to the end of the quiet window.
+function nextSendAt(leftAt, rules = DEFAULT_CART_RULES) {
+  const left = new Date(leftAt || Date.now());
+  const waitMs = rules.waitHours > 0 ? rules.waitHours * 3600 * 1000 : 0;
+  return afterQuietHours(new Date(left.getTime() + waitMs), rules);
+}
+
+// Gate every recovery send through this. Returns { ok, reason, sendAt }:
+//   reason 'below_min'   — cart value under rules.minValue (never send)
+//          'too_soon'    — the wait time hasn't passed yet (send later)
+//          'quiet_hours' — inside quiet hours (send later, at sendAt)
+function checkSend({ value, leftAt } = {}, rules = DEFAULT_CART_RULES, now = new Date()) {
+  const sendAt = nextSendAt(leftAt || now, rules);
+  if (rules.minValue > 0 && (Number(value) || 0) < rules.minValue) return { ok: false, reason: 'below_min', sendAt: null };
+  if (isQuietAt(now, rules)) return { ok: false, reason: 'quiet_hours', sendAt };
+  if (sendAt.getTime() > now.getTime() + 1000) return { ok: false, reason: 'too_soon', sendAt };
+  return { ok: true, reason: null, sendAt };
+}
+
+// updatedAt range the 5-minute capture cron should scan under these rules:
+// old enough for the wait (and the backstop delay), but not so old that a long
+// wait + quiet hours pushes the cart outside the old fixed 24 h window.
+function cronWindow(rules = DEFAULT_CART_RULES, now = new Date()) {
+  const waitMin = Math.max(backstopDelayMin(), Math.round((rules.waitHours || 0) * 60));
+  const to = new Date(now.getTime() - waitMin * 60000);
+  const from = new Date(now.getTime() - (24 + (rules.waitHours || 0) + 12) * 3600 * 1000);
+  return { from, to };
+}
+
+// Stamp the first time a recovery link was opened (the /api/cart-recover
+// redirect, or the storefront's restore call). Never moves updated_at — that
+// column drives the recovery timing and token expiry. Never throws.
+async function markLinkOpened(rowOrId) {
+  try {
+    const id = typeof rowOrId === 'object' && rowOrId ? rowOrId.id : Number(rowOrId);
+    if (!id) return false;
+    await require('./whatsappInsightsService.js').ensureSchema();
+    const { sequelize } = require('../config/db.js');
+    const [, meta] = await sequelize.query(
+      'UPDATE abandoned_carts SET link_opened_at = :now, updated_at = updated_at WHERE id = :id AND link_opened_at IS NULL',
+      { replacements: { id, now: new Date() } });
+    return !!(meta && (meta.affectedRows || meta.changedRows));
+  } catch (e) {
+    logger.warn('[cart-recover] could not record link open: ' + e.message);
+    return false;
+  }
+}
+
 module.exports = {
+  CART_RULES_KEY,
+  DEFAULT_CART_RULES,
+  normaliseCartRules,
+  getCartRules,
+  clearCartRulesCache,
+  backstopDelayMin,
+  isQuietAt,
+  nextSendAt,
+  checkSend,
+  cronWindow,
+  markLinkOpened,
   TOKEN_TTL_DAYS,
   newToken,
   isToken,

@@ -28,6 +28,16 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
   // Private internal note an agent keeps on a conversation (shown in the Notes
   // tab). Never sent to the customer.
   agent_notes: { type: DataTypes.TEXT, allowNull: true },
+  // Keyed hash of the last 10 phone digits (utils/encryption.phoneHash) so the
+  // inbox can join a chat to the customer's orders (shipping/guest phones are
+  // encrypted and only searchable by hash). Set on create; backfilled at boot.
+  phone_hash: { type: DataTypes.STRING(64), allowNull: true },
+  // Denormalised timestamps for the inbox filters (no per-request aggregate
+  // over whatsapp_messages): the customer's last message (24-hour reply
+  // window) and the last reply a PERSON sent (automatic messages don't count,
+  // so "waiting for a reply" stays true until staff actually answer).
+  last_inbound_at: { type: DataTypes.DATE, allowNull: true },
+  last_reply_at: { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName: 'whatsapp_conversations',
   timestamps: true,
@@ -49,7 +59,15 @@ const WhatsappConversation = sequelize.define('WhatsappConversation', {
     // and split the thread. (Production applies this via the guarded migration
     // in index.js, which merges existing duplicates first.)
     { name: 'uniq_wa_conv_phone',               fields: ['customer_phone'], unique: true },
+    { name: 'idx_wa_conv_phone_hash',           fields: ['phone_hash'] },
   ],
+  hooks: {
+    beforeCreate(conv) {
+      if (!conv.phone_hash && conv.customer_phone) {
+        try { conv.phone_hash = require('../utils/encryption.js').phoneHash(conv.customer_phone); } catch (_) { /* optional */ }
+      }
+    },
+  },
 });
 
 const WhatsappMessage = sequelize.define('WhatsappMessage', {
@@ -62,6 +80,15 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   quoted_message_id: { type: DataTypes.INTEGER, allowNull: true, comment: 'ID of the message being replied to' },
   status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received'), defaultValue: 'sent' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
+  // Which automatic message produced this outbound row (e.g. 'order_shipped',
+  // 'abandoned_cart', 'broadcast:12'). NULL = typed by staff / inbound.
+  automation_key: { type: DataTypes.STRING(64), allowNull: true },
+  // Exact Meta template name for template sends (read-rate per template).
+  template_name: { type: DataTypes.STRING(100), allowNull: true },
+  // Staff user who sent it (NULL for inbound and automatic messages).
+  sent_by: { type: DataTypes.INTEGER, allowNull: true },
+  // Readable reason when status = 'failed'.
+  error_reason: { type: DataTypes.STRING(255), allowNull: true },
 }, {
   tableName: 'whatsapp_messages',
   timestamps: true,
@@ -84,6 +111,7 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
     // scripts/add-perf-indexes.js.
     { name: 'idx_wa_msg_dir_status', fields: ['direction', 'status'] },
     { name: 'idx_wa_msg_sent_at',    fields: ['sent_at'] },
+    { name: 'idx_wa_msg_auto_created', fields: ['automation_key', 'createdAt'] },
   ],
 });
 
@@ -99,6 +127,10 @@ const WhatsappCannedResponse = sequelize.define('WhatsappCannedResponse', {
   title: { type: DataTypes.STRING(100), allowNull: false },
   body: { type: DataTypes.TEXT, allowNull: false },
   created_by: { type: DataTypes.INTEGER, allowNull: true },
+  // Tab on the Quick replies page.
+  category: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'other', comment: 'orders|returns|products|other' },
+  // How many times staff inserted it (POST /canned-responses/:id/used).
+  uses: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   // utf8mb4 is REQUIRED — canned bodies contain emojis (📦 📍 💳 …). Without it
   // the column can't store 4-byte chars and every emoji becomes "?".
 }, { tableName: 'whatsapp_canned_responses', timestamps: true, charset: 'utf8mb4', collate: 'utf8mb4_unicode_ci' });
@@ -111,7 +143,9 @@ const WhatsappBroadcast = sequelize.define('WhatsappBroadcast', {
   template_name: { type: DataTypes.STRING(100), allowNull: false },
   // JSON array of param arrays per recipient
   audience_filter: { type: DataTypes.TEXT, allowNull: true, comment: 'JSON: {segment, minOrders, minSpend}' },
-  status: { type: DataTypes.ENUM('draft', 'running', 'done', 'failed'), defaultValue: 'draft' },
+  // scheduled → running (paused outside 10:00–20:00 IST) → done; cancelled
+  // only before it starts.
+  status: { type: DataTypes.ENUM('draft', 'scheduled', 'running', 'paused', 'done', 'failed', 'cancelled'), defaultValue: 'draft' },
   total_recipients: { type: DataTypes.INTEGER, defaultValue: 0 },
   sent_count: { type: DataTypes.INTEGER, defaultValue: 0 },
   failed_count: { type: DataTypes.INTEGER, defaultValue: 0 },
@@ -119,6 +153,8 @@ const WhatsappBroadcast = sequelize.define('WhatsappBroadcast', {
   started_at: { type: DataTypes.DATE, allowNull: true },
   completed_at: { type: DataTypes.DATE, allowNull: true },
   created_by: { type: DataTypes.INTEGER, allowNull: true },
+  // Recipients skipped because they replied STOP.
+  skipped_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
 }, { tableName: 'whatsapp_broadcasts', timestamps: true });
 
 module.exports = { WhatsappConversation, WhatsappMessage, WhatsappCannedResponse, WhatsappBroadcast };

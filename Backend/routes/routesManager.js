@@ -42,6 +42,7 @@ router.use('/checkout',           optionalBrand, checkoutRouter);
 
 // ── WhatsApp ──────────────────────────────────────────────────────────────
 router.use('/whatsapp',           require('./whatsappRoutes.js'));
+router.use('/whatsapp',           require('./whatsappInsightsRoutes.js')); // carts, analytics, settings
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.js'));
