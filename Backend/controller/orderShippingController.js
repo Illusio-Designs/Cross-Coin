@@ -611,8 +611,11 @@ module.exports.handleShippingWebhook = async (req, res) => {
 
     }
 
-    // Stock comes back for every RTO-family status, once per order (ledger-guarded).
-    if (RTO_FAMILY.includes(orderStatus)) {
+    // Stock comes back when the order ENTERS the RTO family (rto / rto delivered
+    // / returned_rto) from a live status — once per order, ledger-guarded.
+    // Orders already in RTO before this code had stock restored by the old DB
+    // trigger (no ledger rows), so a later 'rto delivered' must not restock again.
+    if (statusAdvanced && RTO_FAMILY.includes(orderStatus) && !RTO_FAMILY.includes(order.status)) {
       const units = await restoreRtoStockOnce(order, transaction, 'shipping_webhook', rto_reason);
       if (units > 0) webhookNotes += ` - Stock auto-restored: ${units} unit(s)`;
     }
@@ -1549,6 +1552,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
       const statusChanged = order.status !== newStatus;
 
       if (statusChanged) {
+        const prevStatusForRto = order.status;
         // Prepare update data
         const updateData = {
           status: newStatus,
@@ -1577,8 +1581,9 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
         // Update order status and payment status
         await order.update(updateData, { transaction });
 
-        // RTO detected by polling must restore stock too (webhook-only before).
-        if (RTO_FAMILY.includes(newStatus)) {
+        // RTO detected by polling must restore stock too (webhook-only before) —
+        // only on entering the RTO family, same rule as the webhook.
+        if (RTO_FAMILY.includes(newStatus) && !RTO_FAMILY.includes(prevStatusForRto)) {
           await restoreRtoStockOnce(order, transaction, 'shipping_sync', 'RTO detected by status sync');
         }
 
