@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Loader from '../common/Loader';
 import DonutChart from '../common/DonutChart';
 import { useDashboardStats } from '../../hooks/queries/useDashboard';
@@ -271,29 +271,41 @@ function RoleHome() {
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════════════ */
 function CardGrid() {
+  // dateFilter is what the stats query uses; pickerRange is what the date
+  // picker shows. A half-picked range (only start or only end) stays in the
+  // picker without refetching — the query only changes once both dates are
+  // set or both are cleared.
   const [dateFilter, setDateFilter] = useState({});
+  const [pickerRange, setPickerRange] = useState({});
   const { user, roles } = useAuth();
   // The home's revenue/order reporting is only for roles that can open the
   // Orders + Reports views (admin, order_manager). Everyone else (WhatsApp /
   // product / content managers) gets a role-appropriate home and never pulls
   // store-wide financials. Gate BOTH the fetch and the render on this.
   const canSeeReporting = roles.includes('admin') || roles.includes('order_manager');
-  const { data: stats, isLoading: loading, error: queryError } = useDashboardStats(dateFilter, { enabled: canSeeReporting });
+  const { data: freshStats, isLoading, isFetching, error: queryError } = useDashboardStats(dateFilter, { enabled: canSeeReporting });
+  // Keep showing the last figures while a new range loads, so the page (and
+  // the open date picker) stays mounted instead of swapping to a full loader.
+  const lastStatsRef = useRef(null);
+  if (freshStats) lastStatsRef.current = freshStats;
+  const stats = freshStats || lastStatsRef.current;
+  const loading = isLoading && !stats;
+  const refreshing = isFetching && !!stats;
   const error = queryError ? 'Failed to load dashboard statistics' : null;
 
   if (!canSeeReporting) return <RoleHome />;
 
   const handleDateChange = (field, value) => {
-    setDateFilter(prev => {
-      const next = { ...prev, [field]: value || undefined };
-      if (!next.start_date) delete next.start_date;
-      if (!next.end_date) delete next.end_date;
-      return next;
-    });
+    const next = { ...pickerRange, [field]: value || undefined };
+    if (!next.start_date) delete next.start_date;
+    if (!next.end_date) delete next.end_date;
+    setPickerRange(next);
+    // Only reload once the range is complete (or fully cleared).
+    if (!!next.start_date === !!next.end_date) setDateFilter(next);
   };
 
-  const clearDateFilter = () => setDateFilter({});
-  const hasDateFilter = !!(dateFilter.start_date || dateFilter.end_date);
+  const clearDateFilter = () => { setPickerRange({}); setDateFilter({}); };
+  const hasDateFilter = !!(dateFilter.start_date && dateFilter.end_date);
 
   if (loading) return (
     <div className="dashboard-sections">
@@ -302,7 +314,7 @@ function CardGrid() {
       </div>
     </div>
   );
-  if (error) return <div className="dashboard-sections"><div style={{ textAlign:'center', padding:'40px', color:'var(--ds-color-text)' }}>{error}</div></div>;
+  if (error && !stats) return <div className="dashboard-sections"><div style={{ textAlign:'center', padding:'40px', color:'var(--ds-color-text)' }}>{error}</div></div>;
   if (!stats) return null;
 
   /* ── Derived counts ── */
@@ -367,12 +379,18 @@ function CardGrid() {
       {/* ═══ 1. PAGE HEADER (greeting + date filter) ═══ */}
       <PageHeader
         title={`${getGreeting()}, ${user?.username || 'Admin'}`}
-        subtitle={hasDateFilter ? 'Showing filtered data' : "Here's your store overview"}
+        subtitle={
+          <span role="status" aria-live="polite">
+            {refreshing ? 'Updating…'
+              : error ? error
+              : hasDateFilter ? 'Showing filtered data' : "Here's your store overview"}
+          </span>
+        }
         actions={
           <DateRangePicker
             label=""
-            startDate={dateFilter.start_date || ''}
-            endDate={dateFilter.end_date || ''}
+            startDate={pickerRange.start_date || ''}
+            endDate={pickerRange.end_date || ''}
             onStartChange={val => handleDateChange('start_date', val)}
             onEndChange={val => handleDateChange('end_date', val)}
             onClear={clearDateFilter}

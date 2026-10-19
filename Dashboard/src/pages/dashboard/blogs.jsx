@@ -225,8 +225,8 @@ export function Blogs() {
   // ── Submit post ────────────────────────────────────────────────────────────
   const handlePostSubmit = async (e) => {
     e.preventDefault();
-    if (!postForm.title.trim()) { showError('fieldRequired'); return; }
-    if (!postForm.brand_ids.length) { showError('fieldRequired'); return; }
+    if (!postForm.title.trim()) { showError('fieldRequired', 'Title is required.'); return; }
+    if (!postForm.brand_ids.length) { showError('fieldRequired', 'Select at least one brand.'); return; }
     const payload = {
       title: postForm.title,
       author_name: postForm.author_name || null,

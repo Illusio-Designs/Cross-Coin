@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import { productService } from '../../services';
+import { showError } from '../../utils/toastNotification';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -30,32 +31,37 @@ function extractUploadedUrl(result) {
 // images keep working unchanged.
 const IMAGES_KEY = '_images';
 
-// Explicit, high-contrast react-select styling. Without this the menu options
-// inherited a near-white text colour from the dark admin theme and were almost
-// invisible on the white dropdown. Portalling the menu to <body> also keeps it
+// Explicit react-select styling driven by the admin theme tokens, so the
+// control, menu and options follow light/dark mode instead of react-select's
+// hard-coded white menu (which left light theme text invisible in dark mode). Portalling the menu to <body> also keeps it
 // above the modal so long option lists aren't clipped.
 const selectStyles = {
   menuPortal: (base) => ({ ...base, zIndex: 100000 }),
-  menu: (base) => ({ ...base, zIndex: 100000, backgroundColor: '#ffffff', overflow: 'hidden' }),
-  menuList: (base) => ({ ...base, backgroundColor: '#ffffff' }),
+  menu: (base) => ({ ...base, zIndex: 100000, backgroundColor: 'var(--ds-color-surface)', border: '1px solid var(--ds-color-border)', overflow: 'hidden' }),
+  menuList: (base) => ({ ...base, backgroundColor: 'var(--ds-color-surface)' }),
   option: (base, state) => ({
     ...base,
-    color: '#1f2937',
-    backgroundColor: state.isSelected ? '#dbe4ff' : state.isFocused ? '#f1f5f9' : '#ffffff',
+    color: state.isSelected ? 'var(--ds-color-accent2)' : 'var(--ds-color-text)',
+    backgroundColor: state.isSelected ? 'var(--ds-color-accent2-bg)' : state.isFocused ? 'var(--ds-color-surface-soft)' : 'var(--ds-color-surface)',
     cursor: 'pointer',
   }),
   control: (base, state) => ({
     ...base,
-    backgroundColor: '#ffffff',
-    borderColor: state.isFocused ? '#6366f1' : '#cbd5e1',
+    backgroundColor: 'var(--ds-color-surface)',
+    borderColor: state.isFocused ? 'var(--ds-color-text)' : 'var(--ds-color-border)',
     boxShadow: 'none',
+    '&:hover': { borderColor: 'var(--ds-color-text-faint)' },
   }),
-  singleValue: (base) => ({ ...base, color: '#1f2937' }),
-  input: (base) => ({ ...base, color: '#1f2937' }),
-  placeholder: (base) => ({ ...base, color: '#64748b' }),
-  multiValue: (base) => ({ ...base, backgroundColor: '#eef2ff' }),
-  multiValueLabel: (base) => ({ ...base, color: '#1f2937' }),
-  noOptionsMessage: (base) => ({ ...base, color: '#64748b' }),
+  singleValue: (base) => ({ ...base, color: 'var(--ds-color-text)' }),
+  input: (base) => ({ ...base, color: 'var(--ds-color-text)' }),
+  placeholder: (base) => ({ ...base, color: 'var(--ds-color-text-faint)' }),
+  multiValue: (base) => ({ ...base, backgroundColor: 'var(--ds-color-accent2-bg)' }),
+  multiValueLabel: (base) => ({ ...base, color: 'var(--ds-color-text)' }),
+  multiValueRemove: (base) => ({ ...base, color: 'var(--ds-color-text-muted)', ':hover': { backgroundColor: 'var(--ds-color-danger-bg)', color: 'var(--ds-color-danger)' } }),
+  indicatorSeparator: (base) => ({ ...base, backgroundColor: 'var(--ds-color-border)' }),
+  dropdownIndicator: (base) => ({ ...base, color: 'var(--ds-color-text-faint)' }),
+  clearIndicator: (base) => ({ ...base, color: 'var(--ds-color-text-faint)' }),
+  noOptionsMessage: (base) => ({ ...base, color: 'var(--ds-color-text-muted)' }),
 };
 
 const AttributeSelector = ({
@@ -117,10 +123,10 @@ const AttributeSelector = ({
       if (url) {
         setValueImage(keyLower, value, url);
       } else {
-        window.alert('Upload succeeded but no image URL was returned.');
+        showError('uploadFailed', 'Upload succeeded but no image URL was returned.');
       }
     } catch (err) {
-      window.alert('Image upload failed: ' + (err?.message || 'Unknown error'));
+      showError('uploadFailed', 'Image upload failed: ' + (err?.message || 'Unknown error'));
     } finally {
       setUploading((u) => {
         const n = { ...u };

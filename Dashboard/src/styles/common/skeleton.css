@@ -1,7 +1,7 @@
 /* Skeleton Loading Component Styles */
 
 .skeleton {
-  background: #f0f0f0;
+  background: var(--ds-color-border-soft, #f0f0f0);
   position: relative;
   overflow: hidden;
 }

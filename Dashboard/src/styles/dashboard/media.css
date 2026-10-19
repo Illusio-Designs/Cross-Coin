@@ -9,9 +9,9 @@
 
 /* Error banner */
 .mg-error-banner {
-  background: #ffeef0;
-  color: #dc2626;
-  border: 1px solid #ffd6db;
+  background: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
+  border: 1px solid var(--ds-color-danger-bd);
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 13px;
@@ -69,9 +69,9 @@
   gap: 6px;
   height: 32px;
   padding: 0 12px;
-  background: #ffeef0;
-  color: #dc2626;
-  border: 1px solid #ffd6db;
+  background: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
+  border: 1px solid var(--ds-color-danger-bd);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
@@ -81,7 +81,7 @@
 }
 
 .mg-delete-btn:hover {
-  background: #ffd6db;
+  background: var(--ds-color-danger-bd);
 }
 
 .mg-count-text {
@@ -114,8 +114,8 @@
 }
 
 .mg-view-btn.active {
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
 }
 
 .mg-view-btn:hover:not(.active) {
@@ -142,13 +142,13 @@
 }
 
 .mg-card:hover {
-  border-color: #0a0a0a;
+  border-color: var(--ds-color-text);
   box-shadow: 0 4px 12px rgba(10, 10, 10,0.08);
 }
 
 .mg-card--selected {
-  border-color: #0a0a0a;
-  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.15);
+  border-color: var(--ds-color-text);
+  box-shadow: 0 0 0 2px var(--ds-color-border);
 }
 
 .mg-card-img-wrap {
@@ -189,12 +189,12 @@
   right: 8px;
   width: 22px;
   height: 22px;
-  background: #0a0a0a;
+  background: var(--ds-color-brand);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--ds-color-bg);
   z-index: 2;
 }
 
@@ -220,7 +220,7 @@
   height: 34px;
   border: none;
   border-radius: 6px;
-  background: rgba(255,255,255,0.9);
+  background: var(--ds-color-surface);
   color: var(--ds-color-text);
   cursor: pointer;
   display: flex;
@@ -230,11 +230,11 @@
 }
 
 .mg-overlay-btn:hover {
-  background: var(--ds-color-surface);
+  background: var(--ds-color-surface-soft);
 }
 
 .mg-overlay-btn--delete {
-  color: #dc2626;
+  color: var(--ds-color-danger);
 }
 
 .mg-card-info {
@@ -289,7 +289,7 @@
 }
 
 .mg-list-row--selected {
-  background: rgba(10, 10, 10, 0.04);
+  background: var(--ds-color-brand-soft);
 }
 
 .mg-list-td {
@@ -379,7 +379,7 @@
 .mg-stat-sep {
   width: 1px;
   height: 32px;
-  background: #ebebf0;
+  background: var(--ds-color-border);
   flex-shrink: 0;
 }
 

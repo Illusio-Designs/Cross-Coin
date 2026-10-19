@@ -184,14 +184,18 @@ export const getErrorMessage = (response) => {
   if (!response) return 'Unknown error';
   if (typeof response === 'string') return response;
 
-  return (
-    response.message ||
-    response.error ||
-    response.msg ||
-    response.errors?.[0]?.message ||
-    response.details ||
-    'Operation failed'
-  );
+  const isText = (v) => typeof v === 'string' && v.trim() !== '';
+  if (isText(response.message)) return response.message;
+  if (isText(response.error?.message)) return response.error.message;
+  if (isText(response.error)) return response.error;
+  if (isText(response.msg)) return response.msg;
+
+  const firstError = Array.isArray(response.errors) ? response.errors[0] : undefined;
+  if (isText(firstError)) return firstError;
+  if (isText(firstError?.message)) return firstError.message;
+  if (isText(response.details)) return response.details;
+
+  return 'Operation failed';
 };
 
 /**

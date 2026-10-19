@@ -154,11 +154,11 @@ const SafeImage = ({
         style={{
           width: width || '100%',
           height: height || 'auto',
-          backgroundColor: '#f5f5f5',
+          backgroundColor: 'var(--ds-color-surface-soft, #f5f5f5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#ccc',
+          color: 'var(--ds-color-text-faint, #ccc)',
           fontSize: '14px',
           ...style
         }}

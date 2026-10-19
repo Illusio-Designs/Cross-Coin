@@ -2,10 +2,9 @@
  * Unified SEO Hub.
  *
  * One dashboard view that consolidates every SEO surface we built into
- * tabs, plus a new Search Console section so admins can see how Google
- * is indexing and ranking the site without leaving the dashboard.
+ * tabs.
  *
- * Tab content components (Overview, Settings, Bulk, Pages, FAQs) are
+ * Tab content components (Overview, Pages, FAQs, Settings) are
  * imported from their existing route files; each keeps its own
  * PageHeader so the tab still reads as a real page when navigated to
  * directly via the legacy /dashboard/seo-* URLs.
@@ -95,7 +94,7 @@ export default function SeoHub({ initialTab = 'overview' } = {}) {
         </div>
       )}
 
-      {/* Tab nav — scrolls horizontally on small screens so all six fit. */}
+      {/* Tab nav — scrolls horizontally on small screens so every tab fits. */}
       <nav
         aria-label="SEO sections"
         style={{

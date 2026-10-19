@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import { useNotifications } from '../../hooks/useNotifications';
 import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
+import { showError } from '../../utils/toastNotification';
 
 function timeAgo(date) {
   const s = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -36,10 +37,10 @@ export default function NotificationBell() {
     try {
       const r = await enablePush();
       if (r.ok) setPushOn(true);
-      else if (r.reason === 'denied') alert('Notifications are blocked. Enable them for this site in your browser settings.');
-      else if (r.reason === 'disabled') alert('Push is not configured on the server yet (VAPID keys missing).');
-      else if (r.reason === 'unsupported') alert('This browser does not support push notifications.');
-      else alert('Could not enable notifications. Please try again.');
+      else if (r.reason === 'denied') showError('notifyFailed', 'Notifications are blocked. Enable them for this site in your browser settings.');
+      else if (r.reason === 'disabled') showError('notifyFailed', 'Push is not configured on the server yet (VAPID keys missing).');
+      else if (r.reason === 'unsupported') showError('notifyFailed', 'This browser does not support push notifications.');
+      else showError('notifyFailed', 'Could not enable notifications. Please try again.');
     } finally { setPushBusy(false); }
   };
 
@@ -92,7 +93,7 @@ export default function NotificationBell() {
         {unreadCount > 0 && (
           <span style={{
             position: 'absolute', top: 2, right: 2,
-            background: '#0a0a0a', color: '#fff',
+            background: 'var(--ds-color-brand)', color: 'var(--ds-color-bg)',
             borderRadius: '50%', fontSize: 10, fontWeight: 700,
             minWidth: 16, height: 16, display: 'flex', alignItems: 'center',
             justifyContent: 'center', padding: '0 3px', lineHeight: 1,

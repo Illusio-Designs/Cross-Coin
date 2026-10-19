@@ -4,25 +4,62 @@
 
 :root {
   /* Monochrome palette — accent is near-black, "green" tokens remapped to
-     neutral so the whole studio reads black-and-white. */
-  --wa-accent: #0d1117;
-  --wa-dark: #141518;
-  --wa-green: #0d1117;
-  --wa-green-dark: #000000;
-  --wa-green-bg: #f0f1f3;
-  --wa-surface: #ffffff;
-  --wa-surface-2: #f7f8fa;
-  --wa-surface-3: #f0f2f5;
-  --wa-border: #e4e8ef;
-  --wa-border-light: #f0f2f5;
-  --wa-text-1: #0d1117;
-  --wa-text-2: #4a5568;
-  --wa-text-3: #8a95a3;
+     neutral so the whole studio reads black-and-white. Every colour maps onto
+     the dashboard design tokens (styles/dashboard/tokens.css) so the studio
+     flips with <html data-theme="dark"> instead of staying white-on-white. */
+  --wa-accent: var(--ds-color-brand);
+  --wa-dark: #141518;                 /* studio nav rail — dark in both themes */
+  --wa-green: var(--ds-color-brand);
+  --wa-green-dark: var(--ds-color-brand-strong);
+  --wa-green-bg: var(--ds-color-surface-soft);
+  --wa-on-accent: var(--ds-color-bg); /* text/icons on an accent-filled button */
+  --wa-surface: var(--ds-color-surface);
+  --wa-surface-2: var(--ds-color-surface-soft);
+  --wa-surface-3: var(--ds-color-bg);
+  --wa-border: var(--ds-color-border);
+  --wa-border-light: var(--ds-color-border-soft);
+  --wa-text-1: var(--ds-color-text);
+  --wa-text-2: var(--ds-color-text-muted);
+  --wa-text-3: var(--ds-color-text-faint);
+  --wa-focus: var(--ds-color-text);   /* focus / active / selected borders */
+  /* Neutral tints (chips, active rows, notices). Light values are the
+     original literals; dark values are below. */
+  --wa-tint: #f0f1f3;
+  --wa-tint-2: #f4f4f5;
+  --wa-tint-hover: #ececee;
+  --wa-tint-border: #e4e6ea;
+  --wa-tint-border-2: #d7d9dd;
+  --wa-tint-fg: #3f3f46;
+  --wa-bubble-out: #e7e9ec;
+  --wa-chat-canvas: #f4f4f5;
+  --wa-chat-dot: rgba(13, 17, 23, .06);
+  --wa-hairline: rgba(13, 17, 23, .12);
+  --wa-overlay: rgba(0, 0, 0, .06);        /* date pills, quoted replies */
+  --wa-overlay-strong: rgba(0, 0, 0, .08);
+  --wa-bar-from: #3f3f46;
+  --wa-bar-to: #0d1117;
   --wa-radius: 10px;
   --wa-radius-sm: 6px;
   --wa-shadow-sm: 0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
   --wa-shadow: 0 4px 12px rgba(0, 0, 0, .08);
   --wa-transition: 150ms cubic-bezier(.4, 0, .2, 1);
+}
+
+:root[data-theme="dark"] {
+  --wa-tint: #26262c;
+  --wa-tint-2: var(--ds-color-surface-soft);
+  --wa-tint-hover: #2b2b33;
+  --wa-tint-border: var(--ds-color-border);
+  --wa-tint-border-2: #3a3a43;
+  --wa-tint-fg: #d4d4d8;
+  --wa-bubble-out: #2a2a31;
+  --wa-chat-canvas: var(--ds-color-bg);
+  --wa-chat-dot: rgba(255, 255, 255, .05);
+  --wa-hairline: rgba(255, 255, 255, .08);
+  --wa-overlay: rgba(255, 255, 255, .07);
+  --wa-overlay-strong: rgba(255, 255, 255, .1);
+  --wa-bar-from: #e4e4e7;
+  --wa-bar-to: #a1a1aa;
 }
 
 /* ── Outer shell ── */
@@ -70,7 +107,8 @@
 .was-nav-logo-icon svg {
   width: 16px;
   height: 16px;
-  stroke: #fff;
+  stroke: var(--wa-on-accent);
+  color: var(--wa-on-accent);
 }
 
 .was-nav-logo-text {
@@ -167,7 +205,7 @@
   font-size: 10px;
   font-weight: 700;
   background: var(--wa-accent);
-  color: #fff;
+  color: var(--wa-on-accent);
   border-radius: 999px;
   padding: 1px 7px;
   min-width: 18px;
@@ -252,7 +290,7 @@
   align-items: center;
   gap: 7px;
   background: var(--wa-green);
-  color: #fff;
+  color: var(--wa-on-accent);
   border: none;
   border-radius: var(--wa-radius-sm);
   padding: 8px 16px;
@@ -292,8 +330,8 @@
 }
 
 .was-btn-secondary:hover {
-  border-color: #0d1117;
-  color: var(--ds-color-text-muted);
+  border-color: var(--wa-focus);
+  color: var(--ds-color-text);
 }
 
 /* ── DASHBOARD ── */
@@ -646,7 +684,7 @@
 }
 
 .was-sb-item.active {
-  background: #f0f1f3;
+  background: var(--wa-tint);
   color: var(--wa-green-dark);
   font-weight: 600;
 }
@@ -738,9 +776,9 @@
 }
 
 .was-var-chip {
-  background: #f0f1f3;
-  border: 1px solid #e4e6ea;
-  color: #3f3f46;
+  background: var(--wa-tint);
+  border: 1px solid var(--wa-tint-border);
+  color: var(--wa-tint-fg);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 11px;
@@ -768,9 +806,9 @@
 }
 
 .was-icon-btn:hover {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
   color: var(--ds-color-text-muted);
-  background: #f0f1f3;
+  background: var(--wa-tint);
 }
 
 .was-cat-badge {
@@ -785,19 +823,19 @@
 
 .was-cat--marketing,
 .was-cat--MARKETING {
-  background: #f0f1f3;
-  color: #3f3f46;
+  background: var(--wa-tint);
+  color: var(--wa-tint-fg);
 }
 
 .was-cat--utility,
 .was-cat--UTILITY {
-  background: #f0f1f3;
+  background: var(--wa-tint);
   color: var(--ds-color-text-muted);
 }
 
 .was-cat--otp {
-  background: #f0f1f3;
-  color: #3f3f46;
+  background: var(--wa-tint);
+  color: var(--wa-tint-fg);
 }
 
 /* Phone mockup */
@@ -900,7 +938,7 @@
 
 .was-ph-btext {
   font-size: 9px;
-  color: var(--ds-color-text);
+  color: #141518; /* mock bubble is always light — keep text dark in both themes */
   line-height: 1.5;
 }
 
@@ -947,11 +985,11 @@
 
 .was-ph-input span {
   flex: 1;
-  background: var(--ds-color-surface);
+  background: #fff;
   border-radius: 12px;
   padding: 3px 7px;
   font-size: 8px;
-  color: var(--ds-color-text-faint);
+  color: #8696a0;
 }
 
 .was-pp-empty {
@@ -1001,12 +1039,13 @@
   border-radius: var(--wa-radius-sm);
   font-size: 12.5px;
   font-family: 'DM Sans', sans-serif;
+  color: var(--ds-color-text);
   outline: none;
   transition: border-color var(--wa-transition);
 }
 
 .was-thread-search:focus {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
   background: var(--ds-color-surface);
 }
 
@@ -1033,7 +1072,7 @@
 
 .was-thread-tab.active {
   color: var(--ds-color-text-muted);
-  border-bottom-color: #0d1117;
+  border-bottom-color: var(--wa-focus);
 }
 
 .was-thread-scroll {
@@ -1057,8 +1096,8 @@
 }
 
 .was-thread-item.active {
-  background: #f0f1f3;
-  border-left-color: #0d1117;
+  background: var(--wa-tint);
+  border-left-color: var(--wa-focus);
 }
 
 .was-thread-av {
@@ -1113,7 +1152,7 @@
 
 .was-unread-dot {
   background: var(--wa-green);
-  color: #fff;
+  color: var(--wa-on-accent);
   border-radius: 10px;
   font-size: 10px;
   font-weight: 700;
@@ -1142,7 +1181,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f0f2f5;
+  background: var(--wa-surface-3);
   overflow: hidden;
 }
 
@@ -1215,7 +1254,7 @@
   background: var(--wa-green);
   border: none;
   border-radius: var(--wa-radius-sm);
-  color: #fff;
+  color: var(--wa-on-accent);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1279,7 +1318,7 @@
 }
 
 .was-msg--outbound .was-msg-bubble {
-  background: #e7e9ec;
+  background: var(--wa-bubble-out);
   border-radius: 12px 2px 12px 12px;
   box-shadow: var(--wa-shadow-sm);
   color: var(--wa-text-1);
@@ -1319,6 +1358,7 @@
   border-radius: 20px;
   font-size: 13px;
   font-family: 'DM Sans', sans-serif;
+  color: var(--ds-color-text);
   resize: none;
   outline: none;
   line-height: 1.5;
@@ -1331,7 +1371,7 @@
 }
 
 .was-reply-input:focus {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
   background: var(--ds-color-surface);
 }
 
@@ -1340,7 +1380,7 @@
   height: 38px;
   border-radius: 50%;
   background: var(--wa-green);
-  color: #fff;
+  color: var(--wa-on-accent);
   border: none;
   cursor: pointer;
   display: flex;
@@ -1354,7 +1394,7 @@
 .was-send-btn svg {
   width: 16px;
   height: 16px;
-  stroke: #fff;
+  stroke: var(--wa-on-accent);
 }
 
 .was-send-btn:hover:not(:disabled) {
@@ -1419,10 +1459,12 @@
   width: 200px;
   transition: border-color var(--wa-transition);
   background: var(--wa-surface);
+  color: var(--ds-color-text);
 }
 
 .was-search-input:focus {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
+  background: var(--wa-surface);
 }
 
 .was-filter-pills {
@@ -1474,7 +1516,7 @@
 }
 
 .was-tpl-card:hover {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
   box-shadow: 0 0 0 3px rgba(13, 17, 23, .08), var(--wa-shadow);
   transform: translateY(-1px);
 }
@@ -1498,18 +1540,18 @@
 }
 
 .was-status--approved {
-  background: #f0f1f3;
+  background: var(--wa-tint);
   color: var(--ds-color-text-muted);
 }
 
 .was-status--pending {
-  background: #f4f4f5;
-  color: #6b6b73;
+  background: var(--wa-tint-2);
+  color: var(--ds-color-text-muted);
 }
 
 .was-status--rejected {
-  background: #f4f4f5;
-  color: #6b6b73;
+  background: var(--wa-tint-2);
+  color: var(--ds-color-text-muted);
 }
 
 .was-status-dot {
@@ -1520,7 +1562,7 @@
 }
 
 .was-status--approved .was-status-dot {
-  background: #0d1117;
+  background: var(--ds-color-text);
 }
 
 .was-status--pending .was-status-dot {
@@ -1592,7 +1634,7 @@
 .was-test-icon {
   width: 52px;
   height: 52px;
-  background: #f0f1f3;
+  background: var(--wa-tint);
   border-radius: 13px;
   display: flex;
   align-items: center;
@@ -1609,7 +1651,7 @@
 .was-test-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--wa-dark);
+  color: var(--wa-text-1);
   margin: 0;
 }
 
@@ -1640,7 +1682,7 @@
 }
 
 .was-phone-wrap:focus-within {
-  border-color: #0d1117;
+  border-color: var(--wa-focus);
 }
 
 .was-phone-prefix {
@@ -1682,7 +1724,7 @@
   width: 100%;
   height: 42px;
   background: var(--wa-green);
-  color: #fff;
+  color: var(--wa-on-accent);
   border: none;
   border-radius: var(--wa-radius-sm);
   font-size: 14px;
@@ -1716,14 +1758,14 @@
 }
 
 .was-info-card--tip {
-  background: #f4f4f5;
-  border-color: #e4e6ea;
+  background: var(--wa-tint-2);
+  border-color: var(--wa-tint-border);
 }
 
 .was-info-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--wa-dark);
+  color: var(--wa-text-1);
   margin: 0 0 8px;
 }
 
@@ -1769,12 +1811,12 @@
 
 /* ── MODALS ── */
 .was-modal-notice {
-  background: #f4f4f5;
-  border: 1px solid #e4e6ea;
+  background: var(--wa-tint-2);
+  border: 1px solid var(--wa-tint-border);
   border-radius: var(--wa-radius-sm);
   padding: 9px 12px;
   font-size: 12px;
-  color: #6b6b73;
+  color: var(--ds-color-text-muted);
   margin-bottom: 12px;
   line-height: 1.5;
 }
@@ -1794,15 +1836,15 @@
 }
 
 .wa-response-success {
-  background: #f0f1f3;
-  border: 1px solid #d7d9dd;
+  background: var(--wa-tint);
+  border: 1px solid var(--wa-tint-border-2);
   color: var(--ds-color-text-muted);
 }
 
 .wa-response-error {
-  background: #f4f4f5;
-  border: 1px solid #e4e6ea;
-  color: #6b6b73;
+  background: var(--wa-tint-2);
+  border: 1px solid var(--wa-tint-border);
+  color: var(--ds-color-text-muted);
 }
 
 /* Live pill */
@@ -1812,7 +1854,7 @@
   gap: 5px;
   padding: 3px 8px;
   border-radius: 6px;
-  background: #f0f1f3;
+  background: var(--wa-tint);
   border: 1px solid rgba(13, 17, 23, .3);
   font-size: 12px;
   font-weight: 500;
@@ -1965,7 +2007,7 @@
   border-bottom: 2px solid transparent; margin-bottom: -1px;
   transition: all var(--wa-transition); font-weight: 500;
 }
-.was-rp-tab.active { color: var(--ds-color-text-muted); border-bottom-color: #0d1117; }
+.was-rp-tab.active { color: var(--ds-color-text-muted); border-bottom-color: var(--wa-focus); }
 .was-rp-body { flex: 1; overflow-y: auto; padding: 14px; }
 .was-rp-stats {
   display: grid; grid-template-columns: repeat(3,1fr);
@@ -1983,9 +2025,9 @@
 .was-rp-label { color: var(--wa-text-3); }
 .was-rp-value { color: var(--wa-text-1); font-weight: 500; text-align: right; }
 .was-rp-pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.was-rp-pill--open { background: #f0f1f3; color: var(--ds-color-text-muted); }
+.was-rp-pill--open { background: var(--wa-tint); color: var(--ds-color-text-muted); }
 .was-rp-pill--done { background: var(--wa-surface-2); color: var(--wa-text-3); }
-.was-rp-tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: #f0f1f3; color: var(--ds-color-text-muted); border: 1px solid rgba(10, 10, 10, .2); }
+.was-rp-tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: var(--wa-tint); color: var(--ds-color-text-muted); border: 1px solid rgba(10, 10, 10, .2); }
 .was-rp-notes {
   width: 100%; min-height: 100px; padding: 9px 10px;
   border: 1px solid var(--wa-border); border-radius: var(--wa-radius-sm);
@@ -1993,7 +2035,7 @@
   resize: none; outline: none; background: var(--wa-surface-2); line-height: 1.6;
   transition: border-color var(--wa-transition);
 }
-.was-rp-notes:focus { border-color: #0d1117; background: var(--ds-color-surface); }
+.was-rp-notes:focus { border-color: var(--wa-focus); background: var(--ds-color-surface); }
 
 /* Update inbox wrap to accommodate right panel */
 .was-inbox-wrap { display: flex; flex: 1; overflow: hidden; height: 100%; }
@@ -2053,16 +2095,16 @@
   letter-spacing: 0.02em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #f0f1f3;
-  color: #3f3f46;
+  background: var(--wa-tint);
+  color: var(--wa-tint-fg);
   white-space: nowrap;
 }
 
 /* "Load older messages" control at the top of the chat history. */
 .was-load-older { text-align: center; padding: 8px 0 4px; }
 .was-load-older button {
-  border: 1px solid var(--ds-color-border, var(--ds-color-border));
-  background: var(--ds-color-surface); color: #3f3f46; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface); color: var(--wa-tint-fg); font-size: 12px; font-weight: 600;
   padding: 5px 14px; border-radius: 999px; cursor: pointer;
 }
 .was-load-older button:disabled { opacity: 0.6; cursor: default; }
@@ -2078,25 +2120,25 @@
 .was-studio {
   --wa-radius: 12px;
   --wa-radius-sm: 8px;
-  --wa-green-bg: #f0f1f3;
+  --wa-green-bg: var(--wa-tint);
 }
 
 /* Outgoing bubbles: true WhatsApp green with a hairline edge */
 .was-studio .was-msg--outbound .was-msg-bubble {
-  background: #e7e9ec;
-  border: 1px solid rgba(13, 17, 23,.12);
-  color: #141518;
+  background: var(--wa-bubble-out);
+  border: 1px solid var(--wa-hairline);
+  color: var(--ds-color-text);
 }
 /* Chat canvas: subtle dotted paper like WhatsApp */
 .was-studio .was-messages {
-  background-color: #f4f4f5;
-  background-image: radial-gradient(circle at 1px 1px, rgba(13, 17, 23,.06) 1px, transparent 0);
+  background-color: var(--wa-chat-canvas);
+  background-image: radial-gradient(circle at 1px 1px, var(--wa-chat-dot) 1px, transparent 0);
   background-size: 22px 22px;
 }
 /* Unread pill + send button pick up the emerald accent via tokens already;
    give the active thread a soft emerald wash. */
-.was-studio .was-thread-item.active { background: #f0f1f3; }
-.was-studio .was-brand-chip { background: #f0f1f3; color: #000000; }
+.was-studio .was-thread-item.active { background: var(--wa-tint); }
+.was-studio .was-brand-chip { background: var(--wa-tint); color: var(--ds-color-text); }
 
 /* Mobile "back to list" button — hidden on desktop, shown on phones. */
 .was-chat-back { display: none; }
@@ -2225,12 +2267,12 @@
   border-radius: var(--wa-radius);
 }
 .was-tpl-checkall { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--wa-text-2); cursor: pointer; }
-.was-tpl-checkall input, .was-tpl-check input { width: 16px; height: 16px; accent-color: #0d1117; cursor: pointer; }
+.was-tpl-checkall input, .was-tpl-check input { width: 16px; height: 16px; accent-color: var(--ds-color-brand); cursor: pointer; }
 .was-tpl-bulkbar .was-btn-primary:disabled,
 .was-tpl-bulkbar .was-btn-secondary:disabled { opacity: .45; cursor: not-allowed; }
 
 .was-tpl-card { position: relative; display: flex; flex-direction: column; }
-.was-tpl-card.selected { border-color: #0d1117; box-shadow: 0 0 0 2px rgba(13, 17, 23,.14); }
+.was-tpl-card.selected { border-color: var(--wa-focus); box-shadow: 0 0 0 2px rgba(13, 17, 23,.14); }
 .was-tpl-check { display: inline-flex; align-items: center; margin-right: 2px; }
 .was-tpl-card .was-tpl-body { flex: 1; }
 
@@ -2239,13 +2281,13 @@
   display: inline-flex; align-items: center; gap: 6px;
   font-family: inherit; font-size: 12px; font-weight: 600;
   padding: 7px 12px; border-radius: var(--wa-radius-sm);
-  color: #0d1117; background: #f4f4f5; border: 1px solid #e4e6ea; cursor: pointer;
+  color: var(--ds-color-text); background: var(--wa-tint-2); border: 1px solid var(--wa-tint-border); cursor: pointer;
   transition: all var(--wa-transition);
 }
-.was-btn-danger:hover { background: #ececee; }
+.was-btn-danger:hover { background: var(--wa-tint-hover); }
 
 /* "Not created" status pill */
-.was-status--not_created { color: #8a95a3; background: var(--wa-surface-3); }
+.was-status--not_created { color: var(--wa-text-3); background: var(--wa-surface-3); }
 .was-status--not_created .was-status-dot { background: #b6bec8; }
 
 @media (max-width: 480px) {
@@ -2292,7 +2334,7 @@
   transition: all var(--wa-transition);
 }
 .was-tool-chip span { font-size: 13px; line-height: 1; }
-.was-tool-chip:hover { color: var(--ds-color-text-muted); border-color: #0d1117; background: #f0f1f3; }
+.was-tool-chip:hover { color: var(--ds-color-text); border-color: var(--wa-focus); background: var(--wa-tint); }
 .was-composer-hint { font-size: 11px; color: var(--wa-text-3); white-space: nowrap; }
 
 .was-attach-btn.active { color: var(--ds-color-text-muted); background: var(--wa-surface-3); }
@@ -2319,7 +2361,7 @@
 /* ── Dashboard / Analytics premium polish (emerald) ───────────────────────── */
 .was-bar {
   min-height: 4px;
-  background: linear-gradient(180deg, #3f3f46, #0d1117);
+  background: linear-gradient(180deg, var(--wa-bar-from), var(--wa-bar-to));
   transition: filter var(--wa-transition), transform var(--wa-transition);
 }
 .was-bar-col:hover .was-bar { filter: brightness(1.08); transform: scaleY(1.02); transform-origin: bottom; }
@@ -2344,10 +2386,17 @@
   padding: 8px 12px; border-top: 1px solid var(--wa-border-light);
   transition: background var(--wa-transition); font-family: inherit;
 }
-.was-canned-item:hover { background: #f0f1f3; }
+.was-canned-item:hover { background: var(--wa-tint); }
 .was-canned-short { grid-column: 1; font-size: 12px; font-weight: 700; color: var(--ds-color-text-muted); white-space: nowrap; }
 .was-canned-title { grid-column: 2; font-size: 12px; font-weight: 600; color: var(--wa-text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .was-canned-body { grid-column: 1 / -1; font-size: 11.5px; color: var(--wa-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .was-canned-empty { padding: 12px; font-size: 12.5px; color: var(--wa-text-2); }
 
 .was-tool-chip svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ── Dark theme: translucent near-black edges that vanish on a dark canvas ── */
+:root[data-theme="dark"] .an-live-pill { border-color: var(--ds-color-border); }
+:root[data-theme="dark"] .was-rp-tag { border-color: var(--ds-color-border); }
+:root[data-theme="dark"] .was-stat-card:hover { border-color: var(--ds-color-text-faint); }
+:root[data-theme="dark"] .was-tpl-card:hover,
+:root[data-theme="dark"] .was-tpl-card.selected { box-shadow: 0 0 0 2px rgba(250, 250, 250, .12); }

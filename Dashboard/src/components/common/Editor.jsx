@@ -150,7 +150,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', allowImages 
   }, [value, editor, sourceMode]);
 
   if (!editor) {
-    return <div style={{ minHeight: 150, border: '1px solid #e5e7eb', borderRadius: 6 }} />;
+    return <div style={{ minHeight: 150, border: '1px solid var(--ds-color-border)', borderRadius: 6 }} />;
   }
 
   // Toggle between the rich editor and raw-HTML source. Entering source mode
@@ -326,21 +326,21 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', allowImages 
         </div>
       )}
       <style jsx>{`
-        .rte-container { border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; background: #fff; }
-        .rte-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
-        .rte-btn { border: none; background: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: #333; font-family: inherit; min-width: 28px; }
-        .rte-btn:hover { background: #e5e7eb; }
-        .rte-btn.is-active { background: #dbeafe; color: #1d4ed8; }
-        .rte-sep { width: 1px; background: #e5e7eb; margin: 0 4px; align-self: stretch; }
-        .rte-source { width: 100%; min-height: 220px; padding: 12px; border: none; outline: none; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; color: #333; box-sizing: border-box; }
-        .rte-editor-wrap :global(.ProseMirror) { min-height: 150px; padding: 12px; outline: none; font-size: 14px; line-height: 1.6; color: #333; }
+        .rte-container { border: 1px solid var(--ds-color-border); border-radius: 6px; overflow: hidden; background: var(--ds-color-surface); color: var(--ds-color-text); }
+        .rte-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft); }
+        .rte-btn { border: none; background: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: var(--ds-color-text); font-family: inherit; min-width: 28px; }
+        .rte-btn:hover { background: var(--ds-color-border); }
+        .rte-btn.is-active { background: var(--ds-color-info-bg); color: var(--ds-color-info); }
+        .rte-sep { width: 1px; background: var(--ds-color-border); margin: 0 4px; align-self: stretch; }
+        .rte-source { width: 100%; min-height: 220px; padding: 12px; border: none; outline: none; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; color: var(--ds-color-text); background: var(--ds-color-surface); box-sizing: border-box; }
+        .rte-editor-wrap :global(.ProseMirror) { min-height: 150px; padding: 12px; outline: none; font-size: 14px; line-height: 1.6; color: var(--ds-color-text); }
         .rte-editor-wrap :global(.ProseMirror:focus) { outline: none; }
         .rte-editor-wrap :global(.ProseMirror h2) { font-size: 1.3em; font-weight: 700; margin: 0.5em 0; }
         .rte-editor-wrap :global(.ProseMirror h3) { font-size: 1.1em; font-weight: 600; margin: 0.5em 0; }
         .rte-editor-wrap :global(.ProseMirror ul) { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
         .rte-editor-wrap :global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
-        .rte-editor-wrap :global(.ProseMirror blockquote) { border-left: 3px solid #e5e7eb; padding-left: 1em; margin: 0.5em 0; color: #555; }
-        .rte-editor-wrap :global(.ProseMirror a) { color: #2563eb; text-decoration: underline; }
+        .rte-editor-wrap :global(.ProseMirror blockquote) { border-left: 3px solid var(--ds-color-border); padding-left: 1em; margin: 0.5em 0; color: var(--ds-color-text-muted); }
+        .rte-editor-wrap :global(.ProseMirror a) { color: var(--ds-color-info); text-decoration: underline; }
         .rte-editor-wrap :global(.ProseMirror img) { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
         .rte-editor-wrap :global(.ProseMirror img.ProseMirror-selectednode) { outline: 2px solid #2563eb; }
         /* Editor-only cues so tagged images are distinguishable (both show here;
@@ -350,7 +350,7 @@ const Editor = ({ value, onChange, placeholder = 'Start typing...', allowImages 
         .rte-editor-wrap :global(.ProseMirror img.only-mobile) { outline: 2px dashed #16a34a; outline-offset: 3px; }
         .rte-editor-wrap :global(.ProseMirror p.is-editor-empty:first-child::before) {
           content: attr(data-placeholder);
-          color: #aaa;
+          color: var(--ds-color-text-faint);
           float: left;
           height: 0;
           pointer-events: none;

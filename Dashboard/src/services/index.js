@@ -6,6 +6,18 @@ import { retryHandler } from '../utils/retryHandler';
 import { dataCache } from '../utils/dataCache';
 import { monitoring } from '../utils/monitoring';
 
+// Drop every cached list response for an endpoint (all param combinations), so
+// the next list fetch after a create/update/delete hits the API.
+const invalidateCache = (endpoint) => {
+  const prefix = `${endpoint}:`;
+  for (const key of Array.from(dataCache.cache.keys())) {
+    if (key.startsWith(prefix)) {
+      dataCache.cache.delete(key);
+      dataCache.timestamps.delete(key);
+    }
+  }
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://api.crosscoin.in";
 
@@ -538,20 +550,6 @@ export const orderService = {
     }
   },
 
-  // Refresh order status from active shipping provider (works for both Shipping and iThink)
-  // Inbound shipping-webhook health: tells whether iThink/Shipping is actually
-  // pushing status updates (so Shipped/Delivered/RTO WhatsApp fire in real time
-  // instead of waiting for the twice-daily poll), plus the recent events.
-  getShippingWebhookEvents: async (limit = 20) => {
-    try {
-      const response = await adminApi.get('/api/orders/shipping/webhook-events', { params: { limit } });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-
   // Sync single order with Shipping
   syncSingleOrderWithShipping: async (orderId) => {
     try {
@@ -932,30 +930,6 @@ export const orderService = {
     }
   },
 
-  // Download manifest PDF
-  downloadManifest: async (orderId) => {
-    try {
-      const response = await adminApi.get(`/api/orders/${orderId}/labels/download`, {
-        responseType: 'blob',
-        timeout: 30000
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `label_${orderId}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      return { success: true, message: 'Label downloaded successfully' };
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
 };
 
 // Failed deliveries (courier NDR cases) — Dashboard → Failed Deliveries
@@ -1317,6 +1291,7 @@ export const productService = {
         },
         // No timeout here
       });
+      invalidateCache('/api/products');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1398,6 +1373,7 @@ export const productService = {
         },
         // No timeout here
       });
+      invalidateCache('/api/products');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1419,6 +1395,7 @@ export const productService = {
   deleteProduct: async (id) => {
     try {
       const response = await adminApi.delete(`/api/products/${id}`);
+      invalidateCache('/api/products');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1494,6 +1471,7 @@ export const couponService = {
   createCoupon: async (couponData) => {
     try {
       const response = await adminApi.post("/api/coupons", couponData);
+      invalidateCache('/api/coupons');
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1548,6 +1526,7 @@ export const couponService = {
   updateCoupon: async (id, couponData) => {
     try {
       const response = await adminApi.put(`/api/coupons/${id}`, couponData);
+      invalidateCache('/api/coupons');
       return response.data;
     } catch (error) {
       throw handleApiError(error);
@@ -1557,6 +1536,7 @@ export const couponService = {
   deleteCoupon: async (id) => {
     try {
       const response = await adminApi.delete(`/api/coupons/${id}`);
+      invalidateCache('/api/coupons');
       return response.data;
     } catch (error) {
       throw handleApiError(error);

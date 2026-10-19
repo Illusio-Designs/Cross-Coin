@@ -384,6 +384,12 @@ const Orders = () => {
     };
 
     const handleCancelConfirm = async (reason) => {
+        // The backend rejects reasons shorter than 5 characters — catch it here
+        // and keep the prompt open so the admin can fix it.
+        if (String(reason || '').trim().length < 5) {
+            showError('cancelReasonShort', 'Please enter a cancellation reason of at least 5 characters.');
+            return;
+        }
         const { orderId, orderNumber } = cancelPrompt;
         setCancelPrompt(null);
         try {
@@ -445,7 +451,7 @@ const Orders = () => {
     const submitAwbUpdate = async () => {
         if (!awbNumber.trim()) { showError('fieldRequired', 'Please enter AWB number'); return; }
         try {
-            await orderService.updateAwbNumber(awbOrderId, { awbNumber: awbNumber.trim(), courierName: courierName.trim() || 'Manual Entry' });
+            await orderService.updateAwbNumber(awbOrderId, { awb_number: awbNumber.trim(), courier_name: courierName.trim() || 'Manual Entry' });
             showSuccess('awbUpdated', 'AWB number updated successfully!');
             highlightRow(awbOrderId);
             setIsAwbModalOpen(false); setAwbNumber(''); setCourierName(''); setAwbOrderId(null);
@@ -680,7 +686,7 @@ const Orders = () => {
                     <span className={`status-badge status-${getPaymentStatusClass(row)}`}>{getPaymentStatusDisplay(row)}</span>
                     {label === 'COD' && row.cod_address_confirmed && (
                       <span title={`Customer confirmed their address on WhatsApp${row.cod_address_confirmed_at ? ' · ' + new Date(row.cod_address_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}`}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#0b7a5e', background: 'var(--ds-color-success-bg, #dcfce7)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--ds-color-success)', background: 'var(--ds-color-success-bg)', padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap' }}>
                         <HugeiconsIcon icon={WhatsappIcon} size={11} strokeWidth={2} /> confirmed
                       </span>
                     )}
@@ -808,8 +814,8 @@ const Orders = () => {
                 onOrderCreated={() => { fetchOrders(1); fetchAllOrdersForStats(); }}
             />
             <PromptModal
-                message={cancelPrompt ? `Enter cancellation reason for order ${cancelPrompt.orderNumber}:` : null}
-                placeholder="Cancellation reason..."
+                message={cancelPrompt ? `Enter a cancellation reason for order ${cancelPrompt.orderNumber} (at least 5 characters):` : null}
+                placeholder="Cancellation reason (min. 5 characters)..."
                 onConfirm={handleCancelConfirm}
                 onCancel={() => setCancelPrompt(null)}
             />
@@ -980,11 +986,13 @@ const Orders = () => {
 
                         <label className="ord-filter-label">Sort by</label>
                         <Select value={sortBy} onChange={(v) => setSortBy(v || 'createdAt')}
-                            options={[{ value: 'createdAt', label: 'Sort: Date' }, { value: 'total', label: 'Sort: Total' }, { value: 'status', label: 'Sort: Status' }, { value: 'payment_status', label: 'Sort: Payment' }]} />
+                            options={[{ value: 'createdAt', label: 'Sort: Date' }, { value: 'final_amount', label: 'Sort: Total' }, { value: 'status', label: 'Sort: Status' }, { value: 'payment_status', label: 'Sort: Payment' }]} />
 
                         <label className="ord-filter-label">Order</label>
                         <Select value={sortOrder} onChange={(v) => setSortOrder(v || 'desc')}
-                            options={[{ value: 'desc', label: 'Newest First' }, { value: 'asc', label: 'Oldest First' }]} />
+                            options={sortBy === 'createdAt'
+                                ? [{ value: 'desc', label: 'Newest First' }, { value: 'asc', label: 'Oldest First' }]
+                                : [{ value: 'desc', label: 'Descending' }, { value: 'asc', label: 'Ascending' }]} />
 
                         <label className="ord-filter-label">Rows per page</label>
                         <Select value={String(itemsPerPage)} onChange={(v) => { setItemsPerPage(Number(v || 10)); setCurrentPage(1); }}
@@ -1185,7 +1193,7 @@ const Orders = () => {
                                     <div className="odm-field">
                                         <span className="odm-label">Address (WhatsApp)</span>
                                         {selectedOrder.cod_address_confirmed ? (
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#0b7a5e' }}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--ds-color-success)' }}>
                                                 <HugeiconsIcon icon={WhatsappIcon} size={13} strokeWidth={2} /> Confirmed by customer
                                                 {selectedOrder.cod_address_confirmed_at && (
                                                     <span style={{ fontWeight: 500, color: 'var(--ds-color-text-muted)' }}>

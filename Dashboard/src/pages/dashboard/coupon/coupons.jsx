@@ -36,7 +36,8 @@ export default function Coupons() {
   const { data: coupons = [], isLoading: queryLoading } = useQuery({
     queryKey: queryKeys.couponsAdmin,
     queryFn: async () => {
-      const data = await couponService.getAllCoupons();
+      // React Query owns caching here — bypass the service-level list cache.
+      const data = await couponService.getAllCoupons(null, true);
       return Array.isArray(data?.coupons) ? data.coupons : [];
     },
     staleTime: 30 * 1000,

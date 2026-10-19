@@ -121,11 +121,11 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
         
         {error && (
           <div className="error-message" style={{ 
-            color: 'red', 
+            color: 'var(--ds-color-danger)', 
             marginBottom: '16px',
             padding: '12px',
-            backgroundColor: '#fee',
-            border: '1px solid #fcc',
+            backgroundColor: 'var(--ds-color-danger-bg)',
+            border: '1px solid var(--ds-color-danger-bd)',
             borderRadius: '4px'
           }}>
             <strong>Error:</strong> {error}
@@ -136,8 +136,8 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                 style={{
                   padding: '4px 8px',
                   fontSize: '12px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
+                  backgroundColor: 'var(--ds-color-danger)',
+                  color: 'var(--ds-color-bg)',
                   border: 'none',
                   borderRadius: '3px',
                   cursor: 'pointer',
@@ -157,15 +157,16 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
             <div className="source-selector" style={{
               marginBottom: '20px',
               padding: '16px',
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--ds-color-surface-soft)',
+              color: 'var(--ds-color-text)',
               borderRadius: '8px',
-              border: '1px solid #e9ecef'
+              border: '1px solid var(--ds-color-border)'
             }}>
               <label style={{ 
                 display: 'block', 
                 marginBottom: '8px', 
                 fontWeight: '600',
-                color: '#495057'
+                color: 'var(--ds-color-text)'
               }}>
                 Select Image Source:
               </label>
@@ -247,7 +248,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                   style={{
                     position: 'relative',
                     cursor: 'pointer',
-                    border: selectedImages.includes(imagePath) ? '3px solid #007bff' : '1px solid #ddd',
+                    border: selectedImages.includes(imagePath) ? '3px solid var(--ds-color-info)' : '1px solid var(--ds-color-border)',
                     borderRadius: '8px',
                     overflow: 'hidden'
                   }}
@@ -270,8 +271,8 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                       position: 'absolute',
                       top: '4px',
                       right: '4px',
-                      background: '#007bff',
-                      color: 'white',
+                      background: 'var(--ds-color-info)',
+                      color: 'var(--ds-color-bg)',
                       borderRadius: '50%',
                       width: '24px',
                       height: '24px',
@@ -301,7 +302,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
             </div>
 
             {existingImages.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
+              <div style={{ textAlign: 'center', color: 'var(--ds-color-text-muted)', padding: '40px' }}>
                 {imageSource === 'current_product' 
                   ? 'No images found for this product.' 
                   : `No existing images found in the ${imageSource === 'products' ? 'uploads/products' : 'uploads'} folder.`
@@ -313,10 +314,10 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderTop: '1px solid #eee',
+              borderTop: '1px solid var(--ds-color-border-soft)',
               paddingTop: '16px'
             }}>
-              <div style={{ color: '#666' }}>
+              <div style={{ color: 'var(--ds-color-text-muted)' }}>
                 {selectedImages.length} image(s) selected
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -325,8 +326,9 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                   onClick={onClose}
                   style={{
                     padding: '8px 16px',
-                    border: '1px solid #ddd',
-                    background: 'white',
+                    border: '1px solid var(--ds-color-border)',
+                    background: 'var(--ds-color-surface)',
+                    color: 'var(--ds-color-text)',
                     borderRadius: '4px',
                     cursor: 'pointer'
                   }}
@@ -340,8 +342,8 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                   style={{
                     padding: '8px 16px',
                     border: 'none',
-                    background: selectedImages.length > 0 ? '#007bff' : '#ccc',
-                    color: 'white',
+                    background: selectedImages.length > 0 ? 'var(--ds-color-info)' : 'var(--ds-color-border)',
+                    color: selectedImages.length > 0 ? 'var(--ds-color-bg)' : 'var(--ds-color-text-faint)',
                     borderRadius: '4px',
                     cursor: selectedImages.length > 0 ? 'pointer' : 'not-allowed'
                   }}

@@ -80,23 +80,24 @@
 
 .variation-images-upload input[type="file"] {
   padding: 0.75rem 1rem;
-  border: 1px solid #0a0a0a;
+  border: 1px solid var(--ds-color-border);
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: var(--ds-color-surface);
+  color: var(--ds-color-text);
   width: -webkit-fill-available;
   cursor: pointer;
 }
 
 .variation-images-upload input[type="file"]:focus {
   outline: none;
-  border-color: #0a0a0a;
-  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
+  border-color: var(--ds-color-text);
+  box-shadow: 0 0 0 2px var(--ds-color-surface-soft);
 }
 
 .variation-images-upload input[type="file"]:hover {
-  border-color: #0a0a0a;
+  border-color: var(--ds-color-text);
 }
 
 .variation-images-preview {
@@ -134,8 +135,8 @@
 
 /* File input button styling to match theme */
 .variation-images-upload input[type="file"]::-webkit-file-upload-button {
-  background: #0a0a0a;
-  color: white;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -147,12 +148,12 @@
 }
 
 .variation-images-upload input[type="file"]::-webkit-file-upload-button:hover {
-  background: #b91c31;
+  background: var(--ds-color-danger);
 }
 
 .variation-images-upload input[type="file"]::file-selector-button {
-  background: #0a0a0a;
-  color: white;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -164,7 +165,7 @@
 }
 
 .variation-images-upload input[type="file"]::file-selector-button:hover {
-  background: #b91c31;
+  background: var(--ds-color-danger);
 }
 /* Product Images Upload Styling - Matching InputField.css */
 .product-images-section {
@@ -182,23 +183,24 @@
 
 .product-images-section input[type="file"] {
   padding: 0.75rem 1rem;
-  border: 1px solid #0a0a0a;
+  border: 1px solid var(--ds-color-border);
   border-radius: 6px;
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: var(--ds-color-surface);
+  color: var(--ds-color-text);
   width: -webkit-fill-available;
   cursor: pointer;
 }
 
 .product-images-section input[type="file"]:focus {
   outline: none;
-  border-color: #0a0a0a;
-  box-shadow: 0 0 0 2px rgba(10, 10, 10, 0.1);
+  border-color: var(--ds-color-text);
+  box-shadow: 0 0 0 2px var(--ds-color-surface-soft);
 }
 
 .product-images-section input[type="file"]:hover {
-  border-color: #0a0a0a;
+  border-color: var(--ds-color-text);
 }
 
 .images-preview {
@@ -268,8 +270,8 @@
 
 /* File input button styling to match theme */
 .product-images-section input[type="file"]::-webkit-file-upload-button {
-  background: #0a0a0a;
-  color: white;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -281,12 +283,12 @@
 }
 
 .product-images-section input[type="file"]::-webkit-file-upload-button:hover {
-  background: #b91c31;
+  background: var(--ds-color-danger);
 }
 
 .product-images-section input[type="file"]::file-selector-button {
-  background: #0a0a0a;
-  color: white;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 6px;
@@ -298,7 +300,7 @@
 }
 
 .product-images-section input[type="file"]::file-selector-button:hover {
-  background: #b91c31;
+  background: var(--ds-color-danger);
 }
 
 /* Weight and Dimensions Section Styling */
@@ -449,9 +451,9 @@
 .obz-search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 1.5px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-surface); min-width: 220px; }
 .obz-search svg { width: 15px; height: 15px; color: var(--ds-color-text-muted); flex-shrink: 0; }
 .obz-search input { border: none; background: none; outline: none; font-size: 13px; color: var(--ds-color-text); width: 100%; font-family: inherit; }
-.obz-add-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border: 1.5px solid #0a0a0a; border-radius: 8px; background: #0a0a0a; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .2s, border-color .2s; }
+.obz-add-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border: 1.5px solid var(--ds-color-brand); border-radius: 8px; background: var(--ds-color-brand); color: var(--ds-color-bg); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .2s, border-color .2s; }
 .obz-add-btn svg { width: 16px; height: 16px; }
-.obz-add-btn:hover { background: #262626; border-color: #262626; }
+.obz-add-btn:hover { background: var(--ds-color-brand-strong); border-color: var(--ds-color-brand-strong); }
 
 /* Table cell contents */
 .obz-prod-cell { display: flex; align-items: center; gap: 11px; min-width: 0; }

@@ -1,12 +1,13 @@
 import React from 'react';
 import Tooltip from './Tooltip';
+import { showError } from '../../utils/toastNotification';
 
 const ShipmentStatusBadge = ({ status, syncError }) => {
   const statusConfig = {
-    pending: { icon: '⏳', label: 'Pending Sync', color: '#ff9800', bg: '#fff3e0' },
-    syncing: { icon: '🔄', label: 'Syncing...', color: '#2196f3', bg: '#e3f2fd' },
-    synced: { icon: '✓', label: 'Synced', color: '#4caf50', bg: '#e8f5e9' },
-    failed: { icon: '❌', label: 'Sync Failed', color: '#f44336', bg: '#ffebee' }
+    pending: { icon: '⏳', label: 'Pending Sync', color: 'var(--ds-color-warn)', bg: 'var(--ds-color-warn-bg)' },
+    syncing: { icon: '🔄', label: 'Syncing...', color: 'var(--ds-color-info)', bg: 'var(--ds-color-info-bg)' },
+    synced: { icon: '✓', label: 'Synced', color: 'var(--ds-color-success)', bg: 'var(--ds-color-success-bg)' },
+    failed: { icon: '❌', label: 'Sync Failed', color: 'var(--ds-color-danger)', bg: 'var(--ds-color-danger-bg)' }
   };
 
   // A serviceability failure isn't a "sync error" the operator can retry away —
@@ -15,7 +16,7 @@ const ShipmentStatusBadge = ({ status, syncError }) => {
   const isNotServiceable =
     status === 'failed' && /not\s+serviceable|serviceab/i.test(String(syncError || ''));
   const config = isNotServiceable
-    ? { icon: '📍', label: 'Not Serviceable', color: '#d84315', bg: '#fbe9e7' }
+    ? { icon: '📍', label: 'Not Serviceable', color: 'var(--ds-color-danger)', bg: 'var(--ds-color-danger-bg)' }
     : (statusConfig[status] || statusConfig.pending);
 
   return (
@@ -38,13 +39,14 @@ const ShipmentStatusBadge = ({ status, syncError }) => {
       {syncError && status === 'failed' && (
         // Real hover tooltip (the old native `title` was unreliable and never
         // showed). Click reveals the full reason too, since a sync error can be
-        // long and the tooltip is single-line.
+        // long and the tooltip is single-line (shown as an error toast).
         <Tooltip text={syncError} position="top">
           <span
             role="button"
             tabIndex={0}
-            onClick={() => { if (typeof window !== 'undefined') window.alert(syncError); }}
-            style={{ fontSize: '14px', color: '#f44336', cursor: 'help', fontWeight: 700, lineHeight: 1 }}
+            onClick={() => showError('syncError', String(syncError))}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showError('syncError', String(syncError)); } }}
+            style={{ fontSize: '14px', color: 'var(--ds-color-danger)', cursor: 'help', fontWeight: 700, lineHeight: 1 }}
             aria-label={`Sync error: ${syncError}`}
           >
             ⓘ

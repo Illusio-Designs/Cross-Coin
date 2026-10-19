@@ -13,7 +13,7 @@
   color: var(--ds-color-text);
   font-family: 'DM Sans', sans-serif;
 }
-.sel-required { color: #dc2626; margin-left: 2px; }
+.sel-required { color: var(--ds-color-danger); margin-left: 2px; }
 .sel-wrapper { position: relative; }
 
 /* ── Trigger ── */
@@ -35,9 +35,9 @@
   padding: 6px 10px;
   box-sizing: border-box;
 }
-.sel-trigger:hover:not(.sel-trigger-disabled) { border-color: #0a0a0a; }
-.sel-trigger-open { border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10, 10, 10,0.08); }
-.sel-trigger-error { border-color: #dc2626 !important; }
+.sel-trigger:hover:not(.sel-trigger-disabled) { border-color: var(--ds-color-text); }
+.sel-trigger-open { border-color: var(--ds-color-text); box-shadow: 0 0 0 3px var(--ds-color-surface-soft); }
+.sel-trigger-error { border-color: var(--ds-color-danger) !important; }
 .sel-trigger-disabled { background: var(--ds-color-surface-soft); cursor: not-allowed; color: var(--ds-color-text-faint); }
 .sel-trigger-has-chips { align-items: flex-start; padding: 6px 10px; }
 
@@ -58,8 +58,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #ede9fe;
-  color: #4c1d95;
+  background: var(--ds-color-accent2-bg);
+  color: var(--ds-color-accent2);
   border-radius: 4px;
   padding: 2px 6px 2px 8px;
   font-size: 12px;
@@ -77,14 +77,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #7c3aed;
+  color: var(--ds-color-accent2);
   padding: 1px;
   border-radius: 3px;
   flex-shrink: 0;
   transition: background 0.12s, color 0.12s;
   line-height: 0;
 }
-.sel-chip-remove:hover { background: #c4b5fd; color: #3b0764; }
+.sel-chip-remove:hover { background: var(--ds-color-accent2-bd); color: var(--ds-color-text); }
 
 /* ── Icons ── */
 .sel-icons { display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding-top: 2px; }
@@ -102,7 +102,7 @@
   transition: color 0.15s, background 0.15s;
   line-height: 0;
 }
-.sel-clear-btn:hover { color: var(--ds-color-text); background: #ffeef0; }
+.sel-clear-btn:hover { color: var(--ds-color-text); background: var(--ds-color-danger-bg); }
 
 .sel-chevron {
   color: var(--ds-color-text-faint);
@@ -178,8 +178,8 @@
   font-family: 'DM Sans', sans-serif;
 }
 .sel-option:hover:not(.sel-option-disabled) { background: var(--ds-color-surface-soft); }
-.sel-option-selected { background: rgba(10, 10, 10,0.05); color: var(--ds-color-text); font-weight: 500; }
-.sel-option-selected:hover { background: rgba(10, 10, 10,0.09); }
+.sel-option-selected { background: var(--ds-color-surface-soft); color: var(--ds-color-text); font-weight: 500; }
+.sel-option-selected:hover { background: var(--ds-color-border-soft); }
 .sel-option-disabled { color: #bbb; cursor: not-allowed; opacity: 0.6; }
 .sel-option-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -197,9 +197,10 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .sel-checkbox-checked {
-  background: #0a0a0a;
-  border-color: #0a0a0a;
+  background: var(--ds-color-brand);
+  border-color: var(--ds-color-brand);
 }
+.sel-checkbox-checked svg polyline { stroke: var(--ds-color-bg); }
 
 /* ── Footer (multi-select) ── */
 .sel-footer {
@@ -212,8 +213,8 @@
 }
 .sel-count { font-size: 12px; color: var(--ds-color-text-muted); font-family: 'DM Sans', sans-serif; }
 .sel-done-btn {
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   border-radius: 5px;
   padding: 4px 14px;
@@ -223,7 +224,7 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.sel-done-btn:hover { background: #2d1a6e; }
+.sel-done-btn:hover { background: var(--ds-color-brand-strong); }
 
 .sel-no-options {
   padding: 18px 14px;
@@ -235,9 +236,9 @@
 
 /* ── Helper / error ── */
 .sel-helper-text { margin-top: 5px; font-size: 12px; color: var(--ds-color-text-muted); line-height: 1.4; }
-.sel-error-text   { margin-top: 5px; font-size: 12px; color: #dc2626; line-height: 1.4; }
+.sel-error-text   { margin-top: 5px; font-size: 12px; color: var(--ds-color-danger); line-height: 1.4; }
 
-.sel-trigger:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+.sel-trigger:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
 
 @media (max-width: 480px) {
   .sel-dropdown { max-height: 260px; }

@@ -37,7 +37,7 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
 
     return (
         <div className="dm-field" ref={ref}>
-            <label className="dm-label">Assign to Brands <span style={{color:'#CE1E36'}}>*</span></label>
+            <label className="dm-label">Assign to Brands <span style={{color:'var(--ds-color-danger)'}}>*</span></label>
             <div
                 className={`ba-trigger${open ? ' ba-trigger--open' : ''}${disabled ? ' ba-trigger--disabled' : ''}`}
                 onClick={() => !disabled && setOpen(o => !o)}
@@ -71,7 +71,7 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
                             <div key={b.id} className={`ba-option${checked ? ' ba-option--checked' : ''}`}
                                 onClick={() => toggle(b.id)}>
                                 <div className={`ba-checkbox${checked ? ' ba-checkbox--checked' : ''}`}>
-                                    {checked && <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={3} color="#fff" />}
+                                    {checked && <HugeiconsIcon icon={Tick02Icon} size={16} strokeWidth={3} color="currentColor" />}
                                 </div>
                                 <span className="ba-dot" style={{background: b.primary_color || '#CE1E36'}}/>
                                 <div className="ba-option-info">

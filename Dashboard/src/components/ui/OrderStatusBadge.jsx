@@ -1,29 +1,33 @@
 import React from 'react';
 
 const OrderStatusBadge = ({ status }) => {
+  // Token pairs so the pill reads in both light and dark themes.
+  const tone = (t) => (t === 'neutral'
+    ? { bg: 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text-muted)' }
+    : { bg: `var(--ds-color-${t}-bg)`, color: `var(--ds-color-${t})` });
   const statusConfig = {
-    pending: { bg: '#f5f5f5', color: '#666', label: 'Pending' },
-    awaiting_confirmation: { bg: '#fff8e1', color: '#f57f17', label: 'Awaiting Confirmation' },
-    confirmed: { bg: '#e3f2fd', color: '#1976d2', label: 'Confirmed' },
-    processing: { bg: '#e3f2fd', color: '#1976d2', label: 'Processing' },
-    booked: { bg: '#e8f5e9', color: '#388e3c', label: 'Booked' },
-    'pickup initiated': { bg: '#e0f2f1', color: '#00897b', label: 'Pickup Initiated' },
-    manifested: { bg: '#f3e5f5', color: '#7b1fa2', label: 'Manifested' },
-    'in transit': { bg: '#e0f7fa', color: '#0097a7', label: 'In Transit' },
-    shipped: { bg: '#e8f5e9', color: '#388e3c', label: 'Shipped' },
-    'out for delivery': { bg: '#fce4ec', color: '#c2185b', label: 'Out for Delivery' },
-    delivered: { bg: '#c8e6c9', color: '#2e7d32', label: 'Delivered', bold: true },
-    undelivered: { bg: '#ffccbc', color: '#d84315', label: 'Undelivered' },
-    rto: { bg: '#ffe0b2', color: '#e65100', label: 'RTO' },
-    'rto delivered': { bg: '#c8e6c9', color: '#2e7d32', label: 'RTO Delivered' },
-    'return_initiated': { bg: '#fff3e0', color: '#e65100', label: 'Return Initiated' },
-    'returned_rto': { bg: '#c8e6c9', color: '#2e7d32', label: 'Returned RTO' },
-    cancelled: { bg: '#ffcdd2', color: '#c62828', label: 'Cancelled' },
-    'order cancelled': { bg: '#ffcdd2', color: '#c62828', label: 'Order Cancelled' },
-    exception: { bg: '#ffcdd2', color: '#c62828', label: 'Exception', bold: true }
+    pending: { ...tone('warn'), label: 'Pending' },
+    awaiting_confirmation: { ...tone('warn'), label: 'Awaiting Confirmation' },
+    confirmed: { ...tone('info'), label: 'Confirmed' },
+    processing: { ...tone('info'), label: 'Processing' },
+    booked: { ...tone('accent2'), label: 'Booked' },
+    'pickup initiated': { ...tone('info'), label: 'Pickup Initiated' },
+    manifested: { ...tone('accent2'), label: 'Manifested' },
+    'in transit': { ...tone('info'), label: 'In Transit' },
+    shipped: { ...tone('info'), label: 'Shipped' },
+    'out for delivery': { ...tone('info'), label: 'Out for Delivery' },
+    delivered: { ...tone('success'), label: 'Delivered', bold: true },
+    undelivered: { ...tone('danger'), label: 'Undelivered' },
+    rto: { ...tone('danger'), label: 'RTO' },
+    'rto delivered': { ...tone('accent2'), label: 'RTO Delivered' },
+    'return_initiated': { ...tone('accent2'), label: 'Return Initiated' },
+    'returned_rto': { ...tone('accent2'), label: 'Returned RTO' },
+    cancelled: { ...tone('danger'), label: 'Cancelled' },
+    'order cancelled': { ...tone('danger'), label: 'Order Cancelled' },
+    exception: { ...tone('warn'), label: 'Exception', bold: true }
   };
 
-  const config = statusConfig[status] || { bg: '#f5f5f5', color: '#666', label: status };
+  const config = statusConfig[status] || { ...tone('neutral'), label: status };
 
   return (
     <span

@@ -196,7 +196,7 @@ export function BrandManager() {
   const handleInputChange = (e) => { const { name, value, type, checked } = e.target; setFormData(p => ({ ...p, [name]: type === 'checkbox' ? checked : value })); };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) { showError('fieldRequired'); return; }
+    if (!formData.name.trim()) { showError('fieldRequired', 'Brand name is required.'); return; }
     try {
       if (editingBrand) { await brandService.updateBrand(editingBrand.id, formData); showSuccess('brandUpdated'); }
       else { await brandService.createBrand(formData); showSuccess('brandCreated'); }

@@ -19,7 +19,7 @@
     font-weight: 500;
     color: var(--ds-color-text);
     background: var(--ds-color-bg);
-    border: 1px solid #e0d8ff;
+    border: 1px solid var(--ds-color-accent2-bd);
     white-space: nowrap;
     cursor: default;
     font-family: 'DM Sans', sans-serif;
@@ -28,8 +28,8 @@
 }
 
 .brand-tag:hover {
-    background: #e8e0ff;
-    border-color: #c8b8ff;
+    background: var(--ds-color-accent2-bg);
+    border-color: var(--ds-color-accent2-bd);
 }
 
 .brand-tag-dot {

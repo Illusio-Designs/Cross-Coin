@@ -83,7 +83,9 @@ const SAMPLES = ['Rushikesh','CrossCoin','CC-20240601-0042','1,299','https://cro
 const EMPTY_FORM = { name:'', category:'UTILITY', language:'en', body:'', footer:'', btn1Type:'', btn1Text:'', btn1Val:'', btn2Text:'' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#0a0a0a','#3f3f46','#52525b','#6b6b73','#8a8a92','#9a9aa2','#b8b8bf'];
+// Mid/dark neutrals only — avatars carry white initials, so every swatch must
+// keep them readable (the old #9a9aa2 / #b8b8bf failed contrast in both themes).
+const AVATAR_COLORS = ['#0a0a0a','#27272a','#3f3f46','#52525b','#5b5b63','#6b6b73','#71717a'];
 function avatarColor(str) { let h = 0; for (const c of (str||'')) h = (h*31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length]; }
 function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 function timeAgo(date) {
@@ -340,7 +342,7 @@ function AudioPlayer({ src }) {
   const dlExt = /ogg|opus/i.test(blobType) ? 'ogg' : /mpeg|mp3/i.test(blobType) ? 'mp3' : /mp4|aac|m4a/i.test(blobType) ? 'm4a' : 'audio';
 
   if (loadState === 'error') return (
-    <div style={{fontSize:12, color:'#9ca3af', fontStyle:'italic', display:'flex', alignItems:'center', gap:6}}>
+    <div style={{fontSize:12, color:'var(--ds-color-text-faint)', fontStyle:'italic', display:'flex', alignItems:'center', gap:6}}>
       <HugeiconsIcon icon={Mic01Icon} size={14} strokeWidth={2} />
       Voice message unavailable
     </div>
@@ -351,7 +353,7 @@ function AudioPlayer({ src }) {
   if (loadState === 'unsupported' && blobUrl) return (
     <a href={blobUrl} download={`voice-note.${dlExt}`}
        style={{display:'inline-flex', alignItems:'center', gap:8, fontSize:12, color:'var(--ds-color-text-muted)', textDecoration:'none',
-               background:'#f0f1f3', border:'1px solid #d7d9dd', borderRadius:8, padding:'8px 12px'}}>
+               background:'var(--wa-tint)', border:'1px solid var(--wa-tint-border-2)', borderRadius:8, padding:'8px 12px'}}>
       <HugeiconsIcon icon={Download01Icon} size={16} strokeWidth={2} />
       Download voice note
     </a>
@@ -374,23 +376,23 @@ function AudioPlayer({ src }) {
       <button onClick={toggle} disabled={loadState !== 'ready'} style={{
         width:36, height:36, borderRadius:'50%', border:'none',
         cursor: loadState === 'ready' ? 'pointer' : 'wait',
-        background:'#0d1117', display:'flex', alignItems:'center', justifyContent:'center',
+        background:'var(--ds-color-brand)', color:'var(--ds-color-bg)', display:'flex', alignItems:'center', justifyContent:'center',
         flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.2)', opacity: loadState === 'loading' ? 0.6 : 1,
       }}>
         {loadState === 'loading'
-          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="9" strokeDasharray="28" strokeDashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
+          ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="9" strokeDasharray="28" strokeDashoffset="10"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></circle></svg>
           : playing
-            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-            : <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 19,12 5,21"/></svg>
+            ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
         }
       </button>
       <div style={{flex:1, display:'flex', flexDirection:'column', gap:4}}>
         <div onClick={seek} style={{display:'flex', alignItems:'center', gap:1.5, height:28, cursor:'pointer'}}>
           {bars.map((h,i) => (
-            <div key={i} style={{width:3, height:h, borderRadius:2, flexShrink:0, background: i/bars.length <= progress ? '#0d1117' : '#d1d5db', transition:'background 0.1s'}}/>
+            <div key={i} style={{width:3, height:h, borderRadius:2, flexShrink:0, background: i/bars.length <= progress ? 'var(--ds-color-text)' : 'var(--ds-color-text-faint)', opacity: i/bars.length <= progress ? 1 : 0.4, transition:'background 0.1s'}}/>
           ))}
         </div>
-        <div style={{fontSize:10, color:'#9ca3af', display:'flex', justifyContent:'space-between'}}>
+        <div style={{fontSize:10, color:'var(--ds-color-text-faint)', display:'flex', justifyContent:'space-between'}}>
           <span>{fmt(currentTime)}</span>
           <span>{fmt(duration)}</span>
         </div>
@@ -413,7 +415,7 @@ function ImageMsg({ src, caption }) {
     return () => { cancelled = true; };
   }, [src]);
 
-  if (!blobUrl) return <div style={{width:120,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:11}}>Loading...</div>;
+  if (!blobUrl) return <div style={{width:120,height:80,background:'var(--wa-tint-2)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--ds-color-text-faint)',fontSize:11}}>Loading...</div>;
 
   return (
     <>
@@ -459,7 +461,7 @@ function VideoMsg({ src, caption }) {
   }, [src]);
 
   if (!blobUrl) return (
-    <div style={{width:220,height:80,background:'#f3f4f6',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',fontSize:12,gap:6}}>
+    <div style={{width:220,height:80,background:'var(--wa-tint-2)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--ds-color-text-faint)',fontSize:12,gap:6}}>
       {loadState === 'error'
         ? <><span>🎥</span> Video expired</>
         : <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⏳</span> Loading...</>
@@ -569,7 +571,7 @@ function MsgContent({ msg, brandId = 1 }) {
     return proxyUrl
       ? <AudioPlayer src={proxyUrl} />
       : (
-        <div style={{ display:'flex', alignItems:'center', gap:8, color:'#6b7280', fontSize:13 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, color:'var(--ds-color-text-muted)', fontSize:13 }}>
           <HugeiconsIcon icon={Mic01Icon} size={16} strokeWidth={2} />
           <span style={{ fontStyle:'italic' }}>🎤 Voice message</span>
         </div>
@@ -579,13 +581,13 @@ function MsgContent({ msg, brandId = 1 }) {
   if (effectiveType === 'image') {
     return proxyUrl
       ? <ImageMsg src={proxyUrl} caption={media?.caption} />
-      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>📷 Image</span>;
+      : <span style={{ fontSize:13, color:'var(--ds-color-text-muted)', fontStyle:'italic' }}>📷 Image</span>;
   }
 
   if (effectiveType === 'video') {
     return proxyUrl
       ? <VideoMsg src={proxyUrl} caption={media?.caption} />
-      : <span style={{ fontSize:13, color:'#6b7280', fontStyle:'italic' }}>🎥 Video</span>;
+      : <span style={{ fontSize:13, color:'var(--ds-color-text-muted)', fontStyle:'italic' }}>🎥 Video</span>;
   }
 
   if (effectiveType === 'reaction') {
@@ -616,14 +618,15 @@ function MsgContent({ msg, brandId = 1 }) {
       >
         <div style={{
           width:44, height:44, borderRadius:10,
-          background: isPdf ? '#fef2f2' : '#eff6ff',
+          background: isPdf ? 'var(--ds-color-danger-bg)' : 'var(--ds-color-info-bg)',
+          color: isPdf ? 'var(--ds-color-text)' : 'var(--ds-color-text-muted)',
           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0
         }}>
-          <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} color={isPdf ? '#0a0a0a' : '#6b6b73'} />
+          <HugeiconsIcon icon={File01Icon} size={22} strokeWidth={2} />
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:13, fontWeight:600, color:'var(--ds-color-text)', wordBreak:'break-all', marginBottom:2 }}>{filename}</div>
-          <div style={{ fontSize:11, color:'#6b7280', display:'flex', alignItems:'center', gap:4 }}>
+          <div style={{ fontSize:11, color:'var(--ds-color-text-muted)', display:'flex', alignItems:'center', gap:4 }}>
             <HugeiconsIcon icon={Download01Icon} size={11} strokeWidth={2.5} />
             Download {isPdf ? 'PDF' : 'file'}
           </div>
@@ -646,7 +649,7 @@ function MsgContent({ msg, brandId = 1 }) {
         ? 'Unsupported message'
         : trimmed.replace(/^\[|\]$/g, '').replace(/_/g, ' ') + ' message';
       return (
-        <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:13, color:'#6b7280', fontStyle:'italic' }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:13, color:'var(--ds-color-text-muted)', fontStyle:'italic' }}>
           <HugeiconsIcon icon={InformationCircleIcon} size={14} strokeWidth={2} />
           {kind.charAt(0).toUpperCase() + kind.slice(1)} · view it in WhatsApp
         </span>
@@ -654,7 +657,7 @@ function MsgContent({ msg, brandId = 1 }) {
     }
     if (trimmed.startsWith('{')) {
       // It's JSON that wasn't detected as a known media type — show generic media unavailable
-      return <span style={{ fontSize:13, color:'#9ca3af', fontStyle:'italic' }}>📎 Media (unavailable)</span>;
+      return <span style={{ fontSize:13, color:'var(--ds-color-text-faint)', fontStyle:'italic' }}>📎 Media (unavailable)</span>;
     }
   }
   const formatted = (msg.body || '')
@@ -1685,18 +1688,18 @@ export function WhatsAppManager() {
               {seedResult && (
                 <div style={{
                   margin:'0 0 16px', padding:'12px 14px', borderRadius:10,
-                  border:`1px solid ${seedResult.failed > 0 ? '#fecaca' : '#bbf7d0'}`,
-                  background: seedResult.failed > 0 ? '#fef2f2' : '#f0fdf4',
+                  border:`1px solid ${seedResult.failed > 0 ? 'var(--ds-color-danger-bd)' : 'var(--ds-color-success-bd)'}`,
+                  background: seedResult.failed > 0 ? 'var(--ds-color-danger-bg)' : 'var(--ds-color-success-bg)',
                 }}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:12}}>
                     <div style={{fontSize:13, fontWeight:600, color:'var(--ds-color-text)'}}>
                       Seed result — Created {seedResult.created} · Already existed {seedResult.skipped} · Failed {seedResult.failed}
                     </div>
-                    <button onClick={() => setSeedResult(null)} style={{border:'none', background:'transparent', cursor:'pointer', color:'#6b7280', fontSize:18, lineHeight:1}}>×</button>
+                    <button onClick={() => setSeedResult(null)} style={{border:'none', background:'transparent', cursor:'pointer', color:'var(--ds-color-text-muted)', fontSize:18, lineHeight:1}}>×</button>
                   </div>
                   {seedResult.errors.length > 0 && (
                     <div style={{marginTop:8}}>
-                      <div style={{fontSize:12, fontWeight:600, color:'#b91c1c', marginBottom:4}}>Why these failed (from Meta):</div>
+                      <div style={{fontSize:12, fontWeight:600, color:'var(--ds-color-danger)', marginBottom:4}}>Why these failed (from Meta):</div>
                       <ul style={{margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4}}>
                         {seedResult.errors.map((e, i) => (
                           <li key={i} style={{fontSize:12.5, color:'var(--ds-color-text-muted)'}}>
@@ -1712,15 +1715,15 @@ export function WhatsAppManager() {
               {/* Stats */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><WaLoad /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  color:'#0a0a0a', icon: IC.send },
-                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            color:'#6b6b73', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    color:'#6b6b73', icon: IC.eye },
-                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        color:'#6b6b73', icon: IC.msg },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      change: stats ? `${stats.deliveryRate}% delivery rate` : '',  fg:'var(--ds-color-text)', icon: IC.send },
+                  { label:'Delivered',        val: stats ? String(stats.deliveredMessages) : '—', change: stats ? `${stats.deliveryRate}% rate` : '',            fg:'var(--ds-color-text-muted)', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            change: stats ? `${stats.readMessages} messages read` : '',    fg:'var(--ds-color-text-muted)', icon: IC.eye },
+                  { label:'Open Convs',       val: stats ? String(stats.openConversations) : '—', change: stats ? `${stats.unreadCount} need reply` : '',        fg:'var(--ds-color-text-muted)', icon: IC.msg },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
                       <span className="was-stat-label">{s.label}</span>
-                      <span className="was-stat-icon" style={{ background: s.color + '20', color: s.color }}>{s.icon}</span>
+                      <span className="was-stat-icon" style={{ background: 'var(--wa-tint)', color: s.fg }}>{s.icon}</span>
                     </div>
                     <div className="was-stat-num">{s.val}</div>
                     <div className="was-stat-change">{s.change}</div>
@@ -1740,7 +1743,7 @@ export function WhatsAppManager() {
                       const days = fillLast7Days(stats?.last7Days);
                       const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
                       return days.every(d => (parseInt(d.count) || 0) === 0)
-                        ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
+                        ? <div style={{color:'var(--ds-color-text-faint)',fontSize:13,padding:'20px 0'}}>No data yet</div>
                         : days.map(d => {
                           const val = parseInt(d.count) || 0;
                           const label = new Date(d.day).toLocaleDateString('en-IN', { weekday:'short' });
@@ -1782,12 +1785,12 @@ export function WhatsAppManager() {
               {/* Quick cards */}
               <div className="was-quick-row">
                 {[
-                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending  · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, color:'#0a0a0a', icon: IC.tpl },
-                  { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', color:'#6b6b73', icon: IC.msg },
-                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent  · ${stats?.deliveredMessages ?? 0} delivered`, color:'#6b6b73', icon: IC.phone },
+                  { label:'Approved Templates', val: String(templateList.filter(t => (t.status||'').toLowerCase() === 'approved').length), sub:`${templateList.filter(t => (t.status||'').toLowerCase() === 'pending').length} pending  · ${templateList.filter(t => (t.status||'').toLowerCase() === 'rejected').length} rejected`, fg:'var(--ds-color-text)', icon: IC.tpl },
+                  { label:'Open Conversations', val: String(stats?.openConversations ?? 0), sub:'Live chats', fg:'var(--ds-color-text-muted)', icon: IC.msg },
+                  { label:'Total Messages',     val: String(stats?.totalMessages ?? 0),     sub:`${stats?.sentMessages ?? 0} sent  · ${stats?.deliveredMessages ?? 0} delivered`, fg:'var(--ds-color-text-muted)', icon: IC.phone },
                 ].map(q => (
                   <div key={q.label} className="was-quick-card">
-                    <div className="was-quick-icon" style={{ background: q.color + '20', color: q.color }}>{q.icon}</div>
+                    <div className="was-quick-icon" style={{ background: 'var(--wa-tint)', color: q.fg }}>{q.icon}</div>
                     <div>
                       <div className="was-quick-label">{q.label}</div>
                       <div className="was-quick-val">{q.val}</div>
@@ -1910,7 +1913,7 @@ export function WhatsAppManager() {
                                 margin:'12px 0 8px',
                               }}>
                                 <span style={{
-                                  background:'rgba(0,0,0,0.06)', color:'#6b7280',
+                                  background:'var(--wa-overlay)', color:'var(--ds-color-text-muted)',
                                   fontSize:11, fontWeight:600, padding:'3px 12px',
                                   borderRadius:999, letterSpacing:0.3,
                                 }}>{dateStr}</span>
@@ -1928,22 +1931,22 @@ export function WhatsAppManager() {
                                 position:'absolute', top:'50%', transform:'translateY(-50%)',
                                 [msg.direction === 'outbound' ? 'left' : 'right']: -28,
                                 opacity:0, transition:'opacity 0.15s',
-                                background:'rgba(0,0,0,0.08)', border:'none', borderRadius:'50%',
+                                background:'var(--wa-overlay-strong)', border:'none', borderRadius:'50%',
                                 width:22, height:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                                color:'#6b7280', padding:0,
+                                color:'var(--ds-color-text-muted)', padding:0,
                               }}>
                                 <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={12} strokeWidth={2.5} />
                               </button>
                               <div className="was-msg-bubble">
                                 {msg._quotedMsg && (
                                   <div style={{
-                                    background: msg.direction === 'outbound' ? 'rgba(11,122,94,0.1)' : 'rgba(0,0,0,0.06)',
-                                    borderLeft: '3px solid #0d1117',
+                                    background: msg.direction === 'outbound' ? 'rgba(11,122,94,0.1)' : 'var(--wa-overlay)',
+                                    borderLeft: '3px solid var(--wa-focus)',
                                     borderRadius: '4px 4px 0 0',
                                     padding: '5px 8px',
                                     marginBottom: 6,
                                     fontSize: 12,
-                                    color: '#6b7280',
+                                    color: 'var(--ds-color-text-muted)',
                                     maxWidth: '100%',
                                     overflow: 'hidden',
                                   }}>
@@ -1965,8 +1968,8 @@ export function WhatsAppManager() {
                                       <HugeiconsIcon icon={Clock01Icon} size={11} strokeWidth={2} color="#9ca3af" />
                                     ) : msg.status === 'failed' ? (
                                       <button type="button" onClick={() => retryReply(msg)} title="Not sent — tap to retry"
-                                        style={{ display:'inline-flex', alignItems:'center', gap:3, border:'none', background:'transparent', cursor:'pointer', color:'#dc2626', fontWeight:700, fontSize:11, padding:0 }}>
-                                        <span style={{ display:'inline-flex', width:13, height:13, borderRadius:'50%', background:'#dc2626', color:'#fff', alignItems:'center', justifyContent:'center', fontSize:9, lineHeight:1 }}>!</span>
+                                        style={{ display:'inline-flex', alignItems:'center', gap:3, border:'none', background:'transparent', cursor:'pointer', color:'var(--ds-color-danger)', fontWeight:700, fontSize:11, padding:0 }}>
+                                        <span style={{ display:'inline-flex', width:13, height:13, borderRadius:'50%', background:'var(--ds-color-danger)', color:'var(--ds-color-bg)', alignItems:'center', justifyContent:'center', fontSize:9, lineHeight:1 }}>!</span>
                                         Retry
                                       </button>
                                     ) : msg.status === 'read' ? (
@@ -2040,7 +2043,7 @@ export function WhatsAppManager() {
                         {replyTo && (
                           <div style={{
                             position:'absolute', bottom:'100%', left:0, right:0,
-                            background:'#f0f1f3', borderTop:'3px solid #0d1117',
+                            background:'var(--wa-tint)', borderTop:'3px solid var(--wa-focus)',
                             padding:'8px 12px', display:'flex', alignItems:'center', justifyContent:'space-between',
                             fontSize:12,
                           }}>
@@ -2048,11 +2051,11 @@ export function WhatsAppManager() {
                               <span style={{color:'var(--ds-color-text-muted)', fontWeight:700, fontSize:11}}>
                                 {replyTo.direction === 'inbound' ? 'Customer' : 'You'}
                               </span>
-                              <span style={{color:'#6b7280', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:300}}>
+                              <span style={{color:'var(--ds-color-text-muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:300}}>
                                 {msgPreview(replyTo)}
                               </span>
                             </div>
-                            <button type="button" onClick={() => setReplyTo(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16,padding:'0 4px',flexShrink:0}}>×</button>
+                            <button type="button" onClick={() => setReplyTo(null)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--ds-color-text-faint)',fontSize:16,padding:'0 4px',flexShrink:0}}>×</button>
                           </div>
                         )}
                         <input
@@ -2128,7 +2131,7 @@ export function WhatsAppManager() {
                             <select
                               value={activeConv.brand_id || ''}
                               onChange={e => changeConvBrand(activeConv.id, e.target.value)}
-                              style={{ border:'1px solid #d1d5db', borderRadius:6, padding:'3px 8px', fontSize:13, background:'#fff', cursor:'pointer', maxWidth:150 }}
+                              style={{ border:'1px solid var(--ds-color-border)', borderRadius:6, padding:'3px 8px', fontSize:13, background:'var(--ds-color-surface)', color:'var(--ds-color-text)', cursor:'pointer', maxWidth:150 }}
                               title="Set the brand for this conversation"
                             >
                               {!activeConv.brand_id && <option value="">Select brand…</option>}
@@ -2177,7 +2180,7 @@ export function WhatsAppManager() {
                   {rightPanelTab === 'notes' && (
                     <div className="was-rp-section">
                       <div className="was-rp-section-title">Private Notes</div>
-                      <p style={{fontSize:11,color:'#9ca3af',marginBottom:8}}>Not visible to customer</p>
+                      <p style={{fontSize:11,color:'var(--ds-color-text-faint)',marginBottom:8}}>Not visible to customer</p>
                       <textarea
                         className="was-rp-notes"
                         placeholder="Add a note about this customer..."
@@ -2286,8 +2289,8 @@ export function WhatsAppManager() {
                         {t.status === 'rejected' && (
                           <div style={{
                             display:'flex', gap:6, alignItems:'flex-start', margin:'2px 0 6px',
-                            background:'#fef2f2', border:'1px solid #fecaca', borderRadius:8,
-                            padding:'7px 9px', fontSize:12, color:'#b91c1c', lineHeight:1.4
+                            background:'var(--ds-color-danger-bg)', border:'1px solid var(--ds-color-danger-bd)', borderRadius:8,
+                            padding:'7px 9px', fontSize:12, color:'var(--ds-color-danger)', lineHeight:1.4
                           }}>
                             <span style={{ flexShrink:0, marginTop:1 }}>⚠️</span>
                             <span><strong>Meta rejected:</strong> {t.rejectedReason || 'No reason given. Edit the copy and Re-submit.'}</span>
@@ -2369,7 +2372,7 @@ export function WhatsAppManager() {
                   </div>
                   <div className="was-info-card was-info-card--tip">
                     <h4 className="was-info-title">Tip</h4>
-                    <p style={{fontSize:13,color:'#555',lineHeight:1.6,margin:0}}>The recipient must have messaged your WhatsApp Business number in the last 24 hours, or you must use an approved template.</p>
+                    <p style={{fontSize:13,color:'var(--ds-color-text-muted)',lineHeight:1.6,margin:0}}>The recipient must have messaged your WhatsApp Business number in the last 24 hours, or you must use an approved template.</p>
                   </div>
                 </div>
               </div>
@@ -2409,7 +2412,7 @@ export function WhatsAppManager() {
                       <div className="was-tpl-body">{cr.body}</div>
                       <div className="was-tpl-foot" style={{gap:8}}>
                         <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px'}} onClick={() => { setCannedEditId(cr.id); setCannedForm({ shortcut: cr.shortcut, title: cr.title, body: cr.body }); setCannedModal(true); }}>Edit</button>
-                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'#0a0a0a'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
+                        <button className="was-btn-secondary" style={{fontSize:11,padding:'3px 10px',color:'var(--ds-color-text)'}} onClick={() => deleteCannedResponse(cr.id)}>Delete</button>
                       </div>
                     </div>
                   ))}
@@ -2440,7 +2443,7 @@ export function WhatsAppManager() {
                       <p>No broadcasts yet. Create a campaign to reach all your customers at once.</p>
                     </div>
                   ) : broadcasts.map(b => {
-                    const statusColor = { draft:'#9a9aa2', running:'#6b6b73', done:'#0a0a0a', failed:'#3f3f46' }[b.status] || '#9a9aa2';
+                    const statusColor = { draft:'var(--ds-color-text-faint)', running:'var(--ds-color-text-muted)', done:'var(--ds-color-text)', failed:'var(--ds-color-danger)' }[b.status] || 'var(--ds-color-text-faint)';
                     return (
                       <div key={b.id} className="was-tpl-card">
                         <div className="was-tpl-card-top">
@@ -2457,7 +2460,7 @@ export function WhatsAppManager() {
                               {broadcastRunning === b.id ? 'Starting...' : '▶ Run'}
                             </button>
                           )}
-                          {b.completed_at && <span style={{fontSize:11,color:'#9ca3af'}}>Done {new Date(b.completed_at).toLocaleDateString('en-IN')}</span>}
+                          {b.completed_at && <span style={{fontSize:11,color:'var(--ds-color-text-faint)'}}>Done {new Date(b.completed_at).toLocaleDateString('en-IN')}</span>}
                         </div>
                       </div>
                     );
@@ -2480,15 +2483,15 @@ export function WhatsAppManager() {
               {/* Stats row */}
               <div className="was-stats-grid">
                 {statsLoading ? <div style={{padding:20}}><WaLoad /></div> : [
-                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      color:'#0a0a0a', icon: IC.send },
-                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        color:'#6b6b73', icon: IC.check },
-                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            color:'#6b6b73', icon: IC.eye },
-                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', color:'#6b6b73', icon: IC.phone },
+                  { label:'Messages Sent',    val: stats ? String(stats.sentMessages) : '—',      fg:'var(--ds-color-text)', icon: IC.send },
+                  { label:'Delivery Rate',    val: stats ? `${stats.deliveryRate}%` : '—',        fg:'var(--ds-color-text-muted)', icon: IC.check },
+                  { label:'Read Rate',        val: stats ? `${stats.readRate}%` : '—',            fg:'var(--ds-color-text-muted)', icon: IC.eye },
+                  { label:'Avg Response',     val: slaStats?.avgFirstResponseMinutes ? `${slaStats.avgFirstResponseMinutes}m` : '—', fg:'var(--ds-color-text-muted)', icon: IC.phone },
                 ].map(s => (
                   <div key={s.label} className="was-stat-card">
                     <div className="was-stat-top">
                       <span className="was-stat-label">{s.label}</span>
-                      <span className="was-stat-icon" style={{ background: s.color + '20', color: s.color }}>{s.icon}</span>
+                      <span className="was-stat-icon" style={{ background: 'var(--wa-tint)', color: s.fg }}>{s.icon}</span>
                     </div>
                     <div className="was-stat-num">{s.val}</div>
                   </div>
@@ -2503,7 +2506,7 @@ export function WhatsAppManager() {
                     const days = fillLast7Days(stats?.last7Days);
                     const maxVal = Math.max(...days.map(d => parseInt(d.count) || 0), 1);
                     return days.every(d => (parseInt(d.count) || 0) === 0)
-                      ? <div style={{color:'#9ca3af',fontSize:13,padding:'20px 0'}}>No data yet</div>
+                      ? <div style={{color:'var(--ds-color-text-faint)',fontSize:13,padding:'20px 0'}}>No data yet</div>
                       : days.map(d => {
                         const val = parseInt(d.count) || 0;
                         const label = new Date(d.day).toLocaleDateString('en-IN', { weekday:'short' });
@@ -2682,16 +2685,16 @@ export function WhatsAppManager() {
                       onClick={() => toggleProduct(p)}
                       style={{
                         display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
-                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? '#0d1117' : 'var(--ds-color-border)'}`,
-                        background: selected ? '#f0f1f3' : 'var(--ds-color-surface)', transition:'all 0.15s'
+                        borderRadius:8, cursor:'pointer', border:`1.5px solid ${selected ? 'var(--wa-focus)' : 'var(--ds-color-border)'}`,
+                        background: selected ? 'var(--wa-tint)' : 'var(--ds-color-surface)', transition:'all 0.15s'
                       }}
                     >
                       <div style={{
-                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? '#0d1117' : '#d1d5db'}`,
-                        background: selected ? '#0d1117' : 'transparent', flexShrink:0,
+                        width:18, height:18, borderRadius:4, border:`2px solid ${selected ? 'var(--ds-color-brand)' : 'var(--wa-tint-border-2)'}`,
+                        background: selected ? 'var(--ds-color-brand)' : 'transparent', color:'var(--ds-color-bg)', flexShrink:0,
                         display:'flex', alignItems:'center', justifyContent:'center'
                       }}>
-                        {selected && <HugeiconsIcon icon={Tick02Icon} size={10} strokeWidth={3} color="#fff" />}
+                        {selected && <HugeiconsIcon icon={Tick02Icon} size={10} strokeWidth={3} />}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:500, color:'var(--ds-color-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.name}</div>
@@ -2741,8 +2744,8 @@ export function WhatsAppManager() {
                 {viewTpl.status === 'rejected' && (
                   <div style={{
                     display:'flex', gap:8, alignItems:'flex-start', marginBottom:16,
-                    background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10,
-                    padding:'10px 12px', fontSize:13, color:'#b91c1c', lineHeight:1.5
+                    background:'var(--ds-color-danger-bg)', border:'1px solid var(--ds-color-danger-bd)', borderRadius:10,
+                    padding:'10px 12px', fontSize:13, color:'var(--ds-color-danger)', lineHeight:1.5
                   }}>
                     <span style={{ flexShrink:0, marginTop:1 }}>⚠️</span>
                     <span><strong>Meta rejected this template.</strong><br />{viewTpl.rejectedReason || 'No reason was given. Edit the copy and Re-submit.'}</span>
@@ -2793,7 +2796,7 @@ export function WhatsAppManager() {
                       <div style={{ fontWeight:600, color:'var(--ds-color-text-muted)', marginBottom:3 }}>Buttons</div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         {viewTpl.buttons.map((b, i) => (
-                          <span key={i} style={{ background:'#eef2ff', color:'#4338ca', borderRadius:6, padding:'4px 10px', fontSize:12, fontWeight:500 }}>
+                          <span key={i} style={{ background:'var(--ds-color-accent2-bg)', color:'var(--ds-color-accent2)', borderRadius:6, padding:'4px 10px', fontSize:12, fontWeight:500 }}>
                             {typeof b === 'string' ? b : (b.text || b)}
                           </span>
                         ))}

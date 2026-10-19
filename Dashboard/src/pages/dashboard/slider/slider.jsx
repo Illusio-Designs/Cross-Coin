@@ -36,7 +36,9 @@ const EMPTY_FORM = {
 
 export default function Slider() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, hasAnyRole } = useAuth();
+  // Backend slider routes are isProductManager → admin OR product_manager.
+  const canManage = !!user && hasAnyRole(['admin', 'product_manager']);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,8 +53,8 @@ export default function Slider() {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'admin')) router.push('/dashboard');
-  }, [user, authLoading, router]);
+    if (!authLoading && !canManage) router.push('/dashboard');
+  }, [canManage, authLoading, router]);
 
   useEffect(() => {
     const fetchMeta = async () => {
@@ -234,7 +236,7 @@ export default function Slider() {
   ];
 
   if (authLoading) return <div style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader /></div>;
-  if (!user || user.role !== 'admin') return null;
+  if (!canManage) return null;
 
   return (
     <>

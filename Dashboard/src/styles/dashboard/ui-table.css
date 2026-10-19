@@ -70,8 +70,8 @@
 .tbl-row { transition: background 0.12s; }
 .tbl-row:hover { background: var(--ds-color-surface-soft, var(--ds-color-surface-soft)); }
 .tbl-row-clickable { cursor: pointer; }
-.tbl-row-clickable:hover { background: rgba(10, 10, 10, 0.04); }
-.tbl-row-selected { background: rgba(10, 10, 10, 0.07); }
+.tbl-row-clickable:hover { background: var(--ds-color-surface-soft); }
+.tbl-row-selected { background: var(--ds-color-brand-soft); }
 
 .tbl-cell {
   color: var(--ds-color-text, var(--ds-color-text));
@@ -103,7 +103,7 @@
   width: 30px;
   height: 30px;
   border: 3px solid var(--ds-color-border);
-  border-top-color: #0a0a0a;
+  border-top-color: var(--ds-color-text);
   border-radius: 50%;
   animation: tbl-spin 0.8s linear infinite;
 }

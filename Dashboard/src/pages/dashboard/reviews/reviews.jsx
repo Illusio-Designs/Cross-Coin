@@ -105,7 +105,10 @@ export default function Reviews() {
 
   const fetchStatusCounts = useCallback(async () => {
     try {
-      const opts = { page: 1, limit: 1, brandId: brandFilter || undefined };
+      // The backend scopes by brand slug (X-Brand-Name), not the numeric id.
+      const selectedBrand = (Array.isArray(brands) ? brands : []).find(b => String(b.id) === brandFilter);
+      if (brandFilter && !selectedBrand?.slug) return; // wait for brands to load
+      const opts = { page: 1, limit: 1, brandId: brandFilter || undefined, brandSlug: selectedBrand?.slug || undefined };
       const [a, p, r] = await Promise.all([
         reviewService.getAllReviews('approved', opts),
         reviewService.getAllReviews('pending', opts),
@@ -117,7 +120,7 @@ export default function Reviews() {
         rejected: r?.pagination?.total  || 0,
       });
     } catch {}
-  }, [brandFilter]);
+  }, [brandFilter, brands]);
 
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
   useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);

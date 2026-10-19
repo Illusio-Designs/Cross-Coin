@@ -99,6 +99,18 @@ export function Policies() {
     finally { setEditLoading(false); }
   };
 
+  const handleDelete = (policy) => {
+    setConfirmState({ message: `Delete "${policy.title}"? This cannot be undone.`, onConfirm: async () => {
+      setConfirmState(null);
+      try {
+        setLoading(true);
+        await policyService.deletePolicy(policy.id);
+        await fetchPolicies();
+      } catch (err) { setError(err.message || "Failed to delete policy"); }
+      finally { setLoading(false); }
+    }});
+  };
+
   const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); };
   const handleInputChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
 
@@ -146,6 +158,7 @@ export function Policies() {
       render: (r) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(r.id)}>{IC.edit}</button>
+          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(r)}>{IC.trash}</button>
         </div>
       )
     }

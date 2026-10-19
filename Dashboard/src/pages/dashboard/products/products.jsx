@@ -143,7 +143,7 @@ const ProductsPage = () => {
   }, []);
 
   // Fetch products data
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     try {
       const response = await productService.getAllProducts(
@@ -151,7 +151,7 @@ const ProductsPage = () => {
         itemsPerPage,
         filterValue,
         null,            // signal
-        false,           // forceRefresh
+        forceRefresh === true, // bypass the 3-min list cache after a save/delete
         selectedBrandSlug, // brandSlug — '' means all brands
         true             // listMode — lean columns for the table (full data loads on Edit)
       );
@@ -533,7 +533,7 @@ const ProductsPage = () => {
       try {
         setLoading(true);
         await productService.deleteProduct(id);
-        await fetchProducts();
+        await fetchProducts(true);
       } catch (err) {
         setError(err.message || "Failed to delete product");
       } finally {
@@ -1086,7 +1086,7 @@ const ProductsPage = () => {
 
         if (response.success) {
             setIsModalOpen(false);
-            await fetchProducts();
+            await fetchProducts(true);
         } else {
             throw new Error(response.message || 'Failed to save product');
         }
@@ -1621,19 +1621,22 @@ export default ProductsPage;
  */
 function ProductSeoStep({ formData, setFormData, handleInputChange, editingProductId, brands = [] }) {
   const [regenerating, setRegenerating] = useState(false);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
 
   const previewBrand = brands.find(b => Number(b.id) === Number(formData.brandIds?.[0]));
   const previewUrl = formData.seo?.canonicalUrl
     || brandUrl(previewBrand, `products/${formData.slug || formData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'product'}`);
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = () => {
     if (!editingProductId) {
       showError('noProduct', 'Save the product first, then regenerate SEO.');
       return;
     }
-    if (!window.confirm('Replace all SEO fields with auto-generated values from the product name, brand, description and variations? Your manual edits will be lost in this form (you can still cancel before saving).')) {
-      return;
-    }
+    setConfirmRegenerate(true);
+  };
+
+  const runRegenerate = async () => {
+    setConfirmRegenerate(false);
     setRegenerating(true);
     try {
       const res = await productService.regenerateSeo(editingProductId, false);
@@ -1663,6 +1666,14 @@ function ProductSeoStep({ formData, setFormData, handleInputChange, editingProdu
 
   return (
     <>
+      <ConfirmModal
+        title="Regenerate SEO?"
+        confirmLabel="Regenerate"
+        tone="primary"
+        message={confirmRegenerate ? 'Replace all SEO fields with auto-generated values from the product name, brand, description and variations? Your manual edits will be lost in this form (you can still cancel before saving).' : null}
+        onConfirm={runRegenerate}
+        onCancel={() => setConfirmRegenerate(false)}
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>SEO Settings</h3>
         <button

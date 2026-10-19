@@ -47,8 +47,8 @@ export const ROLE_VIEWS = {
     'seo', 'seo-health', 'seo-bulk', 'seo-pages', 'faqs',
   ],
   order_manager: [
-    'main', 'orders', 'reports', 'payments', 'coupons', 'shippingFees',
-    'reviews', 'consumers', 'loyalty',
+    'main', 'orders', 'ndr', 'returns', 'payments', 'reports', 'coupons',
+    'shippingFees', 'reviews', 'consumers', 'loyalty',
   ],
   whatsapp_manager: [
     'main', 'whatsapp', 'whatsapp-chat',
@@ -124,8 +124,8 @@ function AuthProvider({ children }) {
     const adminLogin = useCallback(async (credentials) => {
         try {
             const response = await authService.login(credentials);
-            // Allow any staff role
-            if (!STAFF_ROLES.includes(response.user?.role)) {
+            // Allow any staff role (primary role or any additional role)
+            if (!getEffectiveRoles(response.user).some((r) => STAFF_ROLES.includes(r))) {
                 throw new Error('Access denied. Staff accounts only.');
             }
             localStorage.setItem('token', response.token);
@@ -151,7 +151,7 @@ function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         try {
-            try { await publicLogout(); } catch { await userService.logout(); }
+            await publicLogout();
         } catch (error) {
         } finally {
             localStorage.removeItem('token');

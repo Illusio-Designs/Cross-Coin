@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Input } from '../ui';
 import { productService } from '../../services';
+import { showError } from '../../utils/toastNotification';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -73,10 +74,10 @@ const ProductAttributesEditor = ({ value = [], onChange }) => {
       if (url) {
         updateValue(gi, vi, { image: url });
       } else {
-        window.alert('Upload succeeded but no image URL was returned. You can paste the image URL instead.');
+        showError('uploadFailed', 'Upload succeeded but no image URL was returned. You can paste the image URL instead.');
       }
     } catch (err) {
-      window.alert('Image upload failed: ' + (err?.message || 'Unknown error') + '. You can paste an image URL instead.');
+      showError('uploadFailed', 'Image upload failed: ' + (err?.message || 'Unknown error') + '. You can paste an image URL instead.');
     } finally {
       setUploading((u) => {
         const n = { ...u };

@@ -46,7 +46,7 @@ const Tooltip = ({ text, children, position = 'top', delay = 300 }) => {
       bottom: '-4px',
       left: '50%',
       transform: 'translateX(-50%)',
-      borderTop: '4px solid rgba(0, 0, 0, 0.8)',
+      borderTop: '4px solid var(--ds-color-text)',
       borderLeft: '4px solid transparent',
       borderRight: '4px solid transparent'
     },
@@ -54,7 +54,7 @@ const Tooltip = ({ text, children, position = 'top', delay = 300 }) => {
       top: '-4px',
       left: '50%',
       transform: 'translateX(-50%)',
-      borderBottom: '4px solid rgba(0, 0, 0, 0.8)',
+      borderBottom: '4px solid var(--ds-color-text)',
       borderLeft: '4px solid transparent',
       borderRight: '4px solid transparent'
     },
@@ -62,7 +62,7 @@ const Tooltip = ({ text, children, position = 'top', delay = 300 }) => {
       right: '-4px',
       top: '50%',
       transform: 'translateY(-50%)',
-      borderLeft: '4px solid rgba(0, 0, 0, 0.8)',
+      borderLeft: '4px solid var(--ds-color-text)',
       borderTop: '4px solid transparent',
       borderBottom: '4px solid transparent'
     },
@@ -70,7 +70,7 @@ const Tooltip = ({ text, children, position = 'top', delay = 300 }) => {
       left: '-4px',
       top: '50%',
       transform: 'translateY(-50%)',
-      borderRight: '4px solid rgba(0, 0, 0, 0.8)',
+      borderRight: '4px solid var(--ds-color-text)',
       borderTop: '4px solid transparent',
       borderBottom: '4px solid transparent'
     }
@@ -88,8 +88,8 @@ const Tooltip = ({ text, children, position = 'top', delay = 300 }) => {
           style={{
             position: 'absolute',
             ...positionStyles[position],
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            color: '#fff',
+            backgroundColor: 'var(--ds-color-text)',
+            color: 'var(--ds-color-surface)',
             padding: '6px 12px',
             borderRadius: '4px',
             fontSize: '12px',

@@ -27,10 +27,10 @@
 .badge-outline-default { background: transparent; color: var(--ds-color-text-muted); border: 1px solid var(--ds-color-border); }
 .badge-outline-primary { background: transparent; color: var(--ds-color-text); border: 1px solid var(--ds-color-text); }
 .badge-outline-secondary { background: transparent; color: var(--ds-color-text); border: 1px solid var(--ds-color-text); }
-.badge-outline-success { background: transparent; color: #16a34a; border: 1px solid #16a34a; }
-.badge-outline-danger { background: transparent; color: #dc2626; border: 1px solid #dc2626; }
-.badge-outline-warning { background: transparent; color: #d97706; border: 1px solid #d97706; }
-.badge-outline-info { background: transparent; color: #2563eb; border: 1px solid #2563eb; }
+.badge-outline-success { background: transparent; color: var(--ds-color-success); border: 1px solid currentColor; }
+.badge-outline-danger { background: transparent; color: var(--ds-color-danger); border: 1px solid currentColor; }
+.badge-outline-warning { background: transparent; color: var(--ds-color-warn); border: 1px solid currentColor; }
+.badge-outline-info { background: transparent; color: var(--ds-color-info); border: 1px solid currentColor; }
 
 .badge-soft-default { background: var(--ds-color-bg); color: var(--ds-color-text-muted); }
 .badge-soft-primary { background: color-mix(in srgb, var(--ds-color-text) 10%, transparent); color: var(--ds-color-text); }

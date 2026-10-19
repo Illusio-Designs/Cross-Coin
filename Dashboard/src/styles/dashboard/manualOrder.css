@@ -24,7 +24,7 @@
   font-family: inherit; color: var(--ds-color-text); background: var(--ds-color-surface);
   transition: border-color 0.2s, box-shadow 0.2s; outline: none;
 }
-.mo-search-input:focus { border-color: #0a0a0a; box-shadow: 0 0 0 3px rgba(10, 10, 10,0.08); }
+.mo-search-input:focus { border-color: var(--ds-color-text); box-shadow: 0 0 0 3px var(--ds-color-surface-soft); }
 .mo-searching { position: absolute; right: 12px; font-size: 11px; color: var(--ds-color-text-faint); }
 
 .mo-search-results {
@@ -39,7 +39,7 @@
   border-bottom: 1px solid var(--ds-color-border-soft);
 }
 .mo-search-item:last-child { border-bottom: none; }
-.mo-search-item:hover { background: #f0edf7; }
+.mo-search-item:hover { background: var(--ds-color-surface-soft); }
 .mo-search-item-name { font-weight: 600; color: var(--ds-color-text); flex: 1; }
 .mo-search-item-var { font-size: 12px; color: var(--ds-color-text-muted); min-width: 80px; }
 .mo-search-item-price { font-weight: 600; color: var(--ds-color-text); min-width: 60px; text-align: right; }
@@ -67,11 +67,11 @@
 .mo-qty { font-size: 13px; font-weight: 600; min-width: 24px; text-align: center; }
 .mo-remove-btn {
   display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border: 1px solid #fecaca;
-  border-radius: 6px; background: #fef2f2; cursor: pointer;
-  color: #dc2626; transition: background 0.15s; margin-left: 4px;
+  width: 28px; height: 28px; border: 1px solid var(--ds-color-danger-bd);
+  border-radius: 6px; background: var(--ds-color-danger-bg); cursor: pointer;
+  color: var(--ds-color-danger); transition: background 0.15s; margin-left: 4px;
 }
-.mo-remove-btn:hover { background: #fee2e2; }
+.mo-remove-btn:hover { background: var(--ds-color-danger-bd); }
 
 /* ── Summary ── */
 .mo-summary {
@@ -82,7 +82,7 @@
   display: flex; justify-content: space-between; padding: 4px 0;
   font-size: 13px; color: var(--ds-color-text-muted);
 }
-.mo-discount { color: #16a34a; }
+.mo-discount { color: var(--ds-color-success); }
 .mo-total { font-size: 15px; font-weight: 700; color: var(--ds-color-text); border-top: 1px solid var(--ds-color-border); padding-top: 8px; margin-top: 4px; }
 
 /* ── Responsive ── */

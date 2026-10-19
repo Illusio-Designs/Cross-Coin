@@ -98,7 +98,7 @@ export default function PickupScheduleModal({ open, onClose }) {
           <div style={{ fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>Checking already-booked orders…</div>
         )}
         {affectedWarn && (
-          <div style={{ background: 'var(--ds-color-warning-bg,#fef3c7)', color: 'var(--ds-color-warning-text,#92400e)', border: '1px solid var(--ds-color-warning,#f59e0b)', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+          <div style={{ background: 'var(--ds-color-warn-bg)', color: 'var(--ds-color-text)', border: '1px solid var(--ds-color-warn-bd)', borderRadius: 9, padding: '10px 12px', fontSize: 12.5, lineHeight: 1.5 }}>
             <b>⚠ {affectedWarn.count} order{affectedWarn.count === 1 ? '' : 's'} already booked for pickup in this range.</b>
             <div style={{ marginTop: 3 }}>
               A block can't hold these — they're already with the courier. The courier will still attempt pickup, and reattempts the next working day if the warehouse is closed.
@@ -118,9 +118,9 @@ export default function PickupScheduleModal({ open, onClose }) {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {blockedRanges.map((r, i) => (
-              <div key={`${r.from}_${r.to}_${i}`} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--ds-color-danger-bg,#fee2e2)', color: 'var(--ds-color-danger,#dc2626)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontWeight: 700 }}>
+              <div key={`${r.from}_${r.to}_${i}`} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--ds-color-danger-bg)', color: 'var(--ds-color-danger)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontWeight: 700 }}>
                 <span>No pickup · {r.from === r.to ? fmt(r.from) : `${fmt(r.from)} → ${fmt(r.to)}`}</span>
-                <button onClick={() => removeRange(i)} title="Remove" style={{ marginLeft: 'auto', border: 'none', background: 'rgba(0,0,0,.14)', color: 'inherit', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', fontWeight: 800 }}>×</button>
+                <button onClick={() => removeRange(i)} title="Remove" style={{ marginLeft: 'auto', border: 'none', background: 'var(--ds-color-danger-bd)', color: 'inherit', width: 20, height: 20, borderRadius: '50%', cursor: 'pointer', fontWeight: 800 }}>×</button>
               </div>
             ))}
           </div>

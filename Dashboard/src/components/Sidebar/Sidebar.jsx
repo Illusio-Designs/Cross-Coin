@@ -65,7 +65,7 @@ const ALL_MENU = [
       { label: 'Products',      view: 'products' },
       { label: 'Categories',    view: 'categories' },
       { label: 'Attributes',    view: 'attributes' },
-      { label: 'Pack pricing',  view: 'pack-pricing' },
+      { label: 'Pack pricing',  view: 'pack-pricing', roles: ['admin'] },
       { label: 'Media Gallery', view: 'media-gallery' },
     ],
   },
@@ -83,8 +83,6 @@ const ALL_MENU = [
     submenu: [
       { label: 'Slider',    view: 'slider' },
       { label: 'Blogs',     view: 'blogs' },
-      // Single SEO entry — opens the unified hub (Overview / Pages /
-      // Products / FAQs / Settings tabs in one view).
       { label: 'SEO',           view: 'seo' },
       { label: 'Policies',  view: 'policies', roles: ['admin'] },
     ],

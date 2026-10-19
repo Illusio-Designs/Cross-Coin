@@ -4,7 +4,8 @@ import { PageHeader, Panel, FilterBar, ResponsiveTable, EmptyState } from "../..
 import Loader from "../../../components/common/Loader";
 import SafeImage from '../../../components/common/SafeImage';
 import { ConfirmModal } from '../../../components/common/AlertModal';
-import { seoService, userService } from "../../../services";
+import { seoService } from "../../../services";
+import { useAuth } from '../../../context/AuthContext';
 import { debounce } from 'lodash';
 import { useRouter } from 'next/router';
 import SerpPreview, { brandSiteName, brandUrl } from '../../../components/common/SerpPreview';
@@ -30,6 +31,7 @@ const ROBOTS_OPTIONS = [
 
 export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
   const router = useRouter();
+  const { user, loading: authLoading, hasAnyRole } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,20 +53,11 @@ export default function SEO({ brandSlug = 'crosscoin', brand = null } = {}) {
     meta_image: null
   });
 
-  // Check admin access
+  // Backend SEO page routes are isProductManager → admin OR product_manager.
+  const canManage = !!user && hasAnyRole(['admin', 'product_manager']);
   useEffect(() => {
-    const checkAdminAccess = async () => {
-      try {
-        const userData = await userService.getCurrentUser();
-        if (!userData || userData.role !== 'admin') {
-          router.push('/dashboard');
-        }
-      } catch (error) {
-        router.push('/dashboard');
-      }
-    };
-    checkAdminAccess();
-  }, [router]);
+    if (!authLoading && !canManage) router.push('/dashboard');
+  }, [canManage, authLoading, router]);
 
   // Fetch SEO data
   const fetchSEOData = async () => {

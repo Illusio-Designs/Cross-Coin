@@ -24,8 +24,8 @@ const Loader = ({ className = "" }) => {
           width: 42,
           height: 42,
           borderRadius: "50%",
-          border: "3px solid rgba(24, 13, 62, 0.12)",
-          borderTopColor: "#180D3E",
+          border: "3px solid var(--ds-color-border)",
+          borderTopColor: "var(--ds-color-text)",
           animation: "cc-spin 0.9s linear infinite",
         }}
       />

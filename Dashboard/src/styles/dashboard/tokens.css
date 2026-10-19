@@ -34,6 +34,10 @@
   --ds-color-info:         #2563eb;
   --ds-color-info-bg:      #eff6ff;
   --ds-color-info-bd:      #bfdbfe;
+  /* Secondary accent (purple) — returns, refunds, "booked"-type chips. */
+  --ds-color-accent2:      #6d28d9;
+  --ds-color-accent2-bg:   #f5f3ff;
+  --ds-color-accent2-bd:   #ddd6fe;
 
   /* ── Color: neutral ──────────────────────────────────────────────── */
   --ds-color-bg:           #f6f6f7;       /* dashboard canvas */
@@ -126,6 +130,19 @@
   --ds-color-warn-bg:      #2a2110;
   --ds-color-danger-bg:    #2a1414;
   --ds-color-info-bg:      #101d33;
+
+  /* Status foregrounds + borders lighten so they pass AA on the dark bgs. */
+  --ds-color-success:      #4ade80;
+  --ds-color-success-bd:   #1f5a37;
+  --ds-color-warn:         #fbbf24;
+  --ds-color-warn-bd:      #5a4718;
+  --ds-color-danger:       #f87171;
+  --ds-color-danger-bd:    #5c2626;
+  --ds-color-info:         #60a5fa;
+  --ds-color-info-bd:      #1f3b66;
+  --ds-color-accent2:      #c4b5fd;
+  --ds-color-accent2-bg:   #241a3d;
+  --ds-color-accent2-bd:   #43347a;
 
   --ds-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.4);
   --ds-shadow-md:  0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);

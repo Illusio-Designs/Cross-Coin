@@ -64,13 +64,13 @@
 }
 
 .drp-trigger:hover {
-  border-color: #0a0a0a;
+  border-color: var(--ds-color-text);
   background: var(--ds-color-surface);
 }
 
 .drp-trigger--active {
-  border-color: #0a0a0a;
-  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+  border-color: var(--ds-color-text);
+  box-shadow: 0 0 0 3px var(--ds-color-surface-soft);
   background: var(--ds-color-surface);
 }
 
@@ -82,8 +82,8 @@
 .drp-apply-btn {
   height: 34px;
   padding: 0 16px;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   border: none;
   border-radius: 8px;
   font-size: 12.5px;
@@ -94,7 +94,7 @@
 }
 
 .drp-apply-btn:hover {
-  background: #262626;
+  background: var(--ds-color-brand-strong);
 }
 
 .drp-apply-btn:active {
@@ -189,8 +189,8 @@
 }
 
 .drp-preset-btn:hover {
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
 }
 
 /* ── Calendar Wrapper ── */
@@ -309,8 +309,8 @@
 
 .drp-cal-start,
 .drp-cal-end {
-  background: #0a0a0a !important;
-  color: #fff !important;
+  background: var(--ds-color-brand) !important;
+  color: var(--ds-color-bg) !important;
   font-weight: 700;
   border-radius: 8px;
 }

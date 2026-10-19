@@ -265,6 +265,8 @@
   border: 1px solid transparent;
   text-transform: capitalize;
 }
+/* Per-status colours (.status-badge.status-*) live in the consolidated,
+   token-driven tone mapping near the end of this file. */
 /* Demo-style dotted pill: a small dot in the current text colour. */
 .status-badge::before {
   content: "";
@@ -273,18 +275,6 @@
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
-}
-
-.status-badge.status-synced {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border: 1px solid #4ade80;
-}
-
-.status-badge.status-unsynced {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #f87171;
 }
 
 /* Label Download Link */
@@ -310,54 +300,6 @@
   box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
 
-.status-badge.status-pending {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #fbbf24;
-}
-
-.status-badge.status-processing {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border: 1px solid #60a5fa;
-}
-
-.status-badge.status-shipped {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  color: #7c2d12;
-  border: 1px solid #f97316;
-}
-
-.status-badge.status-delivered {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border: 1px solid #4ade80;
-}
-
-.status-badge.status-cancelled {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #f87171;
-}
-
-.status-badge.status-paid {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border: 1px solid #4ade80;
-}
-
-.status-badge.status-cod {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #fbbf24;
-}
-
-.status-badge.status-prepaid {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border: 1px solid #4ade80;
-}
-
 /* Payment-type chip (Payment Type column). Flat pills, kept visually
    distinct from the Payment Status column: prepaid reads indigo, COD slate. */
 .pay-chip {
@@ -372,93 +314,7 @@
   white-space: nowrap;
   line-height: 1.5;
 }
-.pay-chip.pay-prepaid { color: #4338ca; background: #eef0fe; }
-.pay-chip.pay-cod     { color: #475569; background: #eff1f5; }
-
-/* New FShip Status Badges */
-.status-badge.status-booked {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #3730a3;
-  border: 1px solid #818cf8;
-}
-
-.status-badge.status-pickup-initiated {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #3730a3;
-  border: 1px solid #a5b4fc;
-}
-
-.status-badge.status-manifested {
-  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-  color: #155e75;
-  border: 1px solid #22d3ee;
-}
-
-.status-badge.status-in-transit {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  color: #9a3412;
-  border: 1px solid #fb923c;
-}
-
-.status-badge.status-out-for-delivery {
-  background: linear-gradient(135deg, #d9f99d 0%, #bef264 100%);
-  color: #365314;
-  border: 1px solid #84cc16;
-}
-
-.status-badge.status-undelivered {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  color: #7f1d1d;
-  border: 1px solid #dc2626;
-}
-
-.status-badge.status-rto {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #f59e0b;
-}
-
-.status-badge.status-rto-delivered {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  color: #475569;
-  border: 1px solid #94a3b8;
-}
-
-.status-badge.status-order-cancelled {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #f87171;
-}
-
-.status-badge.status-exception {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  color: #7f1d1d;
-  border: 1px solid #dc2626;
-}
-
-.status-badge.status-awaiting-confirmation {
-  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-  color: #9a3412;
-  border: 1px solid #fb923c;
-}
-
-.status-badge.status-confirmed {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border: 1px solid #60a5fa;
-}
-
-.status-badge.status-return-initiated {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #f59e0b;
-}
-
-.status-badge.status-returned-rto {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  color: #475569;
-  border: 1px solid #94a3b8;
-}
+/* .pay-prepaid / .pay-cod colours: see the token-driven override near the end of this file. */
 
 /* Clear search button */
 .clear-search-btn {
@@ -1030,31 +886,6 @@
   }
 }
 
-/* Order Status Specific Badges */
-.status-badge.status-processing {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border: 1px solid #60a5fa;
-}
-
-.status-badge.status-shipped {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  color: #7c2d12;
-  border: 1px solid #f97316;
-}
-
-.status-badge.status-delivered {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border: 1px solid #4ade80;
-}
-
-.status-badge.status-cancelled {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #f87171;
-}
-
 /* Enhanced Table Styling */
 .common-table {
   width: 100%;
@@ -1326,21 +1157,21 @@
 }
 
 .rto-badge.rto-high {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--ds-color-danger-bg);
+  color: var(--ds-color-danger);
+  border: 1px solid var(--ds-color-danger-bd);
 }
 
 .rto-badge.rto-medium {
   background: var(--ds-color-warn-bg);
   color: var(--ds-color-warn);
-  border: 1px solid #fde68a;
+  border: 1px solid var(--ds-color-warn-bd);
 }
 
 .rto-badge.rto-low {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
+  border: 1px solid var(--ds-color-success-bd);
 }
 
 /* Date Time Cell */
@@ -1372,19 +1203,19 @@
   background: var(--ds-color-surface);
   cursor: pointer;
   transition: all 0.2s ease;
-  accent-color: #3b82f6;
+  accent-color: var(--ds-color-brand);
 }
 
 .bulk-select-checkbox:checked,
 .order-select-checkbox:checked {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--ds-color-brand);
+  border-color: var(--ds-color-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-color-brand) 12%, transparent);
 }
 
 .bulk-select-checkbox:hover,
 .order-select-checkbox:hover {
-  border-color: #3b82f6;
+  border-color: var(--ds-color-brand);
   transform: scale(1.05);
 }
 
@@ -2323,31 +2154,6 @@
 }
 
 
-/* Payment Status Badges - New Statuses */
-.status-badge.status-failed {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #f87171;
-}
-
-.status-badge.status-refunded {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #fbbf24;
-}
-
-.status-badge.status-refund-pending {
-  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-  color: #9a3412;
-  border: 1px solid #fb923c;
-}
-
-.status-badge.status-unknown {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: var(--ds-color-text-muted);
-  border: 1px solid var(--ds-color-border);
-}
-
 /* Stat Badge for Payment Statuses */
 .stat-badge.failed { 
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
@@ -2501,9 +2307,9 @@
   height: 15px;
 }
 .order-sync-main-btn:hover:not(:disabled) {
-  background: #0a0a0a;
-  border-color: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  border-color: var(--ds-color-brand);
+  color: var(--ds-color-bg);
 }
 .order-sync-main-btn:disabled {
   opacity: 0.5;
@@ -2512,7 +2318,7 @@
 .order-sync-main-btn.syncing {
   background: var(--ds-color-text-muted);
   border-color: var(--ds-color-text-muted);
-  color: #fff;
+  color: var(--ds-color-bg);
 }
 
 /* Filters section */
@@ -2723,12 +2529,12 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #c62828;
+  color: var(--ds-color-danger);
   margin-bottom: 8px;
 }
 
 .odm-sync-error-title svg {
-  stroke: #d32f2f;
+  stroke: var(--ds-color-danger);
 }
 
 .odm-sync-error-list {
@@ -2739,7 +2545,7 @@
 
 .odm-sync-error-list li {
   font-size: 12px;
-  color: #b71c1c;
+  color: var(--ds-color-danger);
   padding: 3px 0 3px 16px;
   position: relative;
 }
@@ -2748,7 +2554,7 @@
   content: '•';
   position: absolute;
   left: 4px;
-  color: #d32f2f;
+  color: var(--ds-color-danger);
 }
 
 /* Guest badge */
@@ -2782,12 +2588,12 @@
 }
 
 .order-sync-btn {
-  background: #e8f5e9;
-  color: #1a7a4a;
+  background: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
 }
 
 .order-sync-btn:hover:not(.disabled) {
-  background: #c8e6c9;
+  background: color-mix(in srgb, var(--ds-color-success) 18%, var(--ds-color-success-bg));
 }
 
 .order-sync-btn.disabled {
@@ -2815,12 +2621,12 @@
 }
 
 .order-label-btn {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--ds-color-info-bg);
+  color: var(--ds-color-info);
 }
 
 .order-label-btn:hover:not(.disabled) {
-  background: #bfdbfe;
+  background: color-mix(in srgb, var(--ds-color-info) 18%, var(--ds-color-info-bg));
 }
 
 .order-label-btn.disabled {
@@ -2830,12 +2636,12 @@
 }
 
 .order-confirm-btn {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
 }
 
 .order-confirm-btn:hover {
-  background: #c8e6c9;
+  background: color-mix(in srgb, var(--ds-color-success) 18%, var(--ds-color-success-bg));
 }
 
 /* Export section */
@@ -3057,7 +2863,7 @@
 }
 
 .awb-input:focus {
-  border-color: #0a0a0a;
+  border-color: var(--ds-color-text);
 }
 
 @media (max-width: 768px) {
@@ -3110,7 +2916,7 @@
 
 /* Card block */
 .odm-card {
-  border: 1px solid #e7eaef;
+  border: 1px solid var(--ds-color-border);
   border-radius: 12px;
   overflow: hidden;
   background: var(--ds-color-surface);
@@ -3133,8 +2939,8 @@
 
 .odm-count {
   margin-left: auto;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
   font-size: 11px;
   font-weight: 700;
   padding: 1px 7px;
@@ -3197,8 +3003,8 @@
   margin-left: 6px;
   font-size: 10px;
   font-weight: 600;
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--ds-color-accent2-bg);
+  color: var(--ds-color-accent2);
   padding: 1px 7px;
   border-radius: 20px;
   vertical-align: middle;
@@ -3216,15 +3022,15 @@
 }
 
 .odm-pay-badge.cod {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fbbf24;
+  background: var(--ds-color-warn-bg);
+  color: var(--ds-color-warn);
+  border: 1px solid var(--ds-color-warn-bd);
 }
 
 .odm-pay-badge.prepaid {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #4ade80;
+  background: var(--ds-color-success-bg);
+  color: var(--ds-color-success);
+  border: 1px solid var(--ds-color-success-bd);
 }
 
 /* Order info 2-col grid */
@@ -3276,15 +3082,15 @@
   gap: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
-  background: #0a0a0a;
+  color: var(--ds-color-bg);
+  background: var(--ds-color-brand);
   padding: 3px 10px;
   border-radius: 6px;
   text-decoration: none;
   transition: background 0.2s;
 }
 
-.odm-label-link:hover { background: #0e0826; }
+.odm-label-link:hover { background: color-mix(in srgb, var(--ds-color-brand) 85%, var(--ds-color-bg)); }
 
 /* ── Product item rows ── */
 .odm-items {
@@ -3299,7 +3105,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid var(--ds-color-border-soft);
 }
 
 .odm-item:last-child { border-bottom: none; }
@@ -3400,8 +3206,8 @@
   align-items: center;
   padding: 9px 16px;
   font-size: 13px;
-  color: #444;
-  border-bottom: 1px solid #f1f3f4;
+  color: var(--ds-color-text-muted);
+  border-bottom: 1px solid var(--ds-color-border-soft);
 }
 
 .odm-summary-row:last-child { border-bottom: none; }
@@ -3524,11 +3330,15 @@
 
 /* ── Header button variants (monochrome, prototype style) ────────────── */
 .order-sync-main-btn--primary {
-  background: #0a0a0a;
-  color: #fff;
-  border-color: #0a0a0a;
+  background: var(--ds-color-brand);
+  color: var(--ds-color-bg);
+  border-color: var(--ds-color-brand);
 }
-.order-sync-main-btn--primary:hover:not(:disabled) { background: #262626; border-color: #262626; color: #fff; }
+.order-sync-main-btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-color-brand) 85%, var(--ds-color-bg));
+  border-color: color-mix(in srgb, var(--ds-color-brand) 85%, var(--ds-color-bg));
+  color: var(--ds-color-bg);
+}
 /* Ghost = identical to the base outline button so every header control
    (Refresh Tracking, Filter, date trigger) reads as one consistent set. */
 .order-sync-main-btn--ghost {
@@ -3536,7 +3346,7 @@
   color: var(--ds-color-text);
   background: var(--ds-color-surface);
 }
-.order-sync-main-btn--ghost:hover:not(:disabled) { color: #fff; border-color: #0a0a0a; background: #0a0a0a; }
+.order-sync-main-btn--ghost:hover:not(:disabled) { color: var(--ds-color-bg); border-color: var(--ds-color-brand); background: var(--ds-color-brand); }
 
 /* ── Status tabs — segmented control like the prototype ──────────────── */
 .ord-tabs {
@@ -3656,7 +3466,7 @@
 .oa-form input::placeholder,
 .oa-form textarea::placeholder { color: var(--ds-color-text-faint); }
 .oa-form input:focus,
-.oa-form textarea:focus { outline: none; border-color: #0a0a0a; background: var(--ds-color-surface); }
+.oa-form textarea:focus { outline: none; border-color: var(--ds-color-text); background: var(--ds-color-surface); }
 .oa-row { display: flex; gap: 10px; }
 .oa-row > label { flex: 1 1 0; min-width: 0; }
 /* While editing, the shipping card spans the full panel width so the
