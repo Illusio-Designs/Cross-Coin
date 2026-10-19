@@ -99,6 +99,9 @@ router.post('/check-address-quality',   zValidateBody(checkAddressQualitySchema)
 // tries iThink + Shipping secrets in order and accepts whichever matches —
 // so the brand can toggle SHIPPING_PROVIDER without re-routing webhooks.
 // Both /shipping/webhook and /fship/webhook (legacy) hit the same handler.
+// GET answers courier panels that validate the URL with a plain request
+// before enabling deliveries (a 404 makes them refuse the webhook).
+router.get('/shipping/webhook', (req, res) => res.json({ success: true, message: 'Webhook endpoint reachable. Deliveries must be POSTed.' }));
 router.post('/shipping/webhook',        verifyWebhookSignature('shipping'), handleShippingWebhook);
 router.post('/fship/webhook',           verifyWebhookSignature('fship'),    handleShippingWebhook);  // legacy alias
 

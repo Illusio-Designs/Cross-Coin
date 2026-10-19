@@ -394,8 +394,12 @@ module.exports.handleShippingWebhook = async (req, res) => {
     const rto_reason    = pick('rto_reason', 'return_reason', 'ndr_reason');
 
     if (!waybill && !order_id) {
+      // iThink's webhook panel sends a test/verification request with a sample
+      // or empty body. A 400 here makes the panel mark the URL invalid and stop
+      // deliveries entirely, so acknowledge pings with a 200 instead.
       await transaction.rollback();
-      return res.status(400).json({ message: "Waybill or Order ID is required" });
+      logger.info('🔔 Shipping webhook ping (no waybill/order id) — acknowledged.');
+      return res.status(200).json({ success: true, message: 'Webhook endpoint reachable' });
     }
 
     // ── Deduplicate + persist the raw event ──────────────────────────────────
