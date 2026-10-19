@@ -437,7 +437,7 @@ const setupDatabase = async () => {
         CREATE TABLE IF NOT EXISTS order_shipments (
           id INT AUTO_INCREMENT PRIMARY KEY,
           order_id INT NOT NULL,
-          provider VARCHAR(50) NOT NULL DEFAULT 'fship',
+          provider VARCHAR(50) NOT NULL DEFAULT 'ithink',
           provider_order_id VARCHAR(255),
           waybill VARCHAR(255),
           tracking_number VARCHAR(100),
@@ -483,7 +483,7 @@ const setupDatabase = async () => {
             created_at, updated_at
           )
           SELECT
-            o.id, 'fship', o.shipping_order_id, o.shipping_waybill,
+            o.id, 'ithink', o.shipping_order_id, o.shipping_waybill,
             COALESCE(o.shipping_tracking_number, o.tracking_number),
             o.tracking_url, o.shipping_route_code, o.shipping_courier_id, o.courier_name,
             o.shipping_label_url, o.shipping_label_downloaded, o.shipping_label_downloaded_at,
@@ -666,74 +666,6 @@ const setupDatabase = async () => {
       console.log("⚠️ Slug cleanup skipped:", slugErr.message);
     }
 
-    // Seed default SEO rows for every known public storefront page so admins
-    // don't start with a blank dashboard. Uses INSERT IGNORE on the
-    // (page_name, brand_id) unique key — admin edits are never overwritten.
-    console.log("Seeding default SEO metadata rows...");
-    try {
-      const SEO_DEFAULTS = [
-        // page_name | slug | title | description | optional canonical (relative path)
-        ['home',           '/',                'CrossCoin — Premium Online Shopping in India',  'Shop premium products at CrossCoin. Free shipping, easy returns and secure payments.',                                      '/'],
-        ['about',          '/About',           'About CrossCoin — Our Story',                   "Learn about CrossCoin, our mission and the team behind India's trusted online store.",                                       '/About'],
-        ['contact',        '/Contact',         "Contact CrossCoin — We're Here to Help",        'Get in touch with CrossCoin support. Email, phone and WhatsApp for orders, returns and product queries.',                  '/Contact'],
-        ['categories',     '/Collections',     'Shop by Collection — CrossCoin',                'Browse curated collections at CrossCoin. Find premium products across every category.',                                     '/Collections'],
-        ['products',       '/Products',        'All Products — CrossCoin',                      'Browse the full catalog at CrossCoin. Filter by category, price and brand to find what you need.',                          '/Products'],
-        ['blog',           '/blog',            'CrossCoin Journal — Buying Guides & News',      'Read product guides, buying tips and brand news from CrossCoin.',                                                          '/blog'],
-        ['blog-details',   '/blog-details',    'Article — CrossCoin Journal',                   'Read this article on CrossCoin.',                                                                                          null],
-        ['wishlist',       '/Wishlist',        'Your Wishlist — CrossCoin',                     "Items you've saved on CrossCoin.",                                                                                          '/Wishlist'],
-        ['search',         '/SearchResults',   'Search Results — CrossCoin',                    'Search results on CrossCoin.',                                                                                             null],
-        ['profile',        '/profile',         'My Account — CrossCoin',                        'Manage your orders, addresses and preferences.',                                                                           '/profile'],
-        ['order-tracking', '/OrderTracking',   'Track Your Order — CrossCoin',                  'Track your CrossCoin order by order number or AWB.',                                                                       '/OrderTracking'],
-        ['thank-you',      '/ThankYou',        'Thank You — CrossCoin',                         'Thanks for your order!',                                                                                                   null],
-      ];
-
-      // Pages that should never be indexed (login-walled / personalized /
-      // post-conversion / parameterized search).
-      const NOINDEX = new Set(['wishlist', 'search', 'profile', 'order-tracking', 'thank-you']);
-
-      // Detect what site URL to use as base for absolute canonicals.
-      const siteUrl = (process.env.FRONTEND_URL || 'https://crosscoin.in').replace(/\/+$/, '');
-
-      for (const [pageName, slug, title, description, canonical] of SEO_DEFAULTS) {
-        const canonicalUrl = canonical ? `${siteUrl}${canonical}` : null;
-        const robots = NOINDEX.has(pageName) ? 'noindex, follow' : 'index, follow, max-image-preview:large';
-        await sequelize.query(
-          `INSERT IGNORE INTO seo_metadata
-             (page_name, slug, meta_title, meta_description, canonical_url, robots, brand_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-          { replacements: [pageName, slug, title, description, canonicalUrl, robots] }
-        );
-      }
-
-      // Auto-seed one SEO row per existing policy (page_name = policy-<title-slug>).
-      const [polRows] = await sequelize.query(
-        `SELECT id, title FROM policies WHERE brand_id IS NULL OR brand_id = 1`
-      );
-      for (const p of polRows) {
-        const slug = String(p.title || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        if (!slug) continue;
-        const pageName = `policy-${slug}`;
-        const canonicalUrl = `${siteUrl}/policy/${slug}`;
-        await sequelize.query(
-          `INSERT IGNORE INTO seo_metadata
-             (page_name, slug, meta_title, meta_description, canonical_url, robots, brand_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'index, follow', 1, NOW(), NOW())`,
-          {
-            replacements: [
-              pageName,
-              `/policy/${slug}`,
-              `${p.title} — CrossCoin`,
-              `${p.title} for CrossCoin. Please review carefully.`,
-              canonicalUrl,
-            ],
-          }
-        );
-      }
-
-      console.log(`✓ Seeded ${SEO_DEFAULTS.length} static page SEO rows + ${polRows.length} policy rows (INSERT IGNORE)`);
-    } catch (seedErr) {
-      console.log("⚠️ Default SEO seeding skipped:", seedErr.message);
-    }
 
     // Ensure faqs table exists (SEO Phase A — global + per-product/category/page FAQs).
     // The model is picked up by the auto-loader above, but we mirror the
@@ -907,18 +839,6 @@ const setupDatabase = async () => {
       );
     }
 
-
-    // Drop the removed Reels / Instagram-Feed feature tables (idempotent).
-    // Child tables first so foreign keys don't block the drop.
-    console.log("Dropping removed reel/instagram tables (if present)...");
-    try {
-      await sequelize.query(`DROP TABLE IF EXISTS reel_products`);
-      await sequelize.query(`DROP TABLE IF EXISTS reels`);
-      await sequelize.query(`DROP TABLE IF EXISTS instagram_post_products`);
-      console.log("✓ Reel/Instagram tables dropped");
-    } catch (dropError) {
-      console.log("⚠️ Reel/Instagram table drop skipped:", dropError.message);
-    }
 
     // Ensure WhatsApp chat tables exist.
     console.log("Ensuring WhatsApp conversation tables...");
@@ -1279,33 +1199,6 @@ const setupDatabase = async () => {
       `);
       console.log("✓ Migration 002 completed");
       
-      // Migration 003 (rewritten): the app records coupon redemptions in
-      // coupon_usages (the Sequelize model); the singular coupon_usage table
-      // was a legacy duplicate this migration used to recreate on every boot.
-      // Now it drops the legacy table instead — but only when it is empty, so
-      // a DB where something unexpectedly wrote rows is left for a human.
-      console.log("Running migration 003: drop legacy coupon_usage (singular) if empty...");
-      try {
-        const [[legacy]] = await sequelize.query(`
-          SELECT COUNT(*) AS n FROM INFORMATION_SCHEMA.TABLES
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupon_usage'
-        `);
-        if (Number(legacy.n) > 0) {
-          const [[rows]] = await sequelize.query('SELECT COUNT(*) AS n FROM coupon_usage');
-          if (Number(rows.n) === 0) {
-            await sequelize.query('DROP TABLE coupon_usage');
-            console.log('  ✓ Dropped empty legacy coupon_usage table');
-          } else {
-            console.log(`  ⚠️ coupon_usage has ${rows.n} rows — left in place for manual review`);
-          }
-        } else {
-          console.log('  ✓ Legacy coupon_usage already gone');
-        }
-        console.log("✓ Migration 003 completed");
-      } catch (e) {
-        console.log("⚠️ Migration 003 skipped:", e.message);
-      }
-      
       // Migration 004: webhooks_log table for Razorpay webhook deduplication
       console.log("Running migration 004: Create webhooks_log table...");
       await sequelize.query(`
@@ -1513,77 +1406,6 @@ const setupDatabase = async () => {
         console.log("⚠️ Migration 013 skipped:", e.message);
       }
 
-      // Migration 014: de-brand the label-download audit table. It logs every
-      // admin label download (who, which order, when, single/bulk, IP) for ANY
-      // courier, so the legacy fship_ prefix was misleading. Renames in place
-      // when the old table exists and the new one doesn't; fresh installs just
-      // create shipping_label_downloads via the model and both branches no-op.
-      console.log("Running migration 014: rename fship_label_downloads → shipping_label_downloads...");
-      try {
-        const [tables] = await sequelize.query(`
-          SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME IN ('fship_label_downloads', 'shipping_label_downloads')
-        `);
-        const names = new Set(tables.map((r) => r.TABLE_NAME));
-        if (names.has('fship_label_downloads') && !names.has('shipping_label_downloads')) {
-          await sequelize.query('RENAME TABLE fship_label_downloads TO shipping_label_downloads');
-          console.log('  ✓ Renamed fship_label_downloads to shipping_label_downloads');
-        } else {
-          console.log('  ✓ shipping_label_downloads already in place');
-        }
-        console.log("✓ Migration 014 completed");
-      } catch (e) {
-        console.log("⚠️ Migration 014 skipped:", e.message);
-      }
-
-      // Migration 015: de-brand the orders table — the shipping columns were
-      // created in the FShip era but now hold iThink (any-courier) data. Each
-      // rename fires only when the old column exists and the new one doesn't,
-      // so re-runs and fresh installs no-op. The old idx_fship_sync_status
-      // index is dropped; the idempotent index block above re-adds it under
-      // the new name.
-      console.log("Running migration 015: rename orders fship_* columns → shipping_*...");
-      try {
-        const RENAMES = [
-          ['fship_order_id', 'shipping_order_id', 'VARCHAR(255) NULL'],
-          ['fship_waybill', 'shipping_waybill', 'VARCHAR(255) NULL'],
-          ['fship_route_code', 'shipping_route_code', 'VARCHAR(255) NULL'],
-          ['fship_courier_id', 'shipping_courier_id', 'INT NULL'],
-          ['fship_label_url', 'shipping_label_url', 'TEXT NULL'],
-          ['fship_label_downloaded', 'shipping_label_downloaded', 'TINYINT(1) NULL DEFAULT 0'],
-          ['fship_label_downloaded_at', 'shipping_label_downloaded_at', 'DATETIME NULL'],
-          ['fship_label_downloaded_by', 'shipping_label_downloaded_by', 'INT NULL'],
-          ['fship_tracking_number', 'shipping_tracking_number', 'VARCHAR(100) NULL'],
-          ['fship_last_synced_at', 'shipping_last_synced_at', 'DATETIME NULL'],
-          ['fship_sync_status', 'shipping_sync_status', "ENUM('pending','syncing','synced','failed') NULL DEFAULT 'pending'"],
-          ['fship_sync_attempts', 'shipping_sync_attempts', 'INT NULL DEFAULT 0'],
-          ['fship_sync_error', 'shipping_sync_error', 'TEXT NULL'],
-        ];
-        const [cols] = await sequelize.query(`
-          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
-        `);
-        const have = new Set(cols.map((c) => c.COLUMN_NAME));
-        for (const [oldCol, newCol, def] of RENAMES) {
-          if (have.has(oldCol) && !have.has(newCol)) {
-            await sequelize.query(`ALTER TABLE orders CHANGE \`${oldCol}\` \`${newCol}\` ${def}`);
-            console.log(`  ✓ ${oldCol} → ${newCol}`);
-          }
-        }
-        const [idx] = await sequelize.query(`
-          SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
-          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND INDEX_NAME = 'idx_fship_sync_status'
-        `);
-        if (idx.length) {
-          await sequelize.query('ALTER TABLE orders DROP INDEX idx_fship_sync_status');
-          console.log('  ✓ Dropped legacy idx_fship_sync_status');
-        }
-        console.log("✓ Migration 015 completed");
-      } catch (e) {
-        console.log("⚠️ Migration 015 skipped:", e.message);
-      }
-
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Migration warning:", migrationError.message);
@@ -1598,9 +1420,6 @@ const setupDatabase = async () => {
     console.log("Creating brands table...");
     await createBrandsTable();
 
-    // Create slider_brands table
-    console.log("Creating slider_brands table...");
-    // await createSliderBrandsTable(); // Temporarily disabled - function defined later in file
 
     // Bootstrap an admin ONLY on a database that has none, and only with
     // credentials supplied via env (ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD) —
@@ -1627,9 +1446,6 @@ const setupDatabase = async () => {
 
     console.log("✓ Database setup completed successfully!");
     
-    // Create RTO stock restoration table
-    console.log("\nCreating RTO stock restoration table...");
-    await createRTOStockRestorationTable();
     
     // Add brand_id column to payments if it doesn't exist
     console.log("\nEnsuring brand_id column exists in payments table...");
@@ -1655,28 +1471,14 @@ const setupDatabase = async () => {
       console.log("⚠️ Error checking/adding brand_id column:", error.message);
     }
     
-    // Fix category image paths
-    console.log("\nFixing category image paths...");
-    await fixCategoryImagePaths();
     
-    // Fix corrupted product image URLs
-    console.log("\nFixing corrupted product image URLs...");
-    await fixProductImageUrls();
     
     // Update coupon table with new fields
     console.log("\nUpdating coupon table with new fields...");
     await updateCouponTable();
     
-    // Add shipping_last_synced_at column to orders table
-    console.log("\nAdding shipping_last_synced_at column to orders table...");
-    await addFshipLastSyncedAtColumn();
     
-    // Add shipping_sync_error column to orders table
-    console.log("\nAdding shipping_sync_error column to orders table...");
-    await addFshipSyncErrorColumn();
     
-    // Create performance optimization indexes
-    await createPerformanceIndexes();
 
     // Create blog tables
     console.log("\nCreating blog tables...");
@@ -1703,207 +1505,9 @@ const setupDatabase = async () => {
 
 
 
-// Function to fix category image paths
-const fixCategoryImagePaths = async () => {
-  try {
-    const { Category } = require('../model/categoryModel');
-    
-    console.log('Checking category image paths...');
-    
-    // Get all categories
-    const categories = await Category.findAll();
-    
-    let fixed = 0;
-    
-    for (const category of categories) {
-      if (category.image && category.image.includes('//uploads/')) {
-        // Remove duplicate /uploads/categories/ paths
-        let cleanPath = category.image;
-        
-        // Keep removing duplicate paths until clean
-        while (cleanPath.includes('//uploads/categories/')) {
-          cleanPath = cleanPath.replace('//uploads/categories/', '/');
-        }
-        
-        // Extract just the filename
-        const filename = cleanPath.split('/').pop();
-        
-        console.log(`  Fixing category ${category.id}: ${category.name}`);
-        console.log(`    Old: ${category.image}`);
-        console.log(`    New: ${filename}`);
-        
-        // Update with just the filename
-        await category.update({ image: filename });
-        fixed++;
-      }
-    }
-    
-    if (fixed > 0) {
-      console.log(`✓ Fixed ${fixed} category image paths`);
-    } else {
-      console.log('✓ All category image paths are already correct');
-    }
-  } catch (error) {
-    console.error('⚠️ Error fixing category image paths:', error.message);
-  }
-};
 
-// Function to fix corrupted product image URLs
-const fixProductImageUrls = async () => {
-  try {
-    const { ProductSEO } = require('../model/associations.js');
-    const { Op } = require('sequelize');
-    
-    console.log('Checking for corrupted ogImage URLs...');
-    
-    // Find all ProductSEO records with corrupted ogImage URLs
-    const corruptedRecords = await ProductSEO.findAll({
-      where: {
-        ogImage: {
-          [Op.and]: [
-            { [Op.not]: null },
-            { [Op.like]: 'https://api.crosscoin.in%' },
-            { [Op.notLike]: 'https://api.crosscoin.in/uploads/%' }
-          ]
-        }
-      }
-    });
-    
-    console.log(`Found ${corruptedRecords.length} records with corrupted ogImage URLs`);
-    
-    let fixedCount = 0;
-    
-    for (const record of corruptedRecords) {
-      const originalUrl = record.ogImage;
-      
-      // Extract the filename from the corrupted URL
-      // Example: "https://api.crosscoin.invariation_0_image-1753379446299-705405863.png"
-      // Should become: "https://api.crosscoin.in/uploads/products/variation_0_image-1753379446299-705405863.png"
-      
-      if (originalUrl.includes('variation_') && originalUrl.endsWith('.png')) {
-        // Extract filename after the last occurrence of 'in'
-        const parts = originalUrl.split('in');
-        if (parts.length > 1) {
-          const filename = parts[parts.length - 1];
-          const fixedUrl = `https://api.crosscoin.in/uploads/products/${filename}`;
-          
-          await record.update({ ogImage: fixedUrl });
-          console.log(`  Fixed ogImage: ${originalUrl} -> ${fixedUrl}`);
-          fixedCount++;
-        }
-      }
-    }
-    
-    // Also fix structured data that might have corrupted image URLs
-    const recordsWithStructuredData = await ProductSEO.findAll({
-      where: {
-        structuredData: {
-          [Op.not]: null
-        }
-      }
-    });
-    
-    let structuredDataFixedCount = 0;
-    
-    for (const record of recordsWithStructuredData) {
-      try {
-        const structuredData = JSON.parse(record.structuredData);
-        
-        if (structuredData.image && typeof structuredData.image === 'string') {
-          const originalImageUrl = structuredData.image;
-          
-          // Fix corrupted image URLs in structured data
-          if (originalImageUrl.includes('api.crosscoin.in') && 
-              !originalImageUrl.includes('/uploads/products/') &&
-              originalImageUrl.includes('variation_')) {
-            
-            const parts = originalImageUrl.split('in');
-            if (parts.length > 1) {
-              const filename = parts[parts.length - 1];
-              const fixedUrl = `https://api.crosscoin.in/uploads/products/${filename}`;
-              
-              structuredData.image = fixedUrl;
-              
-              await record.update({ 
-                structuredData: JSON.stringify(structuredData) 
-              });
-              
-              console.log(`  Fixed structured data image: ${originalImageUrl} -> ${fixedUrl}`);
-              structuredDataFixedCount++;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`  Error parsing structured data for record ${record.id}:`, error.message);
-      }
-    }
-    
-    if (fixedCount > 0 || structuredDataFixedCount > 0) {
-      console.log(`✓ Fixed ${fixedCount} ogImage URLs`);
-      console.log(`✓ Fixed ${structuredDataFixedCount} structured data image URLs`);
-    } else {
-      console.log('✓ All product image URLs are already correct');
-    }
-  } catch (error) {
-    console.error('⚠️ Error fixing product image URLs:', error.message);
-  }
-};
 
-const findAvailablePort = async (startPort) => {
-  const net = require("net");
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.on("error", (err) => {
-      if (err.code === "EADDRINUSE") {
-        resolve(findAvailablePort(startPort + 1));
-      } else {
-        reject(err);
-      }
-    });
-    server.listen(startPort, () => {
-      server.close(() => {
-        resolve(startPort);
-      });
-    });
-  });
-};
 
-// Function to create RTO stock restoration table
-const createRTOStockRestorationTable = async () => {
-  try {
-    console.log('Creating RTO stock restoration table...');
-
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS rto_stock_restoration (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        order_id INT NOT NULL,
-        order_number VARCHAR(255) NOT NULL,
-        product_id INT NOT NULL,
-        variation_id INT NULL,
-        quantity_restored INT NOT NULL,
-        stock_before INT NOT NULL DEFAULT 0,
-        stock_after INT NOT NULL DEFAULT 0,
-        restored_by VARCHAR(255) NULL COMMENT 'admin_id or system',
-        notes TEXT NULL,
-        restoration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_order_id (order_id),
-        INDEX idx_product_id (product_id),
-        INDEX idx_variation_id (variation_id),
-        INDEX idx_restoration_date (restoration_date),
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-        FOREIGN KEY (variation_id) REFERENCES product_variations(id) ON DELETE SET NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-    `);
-
-    console.log('✓ RTO stock restoration table created successfully');
-  } catch (error) {
-    console.log('⚠️ RTO stock restoration table creation skipped (table may already exist):', error.message);
-  }
-};
 
 // Function to update coupon table with new fields
 const updateCouponTable = async () => {
@@ -2028,232 +1632,9 @@ const createBrandsTable = async () => {
   }
 };
 
-// Function to create slider_brands table
-const createSliderBrandsTable = async () => {
-  try {
-    console.log('Creating slider_brands table...');
 
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS slider_brands (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        slider_id INT NOT NULL COMMENT 'Reference to sliders table',
-        brand_id INT NOT NULL COMMENT 'Reference to brands table',
-        status ENUM('active', 'inactive') DEFAULT 'active' COMMENT 'Assignment status',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_slider_id (slider_id),
-        INDEX idx_brand_id (brand_id),
-        INDEX idx_status (status),
-        UNIQUE KEY unique_slider_brand (slider_id, brand_id),
-        FOREIGN KEY (slider_id) REFERENCES sliders(id) ON DELETE CASCADE ON UPDATE CASCADE,
-        FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE ON UPDATE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-    `);
 
-    console.log('✓ slider_brands table created successfully');
 
-    // Migrate existing slider brand_id to slider_brands table
-    console.log('Migrating existing slider brand assignments...');
-    
-    const [existingSliders] = await sequelize.query(`
-      SELECT id, brand_id FROM sliders WHERE brand_id IS NOT NULL
-    `);
-
-    if (existingSliders.length > 0) {
-      for (const slider of existingSliders) {
-        // Check if relationship already exists
-        const [existing] = await sequelize.query(`
-          SELECT COUNT(*) as count FROM slider_brands 
-          WHERE slider_id = ${slider.id} AND brand_id = ${slider.brand_id}
-        `);
-
-        if (existing[0].count === 0) {
-          await sequelize.query(`
-            INSERT INTO slider_brands (slider_id, brand_id, status) 
-            VALUES (${slider.id}, ${slider.brand_id}, 'active')
-          `);
-          console.log(`  ✓ Migrated slider ${slider.id} to brand ${slider.brand_id}`);
-        }
-      }
-      console.log(`✓ Migrated ${existingSliders.length} slider brand assignments`);
-    } else {
-      console.log('✓ No existing slider brand assignments to migrate');
-    }
-
-    // Make brand_id nullable in sliders table for backward compatibility
-    await sequelize.query(`
-      ALTER TABLE sliders 
-      MODIFY COLUMN brand_id INT NULL COMMENT 'Legacy brand reference (use slider_brands table instead)'
-    `);
-    console.log('✓ Updated sliders.brand_id to nullable');
-    
-  } catch (error) {
-    console.log('⚠️ Slider brands table creation/migration skipped:', error.message);
-  }
-};
-
-// Function to add shipping_last_synced_at column to orders table
-const addFshipLastSyncedAtColumn = async () => {
-  try {
-    console.log('Checking if shipping_last_synced_at column exists in orders table...');
-
-    // Check if column exists
-    const [columnExists] = await sequelize.query(`
-      SELECT COUNT(*) as count
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'orders' 
-      AND COLUMN_NAME = 'shipping_last_synced_at'
-    `);
-
-    if (columnExists[0].count === 0) {
-      console.log('Adding shipping_last_synced_at column to orders table...');
-      
-      await sequelize.query(`
-        ALTER TABLE orders 
-        ADD COLUMN shipping_last_synced_at DATETIME NULL 
-        COMMENT 'Last time this order was synced with Shipping' 
-        AFTER brand_id
-      `);
-      
-      console.log('✓ shipping_last_synced_at column added successfully');
-    } else {
-      console.log('✓ shipping_last_synced_at column already exists');
-    }
-  } catch (error) {
-    console.log('⚠️ Error adding shipping_last_synced_at column:', error.message);
-  }
-};
-
-// Add shipping_sync_error column to orders table
-const addFshipSyncErrorColumn = async () => {
-  try {
-    console.log('Checking if shipping_sync_error column exists in orders table...');
-
-    const [columnExists] = await sequelize.query(`
-      SELECT COUNT(*) as count
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'orders' 
-      AND COLUMN_NAME = 'shipping_sync_error'
-    `);
-
-    if (columnExists[0].count === 0) {
-      console.log('Adding shipping_sync_error column to orders table...');
-      
-      await sequelize.query(`
-        ALTER TABLE orders 
-        ADD COLUMN shipping_sync_error TEXT NULL 
-        COMMENT 'Validation or sync error details shown on order page' 
-        AFTER shipping_sync_attempts
-      `);
-      
-      console.log('✓ shipping_sync_error column added successfully');
-    } else {
-      console.log('✓ shipping_sync_error column already exists');
-    }
-  } catch (error) {
-    console.log('⚠️ Error adding shipping_sync_error column:', error.message);
-  }
-};
-
-// Function to create performance optimization indexes
-const createPerformanceIndexes = async () => {
-  try {
-    console.log('\n📊 Creating performance optimization indexes...');
-
-    const indexes = [
-      {
-        name: 'idx_orders_user_date',
-        table: 'orders',
-        columns: '(user_id, createdAt DESC)',
-        comment: 'Optimize user order history queries'
-      },
-      {
-        name: 'idx_order_items_product',
-        table: 'order_items',
-        columns: '(order_id, product_id)',
-        comment: 'Optimize order item lookups'
-      },
-      {
-        name: 'idx_badges_user',
-        table: 'badges',
-        columns: '(user_id, badge_type, createdAt DESC)',
-        comment: 'Optimize badge queries by user'
-      },
-      {
-        name: 'idx_transactions_order',
-        table: 'transactions',
-        columns: '(order_id, status, createdAt DESC)',
-        comment: 'Optimize transaction lookups'
-      },
-      {
-        name: 'idx_products_category',
-        table: 'products',
-        columns: '(category_id, is_active, createdAt DESC)',
-        comment: 'Optimize category product listing'
-      },
-      {
-        name: 'idx_variations_product',
-        table: 'product_variations',
-        columns: '(product_id, is_active)',
-        comment: 'Optimize variation lookups'
-      },
-      {
-        name: 'idx_coupons_code_status',
-        table: 'coupons',
-        columns: '(code, is_active, expiry_date)',
-        comment: 'Optimize coupon validation'
-      },
-      {
-        name: 'idx_stock_product_warehouse',
-        table: 'stock',
-        columns: '(product_id, warehouse_id, quantity)',
-        comment: 'Optimize stock checks'
-      },
-      {
-        name: 'idx_payments_brand_id',
-        table: 'payments',
-        columns: '(brand_id)',
-        comment: 'Optimize payment queries by brand'
-      }
-    ];
-
-    let created = 0;
-    let skipped = 0;
-
-    for (const index of indexes) {
-      try {
-        // Check if index already exists
-        const [indexExists] = await sequelize.query(`
-          SELECT COUNT(*) as count
-          FROM INFORMATION_SCHEMA.STATISTICS 
-          WHERE TABLE_SCHEMA = DATABASE() 
-          AND TABLE_NAME = '${index.table}' 
-          AND INDEX_NAME = '${index.name}'
-        `);
-
-        if (indexExists[0].count === 0) {
-          await sequelize.query(`
-            ALTER TABLE ${index.table} 
-            ADD INDEX ${index.name} ${index.columns}
-          `);
-          console.log(`  ✓ Created ${index.name} on ${index.table}`);
-          created++;
-        } else {
-          console.log(`  ⊘ ${index.name} already exists`);
-          skipped++;
-        }
-      } catch (error) {
-        console.log(`  ⚠️ Error creating ${index.name}: ${error.message}`);
-      }
-    }
-
-    console.log(`✓ Performance indexes: ${created} created, ${skipped} already exist`);
-  } catch (error) {
-    console.error('❌ Error creating performance indexes:', error.message);
-  }
-};
 
 // Function to create blog tables
 const createBlogTables = async () => {
@@ -2548,4 +1929,4 @@ const addCodAddressConfirmedColumns = async () => {
   }
 };
 
-module.exports = { setupDatabase, findAvailablePort, createPerformanceIndexes };
+module.exports = { setupDatabase };

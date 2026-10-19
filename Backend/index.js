@@ -468,6 +468,33 @@ const startServer = async () => {
         await sequelize.authenticate();
         logger.info('✓ Database connection successful');
 
+        // Create all tables — only runs when schema version changes. Runs BEFORE
+        // the migration gate so a fresh database has tables for it to alter.
+        const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
+        let needsSetup = false;
+        try {
+            await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+            // Exact match: the table also holds the 'seo-init-*' marker row, and
+            // an unqualified "first row" read returned that marker (it sorts
+            // before 'v2…'), so setup re-ran on EVERY boot.
+            const [rows] = await sequelize.query(
+                `SELECT version FROM schema_version WHERE version = ? LIMIT 1`,
+                { replacements: [SCHEMA_VERSION] }
+            );
+            needsSetup = rows.length === 0;
+        } catch { needsSetup = true; }
+
+        if (needsSetup) {
+            logger.info('Setting up database (schema version changed)...');
+            await setupDatabase();
+            // Replace only the old schema version — keep the seo-init marker.
+            await sequelize.query(`DELETE FROM schema_version WHERE version NOT LIKE 'seo-%'`);
+            await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES (?)`, { replacements: [SCHEMA_VERSION] });
+            logger.info('✓ Database setup completed');
+        } else {
+            logger.info('✓ Database schema up-to-date, skipping setup');
+        }
+
         // ── Startup-migration gate (perf) ──────────────────────────────────
         // The idempotent schema migrations + backfills below run dozens of
         // sequential information_schema checks on every boot. Because
@@ -477,7 +504,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v18';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v19';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -489,6 +516,12 @@ const startServer = async () => {
             logger.info('✓ Startup migrations already applied — skipping (fast cold start)');
         } else {
             logger.info('Running one-time startup migrations…');
+            // Every step catches + logs its own error. Count those so the gate
+            // is only marked done when ALL steps succeeded; otherwise the
+            // (idempotent) block simply runs again on the next boot.
+            let migrationErrors = 0;
+            const baseLogError = logger.error;
+            logger.error = (...args) => { migrationErrors++; return baseLogError.apply(logger, args); };
 
         // ── Idempotent migration: bundle_tiers table (pack / bundle pricing) ─
         // Per-brand buy-more-save-more tiers. Production doesn't run sequelize
@@ -746,43 +779,6 @@ const startServer = async () => {
             logger.error('CART10 coupon seed failed: ' + err.message);
         }
 
-        // ── One-time cleanup: drop old per-brand policy duplicates ────────
-        // Now that the global policies exist, remove the per-brand rows for the
-        // SAME slugs (a global replaces them). Flag-gated so it runs ONCE —
-        // this way a future intentional per-brand override is never deleted on
-        // a later reboot. Only a per-brand row whose slug matches an existing
-        // global is removed, so unrelated per-brand policies are left alone.
-        try {
-            const settingsSvc = require('./services/brandSettingsService.js');
-            const alreadyDone = await settingsSvc.getBrandSetting(1, 'dpdp_policy_cleanup_done_v2', false);
-            if (!alreadyDone) {
-                const { Policy } = require('./model/policyModel.js');
-                const slugify = (s) => String(s || '').toLowerCase()
-                    .replace(/&/g, ' and ').trim().replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                const all = await Policy.findAll();
-                const globalSlugs = new Set(all.filter((p) => p.brand_id == null).map((p) => slugify(p.title)));
-                let removed = 0;
-                for (const p of all) {
-                    if (p.brand_id != null && globalSlugs.has(slugify(p.title))) { await p.destroy(); removed += 1; }
-                }
-                await settingsSvc.setBrandSetting(1, 'dpdp_policy_cleanup_done_v2', '1', false, 'legal', 'One-time removal of old per-brand policy duplicates', null);
-                logger.info('DPDP policy cleanup: removed ' + removed + ' old per-brand duplicate(s)');
-            }
-        } catch (err) {
-            logger.error('DPDP policy cleanup failed: ' + err.message);
-        }
-
-        // Startup visibility: how many policies exist, and how many are global.
-        try {
-            const { Policy } = require('./model/policyModel.js');
-            const total = await Policy.count();
-            const globals = await Policy.count({ where: { brand_id: null } });
-            logger.info(`DPDP policies after startup: ${total} total, ${globals} global`);
-        } catch (err) {
-            logger.error('DPDP policy count log failed: ' + err.message);
-        }
-
         // ── Idempotent migration: orders.scheduled_pickup_date ────────────
         try {
             const [cols] = await sequelize.query(
@@ -814,63 +810,6 @@ const startServer = async () => {
         } catch (err) {
             logger.error('orders.pickup_hold_until migration failed: ' + err.message);
         }
-
-        // ── One-time repair: review brand tags, product rating stats, bad dates ──
-        // Storefronts filter reviews by brand and show "N reviews" from the list /
-        // the cached product.review_count. Three data issues made those numbers
-        // wrong: (1) some reviews had a NULL/mismatched brandId so the storefront
-        // brand filter dropped them; (2) product.review_count / avg_rating were
-        // stale (not recomputed), showing inflated counts; (3) bulk-imported
-        // reviews landed on the import day or in the FUTURE, so every card showed
-        // the same/wrong date. Fix all three in place (safe to re-run).
-        // Each statement runs in its OWN try/catch so one failure never skips the
-        // others (an earlier single-block version let a MySQL 1093 on the grouped
-        // date UPDATE skip the future-date fix).
-        logger.info('Repairing review brand tags + rating stats + dates…');
-        // 1. Every review belongs to its product's brand.
-        try {
-            await sequelize.query(
-                `UPDATE reviews r JOIN products p ON p.id = r.productId
-                 SET r.brandId = p.brand_id
-                 WHERE r.brandId IS NULL OR r.brandId <> p.brand_id`
-            );
-        } catch (err) { logger.error('review repair (brand tags) failed: ' + err.message); }
-        // 2. Recompute cached product review_count / avg_rating from APPROVED reviews.
-        try {
-            await sequelize.query(
-                `UPDATE products p
-                 LEFT JOIN (SELECT productId, COUNT(*) cnt, AVG(rating) avgr
-                            FROM reviews WHERE status='approved' GROUP BY productId) r
-                   ON r.productId = p.id
-                 SET p.review_count = COALESCE(r.cnt, 0),
-                     p.avg_rating   = ROUND(COALESCE(r.avgr, 0), 2)`
-            );
-        } catch (err) { logger.error('review repair (stats) failed: ' + err.message); }
-        // 3a. Bulk-import batches (>=5 reviews sharing an identical timestamp) → spread
-        //     each over the last ~180 days (deterministic by id) so dates look natural.
-        //     The DOUBLE-nested derived table forces MySQL to materialise it, so this
-        //     self-referencing UPDATE can't throw error 1093.
-        try {
-            await sequelize.query(
-                `UPDATE reviews r
-                 JOIN (SELECT createdAt FROM
-                         (SELECT createdAt FROM reviews GROUP BY createdAt HAVING COUNT(*) >= 5) x
-                      ) g
-                   ON r.createdAt = g.createdAt
-                 SET r.createdAt = DATE_SUB(NOW(), INTERVAL (r.id % 180) DAY),
-                     r.updatedAt = DATE_SUB(NOW(), INTERVAL (r.id % 180) DAY)`
-            );
-        } catch (err) { logger.error('review repair (cluster dates) failed: ' + err.message); }
-        // 3b. Any remaining FUTURE-dated reviews → spread into the past.
-        try {
-            await sequelize.query(
-                `UPDATE reviews
-                 SET createdAt = DATE_SUB(NOW(), INTERVAL (id % 180) DAY),
-                     updatedAt = DATE_SUB(NOW(), INTERVAL (id % 180) DAY)
-                 WHERE createdAt > NOW()`
-            );
-        } catch (err) { logger.error('review repair (future dates) failed: ' + err.message); }
-        logger.info('✓ Review brand tags, rating stats and dates repair attempted');
 
         // ── Idempotent migration: WhatsApp catalog columns ─────────────────
         // products.whatsapp_synced and product_variations.whatsapp_retailer_id
@@ -1228,44 +1167,6 @@ const startServer = async () => {
             logger.error('brand-scoped consumer migration failed: ' + err.message);
         }
 
-        // ── One-time backfill: clean mangled consumer display names ───────────
-        // Historic rows stored username as "Name (9830133884·b11)" or the placeholder
-        // "User 8919904740 (b10)" to dodge the old global username unique. Strip those
-        // so shoppers (after login) and the admin see a real name. Idempotent: once
-        // cleaned the patterns no longer match, so later boots touch 0 rows.
-        try {
-            const { Op } = require('sequelize');
-            const { User } = require('./model/userModel.js');
-            const suspects = await User.findAll({
-                where: { [Op.or]: [
-                    { username: { [Op.like]: '%·b%' } },
-                    { username: { [Op.like]: 'User %(b%' } }
-                ] },
-                attributes: ['id', 'username', 'phone']
-            });
-            let fixed = 0;
-            for (const u of suspects) {
-                const original = u.username || '';
-                let name = original
-                    .replace(/\s*\(\d{6,}·b\d+\)\s*$/, '')        // "Name (9830133884·b11)"
-                    .replace(/^User\s+\d{4,}\s*\(b\d+\)\s*$/, '')  // "User 8919904740 (b10)"
-                    .trim();
-                if (!name) name = u.phone ? `Customer ${String(u.phone).slice(-4)}` : 'Customer';
-                if (name !== original) { await u.update({ username: name }); fixed++; }
-            }
-            if (fixed) logger.info(`✓ cleaned ${fixed} mangled consumer display name(s)`);
-        } catch (err) {
-            logger.warn('consumer name backfill skipped: ' + err.message);
-        }
-
-        // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────
-        // orders_cancelled_backup (manual backup, no code refs), shipping_warehouses
-        // (orphaned, no refs), coupon_usage (legacy duplicate of coupon_usages).
-        for (const t of ['orders_cancelled_backup', 'shipping_warehouses', 'coupon_usage']) {
-            try { await sequelize.query(`DROP TABLE IF EXISTS \`${t}\``); }
-            catch (err) { logger.warn(`drop ${t} failed: ${err.message}`); }
-        }
-
         // ── Idempotent migration: WhatsApp inbox indexes (load speed) ─────────
         // The inbox was slow because these hot columns were unindexed: opening a
         // conversation scans whatsapp_messages by conversation_id, the inbound
@@ -1443,156 +1344,6 @@ const startServer = async () => {
             logger.error('phone_hash backfill failed: ' + err.message);
         }
 
-        // ── One-time backfill: upgrade placeholder consumer names/emails ──────
-        // Fill "User <phone>" / "<phone>@phone.crosscoin.in" accounts with the
-        // shopper's real name/email from their guest/address records (matched by
-        // the phone_hash filled just above). Guarded so it runs once per deploy
-        // marker; the script itself is also idempotent and re-runnable manually.
-        try {
-            await sequelize.query(
-                `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
-            );
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'user-profile-backfill-v1' LIMIT 1`);
-            if (!done.length) {
-                const { backfillUserProfiles } = require('./scripts/backfillUserProfiles.js');
-                const r = await backfillUserProfiles();
-                logger.info(`✓ user-profile backfill: fixed ${r.fixed}/${r.scanned} placeholder accounts`);
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('user-profile-backfill-v1')`);
-            }
-        } catch (err) {
-            logger.error('user-profile backfill failed: ' + err.message);
-        }
-
-        // ── One-time backfill: re-attribute existing WhatsApp conversations ──
-        // Older chats were all tagged with the shared brand (CrossCoin); tag
-        // each with the brand named in its first message. Guarded by a flag row
-        // so it runs exactly once (kept separate from schema_version, whose
-        // single-row check must not see extra rows).
-        try {
-            await sequelize.query(
-                `CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`
-            );
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-brand-backfill-v3' LIMIT 1`);
-            if (!done.length) {
-                // Run OFF the boot critical path: reattributeBrands does an N+1 over
-                // every conversation plus un-indexable LIKE '%digits' scans that can
-                // take minutes on a large DB. Awaiting it here blocked startup. It is
-                // idempotent and sets its own flag on success, so detaching is safe.
-                setImmediate(async () => {
-                    try {
-                        const { reattributeBrands } = require('./controller/whatsappController.js');
-                        const n = await reattributeBrands();
-                        logger.info(`✓ WhatsApp brand backfill: re-attributed ${n} conversation(s)`);
-                        await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-brand-backfill-v3')`);
-                    } catch (err) {
-                        logger.error('WhatsApp brand backfill (background) failed: ' + err.message);
-                    }
-                });
-            }
-        } catch (err) {
-            logger.error('WhatsApp brand backfill failed: ' + err.message);
-        }
-
-        // ── One-time backfill: fill missing customer names ──────────────────
-        // Older chats with no WhatsApp profile name show a bare phone number;
-        // look each up in their order/guest records. Guarded by its own flag.
-        try {
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'wa-name-backfill-v1' LIMIT 1`);
-            if (!done.length) {
-                // Same as the brand backfill above — detach from boot so the N+1 +
-                // LIKE scans don't delay startup. Idempotent + own flag.
-                setImmediate(async () => {
-                    try {
-                        const { backfillCustomerNames } = require('./controller/whatsappController.js');
-                        const n = await backfillCustomerNames();
-                        logger.info(`✓ WhatsApp name backfill: named ${n} conversation(s)`);
-                        await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('wa-name-backfill-v1')`);
-                    } catch (err) {
-                        logger.error('WhatsApp name backfill (background) failed: ' + err.message);
-                    }
-                });
-            }
-        } catch (err) {
-            logger.error('WhatsApp name backfill failed: ' + err.message);
-        }
-
-        // ── Seed per-brand free-shipping thresholds (COD ships free at/above ₹X) ──
-        // Sets each brand's FREE_SHIPPING_THRESHOLD to its advertised number so the
-        // cart's free-shipping bar and the checkout waiver agree out of the box.
-        // Admin-editable afterwards; only fills brands that don't already have it.
-        try {
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'free-ship-threshold-seed-v1' LIMIT 1`);
-            if (!done.length) {
-                const Brand = require('./model/brandModel.js');
-                const { BrandSetting } = require('./model/brandSettingModel.js');
-                const seeds = { crosscoin: '499', gripzus: '999', knitwink: '599', morbix: '999', soxbae: '999', velmique: '2500', velquira: '999' };
-                for (const [slug, value] of Object.entries(seeds)) {
-                    try {
-                        const b = await Brand.findOne({ where: { slug } });
-                        if (!b) continue;
-                        await BrandSetting.findOrCreate({
-                            where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
-                            defaults: { value },
-                        });
-                    } catch (e) { logger.warn(`free-ship threshold seed for ${slug} failed: ` + e.message); }
-                }
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('free-ship-threshold-seed-v1')`);
-                logger.info('✓ Free-shipping thresholds seeded per brand');
-            }
-        } catch (err) {
-            logger.error('Free-shipping threshold seed failed: ' + err.message);
-        }
-
-        // ── One-time: reconcile Soxbae's free-shipping threshold 499 → 999 ──────
-        // The first seed set Soxbae to ₹499; its storefront copy (header/hero/
-        // marquee/PDP) is now all ₹999, so force the threshold to match.
-        try {
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'soxbae-freeship-999-v1' LIMIT 1`);
-            if (!done.length) {
-                const Brand = require('./model/brandModel.js');
-                const { BrandSetting } = require('./model/brandSettingModel.js');
-                const b = await Brand.findOne({ where: { slug: 'soxbae' } });
-                if (b) {
-                    const [row, created] = await BrandSetting.findOrCreate({
-                        where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
-                        defaults: { value: '999' },
-                    });
-                    if (!created && String(row.value) !== '999') await row.update({ value: '999' });
-                }
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('soxbae-freeship-999-v1')`);
-                logger.info('✓ Soxbae free-shipping threshold reconciled to ₹999');
-            }
-        } catch (err) {
-            logger.error('Soxbae free-shipping threshold correction failed: ' + err.message);
-        }
-
-        // ── Shipping is now FREE on every order (prepaid + COD) ─────────────────
-        // Set every brand's threshold to ₹1 so the storefront's free-shipping bar
-        // shows as a permanent "free shipping" badge (any non-empty cart qualifies),
-        // matching the backend which now charges ₹0 shipping on all orders.
-        try {
-            const [done] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = 'free-ship-all-v1' LIMIT 1`);
-            if (!done.length) {
-                const Brand = require('./model/brandModel.js');
-                const { BrandSetting } = require('./model/brandSettingModel.js');
-                for (const slug of ['crosscoin', 'gripzus', 'knitwink', 'morbix', 'soxbae', 'velmique', 'velquira']) {
-                    try {
-                        const b = await Brand.findOne({ where: { slug } });
-                        if (!b) continue;
-                        const [row, created] = await BrandSetting.findOrCreate({
-                            where: { brand_id: b.id, key: 'FREE_SHIPPING_THRESHOLD' },
-                            defaults: { value: '1' },
-                        });
-                        if (!created && String(row.value) !== '1') await row.update({ value: '1' });
-                    } catch (e) { logger.warn(`free-ship-all for ${slug} failed: ` + e.message); }
-                }
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES ('free-ship-all-v1')`);
-                logger.info('✓ Free shipping enabled on all orders (thresholds set to ₹1)');
-            }
-        } catch (err) {
-            logger.error('free-ship-all migration failed: ' + err.message);
-        }
-
         // ── Idempotent migration: abandoned_carts table (WhatsApp recovery) ──
         // Captures a shopper's checkout details (phone encrypted at rest) so the
         // hourly recovery cron can message guests + logged-in users who dropped
@@ -1636,98 +1387,6 @@ const startServer = async () => {
             logger.info('✓ cart_items pack columns ensured');
         } catch (err) {
             logger.error('cart_items pack columns migration failed: ' + err.message);
-        }
-
-        // ── De-brand FShip (v13): rename the orders fship_* columns and the
-        // label-download table to shipping_*. Pure renames — every row, index
-        // and foreign key keeps its data. Each step is guarded by
-        // information_schema so re-runs and fresh installs no-op. MUST run
-        // before the renamed code serves traffic, hence here in the gated
-        // startup block (setupDatabase is schema-version-gated and rarely runs).
-        try {
-            const RENAMES = [
-                ['fship_order_id', 'shipping_order_id', 'VARCHAR(255) NULL'],
-                ['fship_waybill', 'shipping_waybill', 'VARCHAR(255) NULL'],
-                ['fship_route_code', 'shipping_route_code', 'VARCHAR(255) NULL'],
-                ['fship_courier_id', 'shipping_courier_id', 'INT NULL'],
-                ['fship_label_url', 'shipping_label_url', 'TEXT NULL'],
-                ['fship_label_downloaded', 'shipping_label_downloaded', 'TINYINT(1) NULL DEFAULT 0'],
-                ['fship_label_downloaded_at', 'shipping_label_downloaded_at', 'DATETIME NULL'],
-                ['fship_label_downloaded_by', 'shipping_label_downloaded_by', 'INT NULL'],
-                ['fship_tracking_number', 'shipping_tracking_number', 'VARCHAR(100) NULL'],
-                ['fship_last_synced_at', 'shipping_last_synced_at', 'DATETIME NULL'],
-                ['fship_sync_status', 'shipping_sync_status', "ENUM('pending','syncing','synced','failed') NULL DEFAULT 'pending'"],
-                ['fship_sync_attempts', 'shipping_sync_attempts', 'INT NULL DEFAULT 0'],
-                ['fship_sync_error', 'shipping_sync_error', 'TEXT NULL'],
-            ];
-            const [cols] = await sequelize.query(`
-                SELECT COLUMN_NAME FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
-            `);
-            const have = new Set(cols.map((c) => c.COLUMN_NAME));
-            for (const [oldCol, newCol, def] of RENAMES) {
-                if (have.has(oldCol) && !have.has(newCol)) {
-                    await sequelize.query(`ALTER TABLE orders CHANGE \`${oldCol}\` \`${newCol}\` ${def}`);
-                    logger.info(`✓ orders.${oldCol} → ${newCol}`);
-                }
-            }
-            const [tables] = await sequelize.query(`
-                SELECT TABLE_NAME FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME IN ('fship_label_downloads', 'shipping_label_downloads')
-            `);
-            const names = new Set(tables.map((r) => r.TABLE_NAME));
-            if (names.has('fship_label_downloads') && !names.has('shipping_label_downloads')) {
-                await sequelize.query('RENAME TABLE fship_label_downloads TO shipping_label_downloads');
-                logger.info('✓ fship_label_downloads → shipping_label_downloads');
-            }
-            logger.info('✓ FShip de-brand renames ensured');
-        } catch (err) {
-            logger.error('FShip de-brand migration failed: ' + err.message);
-        }
-
-        // ── Drop the legacy coupon_usage duplicate (v13) — empty tables only.
-        // The app records redemptions in coupon_usages; the singular table was
-        // a dead duplicate. Data is never touched: a non-empty table is left
-        // in place with a loud log for manual review.
-        try {
-            const [[legacy]] = await sequelize.query(`
-                SELECT COUNT(*) AS n FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupon_usage'
-            `);
-            if (Number(legacy.n) > 0) {
-                const [[rows]] = await sequelize.query('SELECT COUNT(*) AS n FROM coupon_usage');
-                if (Number(rows.n) === 0) {
-                    await sequelize.query('DROP TABLE coupon_usage');
-                    logger.info('✓ Dropped empty legacy coupon_usage table');
-                } else {
-                    logger.warn(`coupon_usage has ${rows.n} rows — left for manual review`);
-                }
-            }
-        } catch (err) {
-            logger.error('coupon_usage cleanup failed: ' + err.message);
-        }
-
-        // ── Remove the retired lookbook feature's tables (v14). The feature
-        // (models, controllers, routes, dashboard page, storefront showcase)
-        // is deleted from the codebase; these drops clear its DB footprint.
-        // Child tables first so the foreign keys don't block the drops.
-        try {
-            await sequelize.query('DROP TABLE IF EXISTS lookbook_hotspots');
-            await sequelize.query('DROP TABLE IF EXISTS lookbook_images');
-            await sequelize.query('DROP TABLE IF EXISTS lookbooks');
-            logger.info('✓ Lookbook tables removed');
-        } catch (err) {
-            logger.error('Lookbook table removal failed: ' + err.message);
-        }
-
-        // ── Remove the retired Instagram-gallery / reels feature's tables.
-        try {
-            await sequelize.query('DROP TABLE IF EXISTS instagram_post_products');
-            await sequelize.query('DROP TABLE IF EXISTS reels');
-            logger.info('✓ Instagram gallery tables removed');
-        } catch (err) {
-            logger.error('Instagram gallery table removal failed: ' + err.message);
         }
 
         // ── Seed per-brand GST invoice settings (v16). INSERT IGNORE keeps any
@@ -1780,86 +1439,9 @@ const startServer = async () => {
             logger.error('rto_stock_restoration ensure failed: ' + err.message);
         }
 
-        // ── Drop legacy DB triggers that call the removed RestoreRTOStock
-        // procedure (v18). A hand-made trigger on `orders` called it on every
-        // RTO status change; with the procedure gone, every such UPDATE failed
-        // ("PROCEDURE RestoreRTOStock does not exist") and the order never
-        // moved to RTO. The app restores RTO stock itself (ledger-guarded), so
-        // the trigger is redundant and would double-restock if revived.
-        try {
-            const [trigs] = await sequelize.query(
-                `SELECT TRIGGER_NAME AS name FROM information_schema.TRIGGERS
-                  WHERE TRIGGER_SCHEMA = DATABASE() AND ACTION_STATEMENT LIKE '%RestoreRTOStock%'`
-            );
-            for (const t of trigs) {
-                await sequelize.query(`DROP TRIGGER IF EXISTS \`${String(t.name).replace(/`/g, '')}\``);
-                logger.info(`✓ Dropped legacy trigger ${t.name} (called removed RestoreRTOStock)`);
-            }
-            await sequelize.query('DROP PROCEDURE IF EXISTS RestoreRTOStock');
-        } catch (err) {
-            logger.error('Legacy RestoreRTOStock trigger cleanup failed: ' + err.message);
-        }
-
-            // All idempotent startup migrations have run — flag it so future
-            // restarts skip this whole block and cold-start fast.
-            try {
-                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [STARTUP_MIGRATIONS_VERSION] });
-                logger.info('✓ Startup migrations complete — future restarts will skip them');
-            } catch (e) {
-                logger.error('Could not set startup-migrations flag: ' + e.message);
-            }
-        } // end startup-migration gate
-
-        // Create all tables — only runs when schema version changes
-        const SCHEMA_VERSION = 'v2.0-landmark-and-address-hash';
-        let needsSetup = false;
-        try {
-            await sequelize.query(`CREATE TABLE IF NOT EXISTS schema_version (version VARCHAR(50) PRIMARY KEY, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
-            // Exact match: the table also holds the 'seo-init-*' marker row, and
-            // an unqualified "first row" read returned that marker (it sorts
-            // before 'v2…'), so setup re-ran on EVERY boot.
-            const [rows] = await sequelize.query(
-                `SELECT version FROM schema_version WHERE version = ? LIMIT 1`,
-                { replacements: [SCHEMA_VERSION] }
-            );
-            needsSetup = rows.length === 0;
-        } catch { needsSetup = true; }
-
-        if (needsSetup) {
-            logger.info('Setting up database (schema version changed)...');
-            await setupDatabase();
-            // Replace only the old schema version — keep the seo-init marker.
-            await sequelize.query(`DELETE FROM schema_version WHERE version NOT LIKE 'seo-%'`);
-            await sequelize.query(`INSERT IGNORE INTO schema_version (version) VALUES (?)`, { replacements: [SCHEMA_VERSION] });
-            logger.info('✓ Database setup completed');
-        } else {
-            logger.info('✓ Database schema up-to-date, skipping setup');
-        }
-
-        // Legacy single-column UNIQUE indexes on users.username / email / phone
-        // must not exist — identity is the composite (email|phone, source_brand_id).
-        // The run-once migration that dropped them could be marked done even when
-        // a drop failed, leaving e.g. a global username unique that made profile
-        // edits fail with a bare "Validation error". One cheap query per boot.
-        try {
-            const [legacy] = await sequelize.query(
-                `SELECT INDEX_NAME AS name, MAX(COLUMN_NAME) AS col FROM information_schema.STATISTICS
-                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
-                    AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'
-                  GROUP BY INDEX_NAME
-                 HAVING COUNT(*) = 1 AND MAX(COLUMN_NAME) IN ('username', 'email', 'phone')`
-            );
-            for (const r of legacy) {
-                await sequelize.query(`ALTER TABLE users DROP INDEX \`${String(r.name).replace(/`/g, '')}\``);
-                logger.info(`✓ dropped legacy unique ${r.name} on users(${r.col})`);
-            }
-        } catch (err) {
-            logger.error('Legacy users unique-index cleanup failed: ' + err.message);
-        }
-
         // Ensure performance indexes exist (idempotent). Production never runs
-        // sync({alter}), so indexes defined on models don't reach the live DB —
-        // this creates any that are missing on each boot (skips existing ones).
+        // sync({alter}), so indexes defined on models don't reach the live DB.
+        // Bump STARTUP_MIGRATIONS_VERSION after adding an index to that script.
         try {
             const { ensureIndexes } = require('./scripts/add-perf-indexes.js');
             await ensureIndexes();
@@ -1867,7 +1449,7 @@ const startServer = async () => {
             logger.error('[perf-index] boot hook failed: ' + err.message);
         }
 
-        // Migrate seo_metadata indexes (ungated, idempotent). The table was
+        // Migrate seo_metadata indexes (idempotent). The table was
         // created with a GLOBAL UNIQUE on `slug`, which blocks per-brand SEO rows
         // that legitimately share a slug (every brand's home is '/'): the seeder
         // could insert brand 1 but threw on brand 2's '/', so only crosscoin got
@@ -1903,6 +1485,41 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('seo_metadata index migration failed: ' + err.message);
+        }
+
+            logger.error = baseLogError;
+            // Flag only a fully clean run so future restarts skip this block.
+            if (migrationErrors === 0) {
+                try {
+                    await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [STARTUP_MIGRATIONS_VERSION] });
+                    logger.info('✓ Startup migrations complete — future restarts will skip them');
+                } catch (e) {
+                    logger.error('Could not set startup-migrations flag: ' + e.message);
+                }
+            } else {
+                logger.warn(`Startup migrations had ${migrationErrors} error(s) — not marking done; they will retry on next boot`);
+            }
+        } // end startup-migration gate
+
+        // Legacy single-column UNIQUE indexes on users.username / email / phone
+        // must not exist — identity is the composite (email|phone, source_brand_id).
+        // The run-once migration that dropped them could be marked done even when
+        // a drop failed, leaving e.g. a global username unique that made profile
+        // edits fail with a bare "Validation error". One cheap query per boot.
+        try {
+            const [legacy] = await sequelize.query(
+                `SELECT INDEX_NAME AS name, MAX(COLUMN_NAME) AS col FROM information_schema.STATISTICS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+                    AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY'
+                  GROUP BY INDEX_NAME
+                 HAVING COUNT(*) = 1 AND MAX(COLUMN_NAME) IN ('username', 'email', 'phone')`
+            );
+            for (const r of legacy) {
+                await sequelize.query(`ALTER TABLE users DROP INDEX \`${String(r.name).replace(/`/g, '')}\``);
+                logger.info(`✓ dropped legacy unique ${r.name} on users(${r.col})`);
+            }
+        } catch (err) {
+            logger.error('Legacy users unique-index cleanup failed: ' + err.message);
         }
 
         // Initialize SEO data — runs once per seeder version, skipped afterwards.

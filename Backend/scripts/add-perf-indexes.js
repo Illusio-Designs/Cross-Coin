@@ -1,19 +1,16 @@
 /**
  * Performance index migration — runs automatically at boot.
  *
- * Production never runs sync({ alter:true }), so indexes added to a model file
- * do NOT reach the live DB automatically. `ensureIndexes()` is called from
- * index.js on every startup: it is idempotent (checks information_schema and
- * skips indexes that already exist), so it's safe and cheap to run each boot —
- * any newly-added index in the map below is created on the next deploy with no
- * manual step.
+ * The single source of truth for performance indexes. Production never runs
+ * sync({ alter:true }), so indexes added to a model file do NOT reach the live
+ * DB automatically. `ensureIndexes()` runs inside index.js's run-once startup
+ * migration gate; it is idempotent (checks information_schema and skips
+ * indexes that already exist). After adding an index below, bump
+ * STARTUP_MIGRATIONS_VERSION in index.js so the next deploy applies it.
  *
  * Still runnable manually if you want to apply indexes without a restart:
  *
  *   cd Backend && node scripts/add-perf-indexes.js
- *
- * (Re-deploy trigger: 2026-08-06 — ship the WhatsApp perf indexes + getMessages
- * fix after the previous FTP run's deploy job timed out waiting for a runner.)
  */
 
 const { sequelize } = require('../config/db.js');
@@ -21,6 +18,12 @@ const { logger } = require('../config/logging.js');
 
 // table → [{ name, columns }]
 const INDEXES = {
+  order_items: [
+    { name: 'idx_order_items_product', columns: ['order_id', 'product_id'] },
+  ],
+  payments: [
+    { name: 'idx_payments_brand_id', columns: ['brand_id'] },
+  ],
   products: [
     { name: 'idx_products_created_at', columns: ['createdAt'] },
     { name: 'idx_products_status', columns: ['status'] },
