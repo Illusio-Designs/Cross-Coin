@@ -7,7 +7,7 @@ import {
   CreditCardIcon, Discount01Icon, DeliveryTruck01Icon, StarIcon, Search01Icon,
   File01Icon, Building01Icon, Settings01Icon, Analytics01Icon, UserMultiple02Icon,
   UserCheck01Icon, Logout01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon,
-  Cancel01Icon, WhatsappIcon, News01Icon, Share08Icon, ChartLineData01Icon,
+  Cancel01Icon, WhatsappIcon, News01Icon, ChartLineData01Icon,
   CustomerSupportIcon,
 } from '@hugeicons/core-free-icons';
 
@@ -36,7 +36,6 @@ const IC = {
   wa:        nav(WhatsappIcon),
   support:   nav(CustomerSupportIcon),
   blog:      nav(News01Icon),
-  social:    nav(Share08Icon),
   reports:   nav(ChartLineData01Icon),
 };
 
@@ -70,11 +69,6 @@ const ALL_MENU = [
       { label: 'Reviews',       view: 'reviews' },
       { label: 'Leads',         view: 'leads', roles: ['admin'] },
       { label: 'Loyalty',       view: 'loyalty' },
-    ],
-  },
-  {
-    label: 'Social Commerce', icon: IC.social, roles: ['admin','product_manager'],
-    submenu: [
     ],
   },
   {

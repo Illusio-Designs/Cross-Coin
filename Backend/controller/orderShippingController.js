@@ -440,15 +440,17 @@ module.exports.handleShippingWebhook = async (req, res) => {
       logger.warn('shipment_webhook_events store failed: ' + err.message);
     }
 
-    // Find order by Shipping waybill or order ID
+    // Find order by Shipping waybill or order ID. Only include the identifiers
+    // the payload actually carries — Sequelize throws on an `undefined` WHERE
+    // value, and iThink's events often send just the AWB with no order id.
+    const lookup = [];
+    if (waybill) lookup.push({ shipping_waybill: String(waybill) });
+    if (order_id) {
+      lookup.push({ shipping_order_id: String(order_id) });
+      lookup.push({ order_number: String(order_id) });
+    }
     const order = await Order.findOne({
-      where: {
-        [Op.or]: [
-          { shipping_waybill: waybill },
-          { shipping_order_id: order_id },
-          { order_number: order_id }
-        ]
-      },
+      where: { [Op.or]: lookup },
       include: [
         { model: User, as: "User", attributes: ["id", "email", "username"] },
         {

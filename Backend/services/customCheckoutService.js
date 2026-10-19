@@ -372,7 +372,21 @@ async function ingestCheckoutOrder(brandId, p) {
     }
 
     logger.info(`[custom-checkout] ingested order ${order.order_number} (platform ${platformId}, brand ${brandId})`);
-    return { created: true, order_number: order.order_number, order_id: order.id };
+    return { created: true, order_number: order.order_number, order_id: order.id, _order: order };
+  }).then((result) => {
+    // After commit: fire the same lifecycle events a native order gets, so the
+    // customer receives the WhatsApp confirmation + invoice, abandoned-cart
+    // recovery stops, and pickup_hold_until is stamped for the booking batch.
+    if (result?._order) {
+      const orderEmitter = require('./orderEvents.js');
+      const o = result._order;
+      setImmediate(() => {
+        try { orderEmitter.emit('order.created', o); } catch (e) { logger.warn('[custom-checkout] order.created emit failed: ' + e.message); }
+        try { orderEmitter.emit('order.confirmed', o); } catch (e) { logger.warn('[custom-checkout] order.confirmed emit failed: ' + e.message); }
+      });
+      delete result._order;
+    }
+    return result;
   });
 }
 
