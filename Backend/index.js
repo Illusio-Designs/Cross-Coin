@@ -504,7 +504,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v21';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v23';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -739,6 +739,22 @@ const startServer = async () => {
             }
         } catch (err) {
             logger.error('policies.brand_id nullable migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: order_status_history.status ENUM → VARCHAR (v23)
+        // The ENUM only allowed pending/processing/shipped/delivered/cancelled,
+        // but history is written for every order status. Existing values keep.
+        try {
+            const [col] = await sequelize.query(
+                `SELECT DATA_TYPE FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_status_history' AND COLUMN_NAME = 'status'`
+            );
+            if (col.length && col[0].DATA_TYPE === 'enum') {
+                await sequelize.query(`ALTER TABLE order_status_history MODIFY COLUMN status VARCHAR(40) NOT NULL`);
+                logger.info('✓ order_status_history.status is now VARCHAR(40)');
+            }
+        } catch (err) {
+            logger.error('order_status_history.status migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: product alert tables (v21) ──────────────
@@ -992,6 +1008,7 @@ const startServer = async () => {
                     photos JSON NULL,
                     resolution ENUM('original','upi','exchange') NOT NULL DEFAULT 'original',
                     upi_id VARCHAR(80) NULL,
+                    payout_phone VARCHAR(15) NULL,
                     status ENUM('requested','under_review','approved','rejected','pickup_scheduled','picked_up','received','refunded') NOT NULL DEFAULT 'requested',
                     is_cod TINYINT(1) NOT NULL DEFAULT 0,
                     requested_amount DECIMAL(10,2) NULL,
@@ -1016,6 +1033,22 @@ const startServer = async () => {
             );
         } catch (err) {
             logger.error('returns table migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: returns.payout_phone (v22) ──────────────
+        // COD returns are refunded by UPI; staff need the customer's UPI ID
+        // and the mobile number linked to it.
+        try {
+            const [cols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'returns' AND COLUMN_NAME = 'payout_phone'`
+            );
+            if (!cols.length) {
+                await sequelize.query(`ALTER TABLE returns ADD COLUMN payout_phone VARCHAR(15) NULL AFTER upi_id`);
+                logger.info('✓ returns.payout_phone added');
+            }
+        } catch (err) {
+            logger.error('returns.payout_phone migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: add 'partial_refund' to payment status enums ─

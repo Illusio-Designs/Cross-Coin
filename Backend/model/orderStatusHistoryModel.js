@@ -18,14 +18,11 @@ const OrderStatusHistory = sequelize.define(
       },
       foreignKey: true, // Allow this foreign key
     },
+    // Free text, not an ENUM: history records every order status (confirmed,
+    // rto, return_initiated, returned_rto, …) and the old 5-value ENUM made
+    // those writes fail (strict SQL) or save blank (non-strict).
     status: {
-      type: DataTypes.ENUM(
-        "pending",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled"
-      ),
+      type: DataTypes.STRING(40),
       allowNull: false,
     },
     updated_by: {

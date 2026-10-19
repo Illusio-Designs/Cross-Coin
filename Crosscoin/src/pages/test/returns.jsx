@@ -16,7 +16,6 @@ const REASONS = [
 const RESOLUTIONS = [
   { value: 'original', label: 'Refund to original payment' },
   { value: 'upi', label: 'Refund to UPI / bank' },
-  { value: 'exchange', label: 'Exchange' },
 ];
 
 export default function TestReturns() {

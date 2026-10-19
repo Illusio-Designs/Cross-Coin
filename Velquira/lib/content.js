@@ -17,6 +17,6 @@ export const technologies = [
   { icon: 'Sparkles', name: 'HANDCRAFTED', text: 'Finished by master artisans in Morbi' },
   { icon: 'Gauge', name: 'CERTIFIED STONES', text: 'Conflict-free, lab-certified gemstones' },
   { icon: 'Heart', name: 'LIFETIME CARE', text: 'Complimentary cleaning & polishing' },
-  { icon: 'RefreshCw', name: 'EASY EXCHANGE', text: '15-day exchange on unworn pieces' },
+  { icon: 'RefreshCw', name: 'EASY RETURNS', text: 'Hassle-free returns & refunds' },
   { icon: 'Leaf', name: 'RESPONSIBLE', text: 'Recycled gold, ethically sourced' },
 ];

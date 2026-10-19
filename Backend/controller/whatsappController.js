@@ -741,12 +741,12 @@ async function handleAutoReply(phone, text, brandId) {
     }
 
     if (lower === 'hi' || lower === 'hello' || lower === 'hey') {
-      await whatsappService.sendTextMessage(phone, `👋 Hi! Welcome to *${storeName}*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Return/exchange info\n• *help* — Talk to our team`, brandId);
+      await whatsappService.sendTextMessage(phone, `👋 Hi! Welcome to *${storeName}*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Returns & refunds\n• *help* — Talk to our team`, brandId);
       return;
     }
 
     if (lower === 'return' || lower.includes('return') || lower.includes('exchange')) {
-      await whatsappService.sendTextMessage(phone, `↩️ *Returns & Exchanges*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://${storeUrl}/policy`, brandId);
+      await whatsappService.sendTextMessage(phone, `↩️ *Returns & Refunds*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://${storeUrl}/policy`, brandId);
       return;
     }
 
@@ -1360,7 +1360,6 @@ exports.seedCannedResponses = async (req, res) => {
       // Returns & Refunds
       { shortcut: '/return',     title: 'Return Policy',         body: `↩️ *Return Policy*\n\nWe accept returns within *7 days* of delivery for:\n• Wrong product received\n• Damaged/defective item\n\nTo initiate a return, share:\n1. Order number\n2. Photo of the product\n3. Reason for return\n\nRefund is processed within 5-7 business days.` },
       { shortcut: '/refund',     title: 'Refund Status',         body: `💰 Refunds are processed within *5-7 business days* after we receive the returned item.\n\nThe amount will be credited to your original payment method.\n\nPlease share your order number to check the status.` },
-      { shortcut: '/exchange',   title: 'Exchange Request',      body: `🔄 We'd be happy to help with an exchange!\n\nPlease share:\n1. Your order number\n2. Photo of the item\n3. The size/variant you'd like instead\n\nExchanges are processed within 3-5 business days.` },
       { shortcut: '/damaged',    title: 'Damaged Product',       body: `😔 We're really sorry you received a damaged product! This is not the experience we want for you.\n\nPlease share:\n1. Order number\n2. Clear photos of the damage\n\nWe'll arrange a replacement or full refund immediately.` },
 
       // Payment
@@ -1379,7 +1378,7 @@ exports.seedCannedResponses = async (req, res) => {
       { shortcut: '/address',    title: 'Change Address',        body: `📍 Address can be changed only *before the order is dispatched*.\n\nPlease share your order number and new address quickly and we'll update it for you!` },
 
       // General
-      { shortcut: '/hi',         title: 'Welcome Greeting',      body: `👋 Hi! Welcome to *Cross Coin* — India's premium sock brand!\n\nHow can I help you today?\n\n• 📦 Track order → type /track\n• ↩️ Return/exchange → type /return\n• 💳 Payment help → type /payment\n• 📏 Size guide → type /size\n\nOr just type your question!` },
+      { shortcut: '/hi',         title: 'Welcome Greeting',      body: `👋 Hi! Welcome to *Cross Coin* — India's premium sock brand!\n\nHow can I help you today?\n\n• 📦 Track order → type /track\n• ↩️ Returns & refunds → type /return\n• 💳 Payment help → type /payment\n• 📏 Size guide → type /size\n\nOr just type your question!` },
       { shortcut: '/thanks',     title: 'Thank You',             body: `🙏 Thank you for shopping with *Cross Coin*! We hope you love your purchase.\n\nDon't forget to leave us a review — it means the world to us! ⭐\n\nSee you again soon! 😊` },
     ];
 

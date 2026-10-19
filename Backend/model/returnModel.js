@@ -25,6 +25,8 @@ const Return = sequelize.define('Return', {
         allowNull: false, defaultValue: 'original'
     },
     upi_id: { type: DataTypes.STRING(80), allowNull: true },
+    // COD refunds: mobile number linked to the customer's UPI (for the payout).
+    payout_phone: { type: DataTypes.STRING(15), allowNull: true },
     status: {
         type: DataTypes.ENUM(
             'requested',        // customer submitted

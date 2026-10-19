@@ -12,7 +12,8 @@ const refundService = require('../services/refundService.js');
 
 const VALID_REASONS = ['damaged', 'defective', 'wrong', 'notdesc', 'changed', 'other'];
 const REASONS_NEED_PHOTO = ['damaged', 'defective', 'wrong', 'notdesc'];
-const VALID_RESOLUTIONS = ['original', 'upi', 'exchange'];
+// Returns are always refunded (no exchanges): prepaid → original payment
+// method, COD → UPI payout. Old 'exchange' rows are refunded the same way.
 const OPEN_STATUSES = ['requested', 'under_review', 'approved', 'pickup_scheduled', 'picked_up', 'received'];
 
 // ── helpers ──────────────────────────────────────────────────────────────
@@ -71,8 +72,7 @@ async function notify(fnName, phone, data, brandId) {
 }
 
 // Book a reverse (return) pickup with the courier. Fail-soft: any problem is
-// logged and the admin can arrange pickup manually. Exchanges need the old
-// item back too, so they get a pickup like refunds do. Returns the AWB or null.
+// logged and the admin can arrange pickup manually. Returns the AWB or null.
 async function bookReversePickup(ret, order, brandId) {
   try {
     const flag = String(await settingsHelper.getSetting(brandId, 'RETURN_AUTO_PICKUP', 'true')).toLowerCase();
@@ -174,8 +174,9 @@ async function issueReturnRefund(ret, order, adminId, brandId) {
   const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
   const refundAmount = ret.refund_amount != null ? Number(ret.refund_amount) : eligible;
 
-  // Gateway payments are stored as 'successful' / 'completed' (no 'paid').
-  const payment = await Payment.findOne({ where: { order_id: order.id, status: { [Op.in]: ['successful', 'completed'] } }, order: [['createdAt', 'DESC']] });
+  // Gateway payments are stored as 'successful' / 'completed' (no 'paid');
+  // 'refund_pending' is a paid payment whose earlier refund failed (retry).
+  const payment = await Payment.findOne({ where: { order_id: order.id, status: { [Op.in]: ['successful', 'completed', 'refund_pending'] } }, order: [['createdAt', 'DESC']] });
   const isGateway = payment && (
     String(payment.transaction_id || '').startsWith('pay_')
     || String(payment.payment_gateway || '').toLowerCase() === 'customcheckout'
@@ -250,13 +251,12 @@ module.exports.createReturn = async (req, res) => {
   try {
     const userId = req.user.id;
     const brandId = req.brandId || null;
-    const { order_id, reason, note, resolution, upi_id } = req.body;
+    const { order_id, reason, note, upi_id, payout_phone } = req.body;
     let items = req.body.items;
     if (typeof items === 'string') { try { items = JSON.parse(items); } catch (e) { items = null; } }
 
     if (!order_id) return res.status(400).json({ success: false, message: 'order_id is required' });
     if (!VALID_REASONS.includes(reason)) return res.status(400).json({ success: false, message: 'Invalid reason' });
-    const res_ = VALID_RESOLUTIONS.includes(resolution) ? resolution : 'original';
 
     const order = await Order.findByPk(order_id);
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
@@ -286,8 +286,17 @@ module.exports.createReturn = async (req, res) => {
     if (REASONS_NEED_PHOTO.includes(reason) && files.length === 0) {
       return res.status(400).json({ success: false, message: 'Please add at least one photo for this reason.' });
     }
-    if (res_ === 'upi' && !String(upi_id || '').trim()) {
-      return res.status(400).json({ success: false, message: 'Please provide a UPI ID for the refund.' });
+    // Prepaid → refunded to the original payment method. COD → paid out by
+    // UPI, so the customer's UPI ID and mobile number are required.
+    const isCod = order.payment_type === 'cod';
+    const res_ = isCod ? 'upi' : 'original';
+    const upi = String(upi_id || '').trim();
+    const payoutPhone = String(payout_phone || '').replace(/\D/g, '').slice(-10);
+    if (isCod && !/^[\w.\-]{2,}@[a-zA-Z][\w.\-]*$/.test(upi)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid UPI ID (e.g. name@okaxis) for your refund.' });
+    }
+    if (isCod && !/^[6-9]\d{9}$/.test(payoutPhone)) {
+      return res.status(400).json({ success: false, message: 'Please enter the 10-digit mobile number linked to your UPI.' });
     }
     const photos = await storeUploads(files.slice(0, 4), '/returns');
 
@@ -309,9 +318,10 @@ module.exports.createReturn = async (req, res) => {
       note: note ? String(note).slice(0, 1000) : null,
       photos,
       resolution: res_,
-      upi_id: res_ === 'upi' ? String(upi_id).trim().slice(0, 80) : null,
+      upi_id: isCod ? upi.slice(0, 80) : null,
+      payout_phone: isCod ? payoutPhone : null,
       status: 'requested',
-      is_cod: order.payment_type === 'cod',
+      is_cod: isCod,
       requested_amount: requestedAmount,
     });
 
@@ -421,10 +431,8 @@ module.exports.uploadProof = async (req, res) => {
 };
 
 // ── ADMIN: approve — fix the refund amount and book the reverse pickup ────
-// The refund is NOT issued here: money goes back only once the parcel is
-// received at the warehouse (Receive), matching the RTO rule. Pass
-// refund_now=true to refund immediately without waiting for the item (e.g.
-// low-value goods the customer keeps).
+// The refund is NOT issued here: money goes back only after the parcel is
+// received at the warehouse and staff press Issue refund.
 module.exports.approveReturn = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
@@ -449,13 +457,6 @@ module.exports.approveReturn = async (req, res) => {
       status: ['requested', 'under_review'].includes(ret.status) ? 'approved' : ret.status,
     });
 
-    if (req.body.refund_now && ret.resolution !== 'exchange') {
-      const r = await issueReturnRefund(ret, order, req.user.id, brandId);
-      await ret.reload();
-      if (!r.ok) return res.status(400).json({ success: false, code: r.code, message: r.message, return: serialize(ret) });
-      return res.json({ success: true, message: r.message, return: serialize(ret), refund: r.refund });
-    }
-
     const awb = await bookReversePickup(ret, order, brandId);
     await ret.reload();
     const user = await User.findByPk(ret.user_id);
@@ -467,7 +468,7 @@ module.exports.approveReturn = async (req, res) => {
     return res.json({
       success: true,
       message: awb
-        ? `Approved. Reverse pickup booked (AWB ${awb}). Refund is issued once the parcel is received.`
+        ? `Approved. Reverse pickup booked (AWB ${awb}). Issue the refund once the parcel is received.`
         : 'Approved. Arrange the pickup, then press Mark received when the parcel arrives.',
       return: serialize(ret),
     });
@@ -493,9 +494,10 @@ module.exports.markPickedUp = async (req, res) => {
   }
 };
 
-// ── ADMIN: parcel received at the warehouse → restock, then refund ────────
+// ── ADMIN: parcel received at the warehouse → restock ────────────────────
 // body.restock (default true): put the items back into stock. Set false when
-// the item is damaged and can't be resold.
+// the item is damaged and can't be resold. The refund is a separate step
+// (Issue refund) so staff check the item first.
 module.exports.receiveReturn = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
@@ -512,16 +514,10 @@ module.exports.receiveReturn = async (req, res) => {
     await ret.update({ status: 'received', pickup_status: 'received' });
     const stockNote = restock ? (units > 0 ? ` ${units} unit(s) back in stock.` : ' (stock already restored)') : ' Not restocked.';
 
-    if (ret.resolution === 'exchange') {
-      return res.json({ success: true, message: `Received.${stockNote} Create the replacement order for the customer.`, return: serialize(ret) });
-    }
-
-    const r = await issueReturnRefund(ret, order, req.user.id, brandId);
-    await ret.reload();
-    if (!r.ok) {
-      return res.json({ success: true, code: r.code, message: `Received.${stockNote} ${r.message}`, return: serialize(ret) });
-    }
-    return res.json({ success: true, message: `Received.${stockNote} ${r.message}`, return: serialize(ret), refund: r.refund });
+    const next = ret.is_cod
+      ? 'Pay the customer by UPI, upload the payout screenshot, then press Issue refund.'
+      : 'Press Issue refund to refund the original payment method.';
+    return res.json({ success: true, message: `Received.${stockNote} ${next}`, return: serialize(ret) });
   } catch (error) {
     logger.error('receiveReturn error:', error);
     return res.status(500).json({ success: false, message: 'Failed to receive return', error: error.message });
@@ -529,8 +525,8 @@ module.exports.receiveReturn = async (req, res) => {
 };
 
 // ── ADMIN: issue (or retry) the refund for a received return ─────────────
-// Used after uploading the payout proof for a COD/manual refund, or to retry
-// a gateway refund that failed.
+// Prepaid: refunds the original payment method via the gateway. COD: records
+// the manual UPI payout (screenshot required). Also retries a failed refund.
 module.exports.refundReturn = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
@@ -538,7 +534,7 @@ module.exports.refundReturn = async (req, res) => {
     if (!ret) return res.status(404).json({ success: false, message: 'Return not found' });
     if (ret.status === 'refunded') return res.status(400).json({ success: false, message: 'Already refunded.' });
     if (ret.status !== 'received') {
-      return res.status(400).json({ success: false, message: 'Mark the parcel as received before refunding (or approve with refund now).' });
+      return res.status(400).json({ success: false, message: 'Mark the parcel as received before refunding.' });
     }
     const order = ret.Order || await Order.findByPk(ret.order_id);
     const r = await issueReturnRefund(ret, order, req.user.id, brandId);

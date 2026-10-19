@@ -706,6 +706,52 @@ module.exports.razorpayWebhook = async (req, res) => {
       }
     }
 
+    // Refund outcome. Our refund call marks the order refunded right away;
+    // Razorpay settles it later and reports here. A FAILED refund must not
+    // stay looking "refunded": the refund row is marked failed, the payment
+    // and order go back to refund_pending (Orders page shows "Retry refund"
+    // and the "Refund due" filter picks it up), and a linked return goes back
+    // to "received" so staff can press Issue refund again.
+    if (eventType === 'refund.processed' || eventType === 'refund.failed') {
+      const refund = event.payload?.refund?.entity;
+      if (refund?.id) {
+        const refundRow = await Payment.findOne({ where: { transaction_id: refund.id } });
+        if (!refundRow) {
+          logger.warn(`Razorpay ${eventType}: no local refund row for ${refund.id}`);
+        } else if (eventType === 'refund.processed') {
+          if (!/processed by Razorpay/.test(refundRow.notes || '')) {
+            await refundRow.update({ notes: `${refundRow.notes || ''} · processed by Razorpay ${new Date().toISOString().slice(0, 10)}`.trim() });
+          }
+        } else if (refundRow.status !== 'failed') {
+          const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
+          const reason = refund.notes?.reason || refund.error_description || 'Razorpay reported the refund as failed';
+          await sequelize.transaction(async (t) => {
+            await refundRow.update({ status: 'failed', notes: `${refundRow.notes || ''} · FAILED: ${reason}`.trim() }, { transaction: t });
+            const original = refund.payment_id
+              ? await Payment.findOne({ where: { transaction_id: refund.payment_id }, transaction: t })
+              : null;
+            if (original && ['refunded', 'partial_refund'].includes(original.status)) {
+              await original.update({ status: 'refund_pending' }, { transaction: t });
+            }
+            const order = await Order.findByPk(refundRow.order_id, { transaction: t });
+            if (order) {
+              await order.update({ payment_status: 'refund_pending' }, { transaction: t });
+              await OrderStatusHistory.create({
+                order_id: order.id, status: order.status,
+                notes: `Refund ${refund.id} FAILED at Razorpay (₹${(Number(refund.amount) || 0) / 100}). Retry the refund.`,
+              }, { transaction: t });
+              const { Return } = require('../model/returnModel.js');
+              await Return.update(
+                { status: 'received', refunded_at: null, admin_note: `Razorpay refund ${refund.id} failed — issue the refund again.` },
+                { where: { order_id: order.id, status: 'refunded' }, transaction: t }
+              );
+            }
+          });
+          logger.error(`Razorpay refund ${refund.id} FAILED for payment ${refund.payment_id} — order moved to refund_pending`);
+        }
+      }
+    }
+
     res.status(200).json({ status: 'ok' });
   } catch (error) {
     logger.error('Razorpay webhook error:', error.message);

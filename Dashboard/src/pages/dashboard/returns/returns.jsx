@@ -13,6 +13,7 @@ const IC = {
 };
 
 const money = (n) => "₹" + Number(n || 0).toLocaleString("en-IN");
+const copyText = async (t) => { try { await navigator.clipboard.writeText(String(t)); } catch (_) { window.prompt("Copy:", String(t)); } };
 const REASONS = {
   damaged: "Damaged / leaking", defective: "Defective", wrong: "Wrong product",
   notdesc: "Not as described", changed: "Changed mind", other: "Other",
@@ -45,7 +46,6 @@ export default function Returns() {
   const [adminNote, setAdminNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [refundNow, setRefundNow] = useState(false);
   const [restock, setRestock] = useState(true);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -59,7 +59,7 @@ export default function Returns() {
   const refunded = rows.filter((r) => r.status === "refunded").length;
 
   const eligible = Number(detail?.requested_amount) || 0;
-  const isPrepaid = detail && !detail.is_cod && (detail.resolution === "original" || detail.resolution === "upi");
+  const isPrepaid = detail && !detail.is_cod;
   const deducted = Math.max(0, eligible - Number(refundAmt || 0));
 
   const openDetail = async (id) => {
@@ -67,7 +67,7 @@ export default function Returns() {
     try {
       const d = await returnService.getReturn(id);
       setDetail(d); setRefundAmt(Number(d.refund_amount ?? d.requested_amount) || 0);
-      setAdminNote(d.admin_note || ""); setRefundNow(false); setRestock(true); setOpen(true);
+      setAdminNote(d.admin_note || ""); setRestock(true); setOpen(true);
     } catch (e) { setMsg({ type: "err", text: e.message }); }
     finally { setBusy(false); }
   };
@@ -77,7 +77,7 @@ export default function Returns() {
   const doApprove = async () => {
     setBusy(true); setMsg(null);
     try {
-      const res = await returnService.approve(detail.id, { refund_amount: Number(refundAmt), admin_note: adminNote, refund_now: refundNow });
+      const res = await returnService.approve(detail.id, { refund_amount: Number(refundAmt), admin_note: adminNote });
       setMsg({ type: "ok", text: res.message || "Approved" });
       await refresh();
     } catch (e) {
@@ -168,7 +168,7 @@ export default function Returns() {
                 <div className="con-detail-item"><span className="con-detail-label">Order</span><span className="con-detail-value">{detail.Order?.order_number || "—"}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Payment</span><span className="con-detail-value">{detail.is_cod ? "COD" : "Prepaid"}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Reason</span><span className="con-detail-value">{REASONS[detail.reason] || detail.reason}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Refund to</span><span className="con-detail-value">{detail.resolution}</span></div>
+                <div className="con-detail-item"><span className="con-detail-label">Refund to</span><span className="con-detail-value">{detail.is_cod ? "UPI (COD order)" : "Original payment (Razorpay)"}</span></div>
                 <div className="con-detail-item"><span className="con-detail-label">Status</span><span className="con-detail-value"><Badge s={detail.status} /></span></div>
                 {detail.pickup_awb && <div className="con-detail-item"><span className="con-detail-label">Pickup AWB</span><span className="con-detail-value">{detail.pickup_awb}</span></div>}
               </div>
@@ -216,20 +216,22 @@ export default function Returns() {
                     <div style={{ marginTop: 9, fontSize: ".78rem", color: "#888" }}>
                       {deducted > 0 ? `${money(deducted)} in charges deducted · customer gets ${money(refundAmt)}` : "Full item value — no charges deducted"}
                     </div>
-                    {detail.resolution !== "exchange" && (
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: ".82rem", cursor: "pointer" }}>
-                        <input type="checkbox" checked={refundNow} onChange={(e) => setRefundNow(e.target.checked)} />
-                        Refund now without waiting for the item (no pickup)
-                      </label>
-                    )}
                   </div>
                   </>)}
 
                   {isPrepaid ? (
-                    <p style={{ marginTop: 12, fontSize: ".82rem", color: "#0a7a44", display: "flex", alignItems: "center", gap: 6 }}>Prepaid — refunded automatically to the original payment method once the parcel is received.</p>
+                    <p style={{ marginTop: 12, fontSize: ".82rem", color: "#0a7a44", display: "flex", alignItems: "center", gap: 6 }}>
+                      Prepaid — after the parcel is received and checked, press <strong>Issue refund</strong> to refund the original payment method via Razorpay.
+                    </p>
                   ) : (
                     <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: ".82rem", fontWeight: 600, marginBottom: 6 }}>Payout proof (screenshot) — required for manual refunds</div>
+                      <div style={{ padding: 12, background: "#fef3e2", border: "1px solid #f5d9b0", borderRadius: 8, fontSize: ".82rem", marginBottom: 12 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 6 }}>COD — pay the customer by UPI</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>UPI ID: <code>{detail.upi_id || "—"}</code>{detail.upi_id && <button className="sl-chip" style={chip} onClick={() => copyText(detail.upi_id)}>Copy</button>}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>Mobile: <code>{detail.payout_phone || "—"}</code>{detail.payout_phone && <button className="sl-chip" style={chip} onClick={() => copyText(detail.payout_phone)}>Copy</button>}</div>
+                        <div style={{ color: "#888", marginTop: 6 }}>After the parcel is received, send {money(detail.refund_amount ?? detail.requested_amount)} to this UPI, upload the screenshot below, then press <strong>Confirm UPI refund</strong>.</div>
+                      </div>
+                      <div style={{ fontSize: ".82rem", fontWeight: 600, marginBottom: 6 }}>Payout proof (screenshot) — required for UPI refunds</div>
                       {detail.payout_proof && <a href={detail.payout_proof} target="_blank" rel="noreferrer"><img src={detail.payout_proof} alt="proof" style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 8, border: "1px solid #e4e8ee", marginBottom: 8 }} /></a>}
                       <input type="file" accept="image/*" onChange={doProof} disabled={busy} />
                     </div>
@@ -253,7 +255,7 @@ export default function Returns() {
                 <>
                   <Button variant="secondary" onClick={doReject} disabled={busy}>Reject</Button>
                   <Button variant="primary" onClick={doApprove} disabled={busy}>
-                    {busy ? "Working…" : refundNow ? "Approve & refund now" : (detail.resolution === "exchange" ? "Approve exchange & book pickup" : "Approve & book pickup")}
+                    {busy ? "Working…" : "Approve & book pickup"}
                   </Button>
                 </>
               )}
@@ -265,11 +267,14 @@ export default function Returns() {
               )}
               {IN_TRANSIT.includes(detail.status) && (
                 <Button variant="primary" onClick={doReceive} disabled={busy}>
-                  {busy ? "Working…" : (detail.resolution === "exchange" ? "Mark received" : "Mark received & refund")}
+                  {busy ? "Working…" : "Mark received"}
                 </Button>
               )}
-              {detail.status === "received" && detail.resolution !== "exchange" && (
-                <Button variant="primary" onClick={doRefund} disabled={busy}>{busy ? "Working…" : "Issue refund"}</Button>
+              {detail.status === "received" && (
+                <Button variant="primary" onClick={doRefund} disabled={busy || (!isPrepaid && !detail.payout_proof)}
+                  title={!isPrepaid && !detail.payout_proof ? "Upload the UPI payout screenshot first" : undefined}>
+                  {busy ? "Working…" : isPrepaid ? `Issue refund ${money(detail.refund_amount ?? detail.requested_amount)}` : "Confirm UPI refund"}
+                </Button>
               )}
               <Button variant="secondary" onClick={() => setOpen(false)}>Close</Button>
             </div>

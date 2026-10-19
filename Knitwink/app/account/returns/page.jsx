@@ -50,7 +50,7 @@ export default function ReturnsPage() {
   }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
-  const startForm = (order) => { setMsg(null); setForm({ order_id: order.id, order, reason: '', note: '', resolution: order.payment_type === 'cod' ? 'upi' : 'original', upi_id: '', photos: [] }); };
+  const startForm = (order) => { setMsg(null); setForm({ order_id: order.id, order, reason: '', note: '', upi_id: '', payout_phone: '', photos: [] }); };
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const addPhotos = (e) => { const files = Array.from(e.target.files || []).slice(0, 4 - form.photos.length); set('photos', [...form.photos, ...files]); e.target.value = ''; };
 
@@ -58,15 +58,16 @@ export default function ReturnsPage() {
     e.preventDefault(); setMsg(null);
     if (!form.reason) return setMsg({ t: 'err', m: 'Please choose a reason.' });
     if (NEEDS_PHOTO.includes(form.reason) && form.photos.length === 0) return setMsg({ t: 'err', m: 'Please add at least one photo for this reason.' });
-    if (form.resolution === 'upi' && !form.upi_id.trim()) return setMsg({ t: 'err', m: 'Please enter your UPI ID.' });
+    const codForm = form.order?.payment_type === 'cod';
+    if (codForm && !/^[\w.\-]{2,}@[a-zA-Z][\w.\-]*$/.test(form.upi_id.trim())) return setMsg({ t: 'err', m: 'Please enter a valid UPI ID (e.g. name@okaxis).' });
+    if (codForm && !/^[6-9]\d{9}$/.test(form.payout_phone.replace(/\D/g, '').slice(-10))) return setMsg({ t: 'err', m: 'Please enter the 10-digit mobile number linked to your UPI.' });
     setSubmitting(true);
     try {
       const fd = new FormData();
       fd.append('order_id', form.order_id);
       fd.append('reason', form.reason);
       fd.append('note', form.note || '');
-      fd.append('resolution', form.resolution);
-      if (form.resolution === 'upi') fd.append('upi_id', form.upi_id);
+      if (codForm) { fd.append('upi_id', form.upi_id.trim()); fd.append('payout_phone', form.payout_phone.trim()); }
       form.photos.forEach((f) => fd.append('images', f));
       await createReturn(fd);
       setForm(null); setMsg({ t: 'ok', m: 'Return request submitted. We’ll review it within 24–48 hours.' });
@@ -78,7 +79,6 @@ export default function ReturnsPage() {
   if (authLoading || !user) return <div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>;
 
   const isCod = form && form.order?.payment_type === 'cod';
-  const resolutions = isCod ? [['upi', 'Refund to UPI / bank'], ['exchange', 'Exchange']] : [['original', 'Refund to original payment'], ['upi', 'Refund to UPI / bank'], ['exchange', 'Exchange']];
 
   return (
     <div style={{ background: '#f5f5f5', minHeight: '70vh', color: INK, fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -113,12 +113,18 @@ export default function ReturnsPage() {
                 ))}
               </div>
             )}
-            <label style={lbl}>How would you like your refund?</label>
-            {isCod && <p style={{ fontSize: '.8rem', color: '#888', margin: '0 0 6px' }}>This was a COD order, so there’s no online payment to reverse — choose a UPI/bank payout or an exchange.</p>}
-            <select value={form.resolution} onChange={(e) => set('resolution', e.target.value)} style={inp}>
-              {resolutions.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-            </select>
-            {form.resolution === 'upi' && (<><label style={lbl}>Your UPI ID</label><input type="text" value={form.upi_id} onChange={(e) => set('upi_id', e.target.value)} placeholder="name@upi" style={inp} /></>)}
+            <label style={lbl}>Refund</label>
+            {isCod ? (
+              <>
+                <p style={{ fontSize: '.8rem', color: '#888', margin: '0 0 6px' }}>This was a COD order, so we’ll refund you by UPI once we receive the item back.</p>
+                <label style={lbl}>Your UPI ID</label>
+                <input type="text" value={form.upi_id} onChange={(e) => set('upi_id', e.target.value)} placeholder="name@okaxis" autoComplete="off" style={inp} />
+                <label style={lbl}>Mobile number linked to that UPI</label>
+                <input type="tel" inputMode="numeric" maxLength={10} value={form.payout_phone} onChange={(e) => set('payout_phone', e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" style={inp} />
+              </>
+            ) : (
+              <p style={{ fontSize: '.8rem', color: '#888', margin: '0 0 6px' }}>We’ll refund your original payment method once we receive the item back.</p>
+            )}
             <button type="submit" className="pf-btn-primary" disabled={submitting} style={{ marginTop: 14 }}>{submitting ? 'Submitting…' : 'Submit request'}</button>
           </form>
         )}
