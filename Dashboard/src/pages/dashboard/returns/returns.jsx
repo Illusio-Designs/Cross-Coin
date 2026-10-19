@@ -38,7 +38,7 @@ const REVIEW = ["requested", "under_review"];
 // Approved but the parcel is not back yet.
 const IN_TRANSIT = ["approved", "pickup_scheduled", "picked_up"];
 
-export default function Returns() {
+export default function Returns({ embedded = false }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -132,7 +132,7 @@ export default function Returns() {
   return (
     <>
       <div className="dashboard-page">
-        <PageHeader title="Returns & Refunds" subtitle={`${rows.length} request${rows.length !== 1 ? "s" : ""}`} />
+        {!embedded && <PageHeader title="Returns & Refunds" subtitle={`${rows.length} request${rows.length !== 1 ? "s" : ""}`} />}
         <StatGrid>
           <StatTile label="Awaiting review" value={pending} tone="warn" />
           <StatTile label="Refunded" value={refunded} tone="good" />

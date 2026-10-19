@@ -439,6 +439,26 @@ export const pickupScheduleService = {
 };
 
 export const orderService = {
+  // Order Desk: live counts per work queue (tabs).
+  getDeskCounts: async (brandId) => {
+    try {
+      const response = await adminApi.get('/api/orders/desk/counts', { params: brandId && brandId !== 'all' ? { brand_id: brandId } : {} });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+
+  // Order Desk: one order's history, payments/refunds, returns, NDR cases.
+  getOrderDesk: async (id) => {
+    try {
+      const response = await adminApi.get(`/api/orders/${id}/desk`);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+
   getAllOrders: async (params = {}, signal = null, forceRefresh = false) => {
     const cacheKey = JSON.stringify(params);
 

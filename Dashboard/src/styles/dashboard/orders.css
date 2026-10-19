@@ -3588,7 +3588,7 @@
   flex-wrap: wrap;
   margin-bottom: var(--ds-space-4);
 }
-.ord-toolbar .ord-tabs { margin-bottom: 0; }
+.ord-toolbar .ord-tabs { margin-bottom: 0; flex: 1 1 100%; } /* the pipeline tabs get their own line */
 /* flex-wrap so the New order / Live / bulk / Filter buttons drop to a second
    line on narrow phones instead of overflowing the toolbar. */
 .ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }

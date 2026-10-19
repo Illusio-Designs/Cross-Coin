@@ -34,7 +34,7 @@ const reply = (c) => {
 };
 const copy = async (t) => { try { await navigator.clipboard.writeText(String(t)); showSuccess("copied", "Copied"); } catch (_) { window.prompt("Copy:", String(t)); } };
 
-export default function FailedDeliveries() {
+export default function FailedDeliveries({ embedded = false }) {
   const [view, setView] = useState("open");
   const [busyId, setBusyId] = useState(null);
   const { data, isLoading, error, refetch } = useQuery({
@@ -87,7 +87,7 @@ export default function FailedDeliveries() {
 
   return (
     <div className="dashboard-page">
-      <PageHeader title="Failed Deliveries" subtitle="Courier couldn't deliver — the customer is asked on WhatsApp what to do next" />
+      {!embedded && <PageHeader title="Failed Deliveries" subtitle="Courier couldn't deliver — the customer is asked on WhatsApp what to do next" />}
       <StatGrid>
         <StatTile label="Open" value={open.length} tone="info" />
         <StatTile label="Waiting for customer" value={count((c) => c.status === "awaiting_customer")} tone="warn" />

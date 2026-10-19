@@ -16,6 +16,9 @@ import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
 import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 import ManualOrderModal from '../../../components/Dashboard/ManualOrderModal';
+import OrderStory from '../../../components/orders/OrderStory';
+import Returns from '../returns/returns';
+import FailedDeliveries from '../ndr/ndr';
 import { PageHeader, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -28,6 +31,23 @@ import {
 // Compact row overflow menu ("⋯ more"). Rendered through a portal so it isn't
 // clipped by the table's horizontal-scroll container. Keeps the actions column
 // narrow: only View + the one relevant action stay inline; the rest live here.
+// Order Desk tabs = the backend pipeline's work queues (GET /api/orders?stage=).
+// 'problems' and 'returns' render the Failed Deliveries / Returns views inline.
+const DESK_TABS = [
+    { v: 'to_confirm',    l: 'To confirm',        count: 'to_confirm' },
+    { v: 'to_ship',       l: 'To ship',           count: 'to_ship' },
+    { v: 'in_transit',    l: 'In transit',        count: 'in_transit' },
+    { v: 'problems',      l: 'Delivery problems', count: 'ndr_open' },
+    { v: 'returns',       l: 'Returns',           count: 'returns_open' },
+    { v: 'refund_due',    l: 'Refunds due',       count: 'refund_due' },
+    { v: 'delivered',     l: 'Delivered' },
+    { v: 'cancelled_rto', l: 'Cancelled & RTO' },
+    { v: 'all',           l: 'All' },
+];
+const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'in_transit', 'problems', 'returns', 'delivered', 'cancelled_rto', 'refund_due']);
+// Old home-inbox deep links used status buckets — map them onto the tabs.
+const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit', rto: 'cancelled_rto', cancelled: 'cancelled_rto' };
+
 function OverflowMenu({ items }) {
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState(null);
@@ -99,7 +119,8 @@ const Orders = () => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
-    const [statusFilter, setStatusFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("to_confirm");
+    const [deskCounts, setDeskCounts] = useState({});
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [refundDueFilter, setRefundDueFilter] = useState(false);
     const [sortBy, setSortBy] = useState("createdAt");
@@ -156,7 +177,7 @@ const Orders = () => {
         try { hint = sessionStorage.getItem('obz-orders-status'); } catch {}
         if (hint) {
             try { sessionStorage.removeItem('obz-orders-status'); } catch {}
-            setStatusFilter(hint);
+            setStatusFilter(LEGACY_TAB[hint] || hint);
         }
     }, []);
 
@@ -183,7 +204,8 @@ const Orders = () => {
         try {
             const params = {
                 page, limit: itemsPerPage,
-                status: statusFilter !== 'all' ? statusFilter : undefined,
+                stage: DESK_STAGE_VALUES.has(statusFilter) ? statusFilter : undefined,
+                status: !DESK_STAGE_VALUES.has(statusFilter) && statusFilter !== 'all' ? statusFilter : undefined,
                 payment_type: paymentTypeFilter !== 'all' ? paymentTypeFilter : undefined,
                 payment_status: paymentStatusFilter !== 'all' ? paymentStatusFilter : undefined,
                 refund_due: refundDueFilter ? 1 : undefined,
@@ -230,6 +252,16 @@ const Orders = () => {
             if (reqId === requestIdRef.current && !silent && !willRetry) setLoading(false);
         }
     }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, refundDueFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
+
+    // Live tab counts (refreshed with every list load).
+    const fetchDeskCounts = useCallback(async () => {
+        try {
+            const r = await orderService.getDeskCounts(brandFilter);
+            const c = r?.counts || {};
+            setDeskCounts({ ...c, returns_open: (c.returns_to_review || 0) + (c.returns_in_pickup || 0) + (c.returns_to_refund || 0) });
+        } catch { /* counts are optional */ }
+    }, [brandFilter]);
+    useEffect(() => { fetchDeskCounts(); }, [fetchDeskCounts, orders]);
 
     const fetchAllOrdersForStats = useCallback(async () => {
         try {
@@ -869,21 +901,18 @@ const Orders = () => {
 
                     {/* ── Status tabs (left) + Filter drawer trigger (right), one line ── */}
                     <div className="ord-toolbar">
-                        <div className="ord-tabs" role="tablist" aria-label="Filter by order status">
-                            {[
-                                { v: 'all',       l: 'All' },
-                                { v: 'pending',   l: 'Pending' },
-                                { v: 'processing', l: 'Processing' },
-                                { v: 'shipped',   l: 'Shipped' },
-                                { v: 'delivered', l: 'Delivered' },
-                                { v: 'cancelled', l: 'Cancelled' },
-                                { v: 'rto',       l: 'RTO' },
-                            ].map((t) => (
+                        <div className="ord-tabs" role="tablist" aria-label="Order pipeline stages">
+                            {DESK_TABS.map((t) => (
                                 <button key={t.v} type="button" role="tab"
                                     aria-selected={statusFilter === t.v}
                                     className={`ord-tab${statusFilter === t.v ? ' on' : ''}`}
-                                    onClick={() => setStatusFilter(t.v)}>
+                                    onClick={() => { setStatusFilter(t.v); setCurrentPage(1); }}>
                                     {t.l}
+                                    {t.count && deskCounts[t.count] > 0 && (
+                                        <span className="ord-tab-count" style={{ marginLeft: 6, padding: '0 7px', borderRadius: 999, fontSize: '.72rem', fontWeight: 700, background: statusFilter === t.v ? 'var(--ds-color-surface)' : 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text)' }}>
+                                            {deskCounts[t.count]}
+                                        </span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -963,7 +992,13 @@ const Orders = () => {
                     </div>
                 </Modal>
 
-                {/* Table Section */}
+                {statusFilter === 'to_confirm' && deskCounts.to_confirm_overdue > 0 && (
+                    <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 10, background: 'var(--ds-color-warn-bg)', color: 'var(--ds-color-warn)', fontSize: '.86rem', fontWeight: 600 }}>
+                        {deskCounts.to_confirm_overdue} COD order{deskCounts.to_confirm_overdue === 1 ? '' : 's'} waiting more than 24 hours — call the customer, then Confirm or Cancel.
+                    </div>
+                )}
+                {statusFilter === 'problems' ? <FailedDeliveries embedded /> : statusFilter === 'returns' ? <Returns embedded /> : (
+                /* Table Section */
                 <section className="sl-table-wrap" aria-label="Orders table">
                     {loading ? (
                         <div style={{ padding: '20px' }} role="status" aria-label="Loading orders">
@@ -1011,6 +1046,7 @@ const Orders = () => {
                         </>
                     )}
                 </section>
+                )}
             </div>
 
             {/* Order Details Modal */}
@@ -1310,6 +1346,9 @@ const Orders = () => {
                                 <span>{formatCurrency(getOrderTotal(selectedOrder))}</span>
                             </div>
                         </div>
+
+                        {/* Timeline, payments & refunds, return, failed delivery */}
+                        <OrderStory orderId={selectedOrder.id} />
 
                         {/* Manifest Section */}
                         {(selectedOrder.Shipment?.waybill || selectedOrder.shipping_waybill) && (
