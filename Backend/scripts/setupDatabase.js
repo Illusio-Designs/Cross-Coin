@@ -1586,7 +1586,7 @@ const setupDatabase = async () => {
 
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
-      console.log("⚠️ Magic Checkout migration warning:", migrationError.message);
+      console.log("⚠️ Migration warning:", migrationError.message);
       // Don't fail the entire setup if migrations have issues
     }
 

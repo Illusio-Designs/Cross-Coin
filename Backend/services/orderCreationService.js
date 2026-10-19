@@ -346,7 +346,7 @@ async function handlePaymentSuccess({
   // 4. Emit events + Shipping sync (non-blocking)
   if (created) {
     // Carry the real item count so the WhatsApp confirmation doesn't hard-code
-    // "1 item" for multi-item prepaid/magic orders.
+    // "1 item" for multi-item prepaid orders.
     try { order._itemCount = Array.isArray(session.items) ? session.items.length : undefined; } catch (_) {}
     setImmediate(() => {
       // Fire order.created too (payment-first prepaid orders skip the checkout

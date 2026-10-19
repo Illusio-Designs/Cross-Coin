@@ -8,8 +8,8 @@ const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter')
  * The SDK rejects with the parsed API body — { statusCode, error: { code,
  * description, reason, field } } — which is NOT an Error, so `err.message` is
  * `undefined`. That's why order failures showed up as "…: undefined". Dig out
- * the real description (and the offending field, which is gold for Magic
- * line_items errors) so the log and the client see WHY it failed.
+ * the real description (and the offending field)
+ * so the log and the client see WHY it failed.
  */
 function rzpErrorMessage(error) {
   if (!error) return 'Unknown error';
@@ -87,10 +87,7 @@ class RazorpayService {
       receipt,
       notes = {},
       brandId = 1,
-      line_items = null,
-      line_items_total = null,
-      partial_payment = false,
-      one_click_checkout = false
+      partial_payment = false
     } = options;
 
     try {
@@ -114,44 +111,8 @@ class RazorpayService {
         partial_payment
       };
 
-      // Add line_items if provided (for Magic Checkout)
-      if (line_items && Array.isArray(line_items) && line_items.length > 0) {
-        orderOptions.line_items = line_items;
-        orderOptions.line_items_total = line_items_total || amountInSmallestUnit;
-      }
-
-      // Magic (one-click) Checkout — Razorpay's modal collects the address from
-      // its cross-merchant network and calls our shipping/coupon callbacks.
-      if (one_click_checkout) {
-        orderOptions.line_items_total = orderOptions.line_items_total || amountInSmallestUnit;
-        orderOptions.one_click_checkout = true;
-      }
-
       // Create order
-      try {
-        return await razorpay.orders.create(orderOptions);
-      } catch (err) {
-        // If the account isn't provisioned for Magic (one-click) Checkout,
-        // Razorpay rejects one_click_checkout / line_items with
-        // "…is/are not required and should not be sent". Rather than fail the
-        // whole order, strip the Magic-only fields and create a standard order
-        // so payment still works (it just won't be the 1CC address flow).
-        const msg = rzpErrorMessage(err).toLowerCase();
-        const magicRejected = msg.includes('should not be sent')
-          && (msg.includes('one_click_checkout') || msg.includes('line_items'));
-        if (magicRejected && (orderOptions.one_click_checkout || orderOptions.line_items)) {
-          // eslint-disable-next-line no-console
-          console.warn('[Razorpay] Magic (1CC) not enabled on this account — retrying as a standard order. Reason: ' + rzpErrorMessage(err));
-          delete orderOptions.one_click_checkout;
-          delete orderOptions.line_items;
-          delete orderOptions.line_items_total;
-          const order = await razorpay.orders.create(orderOptions);
-          order._magic_disabled = true; // signal to callers that 1CC wasn't used
-          order._magic_disabled_reason = rzpErrorMessage(err); // exact Razorpay message
-          return order;
-        }
-        throw err;
-      }
+      return await razorpay.orders.create(orderOptions);
     } catch (error) {
       throw new Error(`Failed to create Razorpay order: ${rzpErrorMessage(error)}`);
     }
