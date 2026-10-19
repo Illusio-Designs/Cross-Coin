@@ -70,7 +70,7 @@ async function loadOrderForInvoice(where) {
         ],
       },
       { model: ShippingAddress, as: 'ShippingAddress', required: false },
-      { model: Brand, as: 'Brand', attributes: ['id', 'name'], required: false },
+      { model: Brand, as: 'Brand', attributes: ['id', 'name', 'display_name'], required: false },
     ],
   });
 }
@@ -146,7 +146,10 @@ async function buildInvoicePdf(where) {
 
   const gst = await gstBreakdown(order);
   const addr = order.ShippingAddress || {};
-  const brandName = gst.legalName || order.Brand?.name || 'Store';
+  // Header = the store the customer bought from; the legal entity (GST seller)
+  // is printed under it as "Sold by".
+  const brandName = order.Brand?.display_name || order.Brand?.name || gst.legalName || 'Store';
+  const sellerName = gst.legalName && gst.legalName !== brandName ? gst.legalName : '';
 
   const doc = await PDFDocument.create();
   const page = doc.addPage([595.28, 841.89]); // A4
@@ -172,9 +175,10 @@ async function buildInvoicePdf(where) {
   const hr = (yy) => page.drawLine({ start: { x: L, y: yy }, end: { x: R, y: yy }, thickness: 0.7, color: line });
 
   // ── Header ────────────────────────────────────────────────────────────────
-  text(brandName, L, y, { size: 16, bold: true });
+  text(brandName, L, y, { size: 18, bold: true });
   right(gst.gstin && gst.rate != null ? 'TAX INVOICE' : 'INVOICE', R, y, { size: 13, bold: true, color: grey });
-  y -= 16;
+  y -= 17;
+  if (sellerName) { text(`Sold by: ${sellerName}`, L, y, { size: 9, bold: true }); y -= 12; }
   if (gst.address) { text(gst.address, L, y, { size: 8.5, color: grey, maxWidth: 300 }); y -= 12 * Math.ceil(gst.address.length / 68); }
   if (gst.gstin) { text(`GSTIN: ${gst.gstin}`, L, y, { size: 9, bold: true }); y -= 14; }
   y -= 6;
