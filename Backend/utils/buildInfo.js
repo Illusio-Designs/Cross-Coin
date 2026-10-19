@@ -8,7 +8,9 @@ const os = require('os');
 let info = { sha: 'local', builtAt: null };
 try { info = { ...info, ...require('../BUILD_INFO.json') }; } catch (_) { /* not a deployed build */ }
 
-const startedAt = new Date();
+// Process start = now − uptime, so it's right even though this module is
+// first loaded lazily (on the first /api/health call or alert).
+const startedAt = new Date(Date.now() - process.uptime() * 1000);
 
 function buildInfo() {
   return {
