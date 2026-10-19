@@ -77,7 +77,7 @@ export default function Returns() {
   const doApprove = async () => {
     setBusy(true); setMsg(null);
     try {
-      const res = await returnService.approve(detail.id, { refund_amount: Number(refundAmt), admin_note: adminNote });
+      const res = await returnService.approve(detail.id, { admin_note: adminNote });
       setMsg({ type: "ok", text: res.message || "Approved" });
       await refresh();
     } catch (e) {
@@ -107,7 +107,11 @@ export default function Returns() {
   };
   const doPickedUp = () => run(() => returnService.markPickedUp(detail.id), "Marked as picked up");
   const doReceive = () => run(() => returnService.receive(detail.id, restock), "Received");
-  const doRefund = () => run(() => returnService.refund(detail.id), "Refund issued");
+  const doRefund = () => {
+    const amt = Number(refundAmt);
+    if (!Number.isFinite(amt) || amt <= 0 || amt > eligible) { setMsg({ type: "err", text: `Enter a refund amount between ₹1 and ${money(eligible)}.` }); return; }
+    return run(() => returnService.refund(detail.id, amt), "Refund issued");
+  };
 
   const doProof = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -188,10 +192,9 @@ export default function Returns() {
 
               {detail.status !== "refunded" && detail.status !== "rejected" ? (
                 <>
-                  {!REVIEW.includes(detail.status) && (
+                  {IN_TRANSIT.includes(detail.status) && (
                     <div style={{ marginTop: 18, padding: 16, background: "#f5f6f8", border: "1px solid #e4e8ee", borderRadius: 10, fontSize: ".84rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#888" }}>Approved refund</span><strong>{money(detail.refund_amount)}</strong></div>
-                      {detail.charges_deducted > 0 && <div style={{ marginTop: 4, color: "#888" }}>{money(detail.charges_deducted)} in charges deducted</div>}
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#888" }}>Item value</span><strong>{money(eligible)}</strong></div>
                       {detail.pickup_status && <div style={{ marginTop: 4, color: "#888" }}>Courier: {detail.pickup_status}</div>}
                       {IN_TRANSIT.includes(detail.status) && (
                         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer" }}>
@@ -201,10 +204,16 @@ export default function Returns() {
                       )}
                     </div>
                   )}
-                  {REVIEW.includes(detail.status) && (<>
+                  {REVIEW.includes(detail.status) && (
+                    <div style={{ marginTop: 18, padding: 16, background: "#f5f6f8", border: "1px solid #e4e8ee", borderRadius: 10, fontSize: ".84rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#888" }}>Item value</span><strong>{money(eligible)}</strong></div>
+                      <div style={{ marginTop: 6, color: "#888" }}>Approve to book the pickup. You'll enter the refund amount after the parcel is received and checked.</div>
+                    </div>
+                  )}
+                  {detail.status === "received" && (<>
                   <div style={{ marginTop: 18, padding: 16, background: "#f5f6f8", border: "1px solid #e4e8ee", borderRadius: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".82rem" }}><span style={{ color: "#888" }}>Item value</span><strong>{money(eligible)}</strong></div>
-                    <div style={{ fontSize: ".78rem", color: "#888", margin: "10px 0 4px" }}>Refund amount — deduct charges for a part refund</div>
+                    <div style={{ fontSize: ".78rem", color: "#888", margin: "10px 0 4px" }}>Refund amount — after checking the item, deduct charges for a part refund</div>
                     <input type="number" min={0} max={eligible} value={refundAmt} onChange={(e) => setRefundAmt(e.target.value)}
                       style={{ width: "100%", fontSize: "1.5rem", fontWeight: 700, border: "1px solid #d7dce4", borderRadius: 8, padding: "8px 12px" }} />
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
@@ -229,7 +238,7 @@ export default function Returns() {
                         <div style={{ fontWeight: 700, marginBottom: 6 }}>COD — pay the customer by UPI</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>UPI ID: <code>{detail.upi_id || "—"}</code>{detail.upi_id && <button className="sl-chip" style={chip} onClick={() => copyText(detail.upi_id)}>Copy</button>}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 }}>Mobile: <code>{detail.payout_phone || "—"}</code>{detail.payout_phone && <button className="sl-chip" style={chip} onClick={() => copyText(detail.payout_phone)}>Copy</button>}</div>
-                        <div style={{ color: "#888", marginTop: 6 }}>After the parcel is received, send {money(detail.refund_amount ?? detail.requested_amount)} to this UPI, upload the screenshot below, then press <strong>Confirm UPI refund</strong>.</div>
+                        <div style={{ color: "#888", marginTop: 6 }}>After the parcel is received, send the refund amount to this UPI, upload the screenshot below, then press <strong>Confirm UPI refund</strong>.</div>
                       </div>
                       <div style={{ fontSize: ".82rem", fontWeight: 600, marginBottom: 6 }}>Payout proof (screenshot) — required for UPI refunds</div>
                       {detail.payout_proof && <a href={detail.payout_proof} target="_blank" rel="noreferrer"><img src={detail.payout_proof} alt="proof" style={{ width: 92, height: 92, objectFit: "cover", borderRadius: 8, border: "1px solid #e4e8ee", marginBottom: 8 }} /></a>}
@@ -273,7 +282,7 @@ export default function Returns() {
               {detail.status === "received" && (
                 <Button variant="primary" onClick={doRefund} disabled={busy || (!isPrepaid && !detail.payout_proof)}
                   title={!isPrepaid && !detail.payout_proof ? "Upload the UPI payout screenshot first" : undefined}>
-                  {busy ? "Working…" : isPrepaid ? `Issue refund ${money(detail.refund_amount ?? detail.requested_amount)}` : "Confirm UPI refund"}
+                  {busy ? "Working…" : isPrepaid ? `Refund ${money(refundAmt)} via Razorpay` : `Confirm UPI refund of ${money(refundAmt)}`}
                 </Button>
               )}
               <Button variant="secondary" onClick={() => setOpen(false)}>Close</Button>

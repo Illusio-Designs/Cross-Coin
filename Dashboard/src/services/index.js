@@ -2532,9 +2532,9 @@ export const returnService = {
     }
   },
   // Issue/retry the refund for a received return (e.g. after uploading proof).
-  refund: async (id) => {
+  refund: async (id, refundAmount) => {
     try {
-      const res = await adminApi.post(`/api/returns/${id}/refund`);
+      const res = await adminApi.post(`/api/returns/${id}/refund`, refundAmount != null ? { refund_amount: refundAmount } : {});
       return res.data;
     } catch (error) {
       const d = error.response?.data;

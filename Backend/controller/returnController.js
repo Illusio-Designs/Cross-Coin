@@ -537,6 +537,17 @@ module.exports.refundReturn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Mark the parcel as received before refunding.' });
     }
     const order = ret.Order || await Order.findByPk(ret.order_id);
+    // The amount is decided here, after the parcel is received and checked
+    // (deduct shipping / damage charges for a part refund).
+    if (req.body.refund_amount != null) {
+      const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
+      const amt = Number(req.body.refund_amount);
+      if (!Number.isFinite(amt) || amt <= 0 || amt > eligible + 0.01) {
+        return res.status(400).json({ success: false, message: `Refund amount must be between ₹1 and ₹${eligible}.` });
+      }
+      const refundAmount = Math.round(amt * 100) / 100;
+      await ret.update({ refund_amount: refundAmount, charges_deducted: Math.max(0, +(eligible - refundAmount).toFixed(2)) });
+    }
     const r = await issueReturnRefund(ret, order, req.user.id, brandId);
     await ret.reload();
     if (!r.ok) return res.status(400).json({ success: false, code: r.code, message: r.message, return: serialize(ret) });
