@@ -554,6 +554,19 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      name: tName('delivery_failed'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Delivery Attempt Missed' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}, our courier tried to deliver your *{{2}}* order *#{{3}}* but couldn't complete it.\n\nReason: {{4}}\n\nThey'll try again soon — please keep your phone reachable so the delivery goes through.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'Customer not available']] },
+        },
+        { type: 'FOOTER', text: footer },
+        trackButton,
+      ],
+    },
+    {
       name: tName('order_delivered'), category: 'UTILITY', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Order Delivered!' },
@@ -1099,6 +1112,17 @@ async function sendOutForDelivery(phone, data, brandId = 1) {
   ], brandId, { trackOrder: data.orderNumber });
 }
 
+// Failed delivery attempt (courier NDR) — tells the customer why and that a
+// re-attempt is coming, with the Track Order button.
+async function sendDeliveryFailed(phone, data, brandId = 1) {
+  return sendTemplate(phone, tName('delivery_failed'), [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+    String(data.reason || 'The courier could not reach you').slice(0, 120),
+  ], brandId, { trackOrder: data.orderNumber });
+}
+
 async function sendOrderDelivered(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('order_delivered'), [
     data.name || 'there',
@@ -1562,6 +1586,7 @@ module.exports = {
   sendAddressRequest,
   sendOrderShipped,
   sendOutForDelivery,
+  sendDeliveryFailed,
   sendOrderDelivered,
   sendOrderCancelled,
   sendRtoCod,

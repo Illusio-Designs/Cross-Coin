@@ -65,6 +65,9 @@ function shouldAdvanceOrderStatus(current, incoming) {
   if (!current) return true;
   if (incoming === current) return false;                 // no-op / duplicate
   if (ALWAYS_ALLOW_STATUS.has(incoming)) return true;     // NDR / RTO / cancel
+  // After a failed attempt the courier re-attempts: undelivered → out for
+  // delivery is a real step even though it ranks lower.
+  if (current === 'undelivered' && incoming === 'out for delivery') return true;
   const cur = SHIPMENT_STATUS_PRIORITY[current] ?? -1;
   const inc = SHIPMENT_STATUS_PRIORITY[incoming] ?? -1;
   return inc >= cur;                                       // only forward
@@ -555,6 +558,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
 
     // Map Shipping status to our order status — but only ever move FORWARD.
     let orderStatus = order.status;
+    const prevOrderStatus = order.status;
     let statusAdvanced = false;
     let webhookNotes = `Shipping webhook: ${status}`;
 
@@ -698,7 +702,9 @@ module.exports.handleShippingWebhook = async (req, res) => {
         if (!phone) return;
         const name = (addr?.full_name || order.GuestUser?.firstName || '').split(' ')[0] || 'there';
 
-        if (orderStatus === 'shipped' || orderStatus === 'in transit') {
+        if ((orderStatus === 'shipped' || orderStatus === 'in transit')
+            && !['shipped', 'in transit'].includes(prevOrderStatus)) {
+          // "Shipped" once — the shipped → in transit step must not re-send it.
           await whatsappService.sendOrderShipped(phone, {
             name,
             orderNumber: order.order_number,
@@ -710,6 +716,10 @@ module.exports.handleShippingWebhook = async (req, res) => {
             name,
             orderNumber: order.order_number,
             courierName: courier_name || order.courier_name || 'our courier partner'
+          }, order.brand_id || 1);
+        } else if (orderStatus === 'undelivered') {
+          await whatsappService.sendDeliveryFailed(phone, {
+            name, orderNumber: order.order_number, reason: rto_reason || remark,
           }, order.brand_id || 1);
         } else if (orderStatus === 'delivered') {
           await whatsappService.sendOrderDelivered(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
@@ -1717,6 +1727,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
         const _notifyPhone = order.shipping_address_id;
         const _notifyOrder = order;
         const _notifyStatus = newStatus;
+        const _notifyPrev = prevStatusForRto;
         setImmediate(async () => {
           try {
             const whatsappSvc = require('../services/whatsappService.js');
@@ -1725,7 +1736,8 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
             if (!phone) return;
             const name = (addr?.full_name || '').split(' ')[0] || 'there';
 
-            if (_notifyStatus === 'shipped' || _notifyStatus === 'in transit') {
+            if ((_notifyStatus === 'shipped' || _notifyStatus === 'in transit')
+                && !['shipped', 'in transit'].includes(_notifyPrev)) {
               await whatsappSvc.sendOrderShipped(phone, {
                 name,
                 orderNumber: _notifyOrder.order_number,
@@ -1737,6 +1749,12 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
                 name,
                 orderNumber: _notifyOrder.order_number,
                 courierName: _notifyOrder.courier_name || 'our courier partner',
+              }, _notifyOrder.brand_id || 1);
+            } else if (_notifyStatus === 'undelivered') {
+              await whatsappSvc.sendDeliveryFailed(phone, {
+                name,
+                orderNumber: _notifyOrder.order_number,
+                reason: statusData.remark || statusData.ndr_reason || statusData.reason || null,
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'delivered') {
               await whatsappSvc.sendOrderDelivered(phone, {
