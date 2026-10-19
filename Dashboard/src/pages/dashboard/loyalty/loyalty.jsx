@@ -1,144 +1,387 @@
-import { useState, useEffect, useCallback } from 'react';
-import { loyaltyService } from '../../../services';
-import { Button, Modal, Input, Badge } from '../../../components/ui';
-import { PageHeader, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import {
+  Button, PageHeader, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, SkeletonRows,
+} from '../../../components/ui';
+import Dropdown from '../../../components/ui/Dropdown';
+import { loyaltyService, userService, brandService } from '../../../services';
+import { useAuth } from '../../../context/AuthContext';
 import { showSuccess, showError } from '../../../utils/toastNotification';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Search01Icon, StarIcon } from '@hugeicons/core-free-icons';
 
-/** Loyalty — points transactions (earned / redeemed / expired / adjusted / refunded). */
-const fmtDate = (s) => {
-  if (!s) return '—';
-  try { return new Date(s).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-  catch { return s; }
+/* ──────────────────────────────────────────────────────────────
+   Loyalty points — what customers have, earn, spend and lose.
+   Data (Backend services/loyaltyAdminService.js):
+     GET  /api/admin/loyalty/summary        tiles, rules, expiring in 30 days, last expiry run
+     GET  /api/admin/loyalty/transactions   tabs, customer search, paging, real order numbers
+     GET  /api/admin/loyalty/customer/:id   balance for the give/take form
+     POST /api/admin/loyalty/adjust         give (+) / take (−) points with a reason
+     PUT  /api/admin/loyalty/rules          admin; rules live in brand settings
+   Customer search reuses GET /api/admin/customers?q= (registered accounts only —
+   guests have no points). Styles: payLoyalty.css (.pl-*).
+   ────────────────────────────────────────────────────────────── */
+
+const PAGE_SIZE = 25;
+const TABS = [
+  { value: 'all', label: 'All' }, { value: 'earned', label: 'Earned' }, { value: 'spent', label: 'Spent' },
+  { value: 'staff', label: 'By staff' }, { value: 'expired', label: 'Expired' },
+];
+const EMPTY = {
+  all: 'Points show up here when a delivered order earns them.',
+  earned: 'No points earned yet — they’re added when an order is delivered.',
+  spent: 'Nobody has spent points yet.',
+  staff: 'Nobody on the team has given or taken points yet.',
+  expired: 'No points have expired.',
 };
-const TYPE_VARIANT = {
-  earned: 'success',
-  redeemed: 'info',
-  refunded: 'warning',
-  expired: 'danger',
-  adjusted: 'default',
-};
+const RULE_FIELDS = [
+  { key: 'earnRate', label: 'Earn — ₹ spent for 1 point', min: 1, max: 100000 },
+  { key: 'redeemRate', label: 'Worth — points for ₹1 off', min: 1, max: 100 },
+  { key: 'maxRedeemPercent', label: 'Max per order — % of the order', min: 1, max: 100 },
+  { key: 'expiryDays', label: 'Expire after — days', min: 1, max: 3650 },
+];
 
-const S = {
-  wrap: { display: 'flex', flexDirection: 'column', gap: 16 },
-  mono: { fontFamily: 'var(--ds-font-mono, monospace)', fontVariantNumeric: 'tabular-nums' },
-  hint: { fontSize: 12.5, color: 'var(--ds-color-text-muted)' },
-  pager: { display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end' },
-};
+const num = (n) => Number(n || 0).toLocaleString('en-IN');
+const inr = (n) => `₹${num(Math.round(Number(n) || 0))}`;
+const plural = (n, w) => `${num(n)} ${w}${Number(n) === 1 ? '' : 's'}`;
+const fullDate = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '');
+const istDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+function when(d) {
+  if (!d) return '—';
+  if (istDay(d) === istDay(Date.now())) return 'Today';
+  if (istDay(d) === istDay(Date.now() - 86400000)) return 'Yesterday';
+  const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  if (days < 7) return `${days} days ago`;
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: days > 300 ? 'numeric' : undefined, timeZone: 'Asia/Kolkata' });
+}
+function goTo(path) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+function openOrder(orderNumber) {
+  try { sessionStorage.setItem('obz-orders-search', orderNumber); } catch { /* storage blocked */ }
+  goTo('/dashboard/orders');
+}
+const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWidth={2} aria-hidden="true" />;
+const ruleLines = (r) => [
+  ['Earn', `1 point per ₹${num(r.earnRate)} delivered`],
+  ['Worth', r.redeemRate === 1 ? '1 point = ₹1 at checkout' : `${num(r.redeemRate)} points = ₹1 at checkout`],
+  ['Max per order', `${r.maxRedeemPercent}% of the order`],
+  ['Expire after', `${num(r.expiryDays)} days`],
+];
 
-export default function Loyalty() {
-  const [data, setData] = useState({ transactions: [], total: 0, page: 1, totalPages: 1 });
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const load = useCallback(async (p) => {
-    setLoading(true); setError('');
-    try {
-      const d = await loyaltyService.getTransactions(p, 50);
-      if (d?.success) setData(d.data); else setError(d?.message || 'Failed to load');
-    } catch (e) { setError(e?.response?.data?.message || e.message || 'Failed to load'); }
-    finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(page); }, [page, load]);
-
-  // ── Adjust points (admin add/deduct) ──
-  const [adjustOpen, setAdjustOpen] = useState(false);
+// ── Rules ────────────────────────────────────────────────────────
+function RulesCard({ data, brandId, brandName, isAdmin, expiryJob, onSaved }) {
+  const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ userId: '', points: '', description: '' });
-
-  const openAdjust = (userId = '') => {
-    setForm({ userId: String(userId || ''), points: '', description: '' });
-    setAdjustOpen(true);
-  };
-
-  const submitAdjust = async () => {
-    const pts = Number(form.points);
-    if (!form.userId || String(form.points).trim() === '') { showError('fieldRequired', 'Enter a customer ID and points.'); return; }
-    if (!Number.isFinite(pts) || pts === 0) { showError('fieldRequired', 'Points must be a non-zero number (use a minus sign to deduct).'); return; }
-    setSaving(true);
+  const [err, setErr] = useState('');
+  if (!data) return <section className="pl-side-card"><b>How points work</b><SkeletonRows rows={2} label="Loading rules…" /></section>;
+  const r = data.rules;
+  const start = () => { setErr(''); setForm(Object.fromEntries(RULE_FIELDS.map((f) => [f.key, String(r[f.key])]))); };
+  const save = async () => {
+    for (const f of RULE_FIELDS) {
+      const n = Number(form[f.key]);
+      if (!Number.isInteger(n) || n < f.min || n > f.max) { setErr(`${f.label.split(' — ')[0]} must be a whole number from ${f.min} to ${num(f.max)}.`); return; }
+    }
+    setSaving(true); setErr('');
     try {
-      const d = await loyaltyService.adjustPoints({ userId: form.userId, points: pts, description: form.description });
-      if (d?.success) {
-        showSuccess('saved', `Points adjusted: ${pts > 0 ? '+' : ''}${pts} for customer #${form.userId}.`);
-        setAdjustOpen(false);
-        load(page);
-      } else showError('saveFailed', d?.message || 'Failed to adjust points');
-    } catch (e) {
-      showError('saveFailed', e?.response?.data?.message || e.message || 'Failed to adjust points');
-    } finally { setSaving(false); }
+      const res = await loyaltyService.saveRules({ brandId: brandId || undefined, ...Object.fromEntries(RULE_FIELDS.map((f) => [f.key, Number(form[f.key])])) });
+      showSuccess(null, res.message || 'Rules saved.');
+      setForm(null);
+      onSaved();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
   };
-
-  const txns = data.transactions || [];
-
-  const columns = [
-    { key: 'customer', label: 'Customer', render: (t) => (
-      <button type="button" onClick={() => openAdjust(t.user_id)} title="Adjust this customer's points"
-        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--ds-color-text)', font: 'inherit', textDecoration: 'underline dotted', textUnderlineOffset: 3 }}>
-        {t.User?.username || t.User?.email || `User #${t.user_id}`}
-      </button>
-    ) },
-    { key: 'type', label: 'Type', render: (t) => <Badge variant={TYPE_VARIANT[t.type] || 'default'} style={{ textTransform: 'capitalize' }}>{t.type}</Badge> },
-    { key: 'points', label: 'Points', headerStyle: { textAlign: 'right' }, cellStyle: { textAlign: 'right' }, render: (t) => {
-      const pts = Number(t.points) || 0;
-      const positive = ['earned', 'refunded', 'adjusted'].includes(t.type) && pts >= 0;
-      return <span style={{ ...S.mono, fontWeight: 700, color: positive ? 'var(--ds-color-success,#16a34a)' : 'var(--ds-color-text)' }}>{positive ? '+' : ''}{fmtNum(pts)}</span>;
-    } },
-    { key: 'balance', label: 'Balance', headerStyle: { textAlign: 'right' }, cellStyle: { textAlign: 'right', ...S.mono }, render: (t) => fmtNum(t.balance_after) },
-    { key: 'description', label: 'Description', cellStyle: { whiteSpace: 'normal', maxWidth: 280, color: 'var(--ds-color-text-muted)' }, render: (t) => t.description || '—' },
-    { key: 'order', label: 'Order', cellStyle: S.mono, render: (t) => (t.order_id ? `#${t.order_id}` : '—') },
-    { key: 'date', label: 'Date', cellStyle: { color: 'var(--ds-color-text-muted)' }, render: (t) => fmtDate(t.created_at) },
-  ];
-
   return (
-    <div style={S.wrap}>
-      <PageHeader
-        title="Loyalty"
-        subtitle="Points earned, redeemed, expired and adjusted across customers."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => load(page)} loading={loading}>Refresh</Button>
-            <Button variant="primary" onClick={() => openAdjust()}>Adjust points</Button>
-          </>
-        }
-      />
-
-      {error && <p style={{ ...S.hint, color: 'var(--ds-color-danger,#dc2626)' }}>{error}</p>}
-
-      <Panel flush>
-        <ResponsiveTable
-          columns={columns}
-          data={txns}
-          rowKey="id"
-          emptyMessage={loading ? 'Loading…' : 'No loyalty transactions yet.'}
-        />
-      </Panel>
-
-      <div style={S.pager}>
-        <span style={S.hint}>{data.total} total · page {data.page} of {data.totalPages}</span>
-        <Button variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1 || loading}>Prev</Button>
-        <Button variant="secondary" onClick={() => setPage((p) => (p < data.totalPages ? p + 1 : p))} disabled={page >= data.totalPages || loading}>Next</Button>
-      </div>
-
-      <Modal isOpen={adjustOpen} onClose={() => setAdjustOpen(false)} title="Adjust loyalty points"
-        description="Add or deduct a customer's points. Use a minus sign to deduct (e.g. -100). Tip: click a customer in the list to pre-fill their ID."
-        size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setAdjustOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={submitAdjust} loading={saving}>Save adjustment</Button>
-          </>
-        }>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Input label="Customer ID" type="number" value={form.userId}
-            onChange={(e) => setForm((f) => ({ ...f, userId: e.target.value }))} placeholder="e.g. 42" />
-          <Input label="Points (+ add / − deduct)" type="number" value={form.points}
-            onChange={(e) => setForm((f) => ({ ...f, points: e.target.value }))} placeholder="e.g. 100 or -50" />
-          <Input label="Reason (shown in history)" value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="e.g. Goodwill credit" />
+    <section className="pl-side-card" aria-labelledby="pl-rules-h">
+      <b id="pl-rules-h">How points work{brandName ? ` · ${brandName}` : ''}</b>
+      {!form ? (
+        <>
+          {data.same ? (
+            <dl className="pl-rules">
+              {ruleLines(r).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+            </dl>
+          ) : (
+            <div className="pl-rules-split">
+              <span className="pl-small pl-faint">Each brand has its own rules — pick a brand above to see one.</span>
+              {data.perBrand.map((b) => (
+                <span key={b.brandId} className="pl-small"><b>{b.brand}</b>: 1 pt per ₹{num(b.earnRate)} · max {b.maxRedeemPercent}% · {num(b.expiryDays)} days</span>
+              ))}
+            </div>
+          )}
+          <p className="pl-small pl-faint pl-note">
+            Customers can’t spend points at checkout yet, so “Worth” and “Max per order” apply once a store offers it.
+            {expiryJob ? ` Expiry runs daily at 2 am — last run ${fullDate(expiryJob.at)}: ${expiryJob.summary || expiryJob.status}.` : ' Expiry runs daily at 2 am.'}
+          </p>
+          {isAdmin && <Button size="sm" variant="secondary" onClick={start}>Change rules</Button>}
+        </>
+      ) : (
+        <div className="pl-form">
+          {RULE_FIELDS.map((f) => (
+            <label key={f.key} className="pl-field">
+              <span>{f.label}</span>
+              <input type="number" inputMode="numeric" min={f.min} max={f.max} step="1" value={form[f.key]}
+                onChange={(e) => setForm((x) => ({ ...x, [f.key]: e.target.value }))} />
+            </label>
+          ))}
+          <span className="pl-small pl-faint">A new expiry only applies to points earned from now on.</span>
+          {err && <span className="pl-err" role="alert">{err}</span>}
+          <span className="pl-actions">
+            <Button size="sm" variant="secondary" onClick={() => setForm(null)} disabled={saving}>Cancel</Button>
+            <Button size="sm" onClick={save} loading={saving} loadingText="Saving…">{brandId ? `Save for ${brandName || 'this brand'}` : 'Save for all brands'}</Button>
+          </span>
         </div>
-      </Modal>
-    </div>
+      )}
+    </section>
   );
 }
 
-function fmtNum(v) { const n = Number(v); return Number.isFinite(n) ? n.toLocaleString('en-IN') : '—'; }
+// ── Give / take ──────────────────────────────────────────────────
+function GiveTake({ brandId, formRef, onDone }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null); // null = not searched
+  const [searching, setSearching] = useState(false);
+  const [picked, setPicked] = useState(null);
+  const [points, setPoints] = useState('');
+  const [reason, setReason] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (picked) return undefined;
+    const term = query.trim();
+    if (term.length < 2) { setResults(null); return undefined; }
+    let off = false;
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await userService.getCustomerList({ q: term, limit: 8, ...(brandId ? { brandId } : {}) });
+        if (!off) setResults((res?.rows || []).filter((r) => r.userId));
+      } catch { if (!off) setResults([]); }
+      finally { if (!off) setSearching(false); }
+    }, 300);
+    return () => { off = true; clearTimeout(t); };
+  }, [query, brandId, picked]);
+
+  const pick = async (row) => {
+    setErr(''); setResults(null);
+    setPicked({ id: row.userId, name: row.name, contact: row.contact, points: null });
+    try {
+      const c = await loyaltyService.customer(row.userId);
+      setPicked({ id: c.id, name: c.name, contact: c.contact, points: c.points, brand: c.brand });
+    } catch (e) { setErr(e.message); }
+  };
+  const reset = () => { setPicked(null); setQuery(''); setPoints(''); setReason(''); setErr(''); };
+  const n = Number(String(points).replace(/\s/g, ''));
+  const valid = picked && Number.isInteger(n) && n !== 0;
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!picked) { setErr('Search and pick a customer first.'); return; }
+    if (!Number.isInteger(n) || n === 0) { setErr('Enter whole points — e.g. 200 to give, −50 to take.'); return; }
+    if (n < 0 && picked.points != null && picked.points < -n) { setErr(`${picked.name || 'This customer'} only has ${num(picked.points)} points.`); return; }
+    if (reason.trim().length < 3) { setErr('Write a short reason, e.g. “Sorry for the late delivery”.'); return; }
+    setSaving(true); setErr('');
+    try {
+      const res = await loyaltyService.adjustPoints({ userId: picked.id, points: n, description: reason.trim(), brandId });
+      showSuccess(null, res.message || 'Points updated.');
+      reset();
+      onDone();
+    } catch (e2) { setErr(e2.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <section className="pl-side-card" aria-labelledby="pl-give-h">
+      <b id="pl-give-h">Give or take points</b>
+      <form className="pl-form" onSubmit={submit} noValidate>
+        {!picked ? (
+          <div className="pl-picker">
+            <input ref={formRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search customer by name or phone" aria-label="Customer" autoComplete="off" />
+            {(searching || results) && (
+              <ul className="pl-pick-list" aria-live="polite">
+                {searching && <li className="pl-faint pl-small">Searching…</li>}
+                {!searching && results && results.length === 0 && <li className="pl-faint pl-small">No customer accounts match. Guests who never signed up can’t hold points.</li>}
+                {!searching && (results || []).map((r) => (
+                  <li key={r.key}>
+                    <button type="button" onClick={() => pick(r)}>
+                      <b>{r.name || 'Customer'}</b>
+                      <span className="pl-faint pl-small">{[r.contact, r.brands?.[0]].filter(Boolean).join(' · ')}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <div className="pl-picked">
+            <span>
+              <b>{picked.name || 'Customer'}</b>
+              <span className="pl-faint pl-small">{[picked.contact, picked.points == null ? 'loading balance…' : `${num(picked.points)} points now`].filter(Boolean).join(' · ')}</span>
+            </span>
+            <button type="button" className="pl-link" onClick={reset}>Change</button>
+          </div>
+        )}
+        <div className="pl-row2">
+          <input value={points} onChange={(e) => setPoints(e.target.value.replace(/[−–]/g, '-'))} inputMode="numeric"
+            placeholder="+200 or −50" aria-label="Points (minus to take)" className="pl-pts" />
+          <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={250}
+            placeholder="Reason, e.g. Sorry for the late delivery" aria-label="Reason" />
+        </div>
+        <span className="pl-small pl-faint">The reason is saved in the customer’s points history.</span>
+        {err && <span className="pl-err" role="alert">{err}</span>}
+        <Button type="submit" size="sm" loading={saving} loadingText="Saving…" disabled={!valid}>
+          {valid ? (n > 0 ? `Give ${num(n)} points` : `Take ${num(-n)} points`) : 'Give or take points'}
+        </Button>
+      </form>
+    </section>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────
+export default function Loyalty() {
+  const qc = useQueryClient();
+  const { isAdmin } = useAuth() || {};
+  const [brandId, setBrandId] = useState('');
+  const [brands, setBrands] = useState([]);
+  const [tab, setTab] = useState('all');
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const giveRef = useRef(null);
+
+  useEffect(() => {
+    let off = false;
+    brandService.getAllBrands(true).then((r) => { if (!off && r?.success) setBrands(r.data || []); }).catch(() => {});
+    return () => { off = true; };
+  }, []);
+  useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 350); return () => clearTimeout(t); }, [search]);
+  useEffect(() => { setPage(1); }, [tab, brandId, q]);
+
+  const summary = useQuery({
+    queryKey: ['loyalty', 'summary', brandId],
+    queryFn: () => loyaltyService.summary(brandId),
+    staleTime: 60 * 1000,
+  });
+  const params = { tab, page, limit: PAGE_SIZE, ...(q ? { q } : {}), ...(brandId ? { brandId } : {}) };
+  const list = useQuery({
+    queryKey: ['loyalty', 'list', params],
+    queryFn: () => loyaltyService.getTransactions(params),
+    placeholderData: keepPreviousData,
+    staleTime: 20 * 1000,
+  });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['loyalty'] });
+
+  const s = summary.data;
+  const rows = list.data?.rows || [];
+  const total = list.data?.total || 0;
+  const pages = list.data?.pages || 1;
+  useEffect(() => { if (list.data && !list.isPlaceholderData && page > pages) setPage(pages); }, [list.data, list.isPlaceholderData, page, pages]);
+  const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const to = Math.min(total, page * PAGE_SIZE);
+  const brandOpts = [{ value: '', label: 'All brands' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))];
+  const brandName = brandId ? (brandOpts.find((b) => b.value === brandId)?.label || '') : '';
+  const focusGive = () => { giveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); giveRef.current?.focus({ preventScroll: true }); };
+
+  return (
+    <div className="dashboard-sections pl-page">
+      <PageHeader
+        title="Loyalty points"
+        description="Points customers earn on delivered orders."
+        actions={(
+          <div className="pl-head-tools">
+            <Dropdown value={brandId} onChange={(v) => setBrandId(String(v))} options={brandOpts} className="pl-dd" />
+            <Button onClick={focusGive}>Give or take points</Button>
+          </div>
+        )}
+      />
+
+      {summary.error && !s ? (
+        <ErrorState message={`Couldn’t load the points totals — ${summary.error.message}`} onRetry={() => summary.refetch()} retrying={summary.isFetching} />
+      ) : (
+        <KpiGrid className="pl-kpis">
+          <KpiTile label="Points out there" value={s ? num(s.outstanding.points) : '–'} sub={s ? `worth ${inr(s.outstanding.value)} at checkout` : 'loading…'} />
+          <KpiTile label="Earned · 30 d" value={s ? num(s.earned30.points) : '–'} sub={s ? `on ${plural(s.earned30.orders, 'delivered order')}` : ''} />
+          <KpiTile label="Spent · 30 d" value={s ? num(s.spent30.points) : '–'} sub={s ? (s.spent30.times ? `${plural(s.spent30.times, 'time')}` : 'none in 30 days') : ''} />
+          <KpiTile label="Customers with points" value={s ? num(s.customers.withPoints) : '–'} sub={s ? `${num(s.customers.canRedeem100)} have 100+` : ''} />
+        </KpiGrid>
+      )}
+
+      <div className="pl-split">
+        <section className="pl-card pl-main" aria-busy={list.isFetching || undefined}>
+          <div className="pl-card-head">
+            <FilterChips ariaLabel="Type of change" items={TABS} value={tab} onChange={setTab} controls="pl-loy-list" />
+            <label className="pl-search">
+              {ic(Search01Icon)}
+              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Customer name, phone or order" aria-label="Search customer" />
+            </label>
+          </div>
+          <div id="pl-loy-list">
+            {list.isLoading ? (
+              <SkeletonRows rows={6} label="Loading points history…" />
+            ) : list.error && !list.data ? (
+              <ErrorState message={`Couldn’t load the points history — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
+            ) : rows.length === 0 ? (
+              <EmptyState compact icon={ic(StarIcon, 22)} title={q ? 'Nothing matches your search' : 'Nothing here yet'}
+                description={q ? 'Try a full 10-digit phone number, a name or an order number.' : EMPTY[tab]} />
+            ) : (
+              <div className="pl-scroll">
+                <table className="pl-table pl-table--loy">
+                  <thead>
+                    <tr><th>Customer</th><th>What happened</th><th>Order</th><th className="r">Points</th><th className="r">Balance</th><th>When</th></tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id}>
+                        <td><b>{r.customer}</b>{r.contact && <div className="pl-faint pl-small">{r.contact}</div>}</td>
+                        <td className="pl-why">{r.what}{r.reason ? <> — “{r.reason}”</> : null}</td>
+                        <td>
+                          {r.orderNumber
+                            ? <button type="button" className="pl-link pl-mono" onClick={() => openOrder(r.orderNumber)} title="Open this order">{r.orderNumber}</button>
+                            : <span className="pl-faint">—</span>}
+                        </td>
+                        <td className={`r pl-pts-cell ${r.points >= 0 ? 'is-in' : 'is-out'}`}><b>{r.points >= 0 ? `+${num(r.points)}` : `−${num(-r.points)}`}</b></td>
+                        <td className="r pl-num">{num(r.balance)}</td>
+                        <td className="pl-nowrap pl-faint" title={fullDate(r.at)}>{when(r.at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="pl-foot">
+            <span className="pl-faint">{list.error && list.data ? 'Couldn’t refresh — showing the last list. ' : ''}{brandName ? `${brandName} only.` : 'All brands.'}</span>
+            {total > 0 && (
+              <span className="pl-pager">
+                <span className="pl-num">{num(from)}–{num(to)} of {num(total)}</span>
+                <Button size="sm" variant="secondary" disabled={page <= 1 || list.isFetching} onClick={() => setPage((p) => p - 1)}>← Prev</Button>
+                <Button size="sm" variant="secondary" disabled={to >= total || list.isFetching} onClick={() => setPage((p) => p + 1)}>Next →</Button>
+              </span>
+            )}
+          </div>
+        </section>
+
+        <aside className="pl-aside">
+          <RulesCard data={s?.rules} brandId={brandId} brandName={brandName} isAdmin={!!isAdmin} expiryJob={s?.expiryJob} onSaved={refresh} />
+
+          <section className="pl-side-card pl-side-card--warn" aria-labelledby="pl-exp-h">
+            <b id="pl-exp-h" className="pl-warn-title">Expiring in the next 30 days</b>
+            {!s ? <SkeletonRows rows={1} label="Loading…" /> : s.expiring30.points > 0 ? (
+              <>
+                <span className="pl-small"><b>{num(s.expiring30.points)} points</b> for <b>{plural(s.expiring30.customers, 'customer')}</b>. A WhatsApp reminder can bring them back to order before they lose them.</span>
+                <Button size="sm" onClick={() => goTo('/dashboard/whatsapp#broadcast-new')}>Send a reminder broadcast</Button>
+                <span className="pl-small pl-faint">You’ll pick who gets it on the next page — there’s no “points expiring” group there yet.</span>
+              </>
+            ) : (
+              <span className="pl-small pl-faint">No points expire in the next 30 days.</span>
+            )}
+          </section>
+
+          <GiveTake brandId={brandId} formRef={giveRef} onDone={refresh} />
+        </aside>
+      </div>
+    </div>
+  );
+}
