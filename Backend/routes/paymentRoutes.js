@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    createRazorpayOrder, updateOrderPayment,
+    updateOrderPayment,
     razorpayWebhook, handlePaymentFailure,
     adminListPayments, adminPaymentsSummary, adminPaymentMismatches, adminFixPaymentMismatch,
 } = require('../controller/paymentController.js');
@@ -9,15 +9,15 @@ const { isAuthenticated, isOrderManager, isAdmin } = require('../middleware/auth
 const router = express.Router();
 
 // ── Razorpay ──────────────────────────────────────────────────────────────
-router.post('/razorpay/order',    isAuthenticated, createRazorpayOrder);
+// Razorpay orders are created only by checkout (POST /api/checkout/initiate,
+// /guest/initiate, /retry) with the server-computed total. The old
+// /razorpay/order and /guest/razorpay/order endpoints took any amount from the
+// browser and were unused by every storefront, so they are gone.
 router.post('/razorpay/verify',   updateOrderPayment);
 router.post('/razorpay/webhook',  express.raw({ type: 'application/json' }), razorpayWebhook);
 
-// ── Guest Razorpay ────────────────────────────────────────────────────────
-router.post('/guest/razorpay/order', createRazorpayOrder);
-
 // ── User ──────────────────────────────────────────────────────────────────
-router.post('/failed',            handlePaymentFailure);
+router.post('/failed',            isAuthenticated, handlePaymentFailure);
 
 // ── Admin (Dashboard → Payments) ──────────────────────────────────────────
 router.get('/admin/list',         isAuthenticated, isOrderManager, adminListPayments);

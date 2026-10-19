@@ -50,104 +50,6 @@ module.exports.adminFixPaymentMismatch = async (req, res) => {
     }
 };
 
-// Razorpay order creation
-module.exports.createRazorpayOrder = async (req, res) => {
-    try {
-        const { amount, currency = 'INR', receipt, brand_id, items, orderId } = req.body;
-        logger.info('Backend: Received amount to create Razorpay order:', amount);
-        if (!amount) {
-            return res.status(400).json({ message: 'Amount is required' });
-        }
-
-        const brandId = brand_id || (req.brand ? req.brand.id : 1);
-
-        // Create order using centralized Razorpay service
-        const order = await razorpayService.createOrder({
-            amount,
-            currency,
-            receipt,
-            brandId
-        });
-
-        logger.info('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
-
-        // Store a pending payment record immediately so failed payments are tracked
-        if (orderId) {
-            try {
-                const dbOrder = await Order.findByPk(orderId);
-                if (dbOrder) {
-                    const existing = await Payment.findOne({ where: { order_id: orderId, razorpay_order_id: order.id } });
-                    if (!existing) {
-                        await Payment.create({
-                            order_id: orderId,
-                            user_id: dbOrder.user_id || null,
-                            guest_user_id: dbOrder.guest_user_id || null,
-                            payment_type: 'razorpay',
-                            razorpay_order_id: order.id,
-                            amount_paid: toSmallestUnit(parseFloat(amount) / 100, currency),
-                            status: 'pending',
-                            payment_gateway: 'Razorpay',
-                            brand_id: dbOrder.brand_id || brandId,
-                        });
-                        logger.info('Stored pending payment record for Razorpay order:', order.id);
-                    }
-                }
-            } catch (paymentErr) {
-                // Non-fatal — log but don't block the response
-                logger.error('Warning: Could not store pending payment record:', paymentErr.message);
-            }
-        }
-
-        res.json({ order });
-
-        // Fire InitiateCheckout + AddPaymentInfo events (non-blocking)
-        setImmediate(async () => {
-            try {
-                const amountInRupees = parseFloat(amount) / 100;
-                const eventPayload = {
-                    brand_id: brandId,
-                    order_number: receipt || order.id,
-                    total_amount: amountInRupees,
-                    final_amount: amountInRupees,
-                    currency: currency || 'INR',
-                    ip_address: req.ip || null,
-                    user_agent: req.headers['user-agent'] || null,
-                    fbc: req.body?.fbc || req.cookies?._fbc || null,
-                    fbp: req.body?.fbp || req.cookies?._fbp || null,
-                    items: items || [],
-                };
-
-                // If we have an orderId, enrich with user data
-                if (orderId) {
-                    const dbOrder = await Order.findByPk(orderId, { attributes: ['user_id', 'guest_user_id', 'brand_id'] });
-                    if (dbOrder) {
-                        const [orderUser, guestUser] = await Promise.all([
-                            dbOrder.user_id ? User.findByPk(dbOrder.user_id, { attributes: ['email', 'username'] }) : null,
-                            dbOrder.guest_user_id ? GuestUser.findByPk(dbOrder.guest_user_id, { attributes: ['email', 'firstName', 'lastName', 'phone'] }) : null,
-                        ]);
-                        eventPayload.email = orderUser?.email || guestUser?.email || null;
-                        eventPayload.phone = guestUser?.phone || null;
-                        const nameParts = (orderUser?.username || '').trim().split(/\s+/);
-                        eventPayload.first_name = orderUser ? (nameParts[0] || null) : (guestUser?.firstName || null);
-                        eventPayload.last_name = orderUser ? (nameParts.slice(1).join(' ') || null) : (guestUser?.lastName || null);
-                    }
-                }
-
-                // InitiateCheckout is sent (deduped) by the browser pixel + its
-                // CAPI relay when checkout begins — not re-sent server-side here.
-                // AddPaymentInfo has no browser counterpart, so keep it.
-                await sendFacebookEvent('AddPaymentInfo', eventPayload);
-                await sendGAEvent('add_payment_info', eventPayload);
-            } catch (err) {
-                logger.error('Analytics InitiateCheckout/AddPaymentInfo error:', err.message);
-            }
-        });
-    } catch (error) {
-        logger.error('Error creating Razorpay order:', error);
-        res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
-    }
-};
-
 // Update order with payment details after successful payment
 // Supports BOTH flows:
 //   - NEW (payment-first): reservation_id on payment record → create order from session
@@ -399,17 +301,25 @@ module.exports.handlePaymentFailure = async (req, res) => {
       return res.status(400).json({ message: 'orderId and razorpayOrderId are required' });
     }
 
-    // Validate that this razorpay order was actually created by us
+    // Validate that this razorpay order was actually created by us, for THIS
+    // order, and that the caller owns the order (route requires login).
     const existingPayment = await Payment.findOne({
       where: { razorpay_order_id: razorpayOrderId }
     });
     if (!existingPayment) {
       return res.status(403).json({ message: 'Unknown razorpay order' });
     }
+    if (String(existingPayment.order_id) !== String(orderId)) {
+      return res.status(403).json({ message: 'This payment does not belong to that order' });
+    }
 
     const order = await Order.findByPk(orderId);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+    const { hasAnyRole, STAFF_ROLES } = require('../middleware/authMiddleware.js');
+    if (order.user_id !== req.user.id && !hasAnyRole(req.user, STAFF_ROLES)) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     // Only update if not already paid (don't overwrite a successful payment)
