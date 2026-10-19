@@ -1,9 +1,59 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { pageMeta } from '@/lib/site';
+import CheckoutReturn from './CheckoutReturn';
 
-// This route used to fabricate a random order number (#VLQ-#####) and a fake
-// "Thank you" page, with no real order behind it. Real orders confirm in the
-// cart drawer and land on /track-order?order=<number>. There's no order context
-// on a direct hit here, so send the visitor to their account (order history).
-export default function OrderConfirmation() {
-  redirect('/account');
+export const metadata = pageMeta({ title: 'Order Confirmed — Velmique Maison de Parfum', description: 'Your Velmique order.', path: '/order-confirmation', noindex: true });
+
+/* Two ways in:
+   - our own bag checkout → ?order=<order number> (Purchase already tracked
+     when the order was placed);
+   - the custom-checkout provider's redirect → ?oid=<platform order>&ost=<status>.
+     On SUCCESS, CheckoutReturn tracks the Purchase from the bag and empties
+     it; any other status means the payment didn't complete.
+   A bare hit has no order to show, so it goes to the account's order list. */
+export default function OrderConfirmation({ searchParams }) {
+  const ost = (searchParams?.ost || '').toString().toUpperCase();
+  const oid = (searchParams?.oid || '').toString().slice(0, 64);
+  const ownOrder = (searchParams?.order || '').toString().slice(0, 64);
+
+  if (!ownOrder && !oid) redirect('/account');
+
+  if (oid && ost !== 'SUCCESS') {
+    return (
+      <section className="m-section"><div className="m-wrap m-oc">
+        <div className="m-oc__badge m-oc__badge--warn" aria-hidden="true">!</div>
+        <span className="m-eyebrow">Payment not completed</span>
+        <h1>Your order isn&rsquo;t placed yet.</h1>
+        <p className="m-oc__lede">The checkout didn&rsquo;t go through{ost ? ` (${ost.toLowerCase()})` : ''}, so nothing was charged. Your bag is saved — you can try again whenever you&rsquo;re ready.</p>
+        <CheckoutReturn mode="retry" />
+      </div></section>
+    );
+  }
+
+  const order = ownOrder || oid;
+  return (
+    <section className="m-section"><div className="m-wrap m-oc">
+      {oid && !ownOrder ? <CheckoutReturn mode="success" orderId={oid} /> : null}
+      <div className="m-oc__badge" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+      </div>
+      <span className="m-eyebrow">Merci beaucoup</span>
+      <h1>Order Placed.</h1>
+      <p className="m-oc__lede">
+        Thank you for your order — <b>#{order}</b> is confirmed.
+        We&rsquo;ll send updates to you on WhatsApp.
+      </p>
+      <div className="m-oc__steps">
+        <div><i>1</i><b>Confirmed</b><span>Order received</span></div>
+        <div><i>2</i><b>Dispatched</b><span>Packed &amp; shipped within 24–48 hours</span></div>
+        <div><i>3</i><b>Delivered</b><span>At your door in 3–7 working days</span></div>
+      </div>
+      <div className="m-oc__cta">
+        {ownOrder ? <Link className="m-btn m-btn--fill" href={`/track-order?order=${encodeURIComponent(ownOrder)}`}>Track your order <span className="m-arrow">→</span></Link> : null}
+        <Link className="m-btn" href="/account">My orders</Link>
+        <Link className="m-btn" href="/shop">Continue shopping</Link>
+      </div>
+    </div></section>
+  );
 }

@@ -1,7 +1,7 @@
-/* Fonts are loaded via next/font in app/layout.jsx — they expose the CSS
-   variables --font-bodoni (display) / --font-manrope (body)
-   on <html> at build time, so the page paints with the real typeface on
-   first render (no FOUT to a system font). */
+/* Global base: Tailwind (used by the shared cart drawer and floating
+   widgets), accessibility primitives, the onyx & gold design tokens, and the
+   react-toastify skin. Page and shell styling lives in app/mint.css. Fonts
+   (Playfair Display + Inter) load via the Google Fonts link in app/layout.jsx. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -77,10 +77,9 @@
   --text-muted: var(--ink-muted);
 }
 
-/* Onyx & Gold skin for the Maison /test routes — set on <html data-maison> by
-   MaisonThemeFlag. Re-tints the shared design-system variables so global
-   components rendered on /test (notably the live CartDrawer) match the dark
-   /test theme without needing their own markup. */
+/* Onyx & Gold — <html data-maison> (app/layout.jsx) re-tints the shared
+   tokens so Tailwind-styled shared components (notably the CartDrawer) match
+   the Mint shell without needing their own markup. */
 :root[data-maison]{
   color-scheme:dark;
   --bg:#0d0d0f; --surface:#17171a; --surface-2:#1f1f24; --paper:#17171a;
@@ -89,9 +88,9 @@
   --border:rgba(255,255,255,.12); --dark:#000; --dark-soft:#17141a;
 }
 
-/* The live CartDrawer (and other global chrome) hardcodes the light palette
-   as Tailwind arbitrary-value classes, so on /test we remap each hex to its
-   onyx counterpart via class-substring selectors. Order matters: a solid
+/* The CartDrawer hardcodes the original light palette as Tailwind
+   arbitrary-value classes, so each hex is remapped to its onyx counterpart
+   via class-substring selectors. Order matters: a solid
    color rule first, then its /opacity tint variants re-override after. */
 [data-maison] [class*="bg-[#F7F4EF]"]{background-color:#121214!important}
 [data-maison] .bg-white{background-color:#1d1d21!important}
@@ -113,12 +112,10 @@
 [data-maison] .bg-white input, [data-maison] input.bg-white, [data-maison] [class*="bg-[#F7F4EF]"] input, [data-maison] [class*="bg-[#F7F4EF]"] select, [data-maison] [class*="bg-[#F7F4EF]"] textarea{background:#1d1d21;color:#f3ead6}
 [data-maison] [class*="bg-[#F7F4EF]"] input::placeholder, [data-maison] [class*="bg-[#F7F4EF]"] textarea::placeholder{color:#8b857a}
 /* Pill CTAs build on var(--ink) as a dark fill; with --ink remapped to
-   champagne they'd render cream-on-cream, so on /test they become the gold
-   primary button with dark labels. */
+   champagne they'd render cream-on-cream, so they become the gold primary
+   button with dark labels. */
 [data-maison] .pill-cta{background:var(--gold);border-color:var(--gold);color:#17120a;border-radius:8px}
 [data-maison] .pill-cta:hover{background:var(--gold-deep);border-color:var(--gold-deep);color:#17120a}
-[data-maison] .pill-cta-light{background:transparent;color:var(--ink);border-color:var(--border)}
-[data-maison] .pill-cta-light:hover{background:var(--gold);color:#17120a;border-color:var(--gold)}
 [data-maison] .pill-cta-dark{background:var(--gold);color:#17120a;border-color:var(--gold)}
 [data-maison] .pill-cta-dark:hover{background:var(--gold-deep);color:#17120a;border-color:var(--gold-deep)}
 
@@ -137,91 +134,33 @@ html {
 body {
   background-color: var(--bg);
   color: var(--ink);
-  font-family: 'Manrope', 'Manrope', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body.splash-locked { overflow: hidden; }
 /* `overflow-x: hidden` on body makes it a scroll container, which silently breaks
    every `position: sticky` below it (e.g. the product gallery). `clip` stops
    sideways overflow the same way without creating a scroll container. */
 @supports (overflow: clip) { body { overflow-x: clip; } }
 
-/* Editorial display class — Bodoni Moda serif, elegant tracking.
-   Headings were uppercased for the old condensed Anton face; Bodoni Moda is an
-   elegant high-contrast serif that reads best in title case, so we neutralise
-   the `uppercase` utility on every display heading site-wide. (This rule sits
-   after @tailwind utilities, so it wins on source order without !important.) */
+/* Display headings (Tailwind `font-display`) read best in title case, so the
+   `uppercase` utility is neutralised on them. (This rule sits after @tailwind
+   utilities, so it wins on source order without !important.) */
 .font-display {
-  font-family: 'Bodoni Moda', 'Bodoni Moda', 'Playfair Display', Georgia, serif;
+  font-family: 'Playfair Display', Georgia, serif;
   letter-spacing: -0.015em;
   text-transform: none;
-}
-
-/* Vertical text helpers */
-.vertical-rl {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-}
-.vertical-lr {
-  writing-mode: vertical-rl;
-}
-
-/* Gold gradient text */
-.gold-text {
-  background: linear-gradient(135deg, #8F7548 0%, #B89A63 40%, #D9C190 60%, #8F7548 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gold-shimmer {
-  background: linear-gradient(90deg, #8F7548 0%, #B89A63 25%, #D9C190 50%, #B89A63 75%, #8F7548 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s linear infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
 }
 
 /* Hide browser scrollbar — top ScrollProgress bar serves as the only scroll indicator */
 html { scrollbar-width: none; -ms-overflow-style: none; }
 ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
-/* Marquee */
-.marquee-container { overflow: hidden; white-space: nowrap; width: 100%; }
-.marquee-content {
-  display: inline-block;
-  white-space: nowrap;
-  animation: marquee 30s linear infinite;
-  will-change: transform;
-}
-.animate-marquee {
-  animation: marquee 35s linear infinite;
-}
-
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* Divider */
-.gold-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-}
-
 /* Primary CTA — maison square button (matches the homepage hero/story buttons).
-   Base = solid near-black with an uppercase Manrope label; modifiers recolour
-   it. Square edges, no pill radius, to read as one system with the home page. */
+   Base = solid fill with an uppercase label; modifiers recolour it. */
 .pill-cta {
   display: inline-flex;
   align-items: center;
@@ -232,7 +171,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   padding: 0.95rem 1.9rem;
   border: 1px solid var(--ink);
   border-radius: 0;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.22em;
@@ -245,17 +184,6 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   border-color: var(--gold-deep);
   color: #fff;
 }
-/* Outline variant — like the hero "Our story" button. */
-.pill-cta-light {
-  background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--ink);
-}
-.pill-cta-light:hover {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
-}
 /* Dark variant with gold label — for use on light panels needing emphasis. */
 .pill-cta-dark {
   background: var(--ink);
@@ -266,31 +194,6 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   background: var(--gold);
   color: var(--ink);
   border-color: var(--gold);
-}
-
-/* Buttons (legacy) */
-.btn-gold {
-  background: var(--gold);
-  color: var(--ink);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  transition: all 0.25s ease;
-}
-.btn-gold:hover {
-  background: var(--gold-deep);
-  color: var(--paper);
-}
-
-.btn-outline-gold {
-  border: 1px solid var(--gold);
-  color: var(--gold-deep);
-  background: transparent;
-  letter-spacing: 0.1em;
-  transition: all 0.25s ease;
-}
-.btn-outline-gold:hover {
-  background: var(--gold);
-  color: var(--ink);
 }
 
 /* Inputs */
@@ -308,124 +211,9 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 .input-gold::placeholder { color: var(--ink-muted); }
 
 /* ------------------------------------------------------------------
-   Cart drawer — "Available offers" collapsed dropdown (select-style).
-   The menu is position:absolute so it overlays the summary below and
-   the drawer height never grows. Tokens: cream / espresso / gold.
-   ------------------------------------------------------------------ */
-.vq-offers {
-  position: relative;
-  margin-top: 8px;
-}
-.vq-offers-trigger {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--ink);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.vq-offers-trigger:hover:not(:disabled) { border-color: var(--gold); }
-.vq-offers-trigger.open {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.15);
-}
-.vq-offers-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
-.vq-offers-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--gold-deep);
-  letter-spacing: 0.04em;
-}
-.vq-offers-chevron {
-  color: var(--ink-muted);
-  transition: transform 0.25s ease;
-  flex: 0 0 auto;
-}
-.vq-offers-trigger.open .vq-offers-chevron { transform: rotate(180deg); }
-
-.vq-offers-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 40;
-  max-height: 240px;
-  overflow-y: auto;
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 14px 34px rgba(26, 22, 18, 0.18);
-  padding: 4px;
-}
-.vq-offer {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  text-align: left;
-  padding: 9px 10px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.vq-offer:hover:not(:disabled) { background: var(--surface); }
-.vq-offer:disabled { opacity: 0.55; cursor: not-allowed; }
-.vq-offer + .vq-offer { border-top: 1px solid var(--surface); }
-.vq-offer-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.vq-offer-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--gold-deep);
-}
-.vq-offer-desc {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.7rem;
-  color: var(--ink-muted);
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vq-offer-apply {
-  flex: 0 0 auto;
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--paper);
-  background: var(--ink);
-  padding: 5px 11px;
-  border-radius: 999px;
-}
-.vq-offer:hover:not(:disabled) .vq-offer-apply { background: var(--gold-deep); }
-
-/* ------------------------------------------------------------------
    Cart drawer — two-step header back button. Shown on the checkout
    step (step 2) so shoppers can return to the cart review. Mirrors
-   the Soxbae .cd-header-back control, in Velmique's ink/gold tokens.
+   the Soxbae header-back control, in Velmique's ink/gold tokens.
    ------------------------------------------------------------------ */
 .vq-cart-back {
   display: inline-flex;
@@ -441,132 +229,9 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
 }
 .vq-cart-back:hover { color: var(--gold-deep); opacity: 0.88; }
 
-/* Star rating */
-.star-filled { color: var(--gold); }
-.star-empty { color: var(--border); }
-
-/* Section reveal */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Product card hover */
-.product-card:hover .product-overlay { opacity: 1; }
-
-/* Editorial outline text */
-.text-outline {
-  -webkit-text-stroke: 1px var(--ink);
-  color: transparent;
-}
-.text-outline-gold {
-  -webkit-text-stroke: 1px var(--gold);
-  color: transparent;
-}
-
-/* Blog body — prose styles for HTML rendered via dangerouslySetInnerHTML */
-.prose-velmique h1,
-.prose-velmique h2,
-.prose-velmique h3,
-.prose-velmique h4 {
-  font-family: 'Bodoni Moda', 'Bodoni Moda', sans-serif;
-  color: var(--ink);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-}
-.prose-velmique h1 { font-size: clamp(1.9rem, 3.5vw, 2.6rem); }
-.prose-velmique h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); }
-.prose-velmique h3 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); }
-.prose-velmique h4 { font-size: 1.15rem; letter-spacing: 0.02em; }
-
-.prose-velmique h2::after {
-  content: '';
-  display: block;
-  width: 48px;
-  height: 2px;
-  background: var(--gold);
-  margin-top: 0.65rem;
-}
-
-.prose-velmique p {
-  margin-bottom: 1.25rem;
-}
-
-.prose-velmique strong,
-.prose-velmique b {
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.prose-velmique em,
-.prose-velmique i {
-  font-style: italic;
-  color: var(--ink);
-}
-
-.prose-velmique a {
-  color: var(--gold-deep);
-  text-decoration: underline;
-  text-decoration-color: var(--gold);
-  text-underline-offset: 3px;
-  transition: color 0.2s;
-}
-.prose-velmique a:hover { color: var(--ink); }
-
-.prose-velmique ul,
-.prose-velmique ol {
-  padding-left: 1.5rem;
-  margin: 1rem 0 1.5rem;
-}
-.prose-velmique ul { list-style: disc; }
-.prose-velmique ol { list-style: decimal; }
-.prose-velmique li { margin-bottom: 0.4rem; }
-.prose-velmique li::marker { color: var(--gold-deep); }
-
-.prose-velmique blockquote {
-  border-left: 3px solid var(--gold);
-  padding: 0.5rem 0 0.5rem 1.5rem;
-  margin: 1.75rem 0;
-  font-family: 'Bodoni Moda', 'Bodoni Moda', serif;
-  font-style: italic;
-  font-size: 1.35rem;
-  color: var(--ink);
-  line-height: 1.55;
-}
-
-.prose-velmique img {
-  border-radius: 1rem;
-  margin: 1.75rem 0;
-  width: 100%;
-  height: auto;
-}
-
-.prose-velmique hr {
-  border: 0;
-  border-top: 1px solid var(--border);
-  margin: 2.5rem 0;
-}
-
-.prose-velmique code {
-  background: var(--surface-2);
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.3rem;
-  font-size: 0.95em;
-  color: var(--ink);
-}
-
 /* ───────────────────────────────────────────────────────────
    Velmique toast skin — overrides react-toastify defaults so
-   the toasts wear the cream + ink + gold palette instead of the
+   the toasts wear the onyx + gold palette instead of the
    library's default green/red/blue blocks.
    ─────────────────────────────────────────────────────────── */
 .Toastify__toast-container {
@@ -597,12 +262,12 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   }
 }
 .Toastify__toast {
-  font-family: 'Manrope', system-ui, sans-serif;
-  background: var(--bg);
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 12px 32px -12px rgba(26, 22, 18, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   padding: 14px 16px;
   min-height: 0;
   font-size: 13px;
@@ -615,7 +280,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   align-items: center;
 }
 .Toastify__toast-body > div:last-child {
-  font-family: 'Manrope', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   color: var(--ink);
 }
 .Toastify__close-button {
@@ -658,206 +323,10 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   height: 2px;
 }
 
-/* ── WhatsApp floating chat ─────────────────────────────────────────────── */
-.wachat-fab {
-  position: fixed;
-  bottom: 32px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #25D366;
-  border: none;
-  cursor: pointer;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
-  z-index: 1060;
-  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
-  text-decoration: none;
-}
-.wachat-fab:hover {
-  transform: scale(1.08);
-  background: #128C7E;
-  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55);
-}
-.wachat-fab svg { width: 28px; height: 28px; }
-
-.wachat-greet {
-  position: fixed;
-  bottom: 100px;
-  right: 24px;
-  background: #fff;
-  border-radius: 12px 12px 0 12px;
-  padding: 10px 14px 10px 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  font-size: 13.5px;
-  color: #111827;
-  z-index: 1059;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 240px;
-  white-space: nowrap;
-  animation: wachatPop 0.3s cubic-bezier(.34, 1.4, .64, 1);
-}
-.wachat-greet:hover { background: #f9fafb; }
-.wachat-greet-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #9ca3af;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  flex-shrink: 0;
-}
-.wachat-greet-close:hover { color: #374151; }
-
-@keyframes wachatPop {
-  from { opacity: 0; transform: translateY(10px) scale(0.95); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@media (max-width: 480px) {
-  .wachat-fab { bottom: 20px; right: 16px; width: 52px; height: 52px; }
-  .wachat-fab svg { width: 26px; height: 26px; }
-  .wachat-greet { bottom: 84px; right: 16px; font-size: 12.5px; max-width: 220px; padding: 9px 12px 9px 10px; }
-}
-
 /* deploy-refresh 2026-07-31: force Vercel rebuild */
 
 @media (max-width: 768px) {
   input, select, textarea { font-size: 16px !important; }
-}
-
-/* ============================================================
-   My Account page — hero + stats (acc- prefix)
-   Velmique luxe gold. Uses existing cream/gold palette tokens.
-   ============================================================ */
-.acc-hero {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 26px 30px;
-  margin-bottom: 20px;
-  border-radius: 10px;
-  background: linear-gradient(120deg, #B89A63, #8F7548);
-  color: #fffdf5;
-  box-shadow: 0 12px 30px rgba(139, 105, 20, 0.18);
-}
-.acc-avatar {
-  flex-shrink: 0;
-  width: 66px;
-  height: 66px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: rgba(255, 253, 245, 0.18);
-  border: 1px solid rgba(255, 253, 245, 0.4);
-  font-size: 25px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  color: #fffdf5;
-}
-.acc-hero-info {
-  flex: 1;
-  min-width: 0;
-}
-.acc-hero-greeting {
-  display: block;
-  font-size: 11px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  opacity: 0.85;
-}
-.acc-hero-name {
-  margin: 5px 0 3px;
-  font-size: 27px;
-  line-height: 1.1;
-  font-weight: 600;
-  color: #fffdf5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.acc-hero-sub {
-  font-size: 14px;
-  opacity: 0.92;
-  word-break: break-word;
-}
-.acc-signout {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 253, 245, 0.45);
-  background: rgba(255, 253, 245, 0.15);
-  color: #fffdf5;
-  font-size: 10px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-.acc-signout:hover {
-  background: #fffdf5;
-  color: var(--gold-deep);
-}
-
-.acc-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 14px;
-  margin-bottom: 26px;
-}
-.acc-stat {
-  padding: 18px 16px;
-  text-align: center;
-  border-radius: 10px;
-  background: var(--paper);
-  border: 1px solid var(--border);
-}
-.acc-stat-val {
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--ink);
-}
-.acc-stat-label {
-  margin-top: 9px;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-.acc-stat-points {
-  border-color: var(--gold);
-  background: linear-gradient(180deg, #fffdf5, var(--surface));
-}
-.acc-stat-points .acc-stat-val {
-  color: var(--gold-deep);
-}
-
-@media (max-width: 640px) {
-  .acc-hero {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 22px;
-  }
-  .acc-signout {
-    width: 100%;
-    justify-content: center;
-  }
-  .acc-hero-name { font-size: 24px; }
-  .acc-stats { grid-template-columns: repeat(2, 1fr); }
-  .acc-stat-val { font-size: 26px; }
 }
 
 /* Lift floating widgets above the sticky mobile buy bar so they never cover Add to Bag / Buy Now */
@@ -867,105 +336,11 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   body:has([data-sticky-atc]) [data-scrolltop] { bottom: 164px; right: 16px; }
 }
 
-/* ── Review wall — three rows scrolling in alternating directions (Soxbae/Morbix
-   parity, Velmique styling). CSS-only seamless loop + pause-on-hover; the
-   component (components/reviews/ReviewWall.jsx) duplicates each row so the
-   translateX(-50%) loop meets itself. ── */
-.vqrv-rows { display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
-.vqrv-static {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
-  padding-inline: 16px;
-}
-.vqrv-static > .vqrv-card { flex: 0 1 340px; width: 340px; max-width: 86vw; }
-.vqrv-marquee {
-  overflow: hidden; position: relative; min-width: 0; outline: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
-}
-.vqrv-track {
-  display: flex; align-items: stretch; gap: 20px; width: max-content; padding: 2px 10px;
-  animation: vqrvScroll var(--vqrv-dur, 60s) linear infinite;
-  will-change: transform;
-}
-.vqrv-marquee:hover .vqrv-track,
-.vqrv-marquee:focus-within .vqrv-track,
-.vqrv-marquee:active .vqrv-track { animation-play-state: paused; }
-.vqrv-track.vqrv-rtl { animation-direction: reverse; }
-.vqrv-track > .vqrv-card,
-.vqrv-track > .vqrv-dup { flex: 0 0 340px; width: 340px; }
-.vqrv-dup { display: flex; }
-.vqrv-dup > .vqrv-card { flex: 1 1 auto; width: 100%; }
-@keyframes vqrvScroll { to { transform: translateX(calc(-50% - 10px)); } }
-@media (max-width: 700px) {
-  .vqrv-rows { gap: 12px; }
-  .vqrv-track { gap: 14px; }
-  .vqrv-track > .vqrv-card,
-  .vqrv-track > .vqrv-dup { flex-basis: 80vw; width: 80vw; max-width: 320px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .vqrv-marquee { overflow-x: auto; -webkit-mask-image: none; mask-image: none; scroll-snap-type: x mandatory; }
-  .vqrv-track { animation: none; }
-  .vqrv-track > .vqrv-card { scroll-snap-align: start; }
-  .vqrv-dup { display: none; }
-}
-
-/* ── Rich product description (admin rich-text, may include images) ──
-   Renders formatted HTML on the PDP with on-brand Velmique typography
-   (cream/ink/gold, serif display headings). Mirrors the plain-text
-   description scale (15px body, 1.8 line-height). ── */
-.vq-desc-rich { word-break: break-word; }
-.vq-desc-rich img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  margin: 14px 0;
-  display: block;
-}
-.vq-desc-rich h2,
-.vq-desc-rich h3 {
-  font-family: 'Bodoni Moda', 'Playfair Display', Georgia, serif;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  margin: 24px 0 10px;
-}
-.vq-desc-rich h2 { font-size: 1.5rem; }
-.vq-desc-rich h3 { font-size: 1.2rem; }
-.vq-desc-rich p { margin: 0 0 14px; }
-.vq-desc-rich p:last-child { margin-bottom: 0; }
-.vq-desc-rich ul,
-.vq-desc-rich ol { margin: 0 0 14px; padding-left: 1.4em; }
-.vq-desc-rich li { margin: 0 0 6px; }
-.vq-desc-rich ul li { list-style: disc; }
-.vq-desc-rich ol li { list-style: decimal; }
-.vq-desc-rich a {
-  color: var(--gold-deep);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.vq-desc-rich a:hover { color: var(--gold); }
-.vq-desc-rich blockquote {
-  margin: 18px 0;
-  padding: 4px 0 4px 18px;
-  border-left: 2px solid var(--gold);
-  color: var(--ink-muted);
-  font-style: italic;
-}
-.vq-desc-rich strong,
-.vq-desc-rich b { color: var(--ink); font-weight: 600; }
-.vq-desc-rich figure { margin: 14px 0; }
-.vq-desc-rich figcaption {
-  font-size: 12px;
-  color: var(--ink-muted);
-  text-align: center;
-  margin-top: 6px;
-}
-
-/* Responsive description images — tag an <img> "only-desktop" / "only-mobile"
-   in the admin editor to show a different image per breakpoint. */
-.vq-desc-rich .only-mobile { display: none; }
-@media (max-width: 767px) {
-  .vq-desc-rich .only-desktop { display: none; }
-  .vq-desc-rich .only-mobile { display: block; }
-}
+/* Floating chat / back-to-top sit above page content but must not cover the
+   bag drawer's checkout button or an open dialog. */
+body:has(aside[aria-label="Shopping bag"].translate-x-0) .gzwa-fab,
+body:has(aside[aria-label="Shopping bag"].translate-x-0) .gzwa-greet,
+body:has(aside[aria-label="Shopping bag"].translate-x-0) [data-scrolltop],
+body:has(.m-modal) .gzwa-fab,
+body:has(.m-modal) .gzwa-greet,
+body:has(.m-modal) [data-scrolltop] { display: none !important; }

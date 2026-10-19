@@ -1,18 +1,12 @@
-import PolicyView from '@/components/policy/PolicyView';
-import SeoWrapper from '@/components/SeoWrapper';
+import { seoMeta } from '@/lib/site';
+import PolicyPage from '../_components/PolicyPage';
 
-export const metadata = { title: 'Cancellation & Refund — Velmique' };
+export const revalidate = 600;
+
+export async function generateMetadata() {
+  return seoMeta('cancellation-and-refund', { title: 'Cancellation & Refund — Velmique', description: 'How to cancel a Velmique order and how refunds are processed.', path: '/cancellation-refund' });
+}
 
 export default function CancellationRefundPage() {
-  return (
-    <SeoWrapper pageName="cancellation-and-refund">
-      <PolicyView
-        name="cancellation"
-        eyebrow="Policies"
-        fallbackTitle="Cancellation"
-        fallbackAccent="& REFUND"
-        intro="How to cancel an order and how refunds are processed back to your UPI, card or bank."
-      />
-    </SeoWrapper>
-  );
+  return <PolicyPage name="cancellation" eyebrow="Customer care" fallbackTitle="Cancellation & Refund" intro="How to cancel an order and how refunds are processed back to your UPI, card or bank." />;
 }

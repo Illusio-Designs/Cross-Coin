@@ -89,7 +89,10 @@ export function openCookieSettings() {
 
 // Live consent for React components — re-renders when the choice changes.
 export function useConsent() {
-  const [c, setC] = useState(() => getConsent());
+  // Start from the server's value (nothing consented) so the first client
+  // render matches the HTML; the effect below then applies the stored choice.
+  // Reading storage here caused a hydration mismatch for returning visitors.
+  const [c, setC] = useState(() => ({ ...DENIED }));
   useEffect(() => {
     const sync = () => setC(getConsent());
     window.addEventListener(CONSENT_EVENT, sync);

@@ -1,5 +1,5 @@
 import { StoreProvider } from '@/lib/store';
-import ProductCard from '@/components/shop/ProductCard';
+import ProductCard from '@/app/_components/ProductCard';
 
 /**
  * Velmique's ProductCard reads from useStore() (cart + wishlist), so
@@ -15,7 +15,7 @@ export default {
   decorators: [
     (Story) => (
       <StoreProvider>
-        <div style={{ width: 320 }}>
+        <div className="m-root" style={{ width: 320 }}>
           <Story />
         </div>
       </StoreProvider>
@@ -29,22 +29,22 @@ const baseProduct = {
   name: 'Phantom Encens',
   collection: 'Signature',
   price: 7500,
-  salePrice: null,
-  image: 'https://placehold.co/600x800/FBF7EC/8B6914?text=Velmique',
   images: [
     'https://placehold.co/600x800/FBF7EC/8B6914?text=Velmique',
     'https://placehold.co/600x800/F5EFE0/8B6914?text=Velmique+2',
   ],
   inStock: true,
   rating: 4.8,
-  reviewCount: 142,
+  reviews: 142,
+  sizes: ['50ml'],
+  defaultVariationId: 'v_01',
   badge: null,
 };
 
 export const Default = { args: { product: baseProduct } };
 
 export const OnSale = {
-  args: { product: { ...baseProduct, salePrice: 5990 } },
+  args: { product: { ...baseProduct, price: 5990, originalPrice: 7500 } },
 };
 
 export const OutOfStock = {

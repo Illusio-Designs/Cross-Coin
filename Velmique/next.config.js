@@ -3,8 +3,10 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 const nextConfig = {
   images: {
-    domains: ['images.unsplash.com', 'plus.unsplash.com'],
+    // `images.domains` is deprecated in Next 14 — every host is a remotePattern.
     remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'plus.unsplash.com' },
       { protocol: 'https', hostname: 'ik.imagekit.io' },
       { protocol: 'https', hostname: 'api.crosscoin.in' },
       { protocol: 'https', hostname: 'crosscoin.in' },
@@ -57,6 +59,13 @@ const nextConfig = {
         destination: '/collections/:col',
         permanent: true,
       },
+      // The "Mint" redesign was previewed under /test and is now the live site
+      // at the root routes; send preview links (shared, indexed) home.
+      { source: '/test', destination: '/', permanent: true },
+      { source: '/test/:path*', destination: '/:path*', permanent: true },
+      // The blog is the Journal now.
+      { source: '/blog', destination: '/journal', permanent: true },
+      { source: '/blog/:slug', destination: '/journal/:slug', permanent: true },
     ];
   },
 }

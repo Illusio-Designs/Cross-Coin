@@ -13,8 +13,9 @@ import { getPublicCoupons } from '@/lib/api/orders';
  * so it simply never shows there. */
 
 const SESSION_KEY = 'velmique_exit_intent_shown';
-const INK = '#11100E';
-const GOLD = '#B89A63';
+// Onyx & gold (the Mint palette in app/mint.css).
+const INK = '#f3ead6';
+const GOLD = '#d9a43b';
 
 function seenThisSession() {
   try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
@@ -118,20 +119,20 @@ export default function ExitIntentModal() {
       </div>
 
       <style jsx>{`
-        .eim-backdrop { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(17,16,14,.55); animation: eimFade .25s ease; }
-        .eim-card { position: relative; width: 100%; max-width: 384px; background: #FFFFFF; border: 1px solid #E6DED0; box-shadow: 0 24px 64px rgba(17,16,14,.3); padding: 34px 28px 28px; text-align: center; animation: eimPop .3s cubic-bezier(.34,1.4,.64,1); }
-        .eim-close { position: absolute; top: 10px; right: 12px; border: none; background: transparent; color: #a79f93; font-size: 26px; line-height: 1; cursor: pointer; padding: 2px 6px; }
+        .eim-backdrop { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(0,0,0,.65); animation: eimFade .25s ease; }
+        .eim-card { position: relative; width: 100%; max-width: 384px; background: #17171a; border: 1px solid rgba(217,164,59,.35); border-radius: 8px; box-shadow: 0 24px 64px rgba(0,0,0,.6); color: ${INK}; padding: 34px 28px 28px; text-align: center; animation: eimPop .3s cubic-bezier(.34,1.4,.64,1); }
+        .eim-close { position: absolute; top: 10px; right: 12px; border: none; background: transparent; color: #938d82; font-size: 26px; line-height: 1; cursor: pointer; padding: 2px 6px; }
         .eim-close:hover { color: ${INK}; }
-        .eim-title { margin: 0 0 10px; font-size: 26px; font-weight: 600; color: ${INK}; font-family: 'Bodoni Moda', Georgia, serif; }
-        .eim-msg { margin: 0 0 20px; font-size: 14.5px; line-height: 1.55; color: #49423A; }
-        .eim-coupon { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px dashed ${GOLD}; padding: 11px 13px; margin: 0 0 20px; background: #FBF7F0; text-align: left; }
+        .eim-title { margin: 0 0 10px; font-size: 26px; font-weight: 600; color: ${INK}; font-family: 'Playfair Display', Georgia, serif; }
+        .eim-msg { margin: 0 0 20px; font-size: 14.5px; line-height: 1.55; color: #c7c0b2; }
+        .eim-coupon { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px dashed ${GOLD}; padding: 11px 13px; margin: 0 0 20px; background: rgba(217,164,59,.08); border-radius: 8px; text-align: left; }
         .eim-coupon-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .eim-coupon-code { font-weight: 700; font-size: 15px; letter-spacing: 1px; color: ${INK}; }
-        .eim-coupon-desc { font-size: 12px; color: #777168; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .eim-copy { flex: 0 0 auto; border: 1px solid ${GOLD}; background: #fff; color: ${GOLD}; font-weight: 700; font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase; padding: 8px 14px; cursor: pointer; }
-        .eim-copy:hover { background: ${GOLD}; color: #fff; }
-        .eim-cta { width: 100%; border: none; background: ${INK}; color: #fff; font-weight: 600; font-size: 13px; letter-spacing: 1.2px; text-transform: uppercase; padding: 14px 18px; cursor: pointer; }
-        .eim-cta:hover { background: ${GOLD}; }
+        .eim-coupon-desc { font-size: 12px; color: #938d82; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .eim-copy { flex: 0 0 auto; border: 1px solid ${GOLD}; background: transparent; color: ${GOLD}; border-radius: 8px; font-weight: 700; font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase; padding: 8px 14px; cursor: pointer; }
+        .eim-copy:hover { background: ${GOLD}; color: #17120a; }
+        .eim-cta { width: 100%; border: none; border-radius: 8px; background: ${GOLD}; color: #17120a; font-weight: 600; font-size: 13px; letter-spacing: 1.2px; text-transform: uppercase; padding: 14px 18px; cursor: pointer; }
+        .eim-cta:hover { background: #e8c877; }
         @keyframes eimFade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes eimPop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
         @media (prefers-reduced-motion: reduce) { .eim-backdrop, .eim-card { animation: none; } }
