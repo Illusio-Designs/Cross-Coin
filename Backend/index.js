@@ -479,7 +479,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v17';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v18';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1780,6 +1780,26 @@ const startServer = async () => {
             logger.info('✓ rto_stock_restoration ledger ensured');
         } catch (err) {
             logger.error('rto_stock_restoration ensure failed: ' + err.message);
+        }
+
+        // ── Drop legacy DB triggers that call the removed RestoreRTOStock
+        // procedure (v18). A hand-made trigger on `orders` called it on every
+        // RTO status change; with the procedure gone, every such UPDATE failed
+        // ("PROCEDURE RestoreRTOStock does not exist") and the order never
+        // moved to RTO. The app restores RTO stock itself (ledger-guarded), so
+        // the trigger is redundant and would double-restock if revived.
+        try {
+            const [trigs] = await sequelize.query(
+                `SELECT TRIGGER_NAME AS name FROM information_schema.TRIGGERS
+                  WHERE TRIGGER_SCHEMA = DATABASE() AND ACTION_STATEMENT LIKE '%RestoreRTOStock%'`
+            );
+            for (const t of trigs) {
+                await sequelize.query(`DROP TRIGGER IF EXISTS \`${String(t.name).replace(/`/g, '')}\``);
+                logger.info(`✓ Dropped legacy trigger ${t.name} (called removed RestoreRTOStock)`);
+            }
+            await sequelize.query('DROP PROCEDURE IF EXISTS RestoreRTOStock');
+        } catch (err) {
+            logger.error('Legacy RestoreRTOStock trigger cleanup failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future
