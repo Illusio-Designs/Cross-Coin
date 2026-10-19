@@ -277,6 +277,7 @@ export default function AccountClient() {
                         <span className="pf-order-total">Total: ₹{parseFloat(order.final_amount || 0).toFixed(0)}</span>
                         <div className="pf-order-actions">
                           <Link href={`/track-order?order=${order.order_number}`} className="pf-btn-ghost">Track Order</Link>
+                          {order.invoice_url && <a href={order.invoice_url} target="_blank" rel="noreferrer" className="pf-btn-ghost">Invoice</a>}
                           {['pending', 'confirmed', 'processing'].includes(order.status) && (
                             <button className="pf-btn-ghost" style={{ color: '#c62828', borderColor: '#c62828' }}
                               disabled={orderActionId === order.id}

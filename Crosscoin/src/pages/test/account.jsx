@@ -110,7 +110,7 @@ export default function TestAccount() {
                     {o.items.length > 0 && <div className="order__items2">{o.items.map((it, i) => <span key={i} className="oitem2"><b>{it.name}</b>{it.variant ? ` · ${it.variant}` : ''} ×{it.qty}</span>)}</div>}
                     <div className="order__bot">
                       <div className="order__total">Total <b>{inr(o.total)}</b></div>
-                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`${R.track}?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button><button className="btn btn--sm" onClick={() => router.push(R.returns)}>Return</button></div>
+                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`${R.track}?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button>{o.invoiceUrl && <a className="btn btn--sm" href={o.invoiceUrl} target="_blank" rel="noreferrer">Invoice</a>}<button className="btn btn--sm" onClick={() => router.push(R.returns)}>Return</button></div>
                     </div>
                   </div>
                 ))

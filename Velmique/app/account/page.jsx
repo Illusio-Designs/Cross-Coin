@@ -394,6 +394,14 @@ function OrdersTab({ showToast }) {
                     {cancellingId === order.id ? 'Cancelling…' : 'Cancel'}
                   </button>
                 )}
+                {order.invoice_url && (
+                  <a
+                    href={order.invoice_url} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase font-body border border-[var(--ink)]/30 px-4 py-2 hover:border-[var(--gold-deep)] transition-colors"
+                  >
+                    Invoice
+                  </a>
+                )}
                 <Link
                   href={`/track-order?order=${encodeURIComponent(orderRef)}`}
                   className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase font-body bg-[var(--ink)] text-white  px-4 py-2 hover:bg-[var(--gold-deep)] transition-colors"

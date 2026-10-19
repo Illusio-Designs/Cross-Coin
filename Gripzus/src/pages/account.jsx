@@ -317,6 +317,7 @@ export default function AccountPage() {
                               <div className="acc-order-total">Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}</div>
                               <div className="acc-order-actions">
                                 <Link href={`/track-order?order=${o.order_number}`} className="acc-link">Track Order</Link>
+                                {o.invoice_url && <a href={o.invoice_url} target="_blank" rel="noreferrer" className="acc-link">Invoice</a>}
                                 {canCancel && (
                                   <button
                                     onClick={() => handleCancelOrder(o.id)}

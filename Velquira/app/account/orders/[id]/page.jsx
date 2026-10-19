@@ -150,6 +150,9 @@ function OrderDetail({ id }) {
           )}
 
           <Link href={`/track-order?order=${order.order_number}`} className="btn btn-ghost" style={{ width: '100%', marginTop: 10 }}>Track order</Link>
+          {order.invoice_url && (
+            <a href={order.invoice_url} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }}>Download invoice</a>
+          )}
           {canCancel && (
             <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={doCancel} disabled={cancelling}>
               {cancelling ? 'Cancelling…' : 'Cancel order'}

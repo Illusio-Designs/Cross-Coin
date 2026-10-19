@@ -1992,7 +1992,12 @@
               })),
             } : null,
           }));
-          return { ...order, rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0) };
+          const { publicInvoiceUrl } = require('../services/invoiceService.js');
+          return {
+            ...order,
+            rto_risk_level: getRtoRiskLevel(o.rto_risk_score || 0),
+            invoice_url: publicInvoiceUrl(order.order_number),
+          };
         }),
         pagination: {
           total: orders.count,
@@ -2082,7 +2087,10 @@
         return res.status(403).json({ message: "Access denied" });
       }
 
-      res.json(order);
+      const { publicInvoiceUrl } = require("../services/invoiceService.js");
+      const payload = order.toJSON();
+      payload.invoice_url = publicInvoiceUrl(payload.order_number);
+      res.json(payload);
     } catch (error) {
       logger.error("Error fetching order:", error);
       res
