@@ -8,7 +8,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
-import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups } from './store';
+import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups, getCart, restoreCart } from './store';
+import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart } from '../../utils/cartRecovery';
 import { I, Thumb } from './ui';
 import { inr } from './data';
 import { R } from './routes';
@@ -647,23 +648,22 @@ export default function TestLayout({ children }) {
   };
 
   // ── WhatsApp "Complete Order" cart-recovery link ──────────────────────────
-  // The abandoned-cart message's button goes to /?recover=1&coupon=CART10 (via
-  // the backend /api/cart-recover redirect). On the shopper's own device the
-  // cart is still in localStorage, so we reopen it and auto-apply the coupon.
+  // The abandoned-cart message's button goes (via the backend /api/cart-recover
+  // redirect) to /?recover=1&coupon=CART10&cart=<token>. The link usually opens
+  // in WhatsApp's in-app browser, which has no localStorage cart, so an empty
+  // cart is rebuilt from the server copy behind the token; then we open the
+  // drawer and auto-apply the coupon. A cart still on this device is kept.
   const [recoverCode, setRecoverCode] = useState(null);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let sp; try { sp = new URLSearchParams(window.location.search); } catch (_) { return; }
-    if (sp.get('recover') !== '1') return;
+    const rec = readCartRecovery();
+    if (!rec) return;
     setStep('cart'); setDrawer(true);
-    const code = (sp.get('coupon') || '').trim().toUpperCase();
-    if (code) setRecoverCode(code);
+    if (rec.coupon) setRecoverCode(rec.coupon);
     // Clean the URL so a refresh doesn't re-trigger the recovery.
-    try {
-      const u = new URL(window.location.href);
-      u.searchParams.delete('recover'); u.searchParams.delete('coupon');
-      window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash);
-    } catch (_) {}
+    clearCartRecoveryParams();
+    if (rec.cartToken && getCart().length === 0) {
+      fetchRecoveredCart(rec.cartToken).then((lines) => { if (lines.length) restoreCart(lines); }).catch(() => {});
+    }
   }, []);
   useEffect(() => {
     // Apply once the cart total is known so min-cart coupon rules pass.

@@ -1,6 +1,7 @@
 import { getPageTitle } from "../../utils/dashboardRouting";
 import NotificationBell from "./NotificationBell";
 import ProfileMenu from "./ProfileMenu";
+import GlobalSearch from "./GlobalSearch";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Menu01Icon, Maximize01Icon, Minimize01Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons';
 
@@ -24,6 +25,7 @@ function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobi
         <span className="dh-title">{getPageTitle(currentView)}</span>
       </div>
       <div className="dh-right">
+        <GlobalSearch />
         <NotificationBell />
         {onToggleTheme && (
           <button className="dh-action" onClick={onToggleTheme}

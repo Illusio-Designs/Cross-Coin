@@ -14,6 +14,7 @@ import PackPricing from "./products/pack-pricing";
 import Orders from "./orders/orders";
 import Consumers from "./consumers/consumers";
 import Leads from "./consumers/leads";
+import CustomerProfile from "./consumers/customer";
 import Payments from "./payments/payments";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
@@ -233,6 +234,7 @@ function Dashboard() {
       case 'pack-pricing':    return <PackPricing />;
       case 'orders':          return <Orders key="orders" />;
       case 'consumers':       return <Consumers />;
+      case 'customer':        return <CustomerProfile />;
       // Returns and failed deliveries live inside Orders as tabs now; the old
       // views open Orders on that tab so bookmarks and notifications still work.
       case 'returns':         return <Orders key="returns" initialTab="returns" />;

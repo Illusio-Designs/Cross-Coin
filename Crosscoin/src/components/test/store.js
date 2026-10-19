@@ -136,6 +136,33 @@ export function setLinePack(key, { qty, unit, pack, packq }) {
   cart = [...cart];
   emit();
 }
+// WhatsApp cart-recovery link: put a recovered cart back (lines from
+// GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The link
+// usually opens in WhatsApp's in-app browser, which has none of this shopper's
+// localStorage, so the cart is rebuilt from the server copy. Only fills an
+// EMPTY cart; no AddToCart pixel (the shopper isn't adding anything new).
+export function restoreCart(lines) {
+  hydrate();
+  if (cart.length) return 0;
+  const list = (Array.isArray(lines) ? lines : []).map((l) => {
+    if (l.line && l.line.key && l.line.id != null) return { ...l.line, qty: l.quantity || 1 };
+    const price = Number(l.price) || 0;
+    const color = l.color || '';
+    const size = l.size || '';
+    return {
+      key: [l.productId, l.variationId || '', color, size, 1, l.packId || ''].join('|'),
+      id: l.productId, vid: l.variationId || null, name: l.name || '', brand: '',
+      color, size, pack: l.packSize ? `${l.packSize} Pairs` : 'Single', packq: 1,
+      unit: price, was: Number(l.comparePrice) || 0, base: price, img: l.image || '',
+      qty: l.quantity || 1, packId: l.packId || null, packSize: l.packSize || null,
+    };
+  }).filter((i) => i.id != null);
+  if (!list.length) return 0;
+  cart = list;
+  emit();
+  return list.length;
+}
+
 export function removeItem(key) { hydrate(); cart = cart.filter((i) => i.key !== key); emit(); }
 // Remove every line of a pack group at once.
 export function removePack(packId) { hydrate(); cart = cart.filter((i) => i.packId !== packId); emit(); }

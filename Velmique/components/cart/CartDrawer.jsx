@@ -28,6 +28,7 @@ import {
 } from '@/lib/toast';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -91,7 +92,7 @@ export default function CartDrawer() {
   const router = useRouter();
   const {
     cart: items, cartOpen, setCartOpen, cartTotal, cartCount,
-    removeFromCart, updateQuantity, clearCart, addToCart,
+    removeFromCart, updateQuantity, clearCart, addToCart, restoreCart,
   } = useStore();
   const { user, isAuthenticated } = useAuth();
 
@@ -322,6 +323,11 @@ export default function CartDrawer() {
       cartSummary: summary.slice(0, 250),
       itemCount: cartCount,
       cartValue: cartTotal,
+      // Line items so the WhatsApp recovery link can rebuild this bag on any device.
+      items: toRecoveryItems(items, (i) => ({
+        productId: i.productId, variationId: i.variationId, quantity: i.quantity,
+        size: i.size, packGroup: i.packGroup,
+      })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addrForm.phoneNumber, isAuthenticated]);
@@ -609,35 +615,36 @@ export default function CartDrawer() {
   };
 
   // ── Abandoned-cart recovery deep link ───────────────────────────────────
-  // A recovery email/SMS links back with `?recover=1` (optionally
-  // `&coupon=CART10`). On the shopper's own device the bag still lives in the
-  // browser, so we only reopen the drawer — never rebuild it — and, once the
-  // total is known, auto-apply the coupon down the same path as typing a code
-  // + clicking Apply. Best-effort and SSR-guarded: it must never break the
-  // page, and an empty bag is fine (the code is still pre-filled).
+  // The WhatsApp "Complete Order" link comes back with `?recover=1`
+  // (`&coupon=CART10&cart=<token>`). The bag only lives in this tab's memory
+  // (and the link usually opens in WhatsApp's in-app browser), so an empty bag
+  // is rebuilt from the server copy behind the token; then, once the total is
+  // known, the coupon is auto-applied down the same path as typing a code +
+  // clicking Apply. Best-effort and SSR-guarded: it must never break the page.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('recover') !== '1') return;
+      const rec = readCartRecovery();
+      if (!rec) return;
 
       // 1) Reopen the bag via the store's own open mechanism.
       setCartOpen(true);
 
       // 2) Remember + pre-fill the coupon so the code is visible immediately,
       //    even if clean auto-apply can't run yet (e.g. total not known).
-      const coupon = String(params.get('coupon') || '').trim().toUpperCase();
-      if (coupon) {
-        recoverCouponRef.current = coupon;
-        setCouponCode(coupon);
+      if (rec.coupon) {
+        recoverCouponRef.current = rec.coupon;
+        setCouponCode(rec.coupon);
       }
 
       // 3) Strip the recovery params so a refresh / share doesn't re-trigger.
-      params.delete('recover');
-      params.delete('coupon');
-      const qs = params.toString();
-      const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
-      window.history.replaceState(null, '', clean);
+      clearCartRecoveryParams();
+
+      // 4) Empty bag → put the recovered items back.
+      if (rec.cartToken && items.length === 0) {
+        fetchRecoveredCart(rec.cartToken)
+          .then((lines) => { if (lines.length) restoreCart(lines); })
+          .catch(() => {});
+      }
     } catch (err) {
       console.warn('[recover] deep-link handling failed:', err?.message);
     }

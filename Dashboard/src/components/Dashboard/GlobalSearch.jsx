@@ -144,7 +144,7 @@ function itemKey(type, d) {
 export default function GlobalSearch() {
   const { canAccessView, roles } = useAuth();
   const rolesKey = (roles || []).join(',');
-  const uid = useId().replace(/:/g, '');
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const ids = { title: `gs-title-${uid}`, input: `gs-input-${uid}`, list: `gs-list-${uid}`, hint: `gs-hint-${uid}` };
 
   const [open, setOpen] = useState(false);
@@ -313,13 +313,14 @@ export default function GlobalSearch() {
   const q = query.trim();
   const counts = Object.fromEntries(GROUPS.map((g) => [g.key, (groups[g.key] || []).length]));
   const total = visibleGroups.reduce((s, g) => s + counts[g.key], 0);
-  const hasResults = searchedQ && searchedQ === q;
+  // Keep the last results on screen while a refined query is loading.
+  const hasResults = !!searchedQ;
 
   let status = '';
   if (loading) status = 'Searching…';
   else if (error) status = error;
   else if (q.length > 0 && q.length < AUTO_MIN && !hasResults) status = `Type at least ${AUTO_MIN} characters, or press Enter`;
-  else if (hasResults && total === 0) status = `No matches for “${searchedQ}”`;
+  else if (hasResults && searchedQ === q && total === 0) status = `No matches for “${searchedQ}”`;
 
   let idx = -1;
   const dialog = open ? (

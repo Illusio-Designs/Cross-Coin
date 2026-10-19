@@ -11,6 +11,7 @@ export const getPageTitle = (view) => {
     'payments': 'Payments',
     'ndr': 'Orders · Delivery problems',
     'consumers': 'Consumers',
+    'customer': 'Customer',
     'shippingFees': 'Shipping Fees',
     'webhook-events': 'Courier Webhooks',
     'coupons': 'Coupons',

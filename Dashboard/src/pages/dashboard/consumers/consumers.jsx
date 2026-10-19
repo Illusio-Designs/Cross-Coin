@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Table, Pagination, Modal } from "../../../components/ui";
+import { Table, Pagination } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
@@ -22,8 +22,6 @@ export default function Consumers() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [search, setSearch] = useState("");
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedConsumer, setSelectedConsumer] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const queryClient = useQueryClient();
 
@@ -82,14 +80,24 @@ export default function Consumers() {
   const start = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
-  const handleView = (id) => {
-    const consumer = consumers.find(c => c.id === id);
-    if (consumer) { setSelectedConsumer(consumer); setIsViewModalOpen(true); }
+  // Open the customer profile page. Guest rows carry ids like "g12".
+  const handleView = (row) => {
+    const sel = row.isGuest
+      ? { kind: 'guest', id: Number(String(row.id).replace(/\D/g, '')) }
+      : { kind: 'user', id: row.id };
+    try { sessionStorage.setItem('obz-customer', JSON.stringify(sel)); } catch { /* storage blocked */ }
+    window.history.pushState({}, '', '/dashboard/customer');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const columns = [
     { header: "Sr. No", accessor: "serial_number" },
-    { header: "Name", accessor: "username", cell: ({ username }) => <span className="cat-name-cell">{username}</span> },
+    { header: "Name", accessor: "username", cell: (row) => (
+      <button type="button" className="cat-name-cell" title="Open customer profile" onClick={() => handleView(row)}
+        style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+        {row.username || row.email || 'Customer'}
+      </button>
+    ) },
     { header: "Email", accessor: "email" },
     { header: "Phone", accessor: "phone", cell: ({ phone }) => <span>{phone || '—'}</span> },
     { header: "Source", accessor: "SourceBrand", cell: (row) => {
@@ -101,7 +109,7 @@ export default function Consumers() {
       header: "Actions", accessor: "actions",
       cell: (row) => (
         <div className="sl-actions">
-          <button className="sl-btn-edit" title="View Details" onClick={() => handleView(row.id)}>{IC.view}</button>
+          <button className="sl-btn-edit" title="Open customer profile" onClick={() => handleView(row)}>{IC.view}</button>
           {!row.isGuest && (
             <button className="sl-btn-delete" title="Delete customer" onClick={() => confirmDelete(row)}>{IC.del}</button>
           )}
@@ -155,26 +163,6 @@ export default function Consumers() {
           )}
         </Panel>
       </div>
-
-      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title={`Consumer: ${selectedConsumer?.username || ''}`}>
-        {selectedConsumer && (
-          <div className="seo-form">
-            <div className="modal-body">
-              <div className="con-detail-grid">
-                <div className="con-detail-item"><span className="con-detail-label">Username</span><span className="con-detail-value">{selectedConsumer.username || '—'}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Email</span><span className="con-detail-value">{selectedConsumer.email || '—'}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Phone</span><span className="con-detail-value">{selectedConsumer.phone || '—'}</span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Role</span><span className="con-detail-value"><span className="sl-cat-badge">{selectedConsumer.role || '—'}</span></span></div>
-                <div className="con-detail-item"><span className="con-detail-label">Status</span><span className="con-detail-value"><span className={`sl-status-badge sl-status-${selectedConsumer.status}`}>{selectedConsumer.status || '—'}</span></span></div>
-                {selectedConsumer.createdAt && <div className="con-detail-item"><span className="con-detail-label">Joined</span><span className="con-detail-value">{new Date(selectedConsumer.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {confirmState && (
         <ConfirmModal

@@ -45,6 +45,7 @@ const FILES = [
   'brandAssignment.css',
   'seo.css',
   'whatsapp.css',
+  'globalSearch.css',
 ];
 
 const parts = [];

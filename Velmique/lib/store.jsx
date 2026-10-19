@@ -154,6 +154,32 @@ export function StoreProvider({ children }) {
     if (!silent) toastCartCleared();
   }, []);
 
+  // WhatsApp cart-recovery link: put a recovered cart back (lines from
+  // GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The
+  // cart only lives in this tab's memory, so a shopper coming back from the
+  // WhatsApp message (often in its in-app browser) would otherwise find it
+  // empty. Only fills an EMPTY cart; no AddToCart pixel/toast.
+  const restoreCart = useCallback((lines) => {
+    const list = (Array.isArray(lines) ? lines : []).map((l) => {
+      if (l.line && l.line.id != null) return { ...l.line, quantity: l.quantity || 1 };
+      return {
+        id: `${l.productId}:${l.variationId ?? 'v'}${l.packGroup ? ':pack' : ''}`,
+        productId: l.productId,
+        variationId: l.variationId ?? null,
+        name: l.name,
+        price: Number(l.price) || 0,
+        size: l.size || '',
+        image: l.image || '',
+        quantity: l.quantity || 1,
+        ...(l.packGroup ? { packGroup: l.packGroup } : {}),
+      };
+    }).filter((i) => i.productId != null);
+    if (!list.length) return 0;
+    setCart((prev) => (prev.length ? prev : list));
+    setCartOpen(true);
+    return list.length;
+  }, []);
+
   // Derived values memo'd off the underlying state — same reference
   // until cart actually changes.
   const cartTotal = useMemo(
@@ -173,13 +199,13 @@ export function StoreProvider({ children }) {
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
     setCartOpen, setSearchOpen,
-    cartTotal, cartCount, clearCart,
+    cartTotal, cartCount, clearCart, restoreCart,
   }), [
     cart, wishlist, cartOpen, searchOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
-    cartTotal, cartCount, clearCart,
+    cartTotal, cartCount, clearCart, restoreCart,
   ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

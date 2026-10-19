@@ -184,7 +184,7 @@ export function CartDrawer() {
     addToCart,
     removeFromCart: removeItem,
     updateQuantity: updateQty,
-    cartReady,
+    cartReady: cartLoaded,
     restoreCart,
   } = useCartContext();
   // Stable closeDrawer reference — useFocusTrap takes onEscape as a
@@ -896,13 +896,13 @@ export function CartDrawer() {
   // Once the local cart has loaded: if it is empty, restore the recovered one.
   // A cart that's still here (same browser) is left exactly as it is.
   useEffect(() => {
-    if (!recoverToken || !cartReady) return;
+    if (!recoverToken || !cartLoaded) return;
     const token = recoverToken;
     setRecoverToken(null);
     if (items.length) return;
     fetchRecoveredCart(token).then((lines) => { if (lines.length) restoreCart(lines); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recoverToken, cartReady]);
+  }, [recoverToken, cartLoaded]);
 
   // Auto-apply the recovery coupon once the cart total is known. Uses the same
   // validate/apply path as typing a code + clicking Apply, so all the normal

@@ -7,6 +7,7 @@ import { API_URL, addBrandHeader } from '../../services/api/config';
 import { selectProductImage, selectProductImages } from '../../utils/productImageSelector';
 import { getImageUrl } from '../../utils/imageHandler';
 import { getDirectImageUrl, ikTransform } from '../../utils/imageUtils';
+import { toRecoveryItems } from '../../utils/cartRecovery';
 
 const imgOf = (d) => { try { return getImageUrl(d) || ''; } catch (_) { return ''; } };
 
@@ -218,7 +219,14 @@ export function captureCart({ phone, name, cart, total }) {
   const items = Array.isArray(cart) ? cart : [];
   const summary = items.map((i) => `${i.name}${i.color ? ` (${i.color})` : ''} ×${i.qty}`).join(', ').slice(0, 250);
   try {
-    captureAbandonedCart({ phone: digits, name: name || '', cartSummary: summary, itemCount: items.reduce((s, i) => s + (i.qty || 0), 0), cartValue: Math.round(total || 0) });
+    captureAbandonedCart({
+      phone: digits, name: name || '', cartSummary: summary, itemCount: items.reduce((s, i) => s + (i.qty || 0), 0), cartValue: Math.round(total || 0),
+      // Line items so the WhatsApp recovery link can rebuild this cart on any device.
+      items: toRecoveryItems(items, (i) => ({
+        productId: i.id, variationId: i.vid, quantity: i.qty,
+        size: i.size, color: i.color, packId: i.packId, packSize: i.packSize,
+      })),
+    });
   } catch (_) {}
 }
 

@@ -163,10 +163,12 @@ async function tokenForServerCart({ phone, name, brandId, userId, cartItems, sum
       });
       return row.recoverToken;
     }
-    // Keep a storefront-captured snapshot (richer) when the row has one; only
-    // fill in items when it has none. `silent` leaves updated_at alone so this
-    // doesn't shift the row's own recovery timing.
-    if (items && !(row.items || []).length) await row.update({ items }, { silent: true });
+    // Keep a storefront-captured snapshot (richer — it carries the store's own
+    // lines) when the row has one; otherwise take the current server cart.
+    // `silent` leaves updated_at alone so this doesn't shift the row's own
+    // recovery timing.
+    const hasStoreSnapshot = (row.items || []).some((i) => i && i.line);
+    if (items && !hasStoreSnapshot) await row.update({ items }, { silent: true });
     return ensureToken(row);
   } catch (e) {
     logger.warn('[cart-recover] server-cart token failed: ' + e.message);

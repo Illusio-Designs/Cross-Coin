@@ -735,7 +735,21 @@ const Orders = ({ initialTab } = {}) => {
             header: 'Customer',
             cell: (row) => (
                 <div style={{ display: 'grid', gap: 2, alignItems: 'start' }}>
-                    <span style={{ lineHeight: 1.25, wordBreak: 'break-word' }}>{customerName(row)}</span>
+                    <button type="button" title="Open customer profile"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const phone = row.ShippingAddress?.phone || row.GuestUser?.phone;
+                            const sel = row.user_id ? { kind: 'user', id: row.user_id }
+                                : row.guest_user_id ? { kind: 'guest', id: row.guest_user_id }
+                                : phone ? { kind: 'phone', phone } : null;
+                            if (!sel) return;
+                            try { sessionStorage.setItem('obz-customer', JSON.stringify(sel)); } catch { /* storage blocked */ }
+                            window.history.pushState({}, '', '/dashboard/customer');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                        }}
+                        style={{ lineHeight: 1.25, wordBreak: 'break-word', background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--ds-color-border)', textUnderlineOffset: 3 }}>
+                        {customerName(row)}
+                    </button>
                     <span style={muted}>{[row.ShippingAddress?.phone || row.GuestUser?.phone, row.ShippingAddress?.city].filter(Boolean).join(' · ') || '—'}</span>
                     {row.rto_risk_level && (
                         <span className={`rto-badge rto-${row.rto_risk_level.toLowerCase()}`} style={{ justifySelf: 'start' }}>

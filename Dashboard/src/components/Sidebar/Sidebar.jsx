@@ -94,7 +94,7 @@ const ALL_MENU = [
       { label: 'Staff Users',    view: 'staff-users' },
     ],
   },
-  { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'] },
+  { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'], also: ['customer'] },
   { label: 'WhatsApp',     icon: IC.wa,         view: 'whatsapp',    roles: ['admin','whatsapp_manager'] },
   // Logout moved to the header profile menu (see DashboardHeader → ProfileMenu).
 ];
@@ -156,7 +156,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, c
   const onView = (s) => s.view === currentView || (s.also || []).includes(currentView);
 
   const isActive = (item) => {
-    if (item.view && currentView === item.view) return true;
+    if (item.view && onView(item)) return true;
     if (item.submenu) return item.submenu.some(onView);
     return false;
   };
