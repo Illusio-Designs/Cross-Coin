@@ -30,7 +30,8 @@ const LoyaltyTransaction = sequelize.define(
       onUpdate: 'CASCADE',
     },
     type: {
-      type: DataTypes.ENUM('earned', 'redeemed', 'expired', 'adjusted', 'refunded'),
+      // 'reversed' = points taken back after a refund / return / RTO (column widened lazily by loyaltyService.ensureSchema)
+      type: DataTypes.ENUM('earned', 'redeemed', 'expired', 'adjusted', 'refunded', 'reversed'),
       allowNull: false,
     },
     points: {

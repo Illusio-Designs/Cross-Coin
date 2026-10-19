@@ -23,6 +23,6 @@ router.post('/failed',            isAuthenticated, handlePaymentFailure);
 router.get('/admin/list',         isAuthenticated, isOrderManager, adminListPayments);
 router.get('/admin/summary',      isAuthenticated, isOrderManager, adminPaymentsSummary);
 router.get('/admin/mismatches',   isAuthenticated, isOrderManager, adminPaymentMismatches);
-router.post('/admin/mismatches/:orderId/fix', isAuthenticated, isAdmin, adminFixPaymentMismatch);
+router.post('/admin/mismatches/fix', isAuthenticated, isAdmin, adminFixPaymentMismatch);
 
 module.exports = router;

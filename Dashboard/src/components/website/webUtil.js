@@ -99,6 +99,18 @@ export function useLoad(fn, deps) {
   return { ...state, reload: run, setData: (fnOrData) => setState((s) => ({ ...s, data: typeof fnOrData === 'function' ? fnOrData(s.data) : fnOrData })) };
 }
 
+// Preview URL for a picked File (revoked when it changes).
+export function useObjectUrl(file) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    if (!file) { setUrl(null); return undefined; }
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return url;
+}
+
 // Brands list, fetched once per page load and shared by every tab.
 let brandsPromise = null;
 export function loadBrands() {

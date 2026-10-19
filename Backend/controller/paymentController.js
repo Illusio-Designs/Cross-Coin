@@ -18,7 +18,7 @@ const { setImmediate } = require('timers');
 // GET  /api/payments/admin/list?period=1|7|30&tab=all|paid|failed|pending|refund|cod|cancelled&q=&brandId=&page=&limit=
 // GET  /api/payments/admin/summary?period=&brandId=
 // GET  /api/payments/admin/mismatches?brandId=&refresh=1   (dry-run vs Razorpay, cached 10 min)
-// POST /api/payments/admin/mismatches/:orderId/fix          ("Mark paid & confirm", admin only)
+// POST /api/payments/admin/mismatches/fix { orderId } | { paymentId, action: 'create'|'refund' }   (admin only)
 const paymentsAdmin = require('../services/paymentsAdminService.js');
 const adminFail = (res, error, what) => {
     logger.error(`Payments admin: ${what} failed: ${error.message}`);
@@ -42,11 +42,11 @@ module.exports.adminPaymentMismatches = async (req, res) => {
 
 module.exports.adminFixPaymentMismatch = async (req, res) => {
     try {
-        const r = await paymentsAdmin.fixMismatch(req.params.orderId, { id: req.user.id, role: 'admin' });
+        const r = await paymentsAdmin.fixMismatch(req.body || {}, { id: req.user.id, role: 'admin' });
         res.status(r.ok ? 200 : r.status || 500).json({ success: r.ok, changed: !!r.changed, message: r.message });
     } catch (error) {
-        logger.error(`Payments admin: mark paid failed for order ${req.params.orderId}: ${error.message}`);
-        res.status(500).json({ success: false, message: 'Couldn’t mark it paid — nothing was changed. Please try again.' });
+        logger.error(`Payments admin: fix failed for ${JSON.stringify(req.body || {})}: ${error.message}`);
+        res.status(500).json({ success: false, message: 'Couldn’t fix it — nothing was changed. Please try again.' });
     }
 };
 
@@ -370,12 +370,6 @@ module.exports.handlePaymentFailure = async (req, res) => {
 // so req.rawBody is available for signature verification.
 module.exports.razorpayWebhook = async (req, res) => {
   try {
-    const webhookSecret = await settingsHelper.getSetting(1, 'RAZORPAY_WEBHOOK_SECRET');
-    if (!webhookSecret) {
-      logger.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
-      return res.status(400).json({ message: 'Webhook not configured' });
-    }
-
     // Verify x-razorpay-signature header
     const receivedSig = req.headers['x-razorpay-signature'];
     if (!receivedSig) {
@@ -384,23 +378,50 @@ module.exports.razorpayWebhook = async (req, res) => {
 
     const rawBody = req.rawBody || req.body;
     const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : JSON.stringify(rawBody);
-    const expectedSig = crypto.createHmac('sha256', webhookSecret).update(bodyStr).digest('hex');
 
-    if (expectedSig !== receivedSig) {
+    // Each brand has its own Razorpay account and webhook secret. Try the
+    // brand of the payment the event is about first, then every other brand
+    // that has a secret (refund events, payments we have no row for).
+    let parsed = req.body;
+    if (Buffer.isBuffer(parsed)) { try { parsed = JSON.parse(bodyStr); } catch (_) { parsed = {}; } }
+    const rzpOrderRef = parsed?.payload?.payment?.entity?.order_id || null;
+    const brandIds = [];
+    if (rzpOrderRef) {
+      const row = await Payment.findOne({ where: { razorpay_order_id: rzpOrderRef }, attributes: ['brand_id'] });
+      if (row && row.brand_id) brandIds.push(Number(row.brand_id));
+    }
+    const [secretRows] = await sequelize.query("SELECT DISTINCT brand_id FROM brand_settings WHERE `key` = 'RAZORPAY_WEBHOOK_SECRET'");
+    for (const r of secretRows || []) if (!brandIds.includes(Number(r.brand_id))) brandIds.push(Number(r.brand_id));
+    if (!brandIds.includes(1)) brandIds.push(1); // env fallback lives under brand 1
+
+    const received = Buffer.from(String(receivedSig));
+    let configured = false;
+    let verified = false;
+    for (const b of brandIds) {
+      const secret = await settingsHelper.getSetting(b, 'RAZORPAY_WEBHOOK_SECRET');
+      if (!secret) continue;
+      configured = true;
+      const expected = Buffer.from(crypto.createHmac('sha256', secret).update(bodyStr).digest('hex'));
+      if (expected.length === received.length && crypto.timingSafeEqual(expected, received)) { verified = true; break; }
+    }
+    if (!configured) {
+      logger.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+      return res.status(400).json({ message: 'Webhook not configured' });
+    }
+    if (!verified) {
       logger.warn('Razorpay webhook: invalid signature');
       return res.status(400).json({ message: 'Invalid signature' });
     }
 
-    const event = req.body;
+    const event = parsed;
     const eventId = event.id;
     const eventType = event.event;
 
-    // Idempotency: skip if already processed
+    // Idempotency: skip if already processed. The event is recorded only
+    // AFTER it was handled, so a failure answers 5xx and Razorpay retries it.
     if (eventId) {
-      const { sequelize: db } = require('../config/db.js');
       try {
-        // Check if already processed BEFORE inserting
-        const [existing] = await db.query(
+        const [existing] = await sequelize.query(
           `SELECT id FROM webhooks_log WHERE event_id = ? LIMIT 1`,
           { replacements: [eventId] }
         );
@@ -408,14 +429,9 @@ module.exports.razorpayWebhook = async (req, res) => {
           logger.info(`Razorpay webhook: duplicate event ${eventId}, skipping`);
           return res.status(200).json({ status: 'duplicate' });
         }
-        // Mark as processed
-        await db.query(
-          `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
-          { replacements: [eventId, eventType] }
-        );
       } catch (dbErr) {
         // webhooks_log table may not exist yet — non-fatal, continue processing
-        logger.warn('webhooks_log insert skipped:', dbErr.message);
+        logger.warn('webhooks_log lookup skipped:', dbErr.message);
       }
     }
 
@@ -441,7 +457,10 @@ module.exports.razorpayWebhook = async (req, res) => {
             });
             logger.info(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
           } catch (e) {
+            // Answer 5xx so Razorpay retries; the nightly reconciliation and
+            // Dashboard → Payments also pick the captured payment up.
             logger.error(`Webhook: failed to create order from session: ${e.message}`);
+            throw e;
           }
         } else {
           // ── OLD FLOW: Find order via payment record ─────────────────────
@@ -589,6 +608,16 @@ module.exports.razorpayWebhook = async (req, res) => {
       }
     }
 
+    if (eventId) {
+      try {
+        await sequelize.query(
+          `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
+          { replacements: [eventId, eventType] }
+        );
+      } catch (dbErr) {
+        logger.warn('webhooks_log insert skipped:', dbErr.message);
+      }
+    }
     res.status(200).json({ status: 'ok' });
   } catch (error) {
     logger.error('Razorpay webhook error:', error.message);

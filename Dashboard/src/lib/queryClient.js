@@ -26,10 +26,7 @@ export const queryKeys = {
   couponsPublic:    ['couponsPublic'],
 
   // Admin / Dashboard
-  shippingFees:     ['shippingFees'],
-  shippingFee:      (type) => ['shippingFee', type],
   categoriesAdmin:  ['categoriesAdmin'],
-  couponsAdmin:     ['couponsAdmin'],
   consumersAdmin:   ['consumersAdmin'],
   brandsAdmin:      ['brandsAdmin'],
 };

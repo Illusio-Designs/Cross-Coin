@@ -320,9 +320,7 @@ const Editor = ({
   const [notice, setNotice] = useState(null);
   const [slash, setSlash] = useState(null); // { query, from, to, top, left, index }
   const [imgBox, setImgBox] = useState(null);
-  const [, force] = useState(0);
 
-  const rootRef = useRef(null);
   const bodyRef = useRef(null);
   const fileInputRef = useRef(null);
   const altInputRef = useRef(null);
@@ -699,7 +697,7 @@ const Editor = ({
   const rootClass = ['ed', full ? 'ed--full' : '', className || ''].filter(Boolean).join(' ');
 
   return (
-    <div className={rootClass} ref={rootRef} {...props}>
+    <div className={rootClass} {...props}>
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; fileInputRef.current?.onPick?.(f); }} />
 
       <div className="ed-top">
@@ -929,6 +927,8 @@ function LinkPanel({ editor, isSameStore, onClose }) {
       editor.chain().focus().insertContent({ type: 'text', text: label.trim() || url, marks: [{ type: 'link', attrs: { href: url } }] }).run();
     } else {
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+      // Caret after the link, so typing carries on instead of replacing it.
+      editor.commands.setTextSelection(editor.state.selection.to);
     }
     onClose();
   };

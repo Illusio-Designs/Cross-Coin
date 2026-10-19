@@ -381,7 +381,7 @@ const cache = new Map(); // brandKey -> { at, data }
 const inflight = new Map();
 
 async function runCheck(brandId) {
-  const { reconcileOrderPayment } = require('./paymentReconciliationService.js');
+  const { reconcileOrderPayment, reconcileOrphanPayment } = require('./paymentReconciliationService.js');
   const since = new Date(Date.now() - 72 * 3600000);
   const cands = await q(
     `SELECT p.order_id, MAX(p.id) AS pid FROM payments p
@@ -453,10 +453,35 @@ async function runCheck(brandId) {
     });
   }
 
+  // Charged, but no order: payment-first checkouts captured after the session expired.
+  const orphans = await q(
+    `SELECT p.id, p.amount_paid, p.created_at, u.username AS customer, b.name AS brand_name
+       FROM payments p LEFT JOIN users u ON u.id = p.user_id LEFT JOIN brands b ON b.id = p.brand_id
+      WHERE p.order_id IS NULL AND p.reservation_id IS NOT NULL AND p.razorpay_order_id IS NOT NULL
+        AND p.status IN ('pending','failed') AND p.amount_paid > 0
+        AND p.created_at >= :since AND p.created_at <= :quiet ${brandId ? 'AND p.brand_id = :brandId' : ''}
+      ORDER BY p.id DESC LIMIT 30`, { since, quiet: new Date(Date.now() - 20 * 60000), brandId });
+  for (const o of orphans) {
+    try {
+      const res = await reconcileOrphanPayment(o.id, { dryRun: true });
+      if (!res.success) { errors.push(res.error); continue; }
+      if (!res.wouldCorrect) continue;
+      items.push({
+        key: `p${o.id}`, orderId: null, paymentId: o.id, orderNumber: null, customer: o.customer || null, brand: o.brand_name || null,
+        amount: res.remote?.amount ?? r2(num(o.amount_paid) / 100),
+        methodLabel: METHOD_LABEL[normMethod(res.remote?.method)] || 'Online',
+        capturedAt: res.remote?.at || null, here: 'no_order', canCreate: !!res.canCreate,
+        note: res.canCreate
+          ? 'Charged, but no order was made — the checkout timed out before the payment came through.'
+          : 'Charged, but no order was made and the checkout details weren’t saved — refund the customer.',
+      });
+    } catch (e) { errors.push(e.message); }
+  }
+
   const uniqErrors = [...new Set(errors.filter(Boolean))];
   return {
     checkedAt: new Date().toISOString(),
-    checked: cands.length,
+    checked: cands.length + orphans.length,
     items,
     couldNotCheck: errors.length,
     errorHint: uniqErrors.length ? uniqErrors[0].replace(/^Razorpay lookup failed:\s*/, '').slice(0, 160) : null,
@@ -478,8 +503,32 @@ async function mismatches({ brandId: rawBrand, refresh } = {}) {
   return p;
 }
 
-/** "Mark paid & confirm" — idempotent; returns a plain-English message. */
-async function fixMismatch(orderId, actor) {
+const dropFromCache = (pred) => { for (const v of cache.values()) v.data.items = v.data.items.filter((x) => !pred(x)); };
+
+/**
+ * Fix one "doesn't match Razorpay" item. Idempotent; returns a plain-English message.
+ *   { orderId }                          — "Mark paid & confirm"
+ *   { paymentId, action: 'create' }      — charged with no order: make the order
+ *   { paymentId, action: 'refund' }      — charged with no order: give the money back
+ */
+async function fixMismatch({ orderId, paymentId, action } = {}, actor) {
+  if (paymentId) return fixOrphan(parseInt(paymentId, 10), action, actor);
+  return fixOrder(orderId, actor);
+}
+
+async function fixOrphan(id, action, actor) {
+  const { reconcileOrphanPayment, refundOrphanPayment } = require('./paymentReconciliationService.js');
+  if (!id) return { ok: false, status: 400, message: 'Which payment? The payment id is missing.' };
+  if (!['create', 'refund'].includes(action)) return { ok: false, status: 400, message: 'Choose “Create the order” or “Refund”.' };
+  const res = action === 'refund' ? await refundOrphanPayment(id, actor) : await reconcileOrphanPayment(id, { actor });
+  dropFromCache((x) => x.paymentId === id);
+  if (!res.success) return { ok: false, status: res.needsRefund ? 409 : 502, message: `Couldn’t ${action === 'refund' ? 'refund' : 'create the order'}: ${String(res.error || '').replace(/^Razorpay lookup failed:\s*/, '')}.` };
+  if (res.skipped) return { ok: true, changed: false, message: `Nothing to do — ${res.reason}.` };
+  if (res.refunded) return { ok: true, changed: true, message: `Refund of ${inr(res.amount)} sent to the customer’s original payment method.` };
+  return { ok: true, changed: true, message: res.orderAction === 'created' ? `Order ${res.order.order_number} created and confirmed.` : `Order ${res.order.order_number} already existed — the payment is now linked.` };
+}
+
+async function fixOrder(orderId, actor) {
   const { reconcileOrderPayment } = require('./paymentReconciliationService.js');
   const id = parseInt(orderId, 10);
   if (!id) return { ok: false, status: 400, message: 'Which order? The order id is missing.' };
@@ -487,7 +536,7 @@ async function fixMismatch(orderId, actor) {
   if (!o) return { ok: false, status: 404, message: 'That order no longer exists.' };
   const n = o.order_number;
   const res = await reconcileOrderPayment(id, { actor, reopenCancelled: true });
-  for (const v of cache.values()) v.data.items = v.data.items.filter((x) => x.orderId !== id);
+  dropFromCache((x) => x.orderId === id);
 
   if (!res.success) return { ok: false, status: 502, message: `Couldn’t check ${n} with Razorpay: ${String(res.error || '').replace(/^Razorpay lookup failed:\s*/, '')}` };
   if (res.skipped) {

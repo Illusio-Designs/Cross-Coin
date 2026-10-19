@@ -15,6 +15,12 @@
  * Payments ("doesn't match Razorpay": a dry-run check, then the admin's
  * "Mark paid & confirm", which passes reopenCancelled + actor).
  *
+ * Also covers "charged, but no order": a payment-first checkout whose payment
+ * was captured after the Redis session expired (order_id NULL, reservation_id
+ * set). reconcileOrphanPayment() creates the order from the durable session
+ * copy (stockReservationService), or — when there is none — leaves it for an
+ * admin to refund (refundOrphanPayment) from Dashboard → Payments.
+ *
  * Outputs an audit row (order_audit_logs 'payment_reconciled') per change so
  * finance can trace divergence. Every write path is idempotent: a second call
  * finds the rows already in sync and changes nothing.
@@ -252,6 +258,115 @@ async function reconcileOrderPayment(orderId, { dryRun = false, actor = null, re
   };
 }
 
+// ── Charged, but no order ─────────────────────────────────────────────────
+/**
+ * A payment-first checkout row with no order. Captured at Razorpay → create
+ * the order from the saved checkout session (idempotent: the order-creation
+ * service finds an order already made for this reservation). Not captured →
+ * nothing to do (a Razorpay "failed" is copied onto the row).
+ */
+async function reconcileOrphanPayment(paymentId, { dryRun = false, actor = null } = {}) {
+  const payment = await Payment.findByPk(paymentId);
+  if (!payment) return { success: false, error: `payment ${paymentId} not found` };
+  if (payment.order_id) return reconcileOrderPayment(payment.order_id, { dryRun, actor, reopenCancelled: !!actor });
+  if (!payment.razorpay_order_id) return { success: false, error: 'no Razorpay reference on payment row' };
+  if (Number(payment.amount_paid) <= 0) return { success: true, skipped: true, reason: 'refund row' };
+
+  let truth;
+  try {
+    truth = await fetchRazorpayTruth(payment, payment.brand_id || 1);
+  } catch (err) {
+    return { success: false, error: `Razorpay lookup failed: ${err.message}` };
+  }
+  const remote = remoteSummary(truth);
+  if (!truth || truth.status !== 'captured') {
+    if (!dryRun && truth && truth.status === 'failed' && payment.status === 'pending') {
+      await payment.update({ status: 'failed', notes: truth.error_description || 'Payment failed (found by reconciliation)' });
+    }
+    return { success: true, skipped: true, reason: truth ? `remote status "${truth.status}"` : 'no Razorpay payment found yet', remote };
+  }
+  if (payment.status === 'refunded' || payment.status === 'refund_pending') {
+    return { success: true, skipped: true, reason: 'already being refunded', remote };
+  }
+
+  const stockReservation = require('./stockReservationService.js');
+  const session = await stockReservation.getReservationByRazorpayOrder(payment.razorpay_order_id);
+  if (dryRun) {
+    return { success: true, dryRun: true, wouldCorrect: true, orphan: true, canCreate: !!session, from: payment.status, to: 'successful', remote };
+  }
+  if (!session) {
+    return { success: false, needsRefund: true, error: 'the checkout details for this payment were not saved, so no order can be made — refund the customer', remote };
+  }
+
+  let result;
+  try {
+    const { handlePaymentSuccess } = require('./orderCreationService.js');
+    result = await handlePaymentSuccess({
+      session, razorpayPaymentId: truth.id, razorpayOrderId: payment.razorpay_order_id, source: actor ? 'admin-reconcile' : 'reconcile',
+    });
+  } catch (err) {
+    logger.error(`[reconcile] couldn't create the order for payment ${payment.id} (${truth.id}): ${err.message}`);
+    return { success: false, error: `couldn't create the order: ${err.message}`, remote };
+  }
+  try {
+    const { auditLog } = require('./orderService.js');
+    await auditLog(result.order.id, 'payment_reconciled', actor?.id || null, actor ? (actor.role || 'admin') : 'system', {
+      remote_status: 'captured', local_status_before: payment.status, local_status_after: 'successful',
+      order_action: result.created ? 'created_from_session' : 'already_created', razorpay_payment_id: truth.id, razorpay_amount: truth.amount,
+    });
+  } catch (e) { /* audit is advisory */ }
+  logger.info(`[reconcile] payment ${payment.id}: captured at Razorpay with no order → order ${result.order.order_number} ${result.created ? 'created' : 'already existed'}`);
+  return { success: true, corrected: true, from: payment.status, to: 'successful', orderAction: result.created ? 'created' : 'existing', order: { id: result.order.id, order_number: result.order.order_number }, remote };
+}
+
+/**
+ * Admin: give the money back for a captured payment that has no order.
+ * Guarded so two clicks can't refund twice (the row is claimed first).
+ */
+async function refundOrphanPayment(paymentId, actor) {
+  const payment = await Payment.findByPk(paymentId);
+  if (!payment) return { success: false, error: 'payment not found' };
+  if (payment.order_id) return { success: false, error: 'this payment has an order — refund it from the order instead' };
+  let truth;
+  try { truth = await fetchRazorpayTruth(payment, payment.brand_id || 1); }
+  catch (err) { return { success: false, error: `Razorpay lookup failed: ${err.message}` }; }
+  if (!truth || truth.status !== 'captured') {
+    return { success: false, error: truth ? `Razorpay shows this payment as “${truth.status}” — nothing to refund` : 'Razorpay has no payment for this checkout' };
+  }
+
+  const [, claimed] = await sequelize.query(
+    "UPDATE payments SET status = 'refund_pending', updated_at = NOW() WHERE id = ? AND status IN ('pending','failed','successful')",
+    { replacements: [payment.id], type: sequelize.QueryTypes.UPDATE }
+  );
+  if (!claimed) return { success: true, skipped: true, reason: 'already being refunded' };
+
+  const rupees = Number(truth.amount) / 100;
+  let refund;
+  try {
+    refund = await razorpayService.createRefund(truth.id, {
+      amount: rupees, brandId: payment.brand_id || 1,
+      notes: { reason: 'Paid but no order was created', admin_id: actor?.id || null },
+    });
+  } catch (err) {
+    await sequelize.query('UPDATE payments SET status = ? WHERE id = ?', { replacements: [payment.status, payment.id], type: sequelize.QueryTypes.UPDATE });
+    return { success: false, error: err.message };
+  }
+  await sequelize.transaction(async (t) => {
+    await Payment.update({
+      status: 'refunded', transaction_id: payment.transaction_id || truth.id,
+      notes: `Full refund: ₹${rupees}. Razorpay refund ID: ${refund.id}. Reason: paid but no order was created`,
+    }, { where: { id: payment.id }, transaction: t });
+    await Payment.create({
+      order_id: null, user_id: payment.user_id, guest_user_id: payment.guest_user_id, payment_type: 'razorpay',
+      transaction_id: refund.id, razorpay_order_id: payment.razorpay_order_id, amount_paid: -Math.round(rupees * 100),
+      status: 'refunded', payment_gateway: 'Razorpay', brand_id: payment.brand_id || 1,
+      notes: 'Refund: paid but no order was created',
+    }, { transaction: t });
+  });
+  logger.info(`[reconcile] refunded orphan payment ${payment.id} (${truth.id}) ₹${rupees} — refund ${refund.id}${actor ? ` by user ${actor.id}` : ''}`);
+  return { success: true, refunded: true, amount: rupees, refundId: refund.id };
+}
+
 /**
  * Daily reconciliation entry point.
  *
@@ -299,13 +414,16 @@ async function reconcileRecentPayments({ sinceHours = 48, limit = 500, useQueue 
         }
       }
       logger.info(`[reconcile] enqueued ${enqueued}/${candidates.length} reconciliation jobs to Bull`);
-      return { enqueued, total: candidates.length, mode: 'queue' };
+      const orphans = { checked: 0, corrected: 0, errors: 0, skipped: 0 };
+      await reconcileOrphans(since, orphans);
+      return { enqueued, total: candidates.length, mode: 'queue', orphans };
     }
     // Bull isn't actually up — fall through to inline.
     logger.warn('[reconcile] queue mode requested but Bull unavailable — falling back to inline');
   }
 
   const summary = { checked: 0, corrected: 0, errors: 0, skipped: 0, mode: 'inline' };
+  await reconcileOrphans(since, summary);
   for (const p of candidates) {
     summary.checked++;
     try {
@@ -322,4 +440,33 @@ async function reconcileRecentPayments({ sinceHours = 48, limit = 500, useQueue 
   return summary;
 }
 
-module.exports = { reconcileOrderPayment, reconcileRecentPayments };
+/** Payment-first rows with no order (captured after the session expired). */
+async function reconcileOrphans(since, summary) {
+  const rows = await Payment.findAll({
+    where: {
+      order_id: null,
+      reservation_id: { [Op.not]: null },
+      status: { [Op.in]: ['pending', 'failed'] },
+      amount_paid: { [Op.gt]: 0 },
+      razorpay_order_id: { [Op.not]: null },
+      // leave live checkouts alone for 20 minutes
+      createdAt: { [Op.gte]: since, [Op.lte]: new Date(Date.now() - 20 * 60000) },
+    },
+    limit: 200,
+    order: [['createdAt', 'DESC']],
+  });
+  for (const p of rows) {
+    summary.checked++;
+    try {
+      const r = await reconcileOrphanPayment(p.id);
+      if (r.corrected) summary.corrected++;
+      else if (r.skipped) summary.skipped++;
+      else { summary.errors++; logger.warn(`[reconcile] payment ${p.id} (no order): ${r.error}`); }
+    } catch (err) {
+      summary.errors++;
+      logger.warn(`[reconcile] payment ${p.id} (no order) failed: ${err.message}`);
+    }
+  }
+}
+
+module.exports = { reconcileOrderPayment, reconcileOrphanPayment, refundOrphanPayment, reconcileRecentPayments };
