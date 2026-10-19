@@ -63,6 +63,12 @@ const FILES = [
     source: 'shared/frontend/SentryInit.jsx',
     dest: (base) => `${base}components/SentryInit.jsx`,
   },
+  {
+    // WhatsApp abandoned-cart recovery link: read ?recover/&cart, fetch the
+    // server-side cart by token, build the capture items (all 7).
+    source: 'shared/frontend/cartRecovery.js',
+    dest: (base) => `${base}utils/cartRecovery.js`,
+  },
 ];
 
 const banner = (source) =>

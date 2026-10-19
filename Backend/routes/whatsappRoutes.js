@@ -42,6 +42,16 @@ router.post('/test', isAuthenticated, isAdmin, ctrl.testConnection);
 router.get('/stream',                           isAuthenticated, isWhatsappManager, ctrl.streamUpdates);
 router.get('/conversations',                    isAuthenticated, isWhatsappManager, ctrl.getConversations);
 router.get('/conversations/:id/messages',       isAuthenticated, isWhatsappManager, ctrl.getMessages);
+// Orders, totals and the 24-hour reply window for the panel beside a chat.
+router.get('/conversations/:id/context',        isAuthenticated, isWhatsappManager, async (req, res) => {
+  try {
+    const ctx = await require('../services/chatContextService.js').getChatContext(req.params.id);
+    if (!ctx) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, ...ctx });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 router.post('/conversations/:id/reply',         isAuthenticated, isWhatsappManager, ctrl.sendReply);
 router.post('/conversations/:id/send-media',    isAuthenticated, isWhatsappManager, waMediaUpload.single('file'), ctrl.sendMediaReply);
 router.put('/conversations/:id/resolve',        isAuthenticated, isWhatsappManager, ctrl.resolveConversation);

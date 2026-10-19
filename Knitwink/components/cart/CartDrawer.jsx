@@ -29,6 +29,7 @@ import {
   showWarning,
 } from '@/lib/toast';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 import '@/styles/CartDrawer.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -183,6 +184,8 @@ export function CartDrawer() {
     addToCart,
     removeFromCart: removeItem,
     updateQuantity: updateQty,
+    cartReady,
+    restoreCart,
   } = useCartContext();
   // Stable closeDrawer reference — useFocusTrap takes onEscape as a
   // dependency. If we recreated this function on every render the
@@ -250,6 +253,8 @@ export function CartDrawer() {
   // we still need to auto-apply, and a guard so we only apply it once.
   const recoverCouponRef = useRef(null);
   const recoverAppliedRef = useRef(false);
+  // …and the cart token (&cart=), to rebuild the cart when this browser has none.
+  const [recoverToken, setRecoverToken] = useState(null);
 
   // Whole-cart shimmer: the drawer's async loads (coupons, cross-sell, shipping
   // fees) each resolve separately and used to pop in one by one. We reset these
@@ -577,6 +582,11 @@ export function CartDrawer() {
       cartSummary: summary.slice(0, 250),
       itemCount: totalQty,
       cartValue: cartTotal,
+      // Line items so the WhatsApp recovery link can rebuild this cart on any device.
+      items: toRecoveryItems(items, (i) => ({
+        productId: i.productId, variationId: i.variationId, quantity: i.quantity,
+        size: i.size, color: i.color,
+      })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coStep, items, guestInfo.phone, guestInfo.fullName, selectedAddress, addressForm.phoneNumber, isAuthenticated]);
@@ -859,36 +869,40 @@ export function CartDrawer() {
   };
 
   // ── Abandoned-cart recovery deep link ────────────────────────────────────
-  // Shoppers returning via a "?recover=1" link (e.g. from a recovery email)
-  // get their cart drawer reopened automatically; an optional "&coupon=CODE"
-  // is remembered and auto-applied once the cart total is known. The cart
-  // itself still lives in localStorage on the shopper's own device — we only
-  // reopen it, never rebuild it. Runs once on mount, then strips the params
-  // so a refresh or shared URL doesn't re-trigger. Best-effort throughout.
+  // Shoppers returning via the WhatsApp "Complete Order" link
+  // ("?recover=1&coupon=CODE&cart=TOKEN") get their cart drawer reopened; an
+  // optional coupon is remembered and auto-applied once the cart total is
+  // known. The link usually opens in WhatsApp's in-app browser, which has no
+  // localStorage cart, so an empty cart is rebuilt from the server copy behind
+  // the token (effect below). Runs once on mount, then strips the params so a
+  // refresh or shared URL doesn't re-trigger. Best-effort throughout.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('recover') !== '1') return;
+      const rec = readCartRecovery();
+      if (!rec) return;
       setIsDrawerOpen(true);
-      const code = params.get('coupon');
-      if (code) {
-        const clean = String(code).trim().toUpperCase();
-        if (clean) {
-          recoverCouponRef.current = clean;
-          // Pre-fill immediately so the shopper sees the code even if the
-          // async auto-apply below can't complete (e.g. empty cart).
-          setCouponCode(clean);
-        }
+      if (rec.coupon) {
+        recoverCouponRef.current = rec.coupon;
+        // Pre-fill immediately so the shopper sees the code even if the
+        // async auto-apply below can't complete (e.g. empty cart).
+        setCouponCode(rec.coupon);
       }
-      params.delete('recover');
-      params.delete('coupon');
-      const qs = params.toString();
-      const url = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
-      window.history.replaceState(null, '', url);
+      if (rec.cartToken) setRecoverToken(rec.cartToken);
+      clearCartRecoveryParams();
     } catch { /* best-effort — never break the page */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Once the local cart has loaded: if it is empty, restore the recovered one.
+  // A cart that's still here (same browser) is left exactly as it is.
+  useEffect(() => {
+    if (!recoverToken || !cartReady) return;
+    const token = recoverToken;
+    setRecoverToken(null);
+    if (items.length) return;
+    fetchRecoveredCart(token).then((lines) => { if (lines.length) restoreCart(lines); }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoverToken, cartReady]);
 
   // Auto-apply the recovery coupon once the cart total is known. Uses the same
   // validate/apply path as typing a code + clicking Apply, so all the normal

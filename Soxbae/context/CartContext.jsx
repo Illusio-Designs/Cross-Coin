@@ -337,12 +337,47 @@ export function CartProvider({ children }) {
     setItems([]);
   }, []);
 
+  // WhatsApp cart-recovery link: put a recovered cart back (lines from
+  // GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The
+  // link usually opens in WhatsApp's in-app browser, which has none of this
+  // shopper's localStorage, so the cart is rebuilt from the server copy.
+  // Guests: straight into the local cart. Signed-in: added to the server cart.
+  // No AddToCart pixel/toast — the shopper isn't adding anything new.
+  const restore = useCallback(async (lines) => {
+    const list = (Array.isArray(lines) ? lines : [])
+      .map((l) => (l.line && l.line.key
+        ? { ...l.line, productId: l.line.productId ?? l.productId, variationId: l.line.variationId ?? l.variationId ?? null, qty: l.quantity || 1 }
+        : normalizeServerItem(l)))
+      .filter((i) => i && (i.productId ?? i.id));
+    if (!list.length) return 0;
+    if (isAuthed()) {
+      for (const l of lines) {
+        try {
+          await apiAddToCart({
+            productId: Number(l.productId),
+            variationId: l.variationId ? Number(l.variationId) : null,
+            quantity: l.quantity || 1,
+            size: l.line?.size || l.size || null,
+            pack_id: l.packId || l.line?.packId || null,
+            pack_size: l.packSize || l.line?.packSize || null,
+          });
+        } catch { /* non-fatal */ }
+      }
+      await refreshServerCart();
+    } else {
+      setItems((prev) => (prev.length ? prev : list));
+    }
+    setOpen(true);
+    return list.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const count = items.reduce((n, i) => n + i.qty, 0);
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
 
   return (
     <CartContext.Provider
-      value={{ items, add, addPack, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart }}
+      value={{ items, add, addPack, remove, setQty, clear, count, subtotal, ready, open, openCart, closeCart, restore }}
     >
       {children}
     </CartContext.Provider>

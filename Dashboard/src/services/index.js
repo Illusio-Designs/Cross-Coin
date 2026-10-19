@@ -33,7 +33,7 @@ const api = axios.create({
 });
 
 // Admin axios instance — NO X-Brand-Name header (admin sees all brands)
-const adminApi = axios.create({
+export const adminApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
@@ -2328,6 +2328,12 @@ export const whatsappService = {
     const response = await adminApi.get('/api/whatsapp/conversations', {
       params: { brandId, status, page }
     });
+    return response.data;
+  },
+
+  // Orders, totals and the 24-hour reply window for the panel beside a chat.
+  getContext: async (conversationId) => {
+    const response = await adminApi.get(`/api/whatsapp/conversations/${conversationId}/context`);
     return response.data;
   },
 

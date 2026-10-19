@@ -54,21 +54,41 @@ router.get('/shop/:brandId', async (req, res) => {
   }
 });
 
-// GET /api/cart-recover/:brandId → the brand storefront with a recovery flag so
-// the store reopens the shopper's (localStorage) cart and pre-applies the
-// abandoned-cart coupon. Used by the "Complete Order" button on the
-// cart_abandoned WhatsApp template. One shared WABA number can't carry a
-// per-brand domain in the button, so the button points here and we 302 to the
-// right store. ?recover=1 tells the storefront to open the cart drawer; the
-// coupon (default CART10) is pre-filled so the shopper doesn't have to type it.
-router.get('/cart-recover/:brandId', async (req, res) => {
-  const brandId = Number(req.params.brandId) || 1;
-  const coupon = String(req.query.coupon || 'CART10').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || 'CART10';
+// GET /api/cart-recover/:key → the brand storefront with a recovery flag so
+// the store reopens the shopper's cart and pre-applies the abandoned-cart
+// coupon. Used by the "Complete Order" button on the cart_abandoned WhatsApp
+// template (https://api.crosscoin.in/api/cart-recover/{{1}}). One shared WABA
+// number can't carry a per-brand domain in the button, so the button points
+// here and we 302 to the right store.
+//
+// {{1}} is normally the cart's unguessable recovery token (see
+// services/cartRecoveryService.js): we find the cart's brand from it and pass
+// it on as &cart=<token>, so the store can rebuild the cart from the server —
+// the WhatsApp in-app browser (or another phone) has no localStorage cart.
+// A plain number is the legacy form (brand id) from messages sent before the
+// token existed: it still opens the right store, just without the items.
+const CART_RECOVER_COUPON = 'CART10';
+router.get('/cart-recover/:key', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
+  // Tolerate a stray trailing slash / encoded junk WhatsApp may add.
+  const key = String(req.params.key || '').trim().replace(/[/\s]+$/, '');
+  const coupon = String(req.query.coupon || CART_RECOVER_COUPON).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || CART_RECOVER_COUPON;
+  let brandId = 1;
+  let token = null;
   try {
+    if (/^\d{1,9}$/.test(key)) {
+      brandId = Number(key) || 1;
+    } else {
+      const recovery = require('../services/cartRecoveryService.js');
+      const row = await recovery.findByToken(key);
+      if (row) { brandId = row.brandId || 1; token = row.recoverToken; }
+    }
     const domain = await whatsappService.getBrandDomain(brandId);
-    return res.redirect(302, `https://${domain}/?recover=1&coupon=${encodeURIComponent(coupon)}`);
+    const qs = `recover=1&coupon=${encodeURIComponent(coupon)}${token ? `&cart=${encodeURIComponent(token)}` : ''}`;
+    return res.redirect(302, `https://${domain}/?${qs}`);
   } catch (e) {
-    logger.warn('[cart-recover-redirect] failed for brand %s: %s', brandId, e.message);
+    logger.warn('[cart-recover-redirect] failed for %s: %s', key.slice(0, 8), e.message);
     return res.redirect(302, `https://crosscoin.in/?recover=1&coupon=${encodeURIComponent(coupon)}`);
   }
 });

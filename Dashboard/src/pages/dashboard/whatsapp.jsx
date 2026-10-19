@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Modal, Button, Input } from '../../components/ui';
 import Dropdown from '../../components/ui/Dropdown';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { brandService, whatsappService } from '../../services';
+import { brandService, whatsappService, orderService } from '../../services';
 import AbandonedCarts from './consumers/abandoned-carts';
 import { ConfirmModal } from '../../components/common/AlertModal';
 import { useAuth } from '../../context/AuthContext';
@@ -676,7 +676,7 @@ export function WhatsAppManager() {
   // canned responses and abandoned-cart recovery are admin-only on the backend
   // (whatsappRoutes.js → isAdmin); a whatsapp_manager gets a 403 for them, so
   // those controls are only shown to admins.
-  const { isAdmin } = useAuth();
+  const { isAdmin, canAccessView } = useAuth();
   const [page, setPage] = useState('dashboard');
   // In-page confirmation (replaces window.confirm, which Chrome can suppress).
   // { title, message, confirmLabel, tone, onConfirm }
@@ -718,6 +718,9 @@ export function WhatsAppManager() {
   const [reply, setReply] = useState('');
   const [replyTo, setReplyTo] = useState(null); // { id, body, direction, type }
   const [rightPanelTab, setRightPanelTab] = useState('customer'); // 'customer' | 'notes'
+  // The customer's orders + the 24-hour reply window for the open chat.
+  const [chatCtx, setChatCtx] = useState(null);
+  const [confirmingOrder, setConfirmingOrder] = useState(null);
   // On mobile/tablet (<1200px) the right panel is hidden; this opens it as a
   // slide-over so brand reassignment, notes and stats stay reachable there too.
   const [showInfo, setShowInfo] = useState(false);
@@ -769,6 +772,38 @@ export function WhatsAppManager() {
   // without restarting the loop on every conversation switch.
   const activeConvRef = useRef(null);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
+  const activeConvId = activeConv?.id;
+  const loadChatCtx = async (id) => {
+    try {
+      const r = await whatsappService.getContext(id);
+      if (activeConvRef.current?.id === id) setChatCtx(r?.success ? r : null);
+    } catch { if (activeConvRef.current?.id === id) setChatCtx(null); }
+  };
+  useEffect(() => {
+    setChatCtx(null);
+    if (activeConvId) loadChatCtx(activeConvId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConvId]);
+  // Re-check the window when the customer writes again.
+  const lastInboundId = messages.length ? [...messages].reverse().find((m) => m.direction === 'inbound')?.id : null;
+  useEffect(() => {
+    if (activeConvId && lastInboundId) loadChatCtx(activeConvId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastInboundId]);
+  // Jump to another Dashboard page (same pattern as the home page).
+  const goView = (view) => { window.history.pushState({}, '', `/dashboard/${view}`); window.dispatchEvent(new PopStateEvent('popstate')); };
+  const openOrderInOrders = (orderNumber) => { try { sessionStorage.setItem('obz-orders-search', orderNumber); } catch { /* blocked */ } goView('orders'); };
+  const openCustomerProfile = (c) => { try { sessionStorage.setItem('obz-customer', JSON.stringify(c)); } catch { /* blocked */ } goView('customer'); };
+  const confirmFromChat = async (o) => {
+    setConfirmingOrder(o.id);
+    try {
+      const r = await orderService.confirmOrder(o.id);
+      if (r?.success === false) throw new Error(r.message || 'Could not confirm');
+      showSuccess('orderConfirmed', `Order ${o.orderNumber} confirmed — booking the courier.`);
+      loadChatCtx(activeConvId);
+    } catch (e) { showError('confirmFailed', e?.message || 'Could not confirm the order'); }
+    finally { setConfirmingOrder(null); }
+  };
   // The conversation the user most recently asked to open — a synchronous guard
   // so a slow response for a chat they've navigated away from can't overwrite
   // the chat now on screen.
@@ -2071,6 +2106,12 @@ export function WhatsAppManager() {
                     }
                     <div ref={messagesEndRef} />
                   </div>
+                  {chatCtx?.replyWindow && !chatCtx.replyWindow.open && activeConv.status === 'open' && (
+                    <div role="status" style={{ margin: '0 12px 8px', padding: '9px 12px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.45, background: 'var(--ds-color-warn-bg)', color: 'var(--ds-color-warn)', border: '1px solid var(--ds-color-warn-bd, transparent)' }}>
+                      <b>Reply window closed.</b> {chatCtx.replyWindow.lastInboundAt ? `The customer last wrote ${new Date(chatCtx.replyWindow.lastInboundAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. ` : 'The customer hasn’t written yet. '}
+                      WhatsApp only delivers typed messages within 24 hours of the customer’s last message — a message typed now won’t reach them.
+                    </div>
+                  )}
                   {activeConv.status === 'open' ? (
                     <div className="was-composer">
                       {/* Quick-send tools row */}
@@ -2189,6 +2230,76 @@ export function WhatsAppManager() {
                 <div className="was-rp-body">
                   {rightPanelTab === 'customer' && (
                     <>
+                      {/* Orders for this phone — act without leaving the chat */}
+                      {chatCtx && (
+                        <div className="was-rp-section">
+                          <div className="was-rp-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Orders</span>
+                            {chatCtx.replyWindow && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: chatCtx.replyWindow.open ? 'var(--ds-color-success)' : 'var(--ds-color-warn)' }}>
+                                {chatCtx.replyWindow.open
+                                  ? `Reply window · ${Math.max(1, Math.round((new Date(chatCtx.replyWindow.closesAt) - Date.now()) / 3600000))} h left`
+                                  : 'Reply window closed'}
+                              </span>
+                            )}
+                          </div>
+                          {chatCtx.orders.length === 0 ? (
+                            <div style={{ fontSize: 12.5, color: 'var(--ds-color-text-muted)' }}>No orders with this phone number.</div>
+                          ) : (() => {
+                            const o = chatCtx.orders[0];
+                            const tone = o.stage === 'to_confirm' ? 'warn' : o.stage === 'delivered' ? 'success' : o.stage === 'problems' || o.stage === 'cancelled_rto' ? 'danger' : o.stage === 'returns' ? 'accent2' : 'info';
+                            const canOrders = canAccessView ? canAccessView('orders') : true;
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <div style={{ border: '1px solid var(--ds-color-border)', borderRadius: 10, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                                    <b style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 12.5 }}>{o.orderNumber}</b>
+                                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `var(--ds-color-${tone}-bg)`, color: `var(--ds-color-${tone})`, whiteSpace: 'nowrap' }}>{o.stageLabel}</span>
+                                  </div>
+                                  <div style={{ fontSize: 12.5, color: 'var(--ds-color-text)' }}>₹{o.total.toLocaleString('en-IN')} · {o.paymentType}{o.brand ? ` · ${o.brand}` : ''}</div>
+                                  {o.items.length > 0 && <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{o.items.slice(0, 3).join(', ')}{o.items.length > 3 ? ` +${o.items.length - 3} more` : ''}</div>}
+                                  {o.awb && <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>AWB <span style={{ fontFamily: 'var(--ds-font-mono)' }}>{o.awb}</span>{o.courier ? ` · ${o.courier}` : ''}</div>}
+                                  {chatCtx.address && (
+                                    <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', lineHeight: 1.45 }}>
+                                      {chatCtx.address.text}
+                                      {chatCtx.address.deliveredHere > 0 && <div style={{ color: 'var(--ds-color-success)' }}>{chatCtx.address.deliveredHere} order{chatCtx.address.deliveredHere === 1 ? '' : 's'} delivered here before</div>}
+                                    </div>
+                                  )}
+                                  {canOrders && (
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                                      {o.stage === 'to_confirm' && (
+                                        <button type="button" className="was-btn-primary" style={{ fontSize: 12, padding: '6px 10px' }} disabled={confirmingOrder === o.id} onClick={() => confirmFromChat(o)}>
+                                          {confirmingOrder === o.id ? 'Confirming…' : 'Confirm order'}
+                                        </button>
+                                      )}
+                                      <button type="button" className="was-btn-secondary" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => openOrderInOrders(o.orderNumber)}>Open in Orders</button>
+                                    </div>
+                                  )}
+                                </div>
+                                {chatCtx.orders.length > 1 && (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {chatCtx.orders.slice(1).map((x) => (
+                                      <button key={x.id} type="button" onClick={() => canOrders && openOrderInOrders(x.orderNumber)}
+                                        style={{ all: 'unset', cursor: canOrders ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, padding: '4px 0' }}>
+                                        <span style={{ fontFamily: 'var(--ds-font-mono)' }}>{x.orderNumber}</span>
+                                        <span style={{ color: 'var(--ds-color-text-muted)' }}>₹{x.total.toLocaleString('en-IN')} · {x.stageLabel}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                {chatCtx.stats && (
+                                  <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>
+                                    {chatCtx.stats.orders} order{chatCtx.stats.orders === 1 ? '' : 's'} · {chatCtx.stats.delivered} delivered · ₹{chatCtx.stats.spent.toLocaleString('en-IN')} spent{chatCtx.stats.rto ? ` · ${chatCtx.stats.rto} returned/RTO` : ''}
+                                  </div>
+                                )}
+                                {chatCtx.customer && canAccessView && canAccessView('customer') && (
+                                  <button type="button" className="was-btn-secondary" style={{ fontSize: 12, padding: '6px 10px', justifyContent: 'center' }} onClick={() => openCustomerProfile(chatCtx.customer)}>Full customer profile →</button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                       {/* Stats strip */}
                       <div className="was-rp-stats">
                         <div className="was-rp-stat"><div className="was-rp-stat-num">{activeConv.unread_count||0}</div><div className="was-rp-stat-lbl">Unread</div></div>

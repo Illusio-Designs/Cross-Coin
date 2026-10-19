@@ -48,7 +48,9 @@ router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.j
 router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
 router.use('/admin',              require('./brandRoutes.js'));
 router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));
+router.use('/search',             require('./searchRoutes.js'));
 router.use('/reports',            require('./reportsRoutes.js'));
+router.use('/customers',          require('./customerProfileRoutes.js'));
 router.use('/order-status-history', optionalBrand, require('./orderStatusHistoryRoutes.js'));
 
 // ── Integrations ──────────────────────────────────────────────────────────

@@ -352,13 +352,51 @@ export function CartProvider({ children }) {
     toastCartCleared();
   }, []);
 
+  /* WhatsApp cart-recovery link: put a recovered cart back (lines from
+     GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The
+     link usually opens in WhatsApp's in-app browser, which has none of this
+     shopper's localStorage, so the cart is rebuilt from the server copy.
+     Guests: straight into the local cart. Signed-in: added to the server cart.
+     No AddToCart pixel/toast — the shopper isn't adding anything new. */
+  const restoreCart = useCallback(async (lines) => {
+    const list = (Array.isArray(lines) ? lines : [])
+      .map((l) => (l.line && l.line.id != null
+        ? { ...l.line, id: String(l.line.id), qty: l.quantity || 1 }
+        : normalizeApiItem(l)))
+      .filter((it) => it.id);
+    if (!list.length) return 0;
+    if (isAuthed()) {
+      for (const l of lines) {
+        try {
+          await apiAddToCart({
+            productId: Number(l.productId),
+            variationId: l.variationId || null,
+            quantity: l.quantity || 1,
+            size: l.line?.size || l.size || null,
+            color: l.line?.color || l.color || null,
+            pack_id: l.packId || l.line?.packId || null,
+            pack_size: l.packSize || l.line?.packSize || null,
+          });
+        } catch { /* non-fatal */ }
+      }
+      try {
+        const data = await apiGetCart();
+        setItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+      } catch { /* keep current items */ }
+    } else {
+      setItems((prev) => (prev.length ? prev : list));
+    }
+    setOpen(true);
+    return list.length;
+  }, []);
+
   const count    = items.reduce((s, it) => s + it.qty, 0);
   const subtotal = items.reduce((s, it) => s + (it.salePrice ?? it.price) * it.qty, 0);
 
   const value = {
-    items, count, subtotal, lineKey, loading,
+    items, count, subtotal, lineKey, loading, hydrated,
     open, openCart: () => setOpen(true), closeCart: () => setOpen(false),
-    addItem, addPack, removeItem, updateQty, clearCart,
+    addItem, addPack, removeItem, updateQty, clearCart, restoreCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -32,6 +32,25 @@ const AbandonedCart = sequelize.define('AbandonedCart', {
   // messaged  = recovery WhatsApp already sent
   status: { type: DataTypes.ENUM('pending', 'recovered', 'messaged'), allowNull: false, defaultValue: 'pending' },
   waSent: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'wa_sent' },
+  // Line items the shopper had ({ productId, variationId, quantity, ... } — see
+  // services/cartRecoveryService.js), so the WhatsApp "Complete Order" link can
+  // rebuild the cart on ANY device (the in-app browser has no localStorage cart).
+  // Stored as JSON text; ids/quantities only — no personal data.
+  items: {
+    type: DataTypes.TEXT('medium'),
+    allowNull: true,
+    get() {
+      const raw = this.getDataValue('items');
+      if (!raw) return [];
+      try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch (_) { return []; }
+    },
+    set(value) {
+      this.setDataValue('items', Array.isArray(value) && value.length ? JSON.stringify(value) : null);
+    },
+  },
+  // Unguessable, URL-safe token carried by the WhatsApp button
+  // (/api/cart-recover/<token>) — never the sequential id.
+  recoverToken: { type: DataTypes.STRING(64), allowNull: true, field: 'recover_token' },
 }, {
   tableName: 'abandoned_carts',
   timestamps: true,
@@ -47,6 +66,7 @@ const AbandonedCart = sequelize.define('AbandonedCart', {
     { fields: ['phone_hash', 'brand_id'] },
     { fields: ['status', 'updated_at'] },
     { fields: ['brand_id'] },
+    { unique: true, fields: ['recover_token'] },
   ],
 });
 

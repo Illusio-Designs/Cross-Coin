@@ -24,6 +24,7 @@ import {
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
@@ -110,7 +111,7 @@ function _xsFetch() {
 
 export default function CartDrawer() {
   const router = useRouter();
-  const { items, subtotal, count, setQty, remove, clear, open, openCart, closeCart, add } = useCart();
+  const { items, subtotal, count, setQty, remove, clear, open, openCart, closeCart, add, ready, restore } = useCart();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [guest, setGuest] = useState({ email: '', fullName: '', phone: '' });
@@ -535,33 +536,41 @@ export default function CartDrawer() {
     setCouponInput('');
   };
 
-  // ── Abandoned-cart recovery (?recover=1 &optional coupon=CODE) ────────────
-  // A shopper returning from a WhatsApp recovery link lands with ?recover=1.
-  // Their cart still lives in THIS browser's localStorage, so we only reopen
-  // the drawer (if the cart is empty — e.g. a different device — opening it is
-  // still fine). A passed coupon is stashed + pre-filled, then the effect below
-  // auto-applies it once the cart total is known so any minimum-cart rule passes.
+  // ── Abandoned-cart recovery (?recover=1&coupon=CODE&cart=TOKEN) ──────────
+  // A shopper returning from the WhatsApp "Complete Order" link lands with
+  // ?recover=1. That link usually opens in WhatsApp's in-app browser (or another
+  // phone), which does NOT have this shopper's localStorage cart — so when the
+  // cart here is empty we rebuild it from the server copy behind the link's
+  // token, then the effect below auto-applies the coupon once the total is known.
   const [recoverCoupon, setRecoverCoupon] = useState(null);
+  const [recoverToken, setRecoverToken] = useState(null);
 
   // Mount: read the URL, reopen the cart, stash/pre-fill the coupon, then strip
   // the recovery params so a refresh doesn't re-trigger. Best-effort (SSR-guarded,
   // wrapped in try/catch) — it must never break the page.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    const rec = readCartRecovery();
+    if (!rec) return;
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('recover') !== '1') return;
       openCart();
-      const code = (params.get('coupon') || '').trim().toUpperCase();
-      if (code) { setRecoverCoupon(code); setCouponInput(code); }
-      params.delete('recover');
-      params.delete('coupon');
-      const qs = params.toString();
-      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash);
+      if (rec.coupon) { setRecoverCoupon(rec.coupon); setCouponInput(rec.coupon); }
+      if (rec.cartToken) setRecoverToken(rec.cartToken);
     } catch { /* best-effort — never throw */ }
+    clearCartRecoveryParams();
     // Run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Once the local cart has loaded: if it is empty, restore the recovered one.
+  // A cart that's still here (same browser) is left exactly as it is.
+  useEffect(() => {
+    if (!recoverToken || !ready) return;
+    const token = recoverToken;
+    setRecoverToken(null);
+    if (items.length) return;
+    fetchRecoveredCart(token).then((lines) => { if (lines.length) restore(lines); }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoverToken, ready]);
 
   // Auto-apply the stashed recovery coupon via the SAME validate/apply path as
   // the Apply button, once the cart total is known (> 0) and no coupon is applied
@@ -630,7 +639,14 @@ export default function CartDrawer() {
     const name = isAuthenticated
       ? (selectedAddress?.full_name || selectedAddress?.fullName || form.fullName || '')
       : (guest.fullName || '');
-    captureAbandonedCart({ phone: digits, name, cartSummary: summary.slice(0, 250), itemCount: count, cartValue: total });
+    captureAbandonedCart({
+      phone: digits, name, cartSummary: summary.slice(0, 250), itemCount: count, cartValue: total,
+      // Line items so the WhatsApp recovery link can rebuild this cart on any device.
+      items: toRecoveryItems(items, (i) => ({
+        productId: i.productId ?? i.id, variationId: i.variationId, quantity: i.qty,
+        size: i.size, color: i.color, packId: i.packId, packSize: i.packSize,
+      })),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coStep, items, guest.phone, guest.fullName, selectedAddress, form.phoneNumber, isAuthenticated]);
 

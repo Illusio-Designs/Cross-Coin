@@ -506,7 +506,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v25';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v26';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1394,12 +1394,28 @@ const startServer = async () => {
                 cart_value DECIMAL(10,2) NOT NULL DEFAULT 0,
                 status ENUM('pending','recovered','messaged') NOT NULL DEFAULT 'pending',
                 wa_sent TINYINT(1) NOT NULL DEFAULT 0,
+                items MEDIUMTEXT NULL,
+                recover_token VARCHAR(64) NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_ac_hash_brand (phone_hash, brand_id),
                 INDEX idx_ac_status_updated (status, updated_at),
-                INDEX idx_ac_brand (brand_id)
+                INDEX idx_ac_brand (brand_id),
+                UNIQUE INDEX idx_ac_recover_token (recover_token)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+            // Cart-recovery link columns (existing tables): the line items and
+            // the unguessable token the WhatsApp "Complete Order" button carries.
+            const [acCols] = await sequelize.query(
+                `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'abandoned_carts'
+                   AND COLUMN_NAME IN ('items','recover_token')`
+            );
+            const acHave = new Set(acCols.map((c) => c.COLUMN_NAME));
+            if (!acHave.has('items')) await sequelize.query(`ALTER TABLE abandoned_carts ADD COLUMN items MEDIUMTEXT NULL`);
+            if (!acHave.has('recover_token')) {
+                await sequelize.query(`ALTER TABLE abandoned_carts ADD COLUMN recover_token VARCHAR(64) NULL`);
+                await sequelize.query(`ALTER TABLE abandoned_carts ADD UNIQUE INDEX idx_ac_recover_token (recover_token)`);
+            }
             logger.info('✓ abandoned_carts table ensured');
         } catch (err) {
             logger.error('abandoned_carts table migration failed: ' + err.message);

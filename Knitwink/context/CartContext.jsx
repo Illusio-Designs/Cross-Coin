@@ -92,6 +92,8 @@ export function CartProvider({ children }) {
   const [isCartLoading, setIsCartLoading] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // True once the first cart load (localStorage or server) has finished.
+  const [cartReady, setCartReady] = useState(false);
 
   const pendingRef = useRef(false);
   const prevIsAuthRef = useRef(false);
@@ -155,6 +157,7 @@ export function CartProvider({ children }) {
       finally {
         prevIsAuthRef.current = authed;
         setIsCartLoading(false);
+        setCartReady(true);
         pendingRef.current = false;
       }
     };
@@ -274,6 +277,43 @@ export function CartProvider({ children }) {
     setCartItems([]);
   };
 
+  // WhatsApp cart-recovery link: put a recovered cart back (lines from
+  // GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The
+  // link usually opens in WhatsApp's in-app browser, which has none of this
+  // shopper's localStorage, so the cart is rebuilt from the server copy.
+  // Guests: straight into the local cart. Signed-in: added to the server cart.
+  // No AddToCart pixel/toast — the shopper isn't adding anything new.
+  const restoreCart = async (lines) => {
+    const list = (Array.isArray(lines) ? lines : []).map((l) => {
+      if (l.line && l.line.productId != null) {
+        const image = l.line.image || l.image || '';
+        return { ...l.line, image, images: image ? [{ image_url: image }] : [], variation: null, quantity: l.quantity || 1 };
+      }
+      return { ...normalizeApiItem(l), id: Date.now() + Math.random() };
+    }).filter((i) => i.productId != null);
+    if (!list.length) return 0;
+    if (isAuthenticated()) {
+      for (const l of lines) {
+        try {
+          await apiAddToCart({
+            productId: Number(l.productId),
+            variationId: l.variationId ? Number(l.variationId) : null,
+            quantity: l.quantity || 1,
+            size: l.line?.size || l.size || null,
+          });
+        } catch { /* non-fatal */ }
+      }
+      try {
+        const data = await apiGetCart();
+        setCartItems(Array.isArray(data) ? data.map(normalizeApiItem) : []);
+      } catch { /* keep current items */ }
+    } else {
+      setCartItems((prev) => (prev.length ? prev : list));
+    }
+    setIsDrawerOpen(true);
+    return list.length;
+  };
+
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cartItems.reduce((s, i) => s + parseFloat(i.price || 0) * i.quantity, 0);
 
@@ -283,6 +323,8 @@ export function CartProvider({ children }) {
       cartCount,
       cartTotal,
       isCartLoading,
+      cartReady,
+      restoreCart,
       isDrawerOpen,
       setIsDrawerOpen,
       addToCart,

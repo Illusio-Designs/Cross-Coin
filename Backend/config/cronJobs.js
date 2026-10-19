@@ -212,12 +212,20 @@ function initializeCronJobs() {
         } catch (_) { /* image is optional — header falls back to the brand logo */ }
 
         try {
+          // Recovery token so the "Complete Order" link rebuilds this server
+          // cart on any device (the shopper isn't logged in inside WhatsApp's
+          // in-app browser). Null on failure → link still opens the store.
+          const recoverToken = await require('../services/cartRecoveryService.js').tokenForServerCart({
+            phone: user.phone, name: user.username, brandId, userId: user.id,
+            cartItems: cart.CartItems, summary: productName + extra, value: cartTotal,
+          });
           await whatsappService.sendAbandonedCart(user.phone, {
             customerName: user.username,
             itemsSummary: productName + extra,
             total: cartTotal ? cartTotal.toFixed(0) : undefined,
             productImage,
             couponCode: 'CART10',
+            recoverToken,
           }, brandId);
           // Mark the cart abandoned so the hourly cron never re-messages it.
           // (Previously nothing marked it, so the same cart was messaged every
@@ -273,6 +281,9 @@ function initializeCronJobs() {
             total: row.cartValue != null ? Number(row.cartValue).toFixed(0) : undefined,
             // No per-item image in the capture table — header falls back to logo.
             couponCode: 'CART10',
+            // Unguessable token → the "Complete Order" link rebuilds the cart on
+            // any device (rows captured before tokens existed get one now).
+            recoverToken: await require('../services/cartRecoveryService.js').ensureToken(row),
           }, brandId);
           await row.update({ status: 'messaged', waSent: true });
           sent++;

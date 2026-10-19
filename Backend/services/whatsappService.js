@@ -359,7 +359,7 @@ async function listTemplates(brandId = 1, { force = false } = {}) {
 const WA_API_BASE = (process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
 const WA_TRACK_BASE = `${WA_API_BASE}/api/track`;        // + /{{orderNumber}}
 const WA_SHOP_BASE  = `${WA_API_BASE}/api/shop`;         // + /{{brandId}}
-const WA_CART_BASE  = `${WA_API_BASE}/api/cart-recover`; // + /{{brandId}} → store ?recover=1&coupon=CART10
+const WA_CART_BASE  = `${WA_API_BASE}/api/cart-recover`; // + /{{recoverToken}} → store ?recover=1&coupon=CART10&cart=<token>
 const WA_INVOICE_BASE = `${WA_API_BASE}/api/invoice`; // + /{{orderNumber}}?t=<hmac>
 
 // Inspect the LIVE approved template so a sender only attaches a header-image or
@@ -472,8 +472,10 @@ function buildTemplates(storeName, storeUrl) {
     }],
   };
   // "Complete Order" button for the abandoned-cart message. The variable is the
-  // brand id; /api/cart-recover/:brandId 302-redirects to the brand store with
-  // ?recover=1&coupon=CART10 so the store reopens the cart and pre-fills the code.
+  // cart's recovery token (legacy: the brand id); /api/cart-recover/:key
+  // 302-redirects to the brand store with ?recover=1&coupon=CART10&cart=<token>
+  // so the store rebuilds the cart on any device, opens it and applies the code.
+  // The example stays a short value — Meta only uses it for review.
   const cartButton = {
     type: 'BUTTONS',
     buttons: [{
@@ -1417,7 +1419,7 @@ async function sendRefundProcessed(phone, data, brandId = 1) {
 //   {{1}}=name, {{2}}=product/items, {{3}}=brand, {{4}}=coupon.
 // (The previous order — name, brand, items, total, coupon — did NOT match the
 // approved template, so Meta rejected/garbled the send.) The "Complete Order"
-// button carries the brand id; /api/cart-recover/:brandId reopens the cart with
+// button carries the cart recovery token; /api/cart-recover/:key rebuilds the cart with
 // the coupon pre-applied. Coupon defaults to CART10.
 // Pick the abandoned-cart template that is actually APPROVED right now: the new
 // versioned one (with the Complete Order button) once Meta approves it, else the
@@ -1444,15 +1446,25 @@ async function _resolveAbandonedTemplate(brandId = 1) {
 
 async function sendAbandonedCart(phone, data, brandId = 1) {
   const templateName = await _resolveAbandonedTemplate(brandId);
-  // The generic template's button URL ends in the brand id (api redirect); the
-  // per-brand domain template's button already carries the brand domain, so its
-  // URL variable is the coupon code instead.
-  let btnParam = brandId;
+  // The button must let the shopper's cart be rebuilt on ANY device — the link
+  // usually opens in WhatsApp's in-app browser, where the localStorage cart from
+  // their shopping session does not exist. So it carries the cart's unguessable
+  // recovery token (services/cartRecoveryService.js):
+  //  • generic template  …/api/cart-recover/{{1}}  → {{1}} = token (the redirect
+  //    finds the brand from it and forwards ?recover=1&coupon=CART10&cart=token).
+  //    Without a token it falls back to the brand id (opens the store, no items).
+  //  • per-brand domain template  https://<domain>/?recover=1&coupon={{1}}
+  //    → {{1}} = "CART10&cart=<token>" (storefronts also accept it if WhatsApp
+  //    percent-encodes the "&cart=" part).
+  const coupon = data.couponCode || 'CART10';
+  const token = data.recoverToken && /^[A-Za-z0-9_-]{20,64}$/.test(String(data.recoverToken))
+    ? String(data.recoverToken) : null;
+  let btnParam = token || brandId;
   try {
     if (templateName === cartDomainTemplateName(await _brandDomain(brandId))) {
-      btnParam = data.couponCode || 'CART10';
+      btnParam = token ? `${coupon}&cart=${token}` : coupon;
     }
-  } catch (_) { /* keep brandId */ }
+  } catch (_) { /* keep the generic param */ }
   return sendTemplate(phone, templateName, [
     data.customerName || 'there',
     data.itemsSummary || data.productName || 'your items',

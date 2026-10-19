@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { AbandonedCart } = require('../model/abandonedCartModel.js');
 const { phoneHash } = require('../utils/encryption.js');
 const { logger } = require('../config/logging.js');
+const recovery = require('../services/cartRecoveryService.js');
 
 function tenDigits(phone) {
   return String(phone || '').replace(/\D/g, '').slice(-10);
@@ -22,6 +23,9 @@ exports.capture = async (req, res) => {
     if (digits.length !== 10) {
       return res.status(400).json({ success: false, message: 'A valid 10-digit phone is required' });
     }
+    // Line items (ids + quantities) so the WhatsApp link can rebuild this cart
+    // on any device. Optional — older storefront builds don't send them.
+    const items = recovery.sanitizeItems(req.body.items);
     const hash = phoneHash(digits);
     const [row, created] = await AbandonedCart.findOrCreate({
       where: { phoneHashValue: hash, brandId },
@@ -29,6 +33,7 @@ exports.capture = async (req, res) => {
         phone: digits, customerName: name || null, cartSummary: cartSummary || null,
         itemCount: Number(itemCount) || 0, cartValue: Number(cartValue) || 0,
         userId: userId || null, status: 'pending', waSent: false,
+        items, recoverToken: recovery.newToken(),
       },
     });
     let prevStatus = null;
@@ -42,6 +47,8 @@ exports.capture = async (req, res) => {
         cartValue: Number(cartValue) || row.cartValue,
         userId: userId || row.userId,
         status: 'pending', waSent: false,
+        ...(items ? { items } : {}),
+        ...(recovery.isToken(row.recoverToken) ? {} : { recoverToken: recovery.newToken() }),
       });
     }
 
@@ -65,6 +72,7 @@ exports.capture = async (req, res) => {
             itemsSummary: cartSummary || 'your items',
             total: Number(cartValue) ? Number(cartValue).toFixed(0) : undefined,
             couponCode: 'CART10',
+            recoverToken: row.recoverToken,
           }, brandId);
           await row.update({ status: 'messaged', waSent: true });
         } catch (e) {
@@ -77,6 +85,36 @@ exports.capture = async (req, res) => {
   } catch (err) {
     logger.error('Abandoned-cart capture error: ' + err.message);
     return res.status(500).json({ success: false });
+  }
+};
+
+// Public: GET /api/abandoned-cart/restore/:token — the line items behind a
+// WhatsApp "Complete Order" link, so the storefront can rebuild the cart on a
+// device that never had it (WhatsApp's in-app browser, another phone). The
+// token is unguessable and the response carries no personal data (no phone or
+// name) — only product/variation ids, quantities and public product info.
+// Empty items (not an error) when the link has expired or the shopper already
+// ordered, so the store still opens the cart and applies the coupon.
+exports.restore = async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
+  try {
+    const row = await recovery.findByToken(req.params.token);
+    // A storefront only restores its own brand's carts.
+    if (!row || (req.brandId && Number(req.brandId) !== Number(row.brandId))) {
+      return res.status(404).json({ success: false, message: 'Cart link not found' });
+    }
+    if (row.status === 'recovered') {
+      return res.json({ success: true, items: [], reason: 'ordered', coupon: 'CART10' });
+    }
+    if (recovery.isExpired(row)) {
+      return res.json({ success: true, items: [], reason: 'expired', coupon: 'CART10' });
+    }
+    const items = await recovery.buildRestoreLines(row);
+    return res.json({ success: true, items, coupon: 'CART10' });
+  } catch (err) {
+    logger.error('Abandoned-cart restore error: ' + err.message);
+    return res.status(500).json({ success: false, items: [] });
   }
 };
 
