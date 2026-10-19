@@ -92,8 +92,12 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       GROUP BY LOWER(status), LOWER(payment_type), LOWER(payment_status), brand_id
     `, { type: QueryTypes.SELECT, replacements: aggRepl });
 
-    // totalRevenue = ALL orders (including cancelled, RTO) — full picture.
+    // totalRevenue = booked value: every order except cancelled ones (a
+    // cancelled order never earned anything). allOrdersValue keeps the full
+    // figure so the revenue donut's slices still add up to 100%.
     let totalRevenue = 0;
+    let allOrdersValue = 0;
+    let bookedOrders = 0;
     let deliveredRevenue = 0;
     let cancelledRevenue = 0;
     let rtoRevenue = 0;
@@ -125,8 +129,12 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
 
       statusCounts[orderStatus] = (statusCounts[orderStatus] || 0) + cnt;
       paymentTypeCounts[paymentType] = (paymentTypeCounts[paymentType] || 0) + cnt;
-      totalRevenue += amt;
-      monthlyRevenue += monthAmt;
+      allOrdersValue += amt;
+      if (!CANCELLED.has(orderStatus)) {
+        totalRevenue += amt;
+        monthlyRevenue += monthAmt;
+        bookedOrders += cnt;
+      }
 
       switch (orderStatus) {
         case 'delivered':
@@ -185,20 +193,38 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       const bid = g.brand_id || null;
       const b = brandAgg.get(bid) || { orders: 0, revenue: 0, earned: 0, lost: 0 };
       b.orders += cnt;
-      b.revenue += amt;
+      if (!CANCELLED.has(orderStatus)) b.revenue += amt;
       if (orderStatus === 'delivered' || orderStatus === 'completed') b.earned += amt;
       else if (CANCELLED.has(orderStatus) || RTO.has(orderStatus)) b.lost += amt;
       brandAgg.set(bid, b);
     });
 
-    // Earned revenue = only delivered orders (actual money collected)
-    const earnedRevenue = deliveredRevenue;
+    // Refunds already paid out (gateway refunds are negative paise rows; COD
+    // returns are paid by UPI and recorded on the return). Failed refund
+    // attempts are not money out.
+    const [refundRow] = await sequelize.query(`
+      SELECT
+        COALESCE((SELECT SUM(-p.amount_paid) / 100 FROM payments p JOIN orders o ON o.id = p.order_id
+                  WHERE p.amount_paid < 0 AND p.status <> 'failed'
+                    ${brandId ? 'AND o.brand_id = :brandId' : ''}
+                    ${hasDateFilter && dateFilter.startDate ? 'AND o.created_at >= :startDate' : ''}
+                    ${hasDateFilter && dateFilter.endDate ? 'AND o.created_at <= :endDate' : ''}), 0) AS gateway,
+        COALESCE((SELECT SUM(r.refund_amount) FROM returns r JOIN orders o ON o.id = r.order_id
+                  WHERE r.status = 'refunded' AND r.is_cod = 1
+                    ${brandId ? 'AND o.brand_id = :brandId' : ''}
+                    ${hasDateFilter && dateFilter.startDate ? 'AND o.created_at >= :startDate' : ''}
+                    ${hasDateFilter && dateFilter.endDate ? 'AND o.created_at <= :endDate' : ''}), 0) AS cod
+    `, { type: QueryTypes.SELECT, replacements: aggRepl }).catch(() => [{}]);
+    const refundsPaid = parseFloat(refundRow?.gateway || 0) + parseFloat(refundRow?.cod || 0);
+
+    // Earned revenue = delivered orders minus refunds paid (money kept)
+    const earnedRevenue = Math.max(0, deliveredRevenue - refundsPaid);
     // Active revenue = orders still in pipeline (not cancelled/rto/delivered)
     const activeRevenue = pendingRevenue + processingRevenue + shippedRevenue + undeliveredRevenue;
     // Lost revenue = cancelled + RTO
     const lostRevenue = cancelledRevenue + rtoRevenue;
 
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const avgOrderValue = bookedOrders > 0 ? totalRevenue / bookedOrders : 0;
 
     // Get total customers — scoped to the brand when the dashboard is. Consumer
     // accounts are per-brand (users.source_brand_id); guests come from orders
@@ -293,7 +319,10 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     let curEarned = 0, prevEarned = 0, curTotal = 0, prevTotal = 0, curCnt = 0, prevCnt = 0, todayCnt = 0;
     const dayRev = {};
     const nowMs = Date.now();
-    const todayKey = new Date().toISOString().slice(0, 10);
+    // Days are India days, not UTC: an order at 1am IST belongs to that day.
+    const IST_MS = 330 * 60000;
+    const istKey = (ms) => new Date(ms + IST_MS).toISOString().slice(0, 10);
+    const todayKey = istKey(nowMs);
     for (const o of trendOrders) {
       const amt = parseFloat(o.final_amount || 0);
       const t = new Date(o.createdAt).getTime();
@@ -303,9 +332,10 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
       // narrower basis than the number it sits next to.
       const st = String(o.status || '').toLowerCase();
       const earned = st === 'delivered' || st === 'completed';
+      if (CANCELLED.has(st)) continue;
       if (ageDays <= 30) {
         curCnt++; curTotal += amt; if (earned) curEarned += amt;
-        const key = new Date(o.createdAt).toISOString().slice(0, 10);
+        const key = istKey(t);
         dayRev[key] = (dayRev[key] || 0) + amt;
         if (key === todayKey) todayCnt++;
       } else if (ageDays <= 60) {
@@ -331,7 +361,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     };
     const revenueTrend = [];
     for (let i = 29; i >= 0; i--) {
-      const key = new Date(nowMs - i * DAY_MS).toISOString().slice(0, 10);
+      const key = istKey(nowMs - i * DAY_MS);
       revenueTrend.push(Math.round(dayRev[key] || 0));
     }
 
@@ -583,7 +613,9 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
     const rtoStats = {
       totalRTO: totalRtoCount,
       rtoRevenue: parseFloat(rtoRevenue.toFixed(2)),
-      rtoRate: totalOrders > 0 ? parseFloat(((totalRtoCount / totalOrders) * 100).toFixed(2)) : 0,
+      // Share of orders that reached an outcome (delivered or came back) —
+      // orders still in transit aren't failures yet.
+      rtoRate: (totalRtoCount + completedOrdersCount) > 0 ? parseFloat(((totalRtoCount / (totalRtoCount + completedOrdersCount)) * 100).toFixed(2)) : 0,
       rtoPercentageOfRevenue: totalRevenue > 0 ? parseFloat(((rtoRevenue / totalRevenue) * 100).toFixed(2)) : 0,
       averageRTOValue: totalRtoCount > 0 ? parseFloat((rtoRevenue / totalRtoCount).toFixed(2)) : 0
     };
@@ -739,6 +771,7 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
         revenue: {
           total: parseFloat(totalRevenue.toFixed(2)),
           earned: parseFloat(earnedRevenue.toFixed(2)),
+          refunds: parseFloat(refundsPaid.toFixed(2)),
           active: parseFloat(activeRevenue.toFixed(2)),
           lost: parseFloat(lostRevenue.toFixed(2)),
           monthly: parseFloat(monthlyRevenue.toFixed(2)),
@@ -757,43 +790,43 @@ const aggregateDashboardData = async (userId, brandId, dateFilter = {}) => {
               label: 'Delivered',
               value: parseFloat(deliveredRevenue.toFixed(2)),
               color: '#10b981',
-              percentage: totalRevenue > 0 ? parseFloat(((deliveredRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((deliveredRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Shipped / In Transit',
               value: parseFloat(shippedRevenue.toFixed(2)),
               color: '#0891b2',
-              percentage: totalRevenue > 0 ? parseFloat(((shippedRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((shippedRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Processing',
               value: parseFloat(processingRevenue.toFixed(2)),
               color: '#3b82f6',
-              percentage: totalRevenue > 0 ? parseFloat(((processingRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((processingRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Pending',
               value: parseFloat(pendingRevenue.toFixed(2)),
               color: '#f59e0b',
-              percentage: totalRevenue > 0 ? parseFloat(((pendingRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((pendingRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Undelivered',
               value: parseFloat(undeliveredRevenue.toFixed(2)),
               color: '#dc2626',
-              percentage: totalRevenue > 0 ? parseFloat(((undeliveredRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((undeliveredRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'RTO / Returned',
               value: parseFloat(rtoRevenue.toFixed(2)),
               color: '#64748b',
-              percentage: totalRevenue > 0 ? parseFloat(((rtoRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((rtoRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             },
             {
               label: 'Cancelled',
               value: parseFloat(cancelledRevenue.toFixed(2)),
               color: '#ef4444',
-              percentage: totalRevenue > 0 ? parseFloat(((cancelledRevenue / totalRevenue) * 100).toFixed(1)) : 0
+              percentage: allOrdersValue > 0 ? parseFloat(((cancelledRevenue / allOrdersValue) * 100).toFixed(1)) : 0
             }
           ].filter(item => item.value > 0)
         },
