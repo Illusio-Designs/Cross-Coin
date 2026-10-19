@@ -68,25 +68,14 @@ module.exports.exportDeliveredOrders = async (req, res) => {
     };
 
     // Add date filter for delivery date if provided
+    // India days: a parcel delivered at 1am IST belongs to that IST date.
+    const { dayStartTZ, dayEndTZ } = require('../utils/dateRange.js');
     if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999); // Include the entire end date
-
-      statusHistoryWhere.createdAt = {
-        [Op.between]: [start, end]
-      };
-      logger.debug('Delivery date range filter applied:', start, 'to', end);
+      statusHistoryWhere.createdAt = { [Op.between]: [dayStartTZ(startDate), dayEndTZ(endDate)] };
     } else if (startDate) {
-      statusHistoryWhere.createdAt = {
-        [Op.gte]: new Date(startDate)
-      };
+      statusHistoryWhere.createdAt = { [Op.gte]: dayStartTZ(startDate) };
     } else if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      statusHistoryWhere.createdAt = {
-        [Op.lte]: end
-      };
+      statusHistoryWhere.createdAt = { [Op.lte]: dayEndTZ(endDate) };
     }
 
     logger.debug('Query conditions:', JSON.stringify(whereConditions, null, 2));
@@ -186,17 +175,18 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 
       // Order details
       const orderNumber = order.order_number;
-      const orderDate = new Date(order.createdAt).toLocaleDateString('en-IN');
+      const istDate = (d) => new Date(d).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+      const orderDate = istDate(order.createdAt);
 
       // Get actual delivery date from status history
       const deliveredStatusHistory = order.OrderStatusHistories?.find(h => h.status === 'delivered');
       const deliveryDate = deliveredStatusHistory
-        ? new Date(deliveredStatusHistory.createdAt).toLocaleDateString('en-IN')
+        ? istDate(deliveredStatusHistory.createdAt)
         : 'N/A';
 
       // Payment details
       const paymentType = order.payment_type === 'cod' ? 'COD' : 'Prepaid';
-      const paymentStatus = order.payment_status === 'paid' ? 'Paid' : 'Pending';
+      const paymentStatus = String(order.payment_status || 'pending').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
       // Shipping details
       const awbNumber = order.shipping_waybill || 'N/A';
@@ -204,7 +194,7 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       const trackingNumber = order.tracking_number || 'N/A';
 
       // Order totals
-      const subtotal = parseFloat(order.subtotal || 0).toFixed(2);
+      const subtotal = parseFloat(order.total_amount || 0).toFixed(2);
       const shippingFee = parseFloat(order.shipping_fee || 0).toFixed(2);
       const discountAmount = parseFloat(order.discount_amount || 0).toFixed(2);
       const finalAmount = parseFloat(order.final_amount || 0).toFixed(2);
@@ -389,7 +379,7 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 // Produces the GST sales report for DELIVERED orders, one row per order line
 // item, matching the accountant's template:
 //   Order Date | Order ID | Order Status | Place of Supply | Invoice Number |
-//   Custom SKU ID | Product Name | Unit Sold | RATE | AMOUNT | TAXABLE VELUE |
+//   Custom SKU ID | Product Name | Unit Sold | RATE | AMOUNT | TAXABLE VALUE |
 //   SGST | CGST | IGST | NET AMOUNT
 // Tax logic: the GST rate is per-PRODUCT (products.gst_rate, e.g. socks = 5%).
 // Taxable Value = Amount ÷ (1 + rate). The intra/inter-state split is applied
@@ -436,6 +426,7 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
       return `${date} ${time}`;
     };
     const n = (v) => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
+    const r2 = (v) => Math.round(v * 100) / 100;
 
     const rows = [];
     for (const order of orders) {
@@ -453,17 +444,18 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
           'Order ID': order.order_number,
           'Order Status': 'Delivered',
           'Place of Supply': placeOfSupply,
-          'Invoice Number': order.invoice_number || '',
+          // Same number the invoice PDF prints.
+          'Invoice Number': order.order_number || '',
           'Custom SKU ID': item.ProductVariation?.sku || '',
           'Product Name': item.Product?.name || '',
           'Unit Sold': units,
           'RATE': rate,
-          'AMOUNT': amount,
-          'TAXABLE VELUE': split.taxable,
-          'SGST': split.sgst,
-          'CGST': split.cgst,
-          'IGST': split.igst,
-          'NET AMOUNT': amount,
+          'AMOUNT': r2(amount),
+          'TAXABLE VALUE': r2(split.taxable),
+          'SGST': r2(split.sgst),
+          'CGST': r2(split.cgst),
+          'IGST': r2(split.igst),
+          'NET AMOUNT': r2(amount),
         });
       }
     }
@@ -475,7 +467,7 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
       header: ['Order Date', 'Order ID', 'Order Status', 'Place of Supply', 'Invoice Number',
-        'Custom SKU ID', 'Product Name', 'Unit Sold', 'RATE', 'AMOUNT', 'TAXABLE VELUE',
+        'Custom SKU ID', 'Product Name', 'Unit Sold', 'RATE', 'AMOUNT', 'TAXABLE VALUE',
         'SGST', 'CGST', 'IGST', 'NET AMOUNT'],
     });
     ws['!cols'] = [
