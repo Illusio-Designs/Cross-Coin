@@ -34,7 +34,9 @@ const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
     allowNull: true
   }
 }, {
-  tableName: 'fship_label_downloads',
+  // Renamed from fship_label_downloads (migration 014): the audit covers label
+  // downloads for every courier, not just FShip.
+  tableName: 'shipping_label_downloads',
   timestamps: true,
   createdAt: 'downloaded_at',
   updatedAt: false,

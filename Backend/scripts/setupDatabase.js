@@ -1564,6 +1564,30 @@ const setupDatabase = async () => {
         console.log("⚠️ Migration 013 skipped:", e.message);
       }
 
+      // Migration 014: de-brand the label-download audit table. It logs every
+      // admin label download (who, which order, when, single/bulk, IP) for ANY
+      // courier, so the fship_ prefix was misleading. Renames in place when the
+      // old table exists and the new one doesn't; fresh installs just create
+      // shipping_label_downloads via the model and both branches no-op.
+      console.log("Running migration 014: rename fship_label_downloads → shipping_label_downloads...");
+      try {
+        const [tables] = await sequelize.query(`
+          SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME IN ('fship_label_downloads', 'shipping_label_downloads')
+        `);
+        const names = new Set(tables.map((r) => r.TABLE_NAME));
+        if (names.has('fship_label_downloads') && !names.has('shipping_label_downloads')) {
+          await sequelize.query('RENAME TABLE fship_label_downloads TO shipping_label_downloads');
+          console.log('  ✓ Renamed fship_label_downloads to shipping_label_downloads');
+        } else {
+          console.log('  ✓ shipping_label_downloads already in place');
+        }
+        console.log("✓ Migration 014 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 014 skipped:", e.message);
+      }
+
       console.log("✓ All migrations completed successfully");
     } catch (migrationError) {
       console.log("⚠️ Magic Checkout migration warning:", migrationError.message);
