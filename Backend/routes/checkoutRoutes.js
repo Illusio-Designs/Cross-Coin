@@ -1,5 +1,6 @@
 const express = require('express');
-const router = express.Router();
+const otpRouter = express.Router();     // mounted at /api/auth
+const router = express.Router();        // mounted at /api/checkout
 const {
   sendPhoneOtp,
   verifyPhoneOtp,
@@ -82,13 +83,13 @@ const otpVerifySchema = z.object({
   otp: z.string().trim().regex(/^\d{4,8}$/, 'OTP must be 4-8 digits'),
 });
 
-// OTP endpoints — mounted under /auth
-router.post('/otp/send', validateBody(otpSendSchema), sendPhoneOtp);
-router.post('/otp/verify', validateBody(otpVerifySchema), verifyPhoneOtp);
+// OTP endpoints
+otpRouter.post('/otp/send', validateBody(otpSendSchema), sendPhoneOtp);
+otpRouter.post('/otp/verify', validateBody(otpVerifySchema), verifyPhoneOtp);
 
 // Payment-first checkout (prepaid)
 router.post('/initiate', isAuthenticated, validateBody(initiateSchema), initiateCheckout);
 router.post('/retry', isAuthenticated, validateBody(retrySchema), retryCheckout);
 router.post('/guest/initiate', validateBody(guestInitiateSchema), initiateGuestCheckout);
 
-module.exports = router;
+module.exports = { otpRouter, checkoutRouter: router };

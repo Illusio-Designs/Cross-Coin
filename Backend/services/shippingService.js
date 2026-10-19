@@ -1,8 +1,6 @@
 'use strict';
 
 const settingsHelper = require('./settingsHelper.js');
-const { ShippingFee } = require('../model/shippingFeeModel.js');
-const { logger } = require('../config/logging.js');
 
 /**
  * Single source of truth for the delivery fee and the free-shipping threshold.

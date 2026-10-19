@@ -2,7 +2,6 @@ const { SeoMetadata, Product, ProductSEO, BlogPost, BlogSEO } = require('../mode
 const path = require('path');
 const fs = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
-const slugify = require('slugify');
 const { Op } = require('sequelize');
 const cacheManager = require('../services/cacheManager.js');
 const { logger } = require('../config/logging.js');

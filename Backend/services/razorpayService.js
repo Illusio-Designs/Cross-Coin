@@ -1,7 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const settingsHelper = require('./settingsHelper');
-const { toSmallestUnit, fromSmallestUnit } = require('../utils/amountConverter');
+const { toSmallestUnit } = require('../utils/amountConverter');
 
 /**
  * Pull a human-readable message out of a Razorpay SDK rejection.

@@ -7,7 +7,7 @@ const {
   Category,
   Brand
 } = require('../model/associations.js');
-const { Op, fn, col, literal } = require('sequelize');
+const { Op, literal } = require('sequelize');
 const { logger } = require('../config/logging');
 
 /**

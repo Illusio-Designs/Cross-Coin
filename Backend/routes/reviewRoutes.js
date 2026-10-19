@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const {
-    createReview, getProductReviews, getReview,
+    getReview,
     deleteReview, moderateReview, deleteReviewImage,
     getAllReviews, getPublicProductReviews, createPublicReview, getAllPublicReviews,
     bulkUploadReviews

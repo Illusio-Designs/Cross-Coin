@@ -1,7 +1,6 @@
 const { ProductVariation } = require('../model/associations');
 const { sequelize } = require('../config/db');
 const badgeConfig = require('../config/badgeConfig');
-const badgeQueue = require('../queue/badgeQueue');
 
 class BadgeService {
   /**
@@ -72,22 +71,6 @@ class BadgeService {
       const allOutOfStock = variations.length > 0 && 
         variations.every(v => v.stock <= badgeConfig.OUT_OF_STOCK_THRESHOLD);
 
-      // Debug logging
-      console.log('Badge Calculation:', {
-        productId: product.id,
-        productName: product.name,
-        created_at: product.created_at,
-        newArrivalCutoff: newArrivalCutoff,
-        isNewArrival: isNewArrival,
-        totalSoldFromOrders: totalSold,
-        variationSales: variationSales,
-        isHotSelling: isHotSelling,
-        hotSellingThreshold: badgeConfig.HOT_SELLING_THRESHOLD,
-        variationCount: variations.length,
-        variations: variations.map(v => ({ id: v.id, stock: v.stock })),
-        hasLowStock: hasLowStock,
-        allOutOfStock: allOutOfStock
-      });
 
       // Determine badge by priority
       if (allOutOfStock) {
@@ -132,27 +115,36 @@ class BadgeService {
   }
 
   /**
-   * Enqueue badge recalculation job for async processing
-   * Non-blocking - returns immediately
-   * 
-   * @param {number} user_id - User ID to recalculate badges for
-   * @param {string[]} badge_types - Types of badges to recalculate (optional)
-   * @returns {Promise<Object>} - Job object
+   * Recalculate badges for the products in one order — sales and stock just
+   * changed for exactly these products. Fire-and-forget from order.created.
    */
-  static async enqueueBadgeRecalculation(user_id, badge_types = []) {
-    try {
-      // Queue is null when Redis is unavailable — skip silently
-      if (!badgeQueue) return null;
-
-      const job = await badgeQueue.add(
-        { user_id, badge_types },
-        { priority: 'normal', delay: 0 }
-      );
-      return job;
-    } catch (error) {
-      // Don't throw — badge queue failure must never block order creation
-      return null;
+  static async refreshBadgesForOrder(orderId) {
+    const { OrderItem } = require('../model/orderItemModel.js');
+    const { Product } = require('../model/productModel.js');
+    const items = await OrderItem.findAll({ where: { order_id: orderId }, attributes: ['product_id'] });
+    const ids = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
+    if (!ids.length) return 0;
+    const products = await Product.findAll({ where: { id: ids } });
+    let changed = 0;
+    for (const product of products) {
+      if (await this.updateBadgeIfChanged(product)) changed++;
     }
+    return changed;
+  }
+
+  /**
+   * Recalculate every active product's badge. Run nightly so time-based
+   * badges (new arrival expiring) and stock changes from returns/RTO stay
+   * current without anyone editing the product.
+   */
+  static async refreshAllBadges() {
+    const { Product } = require('../model/productModel.js');
+    const products = await Product.findAll({ where: { status: 'active' } });
+    let changed = 0;
+    for (const product of products) {
+      if (await this.updateBadgeIfChanged(product)) changed++;
+    }
+    return { checked: products.length, changed };
   }
 
 }

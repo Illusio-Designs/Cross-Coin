@@ -13,25 +13,14 @@ const cron = require('node-cron');
  *
  * Falls back to inline execution when Redis is unavailable so dev still
  * works — see services/integrationQueue.js.
- *
- * Force a job to run synchronously without going through the queue by
- * setting CRON_SKIP_QUEUE=true (debugging only).
  */
 function initializeCronJobs() {
   console.log('🕐 Initializing cron jobs (Bull-backed)...');
 
   const { enqueue, registerProcessor } = require('../services/integrationQueue.js');
-  const skipQueue = process.env.CRON_SKIP_QUEUE === 'true';
 
   async function trigger(jobName, payload = {}) {
     try {
-      if (skipQueue) {
-        // Fallback path: pull the processor directly. Useful in dev when
-        // you want to see errors inline rather than buried in Bull's UI.
-        const { registerProcessor } = require('../services/integrationQueue.js');
-        // Processors are already registered at boot; nothing to do here
-        // because enqueue() in inline mode runs them via setImmediate.
-      }
       await enqueue(jobName, payload);
       console.log(`✅ [CRON] enqueued ${jobName}`);
     } catch (e) {
@@ -111,6 +100,17 @@ function initializeCronJobs() {
       console.error('❌ [CRON] reservation cleanup error:', e.message);
     }
   });
+
+  // Product badge refresh — nightly at 2:30 AM IST. Keeps time-based badges
+  // (new arrival) and stock badges current without anyone editing a product.
+  cron.schedule('30 2 * * *', async () => {
+    try {
+      const { checked, changed } = await require('../services/badgeService.js').refreshAllBadges();
+      console.log(`⏰ [CRON] badge refresh: ${changed} of ${checked} product badge(s) updated`);
+    } catch (e) {
+      console.error('❌ [CRON] badge refresh error:', e.message);
+    }
+  }, { timezone: 'Asia/Kolkata' });
 
   // Loyalty points expiry — daily at 2 AM
   cron.schedule('0 2 * * *', () => {
@@ -547,10 +547,9 @@ function initializeCronJobs() {
 
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
-  console.log('   - Shipping Order Sync: Every 2 hours at :05');
   console.log('   - iThink Status Refresh: Twice daily (6 AM & 6 PM) — auto-excludes cancelled/delivered');
   console.log('   - Loyalty Expiry: Daily at 2 AM');
-  console.log('   - Instagram Feed Refresh: Every 6 hours');
+  console.log('   - Product Badge Refresh: Daily at 2:30 AM');
   console.log('   - Abandoned Cart Recovery: Every hour at :15');
   console.log('   - Review Request: Daily at 10 AM');
   console.log('   - Win-back Campaign: Daily at 11 AM');

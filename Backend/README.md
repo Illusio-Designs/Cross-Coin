@@ -15,10 +15,10 @@ REST API for the CrossCoin e-commerce platform. Powers the storefront at `crossc
 | ORM | Sequelize |
 | Database | MySQL 8 (utf8mb4) |
 | Cache / sessions | Redis (token blacklist, idempotency keys, rate limits) |
-| Auth | JWT (access + refresh), bcrypt, MSG91 OTP |
+| Auth | JWT, bcrypt, OTP login |
 | File storage | ImageKit (with local `/uploads` fallback) |
 | Payments | Razorpay |
-| Shipping | iThink (primary) + FShip (legacy) |
+| Shipping | iThink |
 | Other integrations | WhatsApp Business API, Facebook Pixel + CAPI, GA4 Data API, Google Search Console API |
 | Cron | `node-cron` (in-process — see [§ Background Jobs](#background-jobs)) |
 
@@ -37,10 +37,9 @@ Backend/
 ├── controller/                 # request handlers (large; see refactor notes)
 ├── services/                   # business logic + 3rd-party integrations
 │   ├── iThinkService.js        # iThink API client
-│   ├── fshipService.js         # legacy FShip API client
 │   ├── razorpayService.js
 │   ├── whatsappService.js
-│   └── shippingProviderFactory.js   # routes orders to the right provider
+│   └── shippingProviderFactory.js   # returns the iThink client per brand
 ├── model/
 │   ├── associations.js         # all Sequelize relations
 │   └── *Model.js               # one per table (auto-loaded by setupDatabase)
@@ -101,50 +100,37 @@ Per-brand integration keys (Razorpay, FB Pixel, iThink, SEO defaults) live in `b
 
 ### Cron
 All schedules live in `config/cronJobs.js`. **Every job enqueues a Bull task; the worker (in `services/integrationQueueWorkers.js`) does the actual work.** node-cron is just the trigger.
-- Shipping sync (provider-agnostic) — every 2 h at :05 → `cron:shipping-sync`
-- Shipping status refresh — 6 AM + 6 PM → `cron:shipping-status-refresh`
+- Shipping status refresh — 6 AM + 6 PM → `cron:shipping-status-refresh` (safety net; courier webhooks deliver updates in real time)
 - Loyalty point expiry — 2 AM → `cron:loyalty-expiry`
+- Product badge refresh — 2:30 AM IST (inline)
 - **Payment reconciliation (Razorpay)** — 3 AM → fans out 1 Bull job per pending payment
-- Instagram feed sync — every 6 h → `cron:instagram-refresh`
-- Abandoned cart recovery — every hour at :15 (still inline; lower volume)
+- Leaked stock-reservation cleanup — every 5 min (inline)
+- Abandoned cart recovery, review requests, win-back, upsell, stale prepaid cleanup — see `config/cronJobs.js`
+
+Courier bookings are made per order from the Dashboard (`shipping:sync-order` job); there is no bulk auto-booking.
 
 ### Integration retry queue
 Failed shipping syncs, payment reconciliations, and WhatsApp sends are pushed onto a Bull queue (`services/integrationQueue.js`) with exponential backoff (5 attempts, 5s/25s/2m/10m/50m). Falls back to inline execution if Redis is unavailable, so dev still works without Redis. Workers register in [`services/integrationQueueWorkers.js`](services/integrationQueueWorkers.js).
 
 ### Webhook signature verification
-HMAC-SHA256 enforced on `/api/orders/shipping/webhook` (and the legacy `/fship/webhook` alias) + `/api/whatsapp/webhook` via [`middleware/webhookSignature.js`](middleware/webhookSignature.js). Configure secrets in env:
-- `FSHIP_WEBHOOK_SECRET` — value from FShip dashboard
-- `WHATSAPP_WEBHOOK_SECRET` — Meta app secret
-- `ITHINK_WEBHOOK_SECRET` — for when iThink switches from pull to push
+Inbound webhooks are verified by [`middleware/webhookSignature.js`](middleware/webhookSignature.js):
+- `/api/orders/shipping/webhook` (iThink) — iThink's panel can only send a static credential, so set the panel's **Bearer Token** and the same value in `ITHINK_WEBHOOK_TOKEN`. (`/fship/webhook` remains as a legacy alias.)
+- `/api/whatsapp/webhook` — HMAC-SHA256 with `WHATSAPP_WEBHOOK_SECRET` (Meta app secret).
 
-The `shipping` source is provider-agnostic: it tries iThink + FShip secrets in order and accepts whichever matches, so the brand can toggle `SHIPPING_PROVIDER` without re-routing webhooks.
+Transitional fail-open: requests pass through (marked unverified) until the secret/token is set. Set `WEBHOOK_REQUIRE_SIGNATURE=true` to reject anything unauthenticated.
 
-Transitional fail-open: requests pass through with a warning until the secret is set, then enforcement is automatic.
+### Shipping (iThink)
+All shipping goes through **iThink**. [`services/shippingProviderFactory.js`](services/shippingProviderFactory.js) returns a per-brand iThink client ([`services/iThinkService.js`](services/iThinkService.js)), configured from `brand_settings` (`ITHINK_*` keys).
 
-### Shipping (multi-provider)
-The system supports **two shipping providers behind one interface**: **iThink** (live in production) and **FShip** (legacy fallback). Selection is **per-brand**, driven by the `SHIPPING_PROVIDER` setting in `brand_settings` (default: `fship`). To switch a brand's provider, update that setting — no code change, no redeploy.
+- **Booking:** per order from the Dashboard (`PUT /api/orders/:id/shipping/sync`), queued as `shipping:sync-order`; held orders are released by the pickup-schedule cron.
+- **Status updates:** iThink pushes every scan to `POST /api/orders/shipping/webhook`; each event is stored in `shipment_webhook_events` (Dashboard → Courier Webhooks, with a Replay action). A twice-daily refresh catches anything missed.
+- **RTO:** stock is restored once per order (ledger: `rto_stock_restoration`); prepaid refunds are issued when the parcel reaches the warehouse.
+- **Returns:** reverse pickups are booked through iThink (`ITHINK_REVERSE_LOGISTICS`); reverse-AWB webhook events advance the return.
 
-| Layer | File | Role |
-|---|---|---|
-| Driver | [`services/iThinkService.js`](services/iThinkService.js) | iThink REST API client |
-| Driver | [`services/fshipService.js`](services/fshipService.js) | FShip REST API client |
-| Factory | [`services/shippingProviderFactory.js`](services/shippingProviderFactory.js) | Reads the setting, returns the right driver (cached per-brand) |
-| **Facade** | [`services/shippingService.js`](services/shippingService.js) | **Canonical front-door.** Use this for new code. |
-| Controller | [`controller/orderShippingController.js`](controller/orderShippingController.js) | Express handlers; functions named `*FShip*` for legacy reasons but every one dispatches via the factory. Provider-agnostic aliases (`syncShipments`, `refreshShipmentStatuses`, `handleShippingWebhook`, etc.) re-export from the bottom of the file. |
-| Routes | [`routes/orderRoutes.js`](routes/orderRoutes.js) | `/api/orders/shipping/*` is canonical; `/fship/*` is a deprecated alias. |
-
-**Canonical usage from new code:**
-```js
-const shipping = require('../services/shippingService.js');
-const result = await shipping.createOrder(brandId, orderData);
-const tracking = await shipping.trackByAwb(brandId, awb);
-await shipping.cancelShipment(brandId, awb, 'Customer request');
-```
-
-**Adding a new provider** (e.g. Delhivery direct): implement the same surface as a class in `services/`, register the brand-setting value in `shippingProviderFactory.js` — existing callers keep working unchanged.
+Legacy rows may still carry provider `fship`; they resolve to the iThink client.
 
 ### CSRF protection
-Double-submit cookie pattern via [`middleware/csrf.js`](middleware/csrf.js). Frontend fetches a token from `GET /api/csrf/token` on load and mirrors it into `X-CSRF-Token` on every state-changing request. Enforcement is opt-in via `CSRF_REQUIRED=true` — the token endpoint is always live so the frontend can prepare for the switch.
+[`middleware/csrf.js`](middleware/csrf.js) issues a double-submit token at `GET /api/csrf/token`, which the Dashboard mirrors into `X-CSRF-Token`. Server-side enforcement is not enabled; the endpoint stays so frontends keep working unchanged.
 
 ### Address quality scoring
 [`services/addressQualityService.js`](services/addressQualityService.js) returns a 0-100 score per shipping address based on pincode validity, phone validity, completeness, **landmark presence**, and historical delivery success at that exact address. `createOrder` blocks COD when score < `COD_MIN_ADDRESS_QUALITY` (default 60, per-brand configurable). Storefront can pre-check via `POST /api/orders/check-address-quality`. Counters auto-increment on delivered / undelivered / rto.
@@ -164,7 +150,7 @@ Double-submit cookie pattern via [`middleware/csrf.js`](middleware/csrf.js). Fro
 | `GET /api/public/tracking-config` | runtime tracking IDs (GA / FB / Clarity) — read by the storefront so changes in admin take effect without a redeploy |
 | `POST /api/products/:id/seo/regenerate` | re-runs auto-fill for product SEO |
 | `POST /api/orders/check-address-quality` | pre-checkout quality + COD eligibility check |
-| `POST /api/orders/fship/refresh-status` | bulk status refresh for active orders |
+| `POST /api/orders/shipping/webhook` | iThink status push (Bearer token = `ITHINK_WEBHOOK_TOKEN`) |
 
 ---
 
@@ -215,15 +201,14 @@ deliberately deferred until a test DB seed exists.
 
 **🟢 Long-tail polish (do if/when you actually need them)**
 6. OpenTelemetry distributed tracing — meaningful once you have a second service to trace into.
-7. Replace last `console.*` calls in `fshipService.js` with `logger` (cosmetic).
+7. Replace the `console.*` calls in `config/cronJobs.js` with `logger` (cosmetic).
 
 ### Required env vars (new this hardening pass)
 
 ```bash
-# Webhook HMAC (transitional fail-open — set these to flip to enforcement)
-FSHIP_WEBHOOK_SECRET=<from-fship-dashboard>
+# Webhook auth (transitional fail-open — set these, then WEBHOOK_REQUIRE_SIGNATURE=true)
+ITHINK_WEBHOOK_TOKEN=<same value as the Bearer Token in iThink's webhook panel>
 WHATSAPP_WEBHOOK_SECRET=<meta-app-secret>
-ITHINK_WEBHOOK_SECRET=<from-ithink-when-they-add-push>
 
 # Metrics endpoint protection
 ADMIN_METRICS_TOKEN=<random-32-hex>

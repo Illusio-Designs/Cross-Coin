@@ -1,4 +1,4 @@
-const { Product, Order, User, Review, OrderItem, ProductVariation, GuestUser, UTMTracking, Brand } = require("../model/associations.js");
+const { Product, Order, User, Review, GuestUser, Brand } = require("../model/associations.js");
 const { sequelize } = require("../config/db.js");
 const { Op, QueryTypes } = require("sequelize");
 const cacheManager = require("./cacheManager.js");

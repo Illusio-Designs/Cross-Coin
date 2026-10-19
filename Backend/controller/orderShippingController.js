@@ -9,19 +9,14 @@ const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const Brand = require("../model/brandModel.js");
 const { OrderShipment } = require("../model/orderShipmentModel.js");
-const ShippingLabelDownload = require("../model/shippingLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
-const axios = require('axios');
 const { logger } = require("../config/logging.js");
 const { setImmediate } = require("timers");
-const { sendFacebookEvent } = require("../integration/facebookPixel.js");
-const { sendGAEvent } = require("../integration/googleAnalytics.js");
 const settingsHelper = require("../services/settingsHelper");
 const shippingValidationService = require('../services/shippingValidationService.js');
 const shippingProviderFactory = require('../services/shippingProviderFactory.js');
 const loyaltyService = require('../services/loyaltyService.js');
-const orderEmitter = require('../services/orderEvents.js');
 const { getAddressHash } = require('../services/addressQualityService.js');
 const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
 const { auditLog: orderAuditLog } = require('../services/orderService.js');
@@ -1213,15 +1208,15 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
 
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
-    const fshipOrderData = await module.exports.prepareShippingOrderData(order, providerName, selectedLogistics, serviceType);
+    const shippingOrderData = await module.exports.prepareShippingOrderData(order, providerName, selectedLogistics, serviceType);
     // Pass the computed pickup date through to the provider. iThink's domestic
     // API may ignore it (pickup_date is documented only on their international
     // endpoint), but the booking is already HELD so the pickup can't land on a
     // blocked day; this just asks iThink to collect on the exact allowed date.
-    if (scheduledPickupDate) fshipOrderData.pickup_Date = scheduledPickupDate;
+    if (scheduledPickupDate) shippingOrderData.pickup_Date = scheduledPickupDate;
 
     // Create order using the resolved provider
-    const result = await provider.createOrUpdateForwardOrder(fshipOrderData);
+    const result = await provider.createOrUpdateForwardOrder(shippingOrderData);
 
     logger.debug(`=== ${providerName} Create Order Result ===`);
     logger.debug('Success:', result.success);
@@ -1442,11 +1437,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
         let labelUrl = null;
 
         // Construct label URL based on provider
-        if (providerName === 'fship') {
-          // FShip is retired — its manifest host is dead, so constructing a
-          // label URL for a legacy shipment would only store a broken link.
-          logger.debug('📄 Legacy FShip shipment — no label available (provider retired)');
-        } else if (providerName === 'ithink') {
+        if (providerName === 'ithink') {
           // iThink typically provides the label URL via API, so we'll try to fetch it
           logger.debug(`📄 Fetching iThink label URL via API for waybill: ${waybill}`);
           try {
@@ -1882,7 +1873,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
 };
 
 // Prepare order data for Shipping API
-module.exports.prepareShippingOrderData = async (order, providerName = 'fship', selectedLogistics = null, serviceType = null) => {
+module.exports.prepareShippingOrderData = async (order, providerName = 'ithink', selectedLogistics = null, serviceType = null) => {
   try {
     // Get customer details
     const customer = order.User || order.GuestUser;
@@ -1933,16 +1924,11 @@ module.exports.prepareShippingOrderData = async (order, providerName = 'fship', 
       if (!pickAddressId) {
         throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
       }
-    } else {
-      // Shipping warehouse ID
-      pickAddressId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
-      returnAddressId = pickAddressId;
-      logger.debug(`🏢 Shipping Warehouse: ${pickAddressId}`);
     }
 
     // Prepare order payload — the same shape works for both providers; each
     // service's formatter picks the fields it needs.
-    const fshipOrderData = {
+    const shippingOrderData = {
       orderId: order.order_number,
       customer_Name: customerName,
       customer_Mobile: customerMobile,
@@ -1975,7 +1961,7 @@ module.exports.prepareShippingOrderData = async (order, providerName = 'fship', 
       s_type: serviceType || null
     };
 
-    return fshipOrderData;
+    return shippingOrderData;
 
   } catch (error) {
     logger.error('Error preparing order data:', error);
@@ -2026,8 +2012,8 @@ module.exports.syncSingleOrderWithShipping = async (req, res) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Bulk Status Refresh — fetch latest Shipping status for old/synced orders
-// POST /api/orders/fship/refresh-status
+// Bulk Status Refresh — fetch latest Shipping status for old/synced orders.
+// Run by the twice-daily cron:shipping-status-refresh job (no HTTP route).
 // Query params: ?limit=50&status=processing,booked,shipped&older_than_days=0
 // ══════════════════════════════════════════════════════════════════════════════
 module.exports.bulkRefreshShippingStatus = async (req, res) => {
@@ -2229,7 +2215,7 @@ module.exports.getAvailableCouriers = async (req, res) => {
     const totalQty = order.OrderItems.reduce((s, i) => s + (i.quantity || 0), 0);
     const warehousePincode = await settingsHelper.getSetting(
       order.brand_id || 1,
-      providerName === 'ithink' ? 'ITHINK_WAREHOUSE_PINCODE' : 'FSHIP_WAREHOUSE_PINCODE',
+      'ITHINK_WAREHOUSE_PINCODE',
       '395006'
     );
 
@@ -2437,24 +2423,6 @@ module.exports.generateLabelForOrder = async (req, res) => {
         labelProviderError = labelResult.error || labelResult.message || null;
         logger.warn(`⚠️ iThink label generation failed: ${labelProviderError}`);
       }
-    } else if (providerName === 'fship') {
-      // Try Shipping label endpoint
-      if (typeof provider.getShippingLabel === 'function') {
-        const fshipLabelData = await provider.getShippingLabel(waybill);
-        if (fshipLabelData) {
-          if (Array.isArray(fshipLabelData.data) && fshipLabelData.data.length > 0) {
-            labelUrl = fshipLabelData.data[0].labelurl || fshipLabelData.data[0].label_url || fshipLabelData.data[0].LabelUrl;
-          } else if (fshipLabelData.data && typeof fshipLabelData.data === 'object') {
-            labelUrl = fshipLabelData.data.labelurl || fshipLabelData.data.label_url || fshipLabelData.data.LabelUrl;
-          } else {
-            labelUrl = fshipLabelData.labelurl || fshipLabelData.label_url || fshipLabelData.LabelUrl;
-          }
-          logger.debug(`✅ Shipping label found. URL: ${labelUrl}`);
-        }
-      }
-
-      // No constructed fallback: the old FShip manifest host is retired, so a
-      // guessed URL would just save a dead link onto the order.
     }
 
     // If we got a label URL but it's not saved, save it

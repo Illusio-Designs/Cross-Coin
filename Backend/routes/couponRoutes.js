@@ -1,9 +1,9 @@
 const express = require('express');
 const {
     createCoupon, getAllCoupons, getCouponById, updateCoupon, deleteCoupon,
-    validateCoupon, getPublicCoupons, applyCoupon
+    validateCoupon, getPublicCoupons
 } = require('../controller/couponController.js');
-const { isAuthenticated, authenticate, isOrderManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, z } = require('../middleware/validate.js');
 
 const router = express.Router();
@@ -27,11 +27,6 @@ const validateCouponSchema = z.object({
   cartItems: z.array(z.object({}).passthrough()).optional(),
   email: z.string().trim().optional(),
   guest_email: z.string().trim().optional(),
-});
-
-const applyCouponSchema = z.object({
-  code: z.string().trim().min(1, 'Coupon code is required').max(50),
-  order_id: z.coerce.number().int().positive().optional(),
 });
 
 // Public

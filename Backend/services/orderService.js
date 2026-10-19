@@ -107,23 +107,16 @@ async function confirmOrder(orderId, adminId) {
     // Emit events AFTER commit
     setImmediate(() => {
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[orderService] order.confirmed emit failed:', e.message); }
-      // Only auto-sync if order is not already synced and provider is ready
-      // For iThink, require explicit courier selection via syncWithCourier endpoint
-      const shippingProviderFactory = require('./shippingProviderFactory.js');
+      // Courier booking is done from the Dashboard; just log the sync state.
       const { OrderShipment } = require('../model/orderShipmentModel.js');
 
       (async () => {
         try {
           const shipment = await OrderShipment.findOne({ where: { order_id: order.id } });
-          const providerName = await shippingProviderFactory.getProviderName(order.brand_id || 1);
-
-          // Only auto-sync for Shipping (not iThink — requires manual courier selection)
-          if (!shipment && providerName === 'fship') {
-            syncOrderToShipping(order).catch(e => logger.warn('[orderService] Shipping sync failed:', e.message));
-          } else if (shipment) {
+          if (shipment) {
             logger.info(`[orderService] Order ${order.order_number} already synced with ${shipment.provider}`);
-          } else if (providerName === 'ithink') {
-            logger.info(`[orderService] iThink order ${order.order_number} confirmed. Awaiting courier selection via /sync-with-courier endpoint.`);
+          } else {
+            logger.info(`[orderService] Order ${order.order_number} confirmed — awaiting courier booking.`);
           }
         } catch (e) {
           logger.warn('[orderService] Auto-sync logic failed:', e.message);
@@ -326,17 +319,11 @@ async function syncOrderToShipping(order) {
     // parcel books from the wrong warehouse). Mirrors the manual-sync path.
     settingsHelper.clearCache(brandId);
 
-    // Determine warehouse ID based on provider
-    let warehouseId = null;
-    if (providerName === 'ithink') {
-      warehouseId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
-      if (!warehouseId) {
-        throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
-      }
-      logger.info(`[Shipping] ${order.order_number} brand=${brandId} → iThink pickup_address_id=${warehouseId}`);
-    } else {
-      warehouseId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
+    const warehouseId = await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID', null);
+    if (!warehouseId) {
+      throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
     }
+    logger.info(`[Shipping] ${order.order_number} brand=${brandId} → iThink pickup_address_id=${warehouseId}`);
 
     const shippingPayload = {
       customer_Name: addr.full_name || user?.username || 'Customer',
@@ -428,43 +415,6 @@ async function syncOrderToShipping(order) {
   }
 }
 
-// ── COD fraud check ───────────────────────────────────────────────────────────
-
-async function checkCodEligibility(phone, brandId = 1) {
-  const { Order } = require('../model/orderModel.js');
-  const { ShippingAddress } = require('../model/shippingAddressModel.js');
-  const { Op } = require('sequelize');
-  const settingsHelper = require('./settingsHelper.js');
-
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-  // Find addresses with this phone
-  const addresses = await ShippingAddress.findAll({ where: { phone }, attributes: ['id'] });
-  if (!addresses.length) return { eligible: true, rtoScore: 0, reason: null };
-
-  const addressIds = addresses.map(a => a.id);
-
-  // Count every status a real return lands on — the courier webhook sets
-  // 'rto' / 'rto delivered', not 'returned_rto'. Counting only 'returned_rto'
-  // meant repeat-RTO customers were never flagged and COD was never blocked.
-  const rtoCount = await Order.count({
-    where: {
-      shipping_address_id: { [Op.in]: addressIds },
-      status: { [Op.in]: ['rto', 'rto delivered', 'returned_rto'] },
-      created_at: { [Op.gte]: sixMonthsAgo },
-    },
-  });
-
-  let rtoScore = 0;
-  if (rtoCount >= 2) return { eligible: false, rtoScore: 40, reason: 'COD blocked: repeat RTO customer' };
-  if (rtoCount === 1) rtoScore += 20;
-
-  const codMax = parseFloat(await settingsHelper.getSetting(brandId, 'COD_MAX_ORDER_VALUE', '1500'));
-
-  return { eligible: true, rtoScore, codMax };
-}
-
 /**
  * Cancel a booked order at the shipping provider that issued the AWB (iThink /
  * Shipping). Best-effort + non-blocking. The AWB may live on the order row OR only
@@ -501,7 +451,6 @@ module.exports = {
   syncOrderToShipping,
   assertTransition,
   getRtoRiskLevel,
-  checkCodEligibility,
   auditLog,
   ALLOWED_TRANSITIONS,
   DISPATCHED_STATUSES,

@@ -9,7 +9,7 @@ const {
     getAttributeById,
     getMegaMenu
 } = require('../controller/attributeController.js');
-const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 

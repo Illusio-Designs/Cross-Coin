@@ -1,15 +1,12 @@
 const { Category } = require('../model/categoryModel.js');
 const { Product, ProductVariation, ProductImage, ProductSEO, Brand } = require('../model/associations.js');
-const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs/promises');
-const fsSync = require('fs');
 const { Op } = require('sequelize');
 const ImageHandler = require('../utils/imageHandler.js');
 const { categoryUpload } = require('../middleware/uploadMiddleware.js');
 const slugify = require('slugify');
 const CategoryService = require('../services/categoryService.js');
-const cacheManager = require('../services/cacheManager.js');
 const imagekitService = require('../services/imagekitService.js');
 const { logger } = require('../config/logging.js');
 

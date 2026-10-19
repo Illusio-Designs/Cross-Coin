@@ -80,20 +80,6 @@ export async function updateProfile(data) {
   if (!res.ok) throw new Error(result.message || 'Update failed')
   return result
 }
-
-// Change password
-export async function changePassword({ currentPassword, newPassword }) {
-  const token = getToken()
-  const res = await fetch(`${API_URL}/api/users/change-password`, {
-    method: 'PUT',
-    headers: headers(token),
-    body: JSON.stringify({ currentPassword, newPassword }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'Password change failed')
-  return data
-}
-
 // Logout
 export async function logout() {
   const token = getToken()
@@ -128,7 +114,6 @@ export async function verifyOtp({ phone, access_token }) {
 
 // Aliases for backward compatibility with old imports
 export const login = loginWithOtp
-export const updatePassword = changePassword
 
 // ── Delete account (DPDP erasure) ────────────────────────────────────────────
 // Backend runs the full cross-table erasure; the UI calls logout() after.

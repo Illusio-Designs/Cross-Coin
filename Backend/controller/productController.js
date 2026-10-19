@@ -11,10 +11,8 @@ const {
   User,
   Brand,
 } = require("../model/associations.js");
-const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 const ImageHandler = require("../utils/imageHandler.js");
-const { productUpload } = require("../middleware/uploadMiddleware.js");
 const slugify = require("slugify");
 const { sequelize } = require("../config/db.js");
 const { Op } = require("sequelize");

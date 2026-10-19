@@ -131,8 +131,6 @@ const stockReservation = require('../services/stockReservationService.js');
 const settingsHelper = require('../services/settingsHelper.js');
 const { toSmallestUnit } = require('../utils/amountConverter.js');
 const { setImmediate } = require('timers');
-const { sendFacebookEvent } = require('../integration/facebookPixel.js');
-const { sendGAEvent } = require('../integration/googleAnalytics.js');
 
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 

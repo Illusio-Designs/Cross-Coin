@@ -16,6 +16,13 @@ orderEmitter.on('order.created', (order) => {
     logger.info(`[Event] order.created: ${order.order_number}`);
   } catch (e) { logger.error('[Event] order.created error:', e.message); }
 
+  // Product badges (hot selling / low / out of stock) depend on sales and
+  // stock, which this order just changed — recalculate them for its products.
+  setImmediate(() => {
+    require('./badgeService.js').refreshBadgesForOrder(order.id)
+      .catch((e) => logger.warn('[Event] badge refresh failed:', e.message));
+  });
+
   // Reliable off-dashboard alerts (fire-and-forget, never blocks order flow).
   setImmediate(async () => {
     try {
@@ -151,22 +158,6 @@ orderEmitter.on('order.delivered', async (order) => {
   } catch (e) { logger.error('[Event] order.delivered error:', e.message); }
 });
 
-// order.out_for_delivery — last-mile notification
-orderEmitter.on('order.out_for_delivery', async (order) => {
-  try {
-    logger.info(`[Event] order.out_for_delivery: ${order.order_number}`);
-    const whatsappService = require('./whatsappService.js');
-    const { ShippingAddress } = require('../model/shippingAddressModel.js');
-    const addr = await ShippingAddress.findByPk(order.shipping_address_id);
-    if (addr?.phone) {
-      await whatsappService.sendOutForDelivery(addr.phone, {
-        orderNumber: order.order_number,
-        courierName: order.courier_name || 'Our courier partner',
-      }, order.brand_id || 1).catch(e => logger.warn('[Event] WA out-for-delivery failed:', e.message));
-    }
-  } catch (e) { logger.error('[Event] order.out_for_delivery error:', e.message); }
-});
-
 // order.cancelled — cancellation message
 orderEmitter.on('order.cancelled', async (order) => {
   try {
@@ -211,17 +202,5 @@ const invalidateDashboardOnChange = (order) => {
 };
 ['order.created', 'order.confirmed', 'order.shipped', 'order.delivered', 'order.cancelled']
   .forEach((evt) => orderEmitter.on(evt, invalidateDashboardOnChange));
-
-// order.analytics — fire FB + GA events
-orderEmitter.on('order.analytics', async ({ event, payload }) => {
-  try {
-    const { sendFacebookEvent } = require('../integration/facebookPixel.js');
-    const { sendGAEvent } = require('../integration/googleAnalytics.js');
-    await Promise.allSettled([
-      sendFacebookEvent(event, payload),
-      sendGAEvent(event.toLowerCase().replace(/([A-Z])/g, '_$1').toLowerCase(), payload),
-    ]);
-  } catch (e) { logger.error('[Event] order.analytics error:', e.message); }
-});
 
 module.exports = orderEmitter;

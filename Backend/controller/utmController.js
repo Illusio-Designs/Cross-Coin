@@ -1,7 +1,5 @@
 const UTMTracking = require('../model/utmModel');
 const { v4: uuidv4 } = require('uuid');
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/db');
 const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
 // Referrer → source/medium classification (incl. self-referral exclusion) lives

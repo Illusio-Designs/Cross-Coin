@@ -120,18 +120,6 @@ export async function updateProfile(data) {
   if (!res.ok) throw new Error(result.message || 'Update failed');
   return result;
 }
-
-export async function changePassword({ currentPassword, newPassword }) {
-  const res = await fetch(`${API_URL}/api/users/change-password`, {
-    method: 'PUT',
-    headers: authHeaders(),
-    body: JSON.stringify({ currentPassword, newPassword }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Password change failed');
-  return data;
-}
-
 // ── Logout ─────────────────────────────────────────────────────────────────
 export async function logout() {
   const token = getToken();

@@ -1151,15 +1151,6 @@ export const userService = {
     }
   },
 
-  changePassword: async (passwordData) => {
-    try {
-      const response = await adminApi.put("/api/users/me/password", passwordData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
   deleteUser: async () => {
     try {
       const response = await adminApi.delete("/api/users/delete");

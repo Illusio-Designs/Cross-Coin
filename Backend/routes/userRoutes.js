@@ -3,8 +3,8 @@ const {
     register, login, adminLogin, logout,
     forgotPassword, resetPassword,
     getCurrentUser, getProfile, updateProfile, updateUser,
-    updatePassword, changePassword, deleteUser, exportMyData,
-    getAllUsers, getStaffUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
+    updatePassword, deleteUser, exportMyData,
+    getAllUsers, getStaffUsers, getGuestUsers, upload, updateUserRole, createStaffUser,
     checkPhone
 } = require('../controller/userController.js');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');

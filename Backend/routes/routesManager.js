@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 const { optionalBrand } = require('../middleware/brandMiddleware.js');
 
 // ── Core resources ────────────────────────────────────────────────────────
@@ -34,10 +33,11 @@ router.use('/pickup-schedule',    require('./pickupScheduleRoutes.js'));
 router.use('/leads',              require('./leadRoutes.js'));
 
 // ── Auth (OTP) ────────────────────────────────────────────────────────────
-router.use('/auth',               optionalBrand, require('./checkoutRoutes.js'));
+const { otpRouter, checkoutRouter } = require('./checkoutRoutes.js');
+router.use('/auth',               optionalBrand, otpRouter);
 
 // ── Checkout (payment-first flow) ─────────────────────────────────────────
-router.use('/checkout',           optionalBrand, require('./checkoutRoutes.js'));
+router.use('/checkout',           optionalBrand, checkoutRouter);
 
 // ── WhatsApp ──────────────────────────────────────────────────────────────
 router.use('/whatsapp',           require('./whatsappRoutes.js'));
@@ -172,12 +172,11 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         // was hardcoded to Shipping even for iThink brands, so the check never
         // reflected reality.
         const factory = require('../services/shippingProviderFactory');
-        const providerName = await factory.getProviderName(brandId); // always iThink
         const provider = await factory.getShippingProvider(brandId);
 
         const src = await settingsHelper.getSetting(
             brandId,
-            providerName === 'ithink' ? 'ITHINK_WAREHOUSE_PINCODE' : 'FSHIP_WAREHOUSE_PINCODE',
+            'ITHINK_WAREHOUSE_PINCODE',
             await settingsHelper.getSetting(brandId, 'DEFAULT_WAREHOUSE_PINCODE', '363641')
         );
 
@@ -211,263 +210,9 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
     }
 });
 
-// ── Last iThink booking attempt (credential-free diagnostics) ───────────────
-// GET /api/ithink-last-booking  (send X-Brand-Name so it reads THAT brand's
-// provider instance). Shows the EXACT payload we last sent to iThink's
-// /order/add.json (auth redacted), iThink's raw reply, the resolved
-// pickup_address_id, and the field issues we detected. Use it right after a
-// failed Sync to see WHY iThink said "Some error occured".
-router.get('/ithink-last-booking', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
-    try {
-        const brandId = Number(req.query.brand_id) || req.brandId || 1;
-        const factory = require('../services/shippingProviderFactory');
-        const provider = await factory.getShippingProvider(brandId).catch(() => null);
-        const raw = provider && provider._lastBookingRaw;
-        if (!raw) {
-            return res.json({
-                success: true,
-                brand_id: brandId,
-                message: 'No booking attempt recorded for this brand yet. Click Sync on the failing order first (with the correct X-Brand-Name), then reload this.',
-            });
-        }
-        return res.json({ success: true, brand_id: brandId, ...raw });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-// ── Verify a brand's iThink pickup ID exists on the account ─────────────────
-// GET /api/ithink-warehouse?brand_id=10[&id=117173]
-// Asks iThink whether the brand's ITHINK_PICKUP_ADDRESS_ID is a REGISTERED
-// pickup location. If it returns empty/error, that ID is not on the account —
-// which is exactly what makes /order/add.json fail with "Some error occured"
-// even though we send the ID. No secrets exposed.
-router.get('/ithink-warehouse', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
-    try {
-        const brandId = Number(req.query.brand_id) || req.brandId || 1;
-        const settingsHelper = require('../services/settingsHelper');
-        settingsHelper.clearCache(brandId);
-        const pickupId = req.query.id || await settingsHelper.getSetting(brandId, 'ITHINK_PICKUP_ADDRESS_ID');
-        if (!pickupId) {
-            return res.json({ success: false, brand_id: brandId, message: 'No ITHINK_PICKUP_ADDRESS_ID set for this brand.' });
-        }
-        const factory = require('../services/shippingProviderFactory');
-        const provider = await factory.getShippingProvider(brandId).catch(() => null);
-        if (!provider || typeof provider.getWarehouse !== 'function') {
-            return res.json({ success: false, brand_id: brandId, message: 'iThink is not the active provider for this brand.' });
-        }
-        const warehouse = await provider.getWarehouse(pickupId).catch((e) => ({ error: e.message }));
-        return res.json({
-            success: true,
-            brand_id: brandId,
-            pickup_address_id: String(pickupId),
-            warehouse,
-            hint: 'If "warehouse" is empty / error / "not found", this pickup ID is NOT registered on the iThink account — that is why bookings fail with "Some error occured". Register the warehouse in iThink → Pickup Addresses (or set the correct existing ID).',
-        });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-// ── iThink booking probe (why does THIS order's booking fail?) ──────────────
-// GET /api/ithink-booking-probe/:orderNumber
-//   Shows the EXACT payload we would send to /order/add.json (auth redacted) —
-//   logistics / s_type / order_type / shipment — plus the REAL courier codes the
-//   account's rate-check returns, so a courier-code mismatch is obvious. It does
-//   NOT send by default. Add ?send=1 to actually POST and see iThink's response
-//   (only do that on a failing order — a success would create a shipment).
-router.get('/ithink-booking-probe/:orderNumber', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
-    try {
-        const { Order } = require('../model/orderModel.js');
-        const { OrderItem } = require('../model/orderItemModel.js');
-        const { Product } = require('../model/productModel.js');
-        const { ProductVariation } = require('../model/productVariationModel.js');
-        const { User } = require('../model/userModel.js');
-        const { GuestUser } = require('../model/guestUserModel.js');
-        const { ShippingAddress } = require('../model/shippingAddressModel.js');
-        const settingsHelper = require('../services/settingsHelper');
-
-        const on = String(req.params.orderNumber || '').trim();
-        const order = await Order.findOne({
-            where: { order_number: on },
-            include: [
-                { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product' }, { model: ProductVariation, as: 'ProductVariation' }] },
-                { model: User, as: 'User', required: false },
-                { model: GuestUser, as: 'GuestUser', required: false },
-                { model: ShippingAddress, as: 'ShippingAddress' },
-            ],
-        });
-        if (!order) return res.status(404).json({ success: false, message: `Order ${on} not found` });
-
-        const brandId = order.brand_id || 1;
-        const factory = require('../services/shippingProviderFactory');
-        const provider = await factory.getShippingProvider(brandId);
-        const osc = require('../controller/orderShippingController.js');
-
-        // Which couriers actually serve this route — via the SAME pincode
-        // serviceability check the Sync auto-selector now uses (rate/check comes
-        // back empty for many routes, so we no longer default to "delhivery").
-        const { extractIThinkCouriers } = require('../utils/serviceability.js');
-        let serviceable = [];
-        try {
-            const whPin = await settingsHelper.getSetting(brandId, 'ITHINK_WAREHOUSE_PINCODE', '363641');
-            const raw = await provider.checkServiceability(whPin, order.ShippingAddress?.pincode);
-            serviceable = extractIThinkCouriers(raw);
-        } catch (e) { serviceable = [{ error: e.message }]; }
-
-        const first = serviceable.find((c) => c && c.code);
-        const picked = req.query.logistics || (first && first.code) || 'delhivery';
-        const stype  = req.query.s_type || (first && first.s_type) || 'surface';
-
-        const orderData = await osc.prepareShippingOrderData(order, 'ithink', picked, stype);
-        const payload = provider.formatOrderDataForIThink(orderData);
-        const { access_token, secret_key, ...safeData } = payload.data || {};
-
-        const out = {
-            success: true,
-            order_number: on,
-            brand_id: brandId,
-            available_courier_codes: serviceable.map((c) => c && c.code).filter(Boolean),
-            available_couriers: serviceable.map((c) => c && c.code ? { code: c.code, s_type: c.s_type, id: c.id, is_serviceable: c.is_serviceable } : c),
-            picked_logistics: picked,
-            picked_s_type: stype,
-            request_preview: { ...safeData, access_token: access_token ? 'set' : 'MISSING', secret_key: secret_key ? 'set' : 'MISSING' },
-        };
-
-        if (String(req.query.send) === '1') {
-            let result, err;
-            try { result = await provider.createForwardOrder(orderData); } catch (e) { err = e.message; }
-            out.sent = true;
-            out.ithink_response = (provider._lastBookingRaw && provider._lastBookingRaw.response) || null;
-            out.result = result;
-            out.error = err;
-        }
-        return res.json(out);
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-// ── Serviceability probe for an order (the NEW auto-courier signal) ─────────
-// GET /api/ithink-serviceability/:orderNumber   (send X-Brand-Name / ?brand_id)
-// Shows EXACTLY what the Sync auto-selector sees for this order: the rate/check
-// couriers (with cod/prepaid support + live rate), which are eligible for this
-// order's payment mode, and the cheapest one it would book. This is the real
-// response to check why an order booked (or was flagged "not serviceable").
-router.get('/ithink-serviceability/:orderNumber', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
-    try {
-        const { Order } = require('../model/orderModel.js');
-        const { OrderItem } = require('../model/orderItemModel.js');
-        const { ShippingAddress } = require('../model/shippingAddressModel.js');
-        const settingsHelper = require('../services/settingsHelper');
-
-        const on = String(req.params.orderNumber || '').trim();
-        const order = await Order.findOne({
-            where: { order_number: on },
-            include: [
-                { model: OrderItem, as: 'OrderItems' },
-                { model: ShippingAddress, as: 'ShippingAddress' },
-            ],
-        });
-        if (!order) return res.status(404).json({ success: false, message: `Order ${on} not found` });
-
-        const brandId = order.brand_id || 1;
-        const factory = require('../services/shippingProviderFactory');
-        const provider = await factory.getShippingProvider(brandId);
-
-        const whPin = await settingsHelper.getSetting(brandId, 'ITHINK_WAREHOUSE_PINCODE', '363641');
-        const destPin = order.ShippingAddress?.pincode || '';
-        const isCOD = String(order.payment_type || '').toLowerCase() === 'cod';
-        const totalQty = (order.OrderItems || []).reduce((s, i) => s + (i.quantity || 0), 0) || 1;
-
-        let raw, checkErr;
-        try {
-            raw = await provider.getAvailableCouriers({
-                sourcePincode: whPin, destinationPincode: destPin,
-                weight: Math.max(0.5, totalQty * 0.1), length: 10, width: 10, height: 5 * totalQty,
-                paymentMode: isCOD ? 'COD' : 'Prepaid', productMrp: parseFloat(order.final_amount) || 500,
-            });
-        } catch (e) { checkErr = e.message; }
-
-        // Same extraction + eligibility the Sync auto-selector uses.
-        const { extractIThinkCouriers } = require('../utils/serviceability.js');
-        const truthy = (v) => v === true || v === 1 || ['yes', '1', 'true', 'y'].includes(String(v).toLowerCase());
-        const couriers = extractIThinkCouriers(raw);
-
-        const parsed = couriers.map((c) => {
-            const modeOk = isCOD
-                ? (c.cod === undefined || truthy(c.cod))
-                : (c.prepaid === undefined || truthy(c.prepaid));
-            const rate = parseFloat(c.raw?.rate ?? c.raw?.freight_charges ?? 0) || 0;
-            return {
-                courier: c.code, book_as: String(c.code).toLowerCase(),
-                service_type: c.s_type, logistics_id: c.id,
-                cod: c.cod, prepaid: c.prepaid, rate,
-                eligible_for_this_order: !!modeOk,
-            };
-        }).filter((c) => c.courier);
-
-        const eligible = parsed.filter((c) => c.eligible_for_this_order).sort((a, b) => a.rate - b.rate);
-
-        return res.json({
-            success: true,
-            order_number: on,
-            brand_id: brandId,
-            payment_type: order.payment_type,
-            is_cod: isCOD,
-            from_pincode: whPin,
-            to_pincode: destPin,
-            serviceable: eligible.length > 0,
-            would_book: eligible[0] ? { courier: eligible[0].courier, book_as: eligible[0].book_as, s_type: String(eligible[0].service_type || '').toLowerCase(), rate: eligible[0].rate } : null,
-            eligible_couriers: eligible.map((c) => `${c.courier}/${c.service_type} @₹${c.rate}`),
-            all_couriers: parsed,
-            check_error: checkErr || null,
-        });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
-// ── Debug: which iThink endpoint returns the full DOMESTIC courier matrix ────
-// GET /api/ithink-serviceability-debug?brand_id=10&from=363641&to=431136
-//   (or ?order=MX-... to pull from/to from an order)
-// Fires every candidate domestic endpoint with the brand's real credentials and
-// returns each raw reply + how many couriers our extractor finds in it. Use this
-// to confirm the correct endpoint before we switch checkServiceability over.
-router.get('/ithink-serviceability-debug', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
-    try {
-        const settingsHelper = require('../services/settingsHelper');
-        let brandId = Number(req.query.brand_id) || req.brandId || 1;
-        let from = req.query.from;
-        let to = req.query.to;
-
-        if (req.query.order) {
-            const { Order } = require('../model/orderModel.js');
-            const { ShippingAddress } = require('../model/shippingAddressModel.js');
-            const order = await Order.findOne({
-                where: { order_number: String(req.query.order).trim() },
-                include: [{ model: ShippingAddress, as: 'ShippingAddress' }],
-            });
-            if (order) { brandId = order.brand_id || brandId; to = to || order.ShippingAddress?.pincode; }
-        }
-        from = from || await settingsHelper.getSetting(brandId, 'ITHINK_WAREHOUSE_PINCODE', '363641');
-        if (!to) return res.status(400).json({ success: false, message: 'Provide ?to=<pincode> or ?order=<orderNumber>' });
-
-        const factory = require('../services/shippingProviderFactory');
-        const provider = await factory.getShippingProvider(brandId);
-        if (typeof provider.debugServiceabilityEndpoints !== 'function') {
-            return res.status(400).json({ success: false, message: 'Active provider for this brand is not iThink.' });
-        }
-        const results = await provider.debugServiceabilityEndpoints(from, to);
-        return res.json({ success: true, brand_id: brandId, from_pincode: from, to_pincode: to, results });
-    } catch (e) {
-        return res.status(500).json({ success: false, message: e.message });
-    }
-});
-
 // ── HTTP cron trigger (cPanel-friendly) ─────────────────────────────────────
 // On cPanel+Passenger the in-process node-cron / Bull worker pauses when the web
-// app idles, so scheduled jobs (shipping sync, status refresh) can stall. The
+// app idles, so scheduled jobs (status refresh, loyalty expiry) can stall. The
 // reliable fix is an OS-level cPanel cron that hits this endpoint — the HTTP
 // request wakes Passenger AND enqueues the job, which the worker then drains.
 //
@@ -475,10 +220,8 @@ router.get('/ithink-serviceability-debug', isAuthenticated, isAdmin, optionalBra
 // token set it refuses (never an open trigger).
 //
 // cPanel → Cron Jobs — twice a day (keeps load light):
-//   0 6,18 * * *  curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=shipping-sync"   >/dev/null 2>&1
 //   30 6,18 * * * curl -fsS -H "x-cron-token: YOUR_TOKEN" "https://api.crosscoin.in/api/cron/run?job=status-refresh" >/dev/null 2>&1
 const CRON_JOBS = {
-    'shipping-sync': 'cron:shipping-sync',
     'status-refresh': 'cron:shipping-status-refresh',
     'loyalty-expiry': 'cron:loyalty-expiry',
 };
@@ -488,7 +231,7 @@ router.all('/cron/run', async (req, res) => {
     if (!token || presented !== token) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
-    const job = (req.query.job || 'shipping-sync').toString();
+    const job = (req.query.job || 'status-refresh').toString();
     const jobName = CRON_JOBS[job];
     if (!jobName) {
         return res.status(400).json({ success: false, message: 'Unknown job', allowed: Object.keys(CRON_JOBS) });

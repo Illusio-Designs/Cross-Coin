@@ -10,7 +10,7 @@
    * │   lifecycle.* : confirmOrder, updateOrderStatus, cancelOrder,  │
    * │                 adminCancelOrder, initiateReturn,              │
    * │                 updateAwbNumber                                │
-   * │   admin.*     : getAllOrders, getOrderStats                    │
+   * │   admin.*     : getAllOrders                                   │
    * │                                                                │
    * │ Route files can import from controller/orders/<domain> today;  │
    * │ they'll get the right function. When you touch one, MOVE it    │
@@ -759,17 +759,6 @@
 
       // Idempotency is now DB-based (idempotency_key column on orders table)
 
-      // Enqueue badge recalculation for async processing (non-blocking)
-      logger.debug("createOrder: Enqueueing badge recalculation for products in order...");
-      try {
-        const BadgeService = require("../services/badgeService");
-        // Enqueue job - returns immediately without blocking
-        await BadgeService.enqueueBadgeRecalculation(userId);
-        logger.debug(`✅ Badge recalculation job enqueued for user ${userId}`);
-      } catch (badgeError) {
-        logger.error("⚠️ Warning: Error enqueueing badge recalculation:", badgeError.message);
-        // Don't fail the order creation if badge queue fails
-      }
 
       // Fetch the created order with its items
       logger.debug("createOrder: Fetching created order with details...");
@@ -1410,13 +1399,6 @@
         } catch (e) { logger.error('[AdminManualOrder] Analytics error:', e.message); }
       });
 
-      // Badge recalculation
-      setImmediate(async () => {
-        try {
-          const BadgeService = require('../services/badgeService');
-          await BadgeService.enqueueBadgeRecalculation(user.id);
-        } catch (e) { logger.warn('[AdminManualOrder] Badge recalc failed:', e.message); }
-      });
 
       res.status(201).json({
         success: true,
@@ -2213,100 +2195,6 @@
     }
   };
 
-  // Get order statistics
-  module.exports.getOrderStats = async (req, res) => {
-    try {
-      // Date filter support (IST day boundaries; gate on hasRange — Op.* are
-      // Symbols so Object.keys() is always 0 and must not be used to detect it).
-      const { start_date, end_date } = req.query;
-      const { buildCreatedAtRange, dayStartTZ, dayEndTZ } = require('../utils/dateRange.js');
-      const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
-      const orderWhere = hasRange ? { createdAt: range } : {};
-
-      const totalOrders = await Order.count({ where: orderWhere });
-
-      // Total revenue = ALL orders (full picture)
-      const totalRevenue = await Order.sum("final_amount", { where: orderWhere }) || 0;
-
-      // Count each status — must honour the SAME date filter as the counts above.
-      // (This previously gated on `hasDateFilter`, which was never defined, so the
-      //  status breakdown silently ignored the date range. Use `hasRange` and the
-      //  IST day boundaries so it matches totalOrders/totalRevenue.)
-      const rawStart = dayStartTZ(start_date) || new Date(0);
-      const rawEnd = dayEndTZ(end_date) || new Date();
-      const [statusRows] = await sequelize.query(`
-        SELECT status, COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
-        FROM orders
-        ${hasRange ? `WHERE created_at >= :startDate AND created_at <= :endDate` : ''}
-        GROUP BY status
-      `, {
-        replacements: hasRange ? { startDate: rawStart, endDate: rawEnd } : {},
-      });
-      const sc = {};
-      const sr = {};
-      statusRows.forEach(r => {
-        sc[r.status] = parseInt(r.count);
-        sr[r.status] = parseFloat(r.revenue || 0);
-      });
-
-      const totalCancelledOrders = (sc['cancelled'] || 0) + (sc['order cancelled'] || 0);
-      const totalRtoOrders = (sc['rto'] || 0) + (sc['rto delivered'] || 0) + (sc['returned_rto'] || 0);
-      const deliveredRevenue = (sr['delivered'] || 0);
-      const cancelledRevenue = (sr['cancelled'] || 0) + (sr['order cancelled'] || 0);
-      const rtoRevenue = (sr['rto'] || 0) + (sr['rto delivered'] || 0) + (sr['return_initiated'] || 0) + (sr['returned_rto'] || 0);
-      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-      res.json({
-        totalOrders,
-        totalRevenue,
-        earnedRevenue: deliveredRevenue,
-        lostRevenue: cancelledRevenue + rtoRevenue,
-        averageOrderValue,
-        statusBreakdown: {
-          awaiting_confirmation: sc['awaiting_confirmation'] || 0,
-          pending: sc['pending'] || 0,
-          confirmed: sc['confirmed'] || 0,
-          processing: sc['processing'] || 0,
-          booked: sc['booked'] || 0,
-          pickup_initiated: sc['pickup initiated'] || 0,
-          manifested: sc['manifested'] || 0,
-          in_transit: sc['in transit'] || 0,
-          shipped: sc['shipped'] || 0,
-          out_for_delivery: sc['out for delivery'] || 0,
-          delivered: sc['delivered'] || 0,
-          undelivered: sc['undelivered'] || 0,
-          rto: sc['rto'] || 0,
-          rto_delivered: sc['rto delivered'] || 0,
-          return_initiated: sc['return_initiated'] || 0,
-          returned_rto: sc['returned_rto'] || 0,
-          cancelled: totalCancelledOrders,
-          exception: sc['exception'] || 0,
-        },
-        revenueBreakdown: {
-          delivered: deliveredRevenue,
-          shipped: (sr['shipped'] || 0) + (sr['in transit'] || 0) + (sr['out for delivery'] || 0) + (sr['booked'] || 0) + (sr['pickup initiated'] || 0) + (sr['manifested'] || 0),
-          processing: (sr['processing'] || 0) + (sr['confirmed'] || 0),
-          pending: (sr['pending'] || 0) + (sr['awaiting_confirmation'] || 0),
-          rto: rtoRevenue,
-          cancelled: cancelledRevenue,
-        },
-        // Legacy fields for backward compatibility
-        totalPendingOrders: (sc['pending'] || 0) + (sc['awaiting_confirmation'] || 0),
-        totalProcessingOrders: (sc['processing'] || 0) + (sc['confirmed'] || 0),
-        totalShippedOrders: (sc['shipped'] || 0) + (sc['in transit'] || 0) + (sc['out for delivery'] || 0),
-        totalDeliveredOrders: sc['delivered'] || 0,
-        totalCancelledOrders,
-        totalRtoOrders,
-        ...(hasRange ? { dateFilter: { start_date, end_date } } : {}),
-      });
-    } catch (error) {
-      logger.error("Error fetching order statistics:", error);
-      res.status(500).json({
-        message: "Failed to fetch order statistics",
-        error: error.message,
-      });
-    }
-  };
 
   // Admin: edit an order's shipping address — mainly to correct a wrong/invalid
   // pincode (or phone/city/state) that blocks courier booking. Updates the

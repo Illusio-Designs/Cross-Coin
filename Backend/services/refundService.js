@@ -2,7 +2,6 @@
 
 const { logger } = require('../config/logging.js');
 const { sequelize } = require('../config/db.js');
-const orderEmitter = require('./orderEvents.js');
 
 /**
  * Refund Service — handles full and partial refunds via Razorpay.

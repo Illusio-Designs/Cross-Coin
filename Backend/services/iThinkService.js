@@ -813,46 +813,6 @@ class IThinkService {
    * prepaid/cod/pickup flags) that iThink's own dashboard shows. Credentials are
    * never included in the return value.
    */
-  async debugServiceabilityEndpoints(sourcePincode, destinationPincode) {
-    await this.initialize();
-    const from = String(sourcePincode || '');
-    const to = String(destinationPincode || '');
-    const attempts = [
-      { name: 'pincode_check__pincode_only', endpoint: '/api_v3/pincode/check.json', body: { pincode: to } },
-      { name: 'pincode_check__from_to', endpoint: '/api_v3/pincode/check.json', body: { from_pincode: from, to_pincode: to } },
-      { name: 'pincode_check__from_to_dims', endpoint: '/api_v3/pincode/check.json', body: {
-        from_pincode: from, to_pincode: to, country_code: 'IN',
-        shipping_length_cms: '10', shipping_width_cms: '10', shipping_height_cms: '5', shipping_weight_kg: '0.10',
-      } },
-      { name: 'rate_check__from_to_dims', endpoint: '/api_v3/rate/check.json', body: {
-        from_pincode: from, to_pincode: to, country_code: 'IN',
-        shipping_length_cms: '10', shipping_width_cms: '10', shipping_height_cms: '5', shipping_weight_kg: '0.10',
-        order_type: 'forward', payment_method: 'COD', product_mrp: '500',
-      } },
-      { name: 'pincode_intl__from_to (current)', endpoint: '/api_v3/pincode_intl/check.json', body: {
-        from_pincode: from, to_pincode: to, country_code: 'IN',
-        shipping_length_cms: '10', shipping_width_cms: '10', shipping_height_cms: '5', shipping_weight_kg: '0.10',
-      } },
-    ];
-    const out = {};
-    for (const a of attempts) {
-      try {
-        const payload = { data: { ...this._authData(), ...a.body } };
-        const r = await this.axiosInstance.post(a.endpoint, payload);
-        const data = r.data;
-        // Count couriers the extractor would find, so it's obvious at a glance.
-        let courierCount = 0;
-        try {
-          const { extractIThinkCouriers } = require('../utils/serviceability.js');
-          courierCount = extractIThinkCouriers(data).length;
-        } catch (_) { /* ignore */ }
-        out[a.name] = { endpoint: a.endpoint, request_fields: Object.keys(a.body), http_status: r.status, courier_count: courierCount, response: data };
-      } catch (e) {
-        out[a.name] = { endpoint: a.endpoint, request_fields: Object.keys(a.body), http_status: e.response?.status || null, error: e.message, response: e.response?.data ?? null };
-      }
-    }
-    return out;
-  }
 
   /**
    * DIAGNOSTIC: run the same Check Pincode request against BOTH the production

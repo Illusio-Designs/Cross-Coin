@@ -19,7 +19,6 @@
  */
 
 const crypto = require('crypto');
-const { logger } = require('../config/logging.js');
 
 const COOKIE_NAME = 'cc_csrf';
 const HEADER_NAME = 'x-csrf-token';

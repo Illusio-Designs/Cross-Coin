@@ -13,7 +13,7 @@ const { initializeSeoData } = require('./utils/initializeSeoData.js');
 const fs = require('fs');
 const { setupDatabase } = require('./scripts/setupDatabase.js');
 const corsOptions = require('./config/corsConfig.js');
-const { logger, getLoggingConfig } = require('./config/logging.js');
+const { logger } = require('./config/logging.js');
 const path = require('path');
 
 
@@ -95,7 +95,7 @@ const mediumLimiter = rateLimit({
 const PUBLIC_READ_PREFIXES = [
   '/api/sliders', '/api/categories', '/api/products', '/api/seo',
   '/api/public', '/api/blogs', '/api/reviews',
-  '/api/policies', '/api/faqs',
+  '/api/policies',
 ];
 const isPublicReadGet = (req) => {
   if ((req.method || 'GET').toUpperCase() !== 'GET') return false;
@@ -133,10 +133,8 @@ app.use(cors(corsOptions));
 // Strict routes
 app.use('/api/users/login', strictLimiter);
 app.use('/api/users/register', strictLimiter);
-// OTP endpoints burn SMS/WhatsApp credits, so both mounts of checkoutRoutes
-// (/api/auth and /api/checkout) get the strict limiter.
+// OTP endpoints burn SMS/WhatsApp credits — strict limiter.
 app.use('/api/auth/otp', strictLimiter);
-app.use('/api/checkout/otp', strictLimiter);
 app.use('/api/checkout/initiate', strictLimiter);
 app.use('/api/checkout/retry', strictLimiter);
 app.use('/api/checkout/guest/initiate', strictLimiter);
@@ -362,7 +360,7 @@ app.get('/api/health/redis', async (req, res) => {
 
 // CSRF token endpoint — frontend calls this on dashboard load to get a
 // token to mirror into X-CSRF-Token on subsequent state-changing requests.
-// Enforcement is opt-in via CSRF_REQUIRED=true env var.
+// Token issuance only — server-side enforcement is not enabled.
 const { csrfTokenHandler } = require('./middleware/csrf.js');
 app.get('/api/csrf/token', csrfTokenHandler);
 app.get('/api/v1/csrf/token', csrfTokenHandler);
@@ -1930,7 +1928,7 @@ const startServer = async () => {
         // Start server
         const server = app.listen(PORT, () => {
             logger.info(`✓ Server is running on port ${PORT}`);
-            logger.info(`✓ Health check available at: http://localhost:${PORT}/api/v1/health`);
+            logger.info(`✓ Health check available at: http://localhost:${PORT}/api/health`);
             logger.info(`✓ API base URL: http://localhost:${PORT}/api/v1`);
             logMemoryUsage(); // Log initial memory usage
             // Nudge: internal endpoints fail closed in prod, so flag missing secrets.

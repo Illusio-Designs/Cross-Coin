@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const brandController = require('../controller/brandController');
-const { authenticate, isAdmin, isProductManager } = require('../middleware/authMiddleware');
+const { authenticate, isProductManager } = require('../middleware/authMiddleware');
 
 // All routes require product manager or admin authentication
 router.use('/', authenticate, isProductManager);

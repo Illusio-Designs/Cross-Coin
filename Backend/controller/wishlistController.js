@@ -1,4 +1,4 @@
-const { Wishlist, Product, ProductImage, ProductVariation, Cart } = require('../model/associations.js');
+const { Wishlist, Product, ProductImage, ProductVariation } = require('../model/associations.js');
 const { logger } = require('../config/logging.js');
 
 // Build a where clause for the current owner — userId for signed-in users,

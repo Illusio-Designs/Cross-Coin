@@ -5,7 +5,6 @@ const SliderBrand = require('../model/sliderBrandModel.js');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs/promises');
-const fsSync = require('fs');
 const ImageHandler = require('../utils/imageHandler.js');
 const multer = require('multer');
 const imagekitService = require('../services/imagekitService.js');

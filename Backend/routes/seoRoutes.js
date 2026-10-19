@@ -6,7 +6,7 @@ const {
     createSEOData,
     deleteSEOData
 } = require('../controller/seoController.js');
-const { isAuthenticated, authorize, isProductManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();

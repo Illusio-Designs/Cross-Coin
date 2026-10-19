@@ -20,7 +20,6 @@
  */
 
 const crypto = require('crypto');
-const { logger } = require('../config/logging.js');
 
 const money = (n) => `Rs. ${Number(n || 0).toFixed(2)}`;
 

@@ -1,7 +1,6 @@
 'use strict';
 
 const { sequelize } = require('../config/db.js');
-const { logger } = require('../config/logging.js');
 const cacheManager = require('./cacheManager.js');
 const imagekitService = require('./imagekitService.js');
 

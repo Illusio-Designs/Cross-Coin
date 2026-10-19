@@ -4,7 +4,6 @@
  * Reduces database round-trips and improves performance by 5-10x
  */
 
-const { sequelize } = require('../config/db');
 
 /**
  * Batch insert records into a table

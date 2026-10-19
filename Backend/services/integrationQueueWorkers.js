@@ -8,7 +8,6 @@
  * Job names:
  *   shipping:sync-order        — retry an order's shipping provider sync
  *   payment:reconcile-order    — reconcile a single Razorpay payment
- *   whatsapp:send-message      — retry a WhatsApp template send
  */
 
 const { registerProcessor } = require('./integrationQueue.js');
@@ -154,17 +153,6 @@ function registerWorkers() {
     return result;
   });
 
-  // ── whatsapp:send-message ──────────────────────────────────────────
-  registerProcessor('whatsapp:send-message', 2, async (job) => {
-    const { phone, template, params, brandId } = job.data;
-    if (!phone || !template) throw new Error('phone and template required');
-
-    const whatsappService = require('./whatsappService.js');
-    const fn = whatsappService[template];
-    if (typeof fn !== 'function') throw new Error(`unknown WA template fn: ${template}`);
-    return await fn(phone, params || {}, brandId || 1);
-  });
-
   // (cron:shipping-sync removed — bulk auto-booking is gone; orders are booked
   // per-order from the dashboard via the shipping:sync-order job above.)
 
@@ -188,7 +176,6 @@ function registerWorkers() {
     return result || { ok: true };
   };
   registerProcessor('cron:shipping-status-refresh', 1, shippingStatusRefreshHandler);
-  registerProcessor('cron:fship-status-refresh', 1, shippingStatusRefreshHandler);  // back-compat
 
   // ── cron:loyalty-expiry ───────────────────────────────────────────
   registerProcessor('cron:loyalty-expiry', 1, async () => {

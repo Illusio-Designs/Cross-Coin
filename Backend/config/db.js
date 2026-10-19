@@ -47,48 +47,4 @@ const sequelize = new Sequelize(
     }
 );
 
-const connectDB = async () => {
-    try {
-        await sequelize.authenticate();
-        console.log('Database connection established successfully.');
-        
-        // Only run alter sync in development — production uses explicit migrations
-        if (process.env.NODE_ENV !== 'production') {
-            await syncDatabase(true);
-            console.log('Database synchronized on connection.');
-        }
-    } catch (error) {
-        console.error('Unable to connect to the database:', error);
-        throw error;
-    }
-};
-
-const syncDatabase = async (force = false) => {
-    try {
-        if (force) {
-            console.warn('WARNING: This will drop all tables and recreate them!');
-            // Only allow force sync in development
-            if (process.env.NODE_ENV === 'development') {
-                await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
-                await sequelize.sync({ force: true });
-                await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
-                console.log('Database forcefully synchronized.');
-            } else {
-                console.error('Force sync is not allowed in production!');
-            }
-        } else {
-            // Use alter: true for safe migrations
-            await sequelize.sync({ alter: true });
-            console.log('Database synchronized with alterations.');
-        }
-    } catch (error) {
-        console.error('Unable to sync database:', error);
-        throw error;
-    }
-};
-
-module.exports = {
-    sequelize,
-    connectDB,
-    syncDatabase
-};
+module.exports = { sequelize };

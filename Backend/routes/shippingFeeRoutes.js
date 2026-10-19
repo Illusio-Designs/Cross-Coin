@@ -6,7 +6,7 @@ const {
     getShippingFeeByType,
     deleteShippingFee
 } = require('../controller/shippingFeeController.js');
-const { isAuthenticated, authorize, isOrderManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 

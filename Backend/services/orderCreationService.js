@@ -357,15 +357,6 @@ async function handlePaymentSuccess({
       syncOrderToShipping(order).catch(e => logger.warn('[OrderCreation] Shipping sync failed:', e.message));
     });
 
-    // 5. Badge recalculation
-    setImmediate(async () => {
-      try {
-        const BadgeService = require('./badgeService.js');
-        await BadgeService.enqueueBadgeRecalculation(session.user_id);
-      } catch (e) {
-        logger.warn(`[OrderCreation] Badge recalc failed: ${e.message}`);
-      }
-    });
 
     // 6. Analytics — Purchase event
     setImmediate(async () => {

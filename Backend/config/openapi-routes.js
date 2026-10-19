@@ -66,7 +66,7 @@
  *     description: |
  *       Frontend calls this on dashboard load and mirrors the returned
  *       token into the `X-CSRF-Token` header on every state-changing
- *       request. Enforcement is opt-in via `CSRF_REQUIRED=true`.
+ *       request. Server-side enforcement is not enabled.
  *     responses:
  *       200:
  *         description: Token issued
@@ -368,18 +368,6 @@
  *         schema: { type: integer }
  *     responses:
  *       200: { description: Search results }
- *
- * /api/orders/shipping/sync:
- *   post:
- *     tags: [Shipping]
- *     summary: Bulk sync pending orders to the active shipping provider
- *     description: |
- *       Provider-agnostic. Reads `SHIPPING_PROVIDER` per brand and
- *       dispatches via `services/shippingService.js`. Legacy alias:
- *       `/api/orders/fship/sync`.
- *     security: [{ bearerAuth: [] }]
- *     responses:
- *       200: { description: Sync result }
  *
  * /api/orders/shipping/webhook:
  *   post:

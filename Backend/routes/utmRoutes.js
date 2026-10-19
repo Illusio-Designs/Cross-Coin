@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const utmController = require('../controller/utmController');
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 const { optionalBrand } = require('../middleware/brandMiddleware.js');
 
 // Public route - track a visit / UTM. optionalBrand reads X-Brand-Name so each

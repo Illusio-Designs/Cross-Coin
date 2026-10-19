@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { logger } = require('../config/logging.js');
-const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const { User } = require('../model/userModel.js');
@@ -17,16 +16,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/users'));
-
-// Generate a refresh token, hash it, store in DB, return raw token
-const issueRefreshToken = async (user) => {
-    const rawTokenPart = crypto.randomBytes(40).toString('hex');
-    const rawToken = `${user.id}:${rawTokenPart}`;
-    const hashed = await bcrypt.hash(rawTokenPart, 10);
-    const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    await user.update({ refreshToken: hashed, refreshTokenExpiry: expiry });
-    return rawToken;
-};
 
 // Helper function to add image URL to user response
 const addImageUrlToResponse = (userResponse) => {
@@ -350,11 +339,10 @@ module.exports.login = async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
-        const refreshToken = await issueRefreshToken(user);
         const userResponse = user.toJSON();
         delete userResponse.password;
 
-        res.json({ message: 'Login successful', token, refreshToken, user: userResponse });
+        res.json({ message: 'Login successful', token, user: userResponse });
     } catch (error) {
         logger.error('Mobile login error:', error);
         res.status(500).json({ message: 'Login failed', error: error.message });
@@ -919,80 +907,8 @@ module.exports.logout = async (req, res) => {
     }
 };
 
-// Add missing changePassword function
-module.exports.changePassword = async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findByPk(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Current password is incorrect' });
-        }
-
-        const strengthCheck = validatePasswordStrength(newPassword);
-        if (!strengthCheck.valid) {
-            return res.status(400).json({ message: strengthCheck.message });
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        user.password = hashedPassword;
-        await user.save();
-
-        res.json({ message: 'Password changed successfully' });
-    } catch (error) {
-        logger.error('Change password error:', error);
-        res.status(500).json({ message: 'Failed to change password', error: error.message });
-    }
-};
-
 // Export upload if needed
 module.exports.upload = upload;
-
-// **Refresh Token**
-module.exports.refreshToken = async (req, res) => {
-    try {
-        const { refreshToken } = req.body;
-        if (!refreshToken) {
-            return res.status(401).json({ success: false, message: 'Refresh token is required' });
-        }
-
-        // Parse userId from token format "userId:tokenPart"
-        const parts = refreshToken.split(':');
-        if (parts.length !== 2) {
-            return res.status(401).json({ success: false, message: 'Invalid refresh token format' });
-        }
-        const [userId, tokenPart] = parts;
-
-        // O(1) lookup by user ID
-        const user = await User.findByPk(userId);
-        if (!user || !user.refreshToken || !user.refreshTokenExpiry || user.refreshTokenExpiry < new Date()) {
-            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
-        }
-
-        const match = await bcrypt.compare(tokenPart, user.refreshToken);
-        if (!match) {
-            return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
-        }
-
-        // Rotate: issue new access token + new refresh token
-        const accessToken = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1d' }
-        );
-        const newRefreshToken = await issueRefreshToken(user);
-
-        res.json({ success: true, token: accessToken, refreshToken: newRefreshToken });
-    } catch (error) {
-        logger.error('Refresh token error:', error);
-        res.status(500).json({ success: false, message: 'Failed to refresh token', error: error.message });
-    }
-};
 
 // **Update User Role (admin only)**
 module.exports.updateUserRole = async (req, res) => {

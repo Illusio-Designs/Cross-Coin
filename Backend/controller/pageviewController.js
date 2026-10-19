@@ -4,7 +4,7 @@ const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
 const { classifyChannel } = require('../utils/channel');
 
-// Anonymous, cookieless pageview counter (see model/pageHitModel.js). Stores
+// Anonymous, cookieless pageview counter (page_hits table, created below). Stores
 // ONLY aggregate counts per (brand, day, channel) — no personal data — so it can
 // run without cookie consent and give the traffic report real visit volume.
 
