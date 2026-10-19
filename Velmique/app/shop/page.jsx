@@ -1,28 +1,18 @@
-import ShopGrid from '../_components/ShopGrid';
-import { seoMeta } from '@/lib/site';
+import { Suspense } from 'react';
+import ShopView from '@/components/shop/ShopView';
+import { buildMetadata } from '@/lib/api/seo';
 
-export const revalidate = 300;
-
-// Dashboard SEO ('products') over the page's own copy. A note filter
-// (?note=Oud) is a view of /shop, so it canonicalises to /shop.
+// Server component so SEO is server-rendered and dashboard-driven. The full
+// catalogue UI lives in components/shop/ShopView (a client component), reused by
+// /collections/<slug>.
 export async function generateMetadata() {
-  return seoMeta('products', {
-    title: 'Shop All Fragrances — Velmique Maison de Parfum',
-    description: 'Explore the full VELMIQUE fragrance collection — handcrafted eau de parfum for every you.',
-    path: '/shop',
-  });
+  return buildMetadata('products', { title: 'Shop — Velmique' });
 }
 
-export default function MaisonShop({ searchParams }) {
-  const note = (searchParams?.note || '').toString().slice(0, 60);
+export default function ShopPage() {
   return (
-    <>
-      <section className="m-wrap m-ph">
-        <span className="m-eyebrow">The collection</span>
-        <h1>{note ? <>Scents with <em style={{ color: 'var(--m-accent-deep)' }}>{note}</em>.</> : 'Signature Scents.'}</h1>
-        <p>{note ? `Every VELMIQUE fragrance carrying a ${note} note.` : 'Distinctly crafted, unmistakably you — explore every VELMIQUE fragrance.'}</p>
-      </section>
-      <ShopGrid note={note} />
-    </>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
+      <ShopView />
+    </Suspense>
   );
 }

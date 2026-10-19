@@ -93,7 +93,6 @@ export default function CartDrawer() {
   const {
     cart: items, cartOpen, setCartOpen, cartTotal, cartCount,
     removeFromCart, updateQuantity, clearCart, addToCart, restoreCart,
-    checkoutRequested, consumeCheckoutRequest,
   } = useStore();
   const { user, isAuthenticated } = useAuth();
 
@@ -287,7 +286,7 @@ export default function CartDrawer() {
 
   // Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
   // checkout intent, not drawer open — then shows the delivery + payment step.
-  function goToCheckout() {
+  const goToCheckout = () => {
     if (!items.length) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId ?? i.id)),
@@ -299,16 +298,7 @@ export default function CartDrawer() {
     });
     setCoStep(2);
     requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
-  }
-
-  // "Buy now" and the /checkout page ask for the bag to open straight on the
-  // delivery & payment step (runs after the open effect above reset it to 1).
-  useEffect(() => {
-    if (!cartOpen || !checkoutRequested) return;
-    consumeCheckoutRequest();
-    if (items.length) goToCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartOpen, checkoutRequested]);
+  };
 
   /* Abandoned-cart capture: once the shopper reaches the checkout step with a
      valid 10-digit phone + items in the bag, record it so the backend can send
@@ -1024,11 +1014,15 @@ export default function CartDrawer() {
                 onClick={() => {
                   setCartOpen(false);
                   if (!orderSuccess.orderNumber) return;
-                  router.push(`/order-confirmation?order=${encodeURIComponent(orderSuccess.orderNumber)}`);
+                  // On the /test storefront land on its themed confirmation page.
+                  const onTest = typeof window !== 'undefined' && window.location.pathname.startsWith('/test');
+                  router.push(onTest
+                    ? `/test/order-confirmation?order=${orderSuccess.orderNumber}`
+                    : `/track-order?order=${orderSuccess.orderNumber}`);
                 }}
                 className="pill-cta mx-auto !py-2.5 !px-6"
               >
-                View Order <ArrowRight size={13} />
+                Track Order <ArrowRight size={13} />
               </button>
             </div>
           ) : items.length === 0 ? (

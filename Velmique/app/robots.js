@@ -1,8 +1,6 @@
-import { SITE_URL as SITE } from '@/lib/site';
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://velmique.co.in';
 
-// Private / transactional pages (also noindex in their metadata). The retired
-// /test preview is NOT disallowed: crawlers must see its 301s to the root.
-const DISALLOW = ['/account', '/cart', '/checkout', '/order-confirmation', '/wishlist', '/login', '/register', '/search', '/api/', '/_next/'];
+const DISALLOW = ['/account', '/cart', '/checkout', '/order-confirmation', '/api/', '/_next/'];
 // AI crawlers we explicitly allow. Each needs its own rule repeating the
 // private-path disallows, because a crawler obeys only its most-specific group.
 const AI_BOTS = ['GPTBot', 'PerplexityBot', 'ClaudeBot', 'Google-Extended'];

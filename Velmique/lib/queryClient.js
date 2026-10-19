@@ -19,6 +19,7 @@ export const queryKeys = {
   shippingAddresses: ['shippingAddresses'],
   wishlist: ['wishlist'],
   cart: ['cart'],
+  sliders: ['sliders'],
   categories: ['categories'],
   category: (handle) => ['category', handle],
   products: ['products'],

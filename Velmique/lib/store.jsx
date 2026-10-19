@@ -52,9 +52,7 @@ export function StoreProvider({ children }) {
   const [wishlistLoading, setWishlistLoading] = useState(true);
   const [wishlistSyncing, setWishlistSyncing] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  // "Buy now" / the /checkout page open the bag straight on its delivery &
-  // payment step; the drawer consumes this flag when it opens.
-  const [checkoutRequested, setCheckoutRequested] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [cartHydrated, setCartHydrated] = useState(false);
 
   // Load the saved bag after mount (not during render, so the server HTML and
@@ -193,12 +191,6 @@ export function StoreProvider({ children }) {
     }
   }, []);
 
-  const openCheckout = useCallback(() => {
-    setCheckoutRequested(true);
-    setCartOpen(true);
-  }, []);
-  const consumeCheckoutRequest = useCallback(() => setCheckoutRequested(false), []);
-
   const clearCart = useCallback((silent = false) => {
     setCart([]);
     if (!silent) toastCartCleared();
@@ -244,19 +236,17 @@ export function StoreProvider({ children }) {
   // Single memo'd value — emits a new object reference only when one of
   // the underlying inputs changes, instead of on every render.
   const value = useMemo(() => ({
-    cart, wishlist, cartOpen,
+    cart, wishlist, cartOpen, searchOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
-    setCartOpen,
-    checkoutRequested, openCheckout, consumeCheckoutRequest,
+    setCartOpen, setSearchOpen,
     cartTotal, cartCount, clearCart, restoreCart,
   }), [
-    cart, wishlist, cartOpen,
+    cart, wishlist, cartOpen, searchOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
-    checkoutRequested, openCheckout, consumeCheckoutRequest,
     cartTotal, cartCount, clearCart, restoreCart,
   ]);
 

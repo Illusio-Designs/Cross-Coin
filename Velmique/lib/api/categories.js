@@ -18,7 +18,7 @@ function cleanUrl(url) {
 }
 
 /* Map backend category → the shape the existing collections UI uses
-   (id, name, slug, tagline, description, image, productCount). */
+   (matches lib/data.js `collections` array). */
 function mapCategory(c) {
   return {
     id:           String(c.id),
