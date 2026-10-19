@@ -1270,32 +1270,6 @@ exports.receiveWebhook = async (req, res) => {
   }
 };
 
-// ─── Assign conversation to agent ─────────────────────────────────────────────
-exports.assignConversation = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { agentId } = req.body;
-    const [updated] = await WhatsappConversation.update({ assigned_to: agentId || null }, { where: { id } });
-    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// ─── Tag conversation ─────────────────────────────────────────────────────────
-exports.tagConversation = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { tags } = req.body; // comma-separated string
-    const [updated] = await WhatsappConversation.update({ tags: tags || null }, { where: { id } });
-    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
 // ─── Set conversation brand ───────────────────────────────────────────────────
 // Manual override for the inbox brand badge: a shared number can't always detect
 // the brand from the message or an order, so let staff set it explicitly.
@@ -1320,19 +1294,6 @@ exports.setConversationNote = async (req, res) => {
     const [updated] = await WhatsappConversation.update({ agent_notes: note }, { where: { id } });
     if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
     res.json({ success: true, agent_notes: note });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// ─── Opt-out management ───────────────────────────────────────────────────────
-exports.setOptOut = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { opted_out } = req.body;
-    const [updated] = await WhatsappConversation.update({ opted_out: !!opted_out }, { where: { id } });
-    if (!updated) return res.status(404).json({ success: false, message: 'Conversation not found' });
-    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1494,7 +1455,6 @@ exports.runBroadcast = async (req, res) => {
 
         // Build audience: opted-in conversations for this brand
         const convWhere = { brand_id: broadcast.brand_id, opted_out: false };
-        if (filter.tags) convWhere.tags = { [Op.like]: `%${filter.tags}%` };
 
         const convs = await WhatsappConversation.findAll({ where: convWhere, attributes: ['customer_phone', 'customer_name'] });
         const phones = convs.map(c => c.customer_phone);
@@ -1524,32 +1484,18 @@ exports.getSLAStats = async (req, res) => {
     const brandId = parseInt(req.query.brandId) || 1;
     const { sequelize: sq } = require('../config/db.js');
 
-    const [avgResponseTime, tagStats, agentStats] = await Promise.all([
-      // Average first response time in minutes
-      WhatsappConversation.findOne({
-        where: { brand_id: brandId, first_response_at: { [Op.ne]: null } },
-        attributes: [[sq.fn('AVG', sq.fn('TIMESTAMPDIFF', sq.literal('SECOND'), sq.col('createdAt'), sq.col('first_response_at'))), 'avg_seconds']],
-        raw: true,
-      }),
-      // Conversations by tag
-      sq.query(
-        `SELECT tags, COUNT(*) as count FROM whatsapp_conversations WHERE brand_id = ? AND tags IS NOT NULL GROUP BY tags`,
-        { replacements: [brandId], type: sq.QueryTypes.SELECT }
-      ),
-      // Conversations by assigned agent
-      sq.query(
-        `SELECT assigned_to, COUNT(*) as count FROM whatsapp_conversations WHERE brand_id = ? AND assigned_to IS NOT NULL GROUP BY assigned_to`,
-        { replacements: [brandId], type: sq.QueryTypes.SELECT }
-      ),
-    ]);
+    // Average first response time in minutes
+    const avgResponseTime = await WhatsappConversation.findOne({
+      where: { brand_id: brandId, first_response_at: { [Op.ne]: null } },
+      attributes: [[sq.fn('AVG', sq.fn('TIMESTAMPDIFF', sq.literal('SECOND'), sq.col('createdAt'), sq.col('first_response_at'))), 'avg_seconds']],
+      raw: true,
+    });
 
     const avgSeconds = parseFloat(avgResponseTime?.avg_seconds || 0);
     res.json({
       success: true,
       sla: {
         avgFirstResponseMinutes: avgSeconds > 0 ? (avgSeconds / 60).toFixed(1) : null,
-        tagStats,
-        agentStats,
       },
     });
   } catch (err) {
@@ -1632,110 +1578,6 @@ exports.sendProductLink = async (req, res) => {
     res.json({ success: true, sent, message: lastSaved });
   } catch (err) {
     logger.error('[WhatsApp] sendProductLink failed:', errMsg(err));
-    res.status(500).json({ success: false, message: errMsg(err) });
-  }
-};
-
-// ─── Send product card to customer (interactive product message) ─────────────
-exports.sendProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { productId, variationId, brandId = 1 } = req.body;
-    if (!productId) return res.status(400).json({ success: false, message: 'productId required' });
-
-    const conv = await WhatsappConversation.findByPk(id);
-    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
-
-    const { ProductVariation } = require('../model/productVariationModel.js');
-
-    // Get variation (auto-pick first if not specified)
-    let variation;
-    if (variationId) {
-      variation = await ProductVariation.findByPk(variationId);
-      if (!variation || variation.productId !== productId) {
-        return res.status(400).json({ success: false, message: 'Variation not found for this product' });
-      }
-    } else {
-      variation = await ProductVariation.findOne({ where: { productId }, order: [['id', 'ASC']] });
-      if (!variation) return res.status(400).json({ success: false, message: 'No variation found for this product' });
-    }
-
-    // Use whatsapp_retailer_id if synced, otherwise construct it (for backward compatibility)
-    const retailerId = variation.whatsapp_retailer_id || `${productId}_${variation.id}`;
-
-    // Warn if not synced to catalog
-    if (!variation.whatsapp_retailer_id) {
-      logger.warn(`Product ${productId}_${variation.id} not synced to WhatsApp catalog. This may fail if not in catalog.`);
-    }
-
-    const result = await whatsappService.sendProductCard(conv.customer_phone, retailerId, brandId);
-
-    const saved = await WhatsappMessage.create({
-      conversation_id: id,
-      wa_message_id:   result?.messages?.[0]?.id || null,
-      direction:       'outbound',
-      type:            'template',
-      body:            JSON.stringify({ type: 'product', retailerId }),
-      status:          'sent',
-      sent_at:         new Date(),
-    });
-
-    await conv.update({ last_message: '🛍️ Product shared', last_message_at: new Date() });
-    res.json({ success: true, message: saved });
-  } catch (err) {
-    res.status(500).json({ success: false, message: errMsg(err) });
-  }
-};
-
-// ─── Send catalogue section to customer ──────────────────────────────────────
-exports.sendCatalogue = async (req, res) => {
-  try {
-    const { id } = req.params;
-    // retailerIds: array of "{productId}_{variationId}" strings
-    // OR productIds: array of productIds — we'll auto-resolve to first variation
-    const { retailerIds, productIds, headerText, bodyText, brandId = 1 } = req.body;
-
-    const conv = await WhatsappConversation.findByPk(id);
-    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
-
-    let finalRetailerIds = retailerIds;
-
-    // If only productIds provided, resolve each to whatsapp_retailer_id or "{productId}_{firstVariationId}"
-    if (!finalRetailerIds?.length && productIds?.length) {
-      const { ProductVariation } = require('../model/productVariationModel.js');
-      finalRetailerIds = [];
-      for (const pid of productIds) {
-        const v = await ProductVariation.findOne({ where: { productId: pid }, order: [['id', 'ASC']] });
-        if (v) {
-          // Use synced whatsapp_retailer_id if available, fallback to constructed ID
-          const rId = v.whatsapp_retailer_id || `${pid}_${v.id}`;
-          finalRetailerIds.push(rId);
-        }
-      }
-    }
-
-    if (!finalRetailerIds?.length) return res.status(400).json({ success: false, message: 'No valid retailer IDs resolved' });
-
-    const result = await whatsappService.sendCatalogueMessage(
-      conv.customer_phone,
-      finalRetailerIds,
-      { headerText, bodyText },
-      brandId
-    );
-
-    const saved = await WhatsappMessage.create({
-      conversation_id: id,
-      wa_message_id:   result?.messages?.[0]?.id || null,
-      direction:       'outbound',
-      type:            'template',
-      body:            JSON.stringify({ type: 'catalogue', retailerIds: finalRetailerIds }),
-      status:          'sent',
-      sent_at:         new Date(),
-    });
-
-    await conv.update({ last_message: `🛍️ Catalogue shared (${finalRetailerIds.length} products)`, last_message_at: new Date() });
-    res.json({ success: true, message: saved });
-  } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }
 };
@@ -2025,43 +1867,6 @@ exports.proxyMedia = async (req, res) => {
   } catch (err) {
     logger.error('Media proxy error: ' + err.message);
     res.status(500).json({ success: false, message: errMsg(err) });
-  }
-};
-
-// ─── Back-in-stock: notify wishlisted customers ───────────────────────────────
-exports.notifyBackInStock = async (req, res) => {
-  try {
-    const { productId, brandId = 1 } = req.body;
-    if (!productId) return res.status(400).json({ success: false, message: 'productId required' });
-
-    const { Wishlist } = require('../model/wishlistModel.js');
-    const { Product } = require('../model/productModel.js');
-    const { User } = require('../model/userModel.js');
-
-    const product = await Product.findByPk(productId);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
-    const wishlistItems = await Wishlist.findAll({
-      where: { productId },
-      include: [{ model: User, attributes: ['id', 'username', 'phone'] }],
-    });
-
-    let sent = 0;
-    for (const item of wishlistItems) {
-      const phone = item.User?.phone;
-      if (!phone) continue;
-      // Check opted out
-      const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${phone.slice(-10)}` }, brand_id: brandId } });
-      if (conv?.opted_out) continue;
-      try {
-        await whatsappService.sendBackInStock(phone, { customerName: item.User?.username, productName: product.name, productSlug: product.slug }, brandId);
-        sent++;
-      } catch (e) { logger.warn('Back-in-stock WA failed: ' + e.message); }
-    }
-
-    res.json({ success: true, notified: sent, total: wishlistItems.length });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 };
 

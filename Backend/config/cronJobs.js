@@ -473,6 +473,21 @@ function initializeCronJobs() {
     }
   }));
 
+  // ── Product alerts — every 30 min, 9 AM–9 PM IST only ────────────────────
+  // WhatsApp customers who wishlisted a product or still have it in their
+  // cart when it comes back in stock or drops in price. Changes made at night
+  // are picked up by the first run of the morning, so nobody is messaged
+  // while asleep. See services/productAlertService.js.
+  cron.schedule('20,50 9-20 * * *', queued('cron:product-alerts', async () => {
+    try {
+      const { runProductAlerts } = require('../services/productAlertService.js');
+      const r = await runProductAlerts();
+      if (r.events) console.log(`✅ [CRON] Product alerts: ${r.events} change(s), ${r.sent} message(s) sent`);
+    } catch (error) {
+      console.error('❌ [CRON] Product alerts error:', error.message);
+    }
+  }), { timezone: 'Asia/Kolkata' });
+
   // ── Stale Prepaid Order Cleanup — every 30 minutes at :10 and :40 ────────
   // Cancels prepaid orders where payment_status is still 'pending' or 'failed'
   // after 30 minutes (customer abandoned or payment failed)
@@ -572,6 +587,7 @@ function initializeCronJobs() {
   console.log('   - Review Request: Daily at 10 AM');
   console.log('   - Win-back Campaign: Daily at 11 AM');
   console.log('   - Post-purchase Upsell: Daily at 3 PM');
+  console.log('   - Product Alerts (back in stock / price drop): Every 30 min, 9 AM–9 PM IST');
   console.log('   - Stale Prepaid Cleanup: Every 30 min at :10/:40');
 }
 

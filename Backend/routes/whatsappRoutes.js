@@ -45,11 +45,8 @@ router.get('/conversations/:id/messages',       isAuthenticated, isWhatsappManag
 router.post('/conversations/:id/reply',         isAuthenticated, isWhatsappManager, ctrl.sendReply);
 router.post('/conversations/:id/send-media',    isAuthenticated, isWhatsappManager, waMediaUpload.single('file'), ctrl.sendMediaReply);
 router.put('/conversations/:id/resolve',        isAuthenticated, isWhatsappManager, ctrl.resolveConversation);
-router.put('/conversations/:id/assign',         isAuthenticated, isWhatsappManager, ctrl.assignConversation);
-router.put('/conversations/:id/tags',           isAuthenticated, isWhatsappManager, ctrl.tagConversation);
 router.put('/conversations/:id/brand',          isAuthenticated, isWhatsappManager, ctrl.setConversationBrand);
 router.put('/conversations/:id/note',           isAuthenticated, isWhatsappManager, ctrl.setConversationNote);
-router.put('/conversations/:id/optout',         isAuthenticated, isWhatsappManager, ctrl.setOptOut);
 
 // ── Canned Responses ──────────────────────────────────────────────────────────
 router.get('/canned-responses',     isAuthenticated, isWhatsappManager, ctrl.getCannedResponses);
@@ -84,16 +81,11 @@ router.get('/media/:mediaId', (req, res, next) => {
   next();
 }, isAuthenticated, isWhatsappManager, ctrl.proxyMedia);
 
-// ── Back-in-stock notifications ───────────────────────────────────────────────
-router.post('/notify/back-in-stock', isAuthenticated, isAdmin, ctrl.notifyBackInStock);
-
 // ── Canned responses seed ─────────────────────────────────────────────────────
 router.post('/canned-responses/seed', isAuthenticated, isAdmin, ctrl.seedCannedResponses);
 
-// ── Send product / catalogue ──────────────────────────────────────────────────
-router.post('/conversations/:id/send-product',        isAuthenticated, isWhatsappManager, ctrl.sendProduct);
+// ── Send products (photo + buy link) ──────────────────────────────────────────────────
 router.post('/conversations/:id/send-product-link',   isAuthenticated, isWhatsappManager, ctrl.sendProductLink);
-router.post('/conversations/:id/send-catalogue', isAuthenticated, isWhatsappManager, ctrl.sendCatalogue);
 
 // Sync products to WhatsApp catalog
 router.post('/products/sync-catalog', isAuthenticated, isAdmin, ctrl.syncProductsCatalog);

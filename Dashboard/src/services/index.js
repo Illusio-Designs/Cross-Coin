@@ -2370,16 +2370,6 @@ export const whatsappService = {
     return response.data;
   },
 
-  assignConversation: async (conversationId, agentId) => {
-    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/assign`, { agentId });
-    return response.data;
-  },
-
-  tagConversation: async (conversationId, tags) => {
-    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/tags`, { tags });
-    return response.data;
-  },
-
   setConversationBrand: async (conversationId, brandId) => {
     const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/brand`, { brandId });
     return response.data;
@@ -2387,11 +2377,6 @@ export const whatsappService = {
 
   updateConversationNote: async (conversationId, note) => {
     const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/note`, { note });
-    return response.data;
-  },
-
-  setOptOut: async (conversationId, opted_out) => {
-    const response = await adminApi.put(`/api/whatsapp/conversations/${conversationId}/optout`, { opted_out });
     return response.data;
   },
 
@@ -2438,26 +2423,8 @@ export const whatsappService = {
     return response.data;
   },
 
-  // ── Back-in-stock ──
-  notifyBackInStock: async (productId, brandId = 1) => {
-    const response = await adminApi.post('/api/whatsapp/notify/back-in-stock', { productId, brandId });
-    return response.data;
-  },
-
   seedCannedResponses: async (brandId = 1) => {
     const response = await adminApi.post('/api/whatsapp/canned-responses/seed', { brandId });
-    return response.data;
-  },
-
-  sendProduct: async (conversationId, productId, brandId = 1) => {
-    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-product`, { productId, brandId });
-    return response.data;
-  },
-
-  sendCatalogue: async (conversationId, retailerIds, productIds, headerText, bodyText, brandId = 1) => {
-    const response = await adminApi.post(`/api/whatsapp/conversations/${conversationId}/send-catalogue`, {
-      retailerIds, productIds, headerText, bodyText, brandId
-    });
     return response.data;
   },
 

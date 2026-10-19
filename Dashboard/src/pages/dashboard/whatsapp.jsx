@@ -2146,22 +2146,11 @@ export function WhatsAppManager() {
                           </span>
                         </div>
                         <div className="was-rp-row"><span className="was-rp-label">Opt-out</span>
-                          <span className="was-rp-value" style={{fontSize:11,color:activeConv.opted_out?'#0a0a0a':'#0a0a0a'}}>
-                            {activeConv.opted_out?'Yes':'No'}
+                          <span className="was-rp-value" style={{fontSize:11}} title="Customers opt out by replying STOP and back in with START">
+                            {activeConv.opted_out?'Yes (replied STOP)':'No'}
                           </span>
                         </div>
                       </div>
-                      {/* Tags */}
-                      {activeConv.tags && (
-                        <div className="was-rp-section">
-                          <div className="was-rp-section-title">Tags</div>
-                          <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                            {activeConv.tags.split(',').filter(Boolean).map(tag => (
-                              <span key={tag} className="was-rp-tag">{tag.trim()}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                       {/* Quick actions */}
                       <div className="was-rp-section">
                         <div className="was-rp-section-title">Quick Actions</div>
@@ -2530,21 +2519,6 @@ export function WhatsAppManager() {
                 </div>
               </div>
 
-              {/* Tag stats */}
-              {slaStats?.tagStats?.length > 0 && (
-                <div className="was-dash-card" style={{marginTop:20}}>
-                  <div className="was-dash-card-head"><span className="was-dash-card-title">Conversations by Tag</span></div>
-                  <div className="was-activity">
-                    {slaStats.tagStats.map((t, i) => (
-                      <div key={i} className="was-act-item">
-                        <span className="was-act-dot was-act-dot--blue" />
-                        <span className="was-act-text"><strong>{t.tags}</strong></span>
-                        <span className="was-act-time">{t.count} convs</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}

@@ -724,8 +724,20 @@ function buildTemplates(storeName, storeUrl) {
         { type: 'HEADER', format: 'TEXT', text: 'Back in Stock!' },
         {
           type: 'BODY',
-          text: `Good news, {{1}}! 🎉\n\n*{{2}}* from your wishlist is back in stock at *{{3}}*.\n\n👉 Grab yours here: {{4}}\n\nPopular sizes sell out fast, so don't wait too long!`,
+          text: `Good news, {{1}}! 🎉\n\n*{{2}}*, which you saved at *{{3}}*, is back in stock.\n\n👉 Grab yours here: {{4}}\n\nPopular sizes sell out fast, so don't wait too long!`,
           example: { body_text: [['Rushikesh', 'Classic Crew Socks', storeName, `https://${storeUrl}/products/sample-product`]] },
+        },
+        { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      name: tName('price_drop'), category: 'MARKETING', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Price Drop Alert!' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}! 🎉 *{{2}}*, which you saved at *{{3}}*, is now *₹{{4}}* (was ₹{{5}}).\n\n👉 Get it here: {{6}}\n\nThe new price won't last forever!`,
+          example: { body_text: [['Rushikesh', 'Classic Crew Socks', storeName, '249', '299', `https://${storeUrl}/products/sample-product`]] },
         },
         { type: 'FOOTER', text: footer },
       ],
@@ -1373,6 +1385,18 @@ async function sendBackInStock(phone, data, brandId = 1) {
   ], brandId);
 }
 
+async function sendPriceDrop(phone, data, brandId = 1) {
+  const rupees = (n) => { const v = Number(n) || 0; return Number.isInteger(v) ? String(v) : v.toFixed(2); };
+  return sendTemplate(phone, tName('price_drop'), [
+    data.customerName || 'there',
+    data.productName,
+    await _brandName(brandId),
+    rupees(data.newPrice),
+    rupees(data.oldPrice),
+    await _productUrl(brandId, data.productSlug),
+  ], brandId);
+}
+
 async function sendLoyaltyNotification(phone, data, brandId = 1) {
   return sendTemplate(phone, tName('loyalty_points'), [
     data.customerName || 'there',
@@ -1456,83 +1480,6 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
     }
   }
   return { sent, failed, throttled };
-}
-
-// ─── Send single product card (interactive product message) ──────────────────
-// product_retailer_id in your catalogue feed is "{productId}_{variationId}"
-// Pass retailerIds as an array like ["123_456"] matching your catalogue g:id values
-async function sendProductCard(phone, retailerId, brandId = 1) {
-  const { token, phoneNumberId } = await getCredentials(brandId);
-  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
-  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
-
-  const to = formatE164(phone);
-  if (!to) throw new Error('Invalid phone number: ' + phone);
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-  const res = await WA_HTTP.post(
-    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    {
-      messaging_product: 'whatsapp',
-      to,
-      type: 'interactive',
-      interactive: {
-        type: 'product',
-        body: { text: `Check out this product from ${storeName} 👇` },
-        action: {
-          catalog_id: catalogId,
-          // retailerId must match g:id in your catalogue feed exactly: "{productId}_{variationId}"
-          product_retailer_id: String(retailerId),
-        },
-      },
-    },
-    { headers: authHeader(token) }
-  );
-  return res.data;
-}
-
-// ─── Send catalogue section (multi-product message — up to 30 items) ─────────
-// retailerIds must be an array of strings matching g:id in your catalogue feed
-async function sendCatalogueMessage(phone, retailerIds, opts = {}, brandId = 1) {
-  const { token, phoneNumberId } = await getCredentials(brandId);
-  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
-  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
-
-  const to = formatE164(phone);
-  if (!to) throw new Error('Invalid phone number: ' + phone);
-  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
-
-  // Meta allows max 30 products per section, max 10 sections
-  const sections = [];
-  const chunkSize = 30;
-  for (let i = 0; i < retailerIds.length; i += chunkSize) {
-    sections.push({
-      title: i === 0 ? (opts.sectionTitle || `${storeName} Products`) : `More Products`,
-      product_items: retailerIds.slice(i, i + chunkSize).map(id => ({
-        product_retailer_id: String(id),
-      })),
-    });
-  }
-
-  const res = await WA_HTTP.post(
-    `${GRAPH_API_URL}/${phoneNumberId}/messages`,
-    {
-      messaging_product: 'whatsapp',
-      to,
-      type: 'interactive',
-      interactive: {
-        type: 'product_list',
-        header: { type: 'text', text: opts.headerText || `${storeName} Collection` },
-        body: { text: opts.bodyText || `Browse our latest products and tap to order directly! 🛍️` },
-        footer: { text: `Powered by ${storeName}` },
-        action: {
-          catalog_id: catalogId,
-          sections,
-        },
-      },
-    },
-    { headers: authHeader(token) }
-  );
-  return res.data;
 }
 
 // ─── Sync products to WhatsApp catalog ────────────────────────────────────────
@@ -1663,6 +1610,7 @@ module.exports = {
   sendAbandonedCart,
   sendReviewRequest,
   sendBackInStock,
+  sendPriceDrop,
   sendLoyaltyNotification,
   sendWinBack,
   sendPostPurchaseUpsell,
@@ -1670,8 +1618,6 @@ module.exports = {
   sendBroadcast,
   resolveApprovedTemplateName,
   // Catalogue & product
-  sendProductCard,
-  sendCatalogueMessage,
   syncProductsToCatalog,
   // Media
   getMediaUrl,
