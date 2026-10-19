@@ -137,4 +137,4 @@ async function getChatContext(conversationId) {
   };
 }
 
-module.exports = { getChatContext };
+module.exports = { getChatContext, stageOf };

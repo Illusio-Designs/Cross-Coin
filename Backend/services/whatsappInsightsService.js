@@ -13,6 +13,7 @@
 //   whatsapp_messages.error_reason   readable reason for a failed send
 //   whatsapp_messages index on createdAt (every report here windows on it)
 //   abandoned_carts.link_opened_at   first time the recovery link was opened
+//   abandoned_carts.wa_sent_at       when the recovery message went out (7-day no-resend rule)
 // The whatsapp_messages columns are also created by index.js (v27); the guards
 // here only matter if this code runs before that migration has.
 //
@@ -60,16 +61,19 @@ async function _ensureSchema() {
     `SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
         AND ((TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME IN ('sent_by','automation_key','error_reason'))
-          OR (TABLE_NAME = 'abandoned_carts' AND COLUMN_NAME = 'link_opened_at'))`);
+          OR (TABLE_NAME = 'abandoned_carts' AND COLUMN_NAME IN ('link_opened_at','wa_sent_at')))`);
   const have = new Set(cols.map((r) => `${r.t}.${r.c}`));
   const msgAdds = [];
   if (!have.has('whatsapp_messages.sent_by')) msgAdds.push('ADD COLUMN sent_by INT NULL');
   if (!have.has('whatsapp_messages.automation_key')) msgAdds.push('ADD COLUMN automation_key VARCHAR(64) NULL');
   if (!have.has('whatsapp_messages.error_reason')) msgAdds.push('ADD COLUMN error_reason VARCHAR(255) NULL');
   if (msgAdds.length) await exec(`ALTER TABLE whatsapp_messages ${msgAdds.join(', ')}`);
-  if (!have.has('abandoned_carts.link_opened_at')) {
+  const cartAdds = [];
+  if (!have.has('abandoned_carts.link_opened_at')) cartAdds.push('ADD COLUMN link_opened_at DATETIME NULL');
+  if (!have.has('abandoned_carts.wa_sent_at')) cartAdds.push('ADD COLUMN wa_sent_at DATETIME NULL');
+  if (cartAdds.length) {
     try {
-      await exec('ALTER TABLE abandoned_carts ADD COLUMN link_opened_at DATETIME NULL');
+      await exec(`ALTER TABLE abandoned_carts ${cartAdds.join(', ')}`);
     } catch (e) {
       // Table may not exist yet on a fresh DB (index.js creates it at startup).
       if (!/doesn't exist/i.test(e.message)) throw e;
@@ -546,7 +550,8 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
       } else {
         wa = 'wait';
         waSendAt = sendAt;
-        result = sendAt > now ? `Sends at ${istTime(sendAt)}` : 'Sending shortly';
+        result = sendAt <= now ? 'Sending shortly'
+          : `Sends ${ist(sendAt).ymd === ist(now).ymd ? '' : ist(sendAt).ymd === ist(new Date(now.getTime() + DAY)).ymd ? 'tomorrow ' : `on ${ist(sendAt).ymd} `}at ${istTime(sendAt)}`;
       }
     }
 
@@ -624,6 +629,10 @@ async function sendCartNow(id) {
   if (convs.some((c) => Number(c.opted_out))) {
     return { status: 409, body: { success: false, code: 'OPTED_OUT', message: 'This customer opted out of WhatsApp offers' } };
   }
+  if (await recovery.orderedSince({ phone: p10, brandId: row.brandId, after: row.updatedAt })) {
+    await exec(`UPDATE abandoned_carts SET status = 'recovered', updated_at = updated_at WHERE id = :id`, { id: row.id });
+    return { status: 409, body: { success: false, code: 'ALREADY_ORDERED', message: 'This shopper has already ordered' } };
+  }
   const rules = await recovery.getCartRules({ fresh: true });
   const whatsappService = require('./whatsappService.js');
   const token = await recovery.ensureToken(row);
@@ -643,8 +652,7 @@ async function sendCartNow(id) {
   if (result && result.rate_limited) {
     return { status: 429, body: { success: false, code: 'RATE_LIMITED', message: 'This customer already got 10 messages in the last hour. Try again later.' } };
   }
-  // silent: keep updated_at (= when the cart was left) as it is.
-  await row.update({ status: 'messaged', waSent: true }, { silent: true });
+  await recovery.markMessaged(row); // keeps updated_at (= when the cart was left)
   return { status: 200, body: { success: true, wa_message_id: result?.messages?.[0]?.id || null, conversation_id: convs[0]?.id || null } };
 }
 
@@ -889,7 +897,10 @@ async function getFailed({ hours: rawHours, brandId: rawBrand } = {}) {
       || (r.type === 'template' ? (r.template_name ? `Template ${r.template_name}` : 'Template')
         : r.type === 'text' ? 'Reply' : `${r.type[0].toUpperCase()}${r.type.slice(1)}`);
     const who = r.customer_name || maskPhone(r.customer_phone) || 'Customer';
-    const reason = (r.error_reason && (describeFailure(null, r.error_reason) || r.error_reason))
+    // The status webhook stores Meta's text with a "(code N)" suffix — turn
+    // known codes into plain words.
+    const codeM = /\(code (\d+)\)\s*$/.exec(r.error_reason || '');
+    const reason = (r.error_reason && ((codeM && META_ERRORS[Number(codeM[1])]) || r.error_reason))
       || (Number(r.opted_out) ? 'Customer opted out' : 'WhatsApp didn’t say why');
     return {
       id: r.id,

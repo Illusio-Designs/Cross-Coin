@@ -123,9 +123,13 @@ exports.capturePhoneLead = async (req, res) => {
       // (popup_coupon_v2) and fills BOTH body variables ({{1}} brand name,
       // {{2}} coupon). The old direct sendTemplate() used the un-versioned
       // name and only 1 param, so Meta rejected every popup-coupon message.
-      await whatsappService.sendPopupCoupon(digits, { couponCode: COUPON_CODE }, brandId);
-      waSent = true;
-      await lead.update({ wa_sent: true });
+      // The sender skips numbers that replied STOP (per phone, shared number)
+      // and returns { skipped:true } when the automation is switched off.
+      const r = await whatsappService.sendPopupCoupon(digits, { couponCode: COUPON_CODE }, brandId);
+      if (!r?.skipped) {
+        waSent = true;
+        await lead.update({ wa_sent: true });
+      }
     } catch (waErr) {
       logger.warn(`Popup coupon WA send failed for ${digits}: ${waErr.message}`);
     }

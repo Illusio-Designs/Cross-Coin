@@ -56,29 +56,22 @@ function staffReplyUpdate(conv, preview) {
 
 // Shared-number mode: one verified WhatsApp number serves every brand, so we
 // can't tell the brand from the number. Attribute an inbound message to the
-// brand of the customer's MOST RECENT order (matched by shipping/guest phone).
-// Falls back to the shared default brand when the customer has no orders yet.
+// brand of the customer's MOST RECENT order. Shipping / guest phones are
+// encrypted at rest, so orders are matched by the keyed phone hash (and the
+// plain account phone) — see whatsappService.ordersForPhones. Falls back to the
+// shared default brand when the customer has no orders yet.
+async function recentOrdersByPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (digits.length !== 10) return [];
+  const rows = await whatsappService.ordersForPhones([digits]);
+  return rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
 async function resolveBrandByPhone(phone) {
   const DEFAULT_BRAND = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
   try {
-    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
-    if (digits.length !== 10) return DEFAULT_BRAND;
-    const { Order } = require('../model/orderModel.js');
-    const { ShippingAddress } = require('../model/shippingAddressModel.js');
-    const { GuestUser } = require('../model/guestUserModel.js');
-    const recent = { attributes: ['brand_id', 'createdAt'], order: [['createdAt', 'DESC']] };
-
-    const viaAddr = await Order.findOne({
-      ...recent,
-      include: [{ model: ShippingAddress, as: 'ShippingAddress', attributes: [], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
-    });
-    if (viaAddr?.brand_id) return viaAddr.brand_id;
-
-    const viaGuest = await Order.findOne({
-      ...recent,
-      include: [{ model: GuestUser, as: 'GuestUser', attributes: [], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
-    });
-    if (viaGuest?.brand_id) return viaGuest.brand_id;
+    const [latest] = await recentOrdersByPhone(phone);
+    if (latest?.brand_id) return latest.brand_id;
   } catch (e) {
     logger.warn('[WhatsApp] brand resolve by phone failed: ' + e.message);
   }
@@ -107,31 +100,25 @@ async function resolveBrandByOrderRef(text) {
 // WhatsApp only includes a customer's profile name in the webhook when they've
 // set one and their privacy allows it — so many threads have no name and the
 // inbox falls back to showing the raw phone number. When we have no name, look
-// one up from the customer's most recent order (shipping name), then their guest
-// record. Matched by the last-10 phone digits, same as the brand resolver.
+// one up from the customer's most recent order (shipping name, then guest
+// record, then account), matched by phone hash.
 async function resolveCustomerNameByPhone(phone) {
   try {
-    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
-    if (digits.length !== 10) return null;
-    const { Order } = require('../model/orderModel.js');
+    const orders = await recentOrdersByPhone(phone);
     const { ShippingAddress } = require('../model/shippingAddressModel.js');
     const { GuestUser } = require('../model/guestUserModel.js');
-    const recent = { attributes: ['id'], order: [['createdAt', 'DESC']] };
-
-    const viaAddr = await Order.findOne({
-      ...recent,
-      include: [{ model: ShippingAddress, as: 'ShippingAddress', attributes: ['full_name'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
-    });
-    const addrName = viaAddr?.ShippingAddress?.full_name?.trim();
-    if (addrName) return addrName;
-
-    const viaGuest = await Order.findOne({
-      ...recent,
-      include: [{ model: GuestUser, as: 'GuestUser', attributes: ['firstName', 'lastName'], required: true, where: { phone: { [Op.like]: `%${digits}` } } }],
-    });
-    const g = viaGuest?.GuestUser;
-    const gName = g ? [g.firstName, g.lastName].filter(Boolean).join(' ').trim() : '';
-    if (gName) return gName;
+    for (const o of orders.slice(0, 3)) {
+      if (o.shipping_address_id) {
+        const a = await ShippingAddress.findByPk(o.shipping_address_id, { attributes: ['id', 'full_name'] });
+        const n = a?.full_name?.trim();
+        if (n) return n;
+      }
+      if (o.guest_user_id) {
+        const g = await GuestUser.findByPk(o.guest_user_id);
+        const n = g ? [g.firstName, g.lastName].filter(Boolean).join(' ').trim() : '';
+        if (n) return n;
+      }
+    }
   } catch (e) {
     logger.warn('[WhatsApp] name resolve by phone failed: ' + e.message);
   }
@@ -303,12 +290,13 @@ exports.getStats = async (req, res) => {
           sent_at: { [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
           ...brandMsgWhere,
         },
+        // Bucket by the IST calendar day (sent_at is stored in UTC).
         attributes: [
-          [fn('DATE', col('sent_at')), 'day'],
+          [sequelize.literal('DATE(DATE_ADD(sent_at, INTERVAL 330 MINUTE))'), 'day'],
           [fn('COUNT', col('id')), 'count'],
         ],
-        group: [fn('DATE', col('sent_at'))],
-        order: [[fn('DATE', col('sent_at')), 'ASC']],
+        group: [sequelize.literal('DATE(DATE_ADD(sent_at, INTERVAL 330 MINUTE))')],
+        order: [[sequelize.literal('DATE(DATE_ADD(sent_at, INTERVAL 330 MINUTE))'), 'ASC']],
         raw: true,
       }),
     ]);
@@ -358,6 +346,31 @@ exports.getStats = async (req, res) => {
 // one grouped order lookup per page (no per-row queries).
 const CONV_FILTERS = new Set(['all', 'unread', 'waiting', 'window_closed', 'has_order']);
 
+// whatsapp_conversations is utf8mb4_unicode_ci while users / shipping_addresses
+// / guest_users may be utf8mb4_general_ci; comparing their columns directly
+// fails with "Illegal mix of collations". Cast the conversation side to the
+// OTHER column's own collation (read once) so its index is still used.
+let _collations = null;
+async function phoneCollations() {
+  if (_collations) return _collations;
+  const { sequelize } = require('../config/db.js');
+  const rows = await sequelize.query(
+    `SELECT TABLE_NAME AS t, COLUMN_NAME AS c, COLLATION_NAME AS coll FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND ((TABLE_NAME = 'users' AND COLUMN_NAME = 'phone')
+          OR (TABLE_NAME IN ('shipping_addresses', 'guest_users') AND COLUMN_NAME IN ('phone', 'phone_hash')))`,
+    { type: require('sequelize').QueryTypes.SELECT });
+  const safe = (v) => (/^[a-z0-9_]+$/i.test(String(v || '')) ? v : 'utf8mb4_unicode_ci');
+  const get = (t, c) => safe(rows.find((r) => r.t === t && r.c === c)?.coll);
+  _collations = {
+    users_phone: get('users', 'phone'),
+    sa_hash: get('shipping_addresses', 'phone_hash'),
+    sa_phone: get('shipping_addresses', 'phone'),
+    gu_hash: get('guest_users', 'phone_hash'),
+  };
+  return _collations;
+}
+
 async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const { sequelize } = require('../config/db.js');
   const { QueryTypes } = require('sequelize');
@@ -390,12 +403,14 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const WAITING = '(c.last_inbound_at IS NOT NULL AND (c.last_reply_at IS NULL OR c.last_reply_at < c.last_inbound_at))';
   const CLOSED  = '(c.last_inbound_at IS NULL OR c.last_inbound_at < :cut24)';
   const hasKey = !!require('../utils/encryption.js').phoneHash('9999999999');
+  const col = await phoneCollations();
+  const p10c = (coll) => `RIGHT(c.customer_phone, 10) COLLATE ${coll}`;
   const HAS_ORDER = `(EXISTS (SELECT 1 FROM users u JOIN orders o ON o.user_id = u.id
-                        WHERE u.phone IN (RIGHT(c.customer_phone, 10), CONCAT('91', RIGHT(c.customer_phone, 10)), CONCAT('+91', RIGHT(c.customer_phone, 10))))
+                        WHERE u.phone IN (${p10c(col.users_phone)}, CONCAT('91', ${p10c(col.users_phone)}) COLLATE ${col.users_phone}, CONCAT('+91', ${p10c(col.users_phone)}) COLLATE ${col.users_phone}))
      OR ${hasKey
-    ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = c.phone_hash)
-          OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = c.phone_hash)))`
-    : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = RIGHT(c.customer_phone, 10))`})`;
+    ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = c.phone_hash COLLATE ${col.sa_hash})
+          OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = c.phone_hash COLLATE ${col.gu_hash})))`
+    : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = ${p10c(col.sa_phone)})`})`;
   const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER }[filter];
 
   const [countRow] = await sequelize.query(
@@ -403,6 +418,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
             SUM(c.unread_count > 0) AS unread_n,
             SUM(${WAITING}) AS waiting_n,
             SUM(${CLOSED}) AS closed_n,
+            SUM(${HAS_ORDER}) AS has_order_n,
             SUM(${filterSql}) AS filtered_n
        FROM whatsapp_conversations c WHERE ${baseSql}`,
     { replacements: repl, type: QueryTypes.SELECT });
@@ -475,6 +491,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
       unread: Number(countRow?.unread_n) || 0,
       waiting: Number(countRow?.waiting_n) || 0,
       window_closed: Number(countRow?.closed_n) || 0,
+      has_order: Number(countRow?.has_order_n) || 0,
     },
   };
 }
@@ -977,130 +994,91 @@ exports.testConnection = async (req, res) => {
 // Resolve the correct brand's name + bare domain for auto-reply copy, so a
 // shared WhatsApp number never shows "Cross Coin" to a Soxbae/Morbix/etc shopper.
 async function brandCopy(brandId) {
-  const settingsHelper = require('../services/settingsHelper.js');
-  const name = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'our store';
-  let url = (await settingsHelper.getSetting(brandId, 'STORE_URL')) || 'crosscoin.in';
-  url = String(url).replace(/^https?:\/\//, '').replace(/\/+$/, '');
-  return { name, url };
+  let name = null;
+  try {
+    const Brand = require('../model/brandModel.js');
+    const b = await Brand.findByPk(brandId, { attributes: ['display_name', 'name'] });
+    name = b && (b.display_name || b.name);
+  } catch (_) { /* fall back below */ }
+  const url = await whatsappService.getBrandDomain(brandId);
+  return { name: name || 'our store', url };
 }
 
+// Keyword replies are saved to the chat (automation key 'chat_auto_replies').
+// hi / track / return obey the on/off switch; STOP / START / CANCEL are always
+// handled because they change the customer's state.
 async function handleAutoReply(phone, text, brandId) {
   const lower = (text || '').toLowerCase().trim();
+  const say = (msg, gate = true) => whatsappService.sendAutoText('chat_auto_replies', phone, msg, brandId, { gate });
   try {
     const { name: storeName, url: storeUrl } = await brandCopy(brandId);
     if (lower === 'track' || lower.startsWith('track ') || lower.includes('track my order') || lower.includes('where is my order')) {
+      if (!(await whatsappService.isAutomationEnabled('chat_auto_replies'))) return;
       const { Order } = require('../model/orderModel.js');
-      const { User } = require('../model/userModel.js');
-      const digits = phone.replace(/\D/g, '').slice(-10);
-      // Find latest order by phone
-      const { ShippingAddress } = require('../model/shippingAddressModel.js');
-      const addr = await ShippingAddress.findOne({ where: { phone: { [Op.like]: `%${digits}` } }, order: [['createdAt', 'DESC']] });
-      if (addr) {
-        const order = await Order.findOne({ where: { shipping_address_id: addr.id }, order: [['createdAt', 'DESC']] });
-        if (order) {
-          const trackUrl = order.tracking_url || `https://${storeUrl}/OrderTracking?order=${order.order_number}`;
-          const reply = `📦 Your latest order *#${order.order_number}*\nStatus: *${order.status}*\nAWB: ${order.tracking_number || 'Not assigned yet'}\n\nTrack here: ${trackUrl}`;
-          await whatsappService.sendTextMessage(phone, reply, brandId);
-          return;
-        }
+      const [latest] = await recentOrdersByPhone(phone);
+      const order = latest ? await Order.findByPk(latest.id) : null;
+      if (order) {
+        const trackUrl = await whatsappService.getTrackingUrl(order.brand_id || brandId, order.order_number);
+        const reply = `📦 Your latest order *#${order.order_number}*\nStatus: *${order.status}*\nAWB: ${order.shipping_waybill || order.tracking_number || 'Not assigned yet'}\n\nTrack here: ${trackUrl}`;
+        await say(reply);
+        return;
       }
-      await whatsappService.sendTextMessage(phone, `We couldn't find an order linked to this number. Please share your order number (e.g. ORD-20240101-0001) and we'll help you right away!`, brandId);
+      await say(`We couldn't find an order linked to this number. Please share your order number and we'll help you right away!`);
       return;
     }
 
     if (lower === 'hi' || lower === 'hello' || lower === 'hey') {
-      await whatsappService.sendTextMessage(phone, `👋 Hi! Welcome to *${storeName}*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Returns & refunds\n• *help* — Talk to our team`, brandId);
+      await say(`👋 Hi! Welcome to *${storeName}*.\n\nHow can we help you today?\n\nReply with:\n• *track* — Track your order\n• *return* — Returns & refunds\n• *help* — Talk to our team`);
       return;
     }
 
     if (lower === 'return' || lower.includes('return') || lower.includes('exchange')) {
-      await whatsappService.sendTextMessage(phone, `↩️ *Returns & Refunds*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://${storeUrl}/policy`, brandId);
+      await say(`↩️ *Returns & Refunds*\n\nWe accept returns within 7 days of delivery.\n\nTo initiate a return, please share your order number and reason.\n\nOr visit: https://${storeUrl}/policy`);
       return;
     }
 
+    // One thread per phone on the shared number → opt-out is per PHONE (all
+    // brands), never scoped by brand_id.
+    const variants = (() => { const d = String(phone).replace(/\D/g, ''); const t = d.slice(-10); return [...new Set([d, t, `91${t}`, `+91${t}`])]; })();
     if (lower === 'stop' || lower === 'unsubscribe' || lower === 'opt out') {
-      await WhatsappConversation.update({ opted_out: true }, { where: { customer_phone: phone, brand_id: brandId } });
-      await whatsappService.sendTextMessage(phone, `You've been unsubscribed from ${storeName} WhatsApp notifications. Reply *START* to re-subscribe.`, brandId);
+      await WhatsappConversation.update({ opted_out: true }, { where: { customer_phone: variants } });
+      await say(`You've been unsubscribed from ${storeName} WhatsApp offers. Order updates will still reach you. Reply *START* to re-subscribe.`, false);
       return;
     }
 
     if (lower === 'start' || lower === 'subscribe') {
-      await WhatsappConversation.update({ opted_out: false }, { where: { customer_phone: phone, brand_id: brandId } });
-      await whatsappService.sendTextMessage(phone, `✅ You're now subscribed to ${storeName} WhatsApp updates. You'll receive order notifications and offers.`, brandId);
+      await WhatsappConversation.update({ opted_out: false }, { where: { customer_phone: variants } });
+      await say(`✅ You're now subscribed to ${storeName} WhatsApp updates. You'll receive order notifications and offers.`, false);
       return;
     }
 
-    // Task 18: Cancel window — customer replies CANCEL within 2h of COD order confirmation
+    // Cancel window — customer replies CANCEL within 2h of placing a COD order.
+    // Goes through the normal cancel (transaction, stock + coupon + points
+    // restore, courier cancel, order.cancelled event).
     if (lower === 'cancel' || lower === 'cancel order') {
       try {
         const { Order } = require('../model/orderModel.js');
-        const { OrderItem } = require('../model/orderItemModel.js');
-        const { ProductVariation } = require('../model/productVariationModel.js');
-        const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-        const { ShippingAddress } = require('../model/shippingAddressModel.js');
-        const { Op } = require('sequelize');
-
-        const digits = phone.replace(/\D/g, '').slice(-10);
-        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-
-        // Find most recent confirmed COD order for this phone within 2 hours
-        const addr = await ShippingAddress.findOne({
-          where: { phone: { [Op.like]: `%${digits}` } },
-          order: [['createdAt', 'DESC']],
-        });
-
-        let order = null;
-        if (addr) {
-          order = await Order.findOne({
-            where: {
-              shipping_address_id: addr.id,
-              status: 'confirmed',
-              payment_type: 'cod',
-              createdAt: { [Op.gte]: twoHoursAgo },
-            },
-            order: [['createdAt', 'DESC']],
-          });
-        }
-
-        if (!order) {
-          await whatsappService.sendTextMessage(
-            phone,
-            `Your order is already being processed and cannot be cancelled via WhatsApp.\n\nTo cancel, please contact our support team with your order number.`,
-            brandId
-          );
+        const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+        const candidates = (await recentOrdersByPhone(phone)).filter((o) =>
+          String(o.payment_type).toLowerCase() === 'cod'
+          && ['awaiting_confirmation', 'confirmed', 'pending'].includes(String(o.status))
+          && new Date(o.created_at).getTime() >= twoHoursAgo);
+        const target = candidates[0] ? await Order.findByPk(candidates[0].id) : null;
+        if (!target) {
+          await say(`Your order is already being processed and cannot be cancelled via WhatsApp.\n\nTo cancel, please contact our support team with your order number.`, false);
           return;
         }
-
-        // Cancel the order
-        order.status = 'cancelled';
-        order.payment_status = 'cancelled';
-        await order.save();
-
-        // Restore stock
-        const items = await OrderItem.findAll({ where: { order_id: order.id } });
-        for (const item of items) {
-          if (item.variation_id) {
-            await ProductVariation.increment('stock', { by: item.quantity, where: { id: item.variation_id } });
-          }
+        const orderService = require('../services/orderService.js');
+        await orderService.cancelOrder(target.id, { reason: 'Cancelled by customer via WhatsApp', cancelledBy: null, isAdmin: false });
+        // order.cancelled sends the "Order cancelled" template; only add a text
+        // when that automatic message is switched off.
+        if (!(await whatsappService.isAutomationEnabled('order_cancelled'))) {
+          await say(`✅ Your order *#${target.order_number}* has been cancelled.\n\nIf you have any questions, reply *help* to talk to our team.`, false);
         }
-
-        await OrderStatusHistory.create({
-          order_id: order.id,
-          status: 'cancelled',
-          updated_by: null,
-          notes: 'Cancelled by customer via WhatsApp',
-          created_by: 'whatsapp_bot',
-        });
-
-        await whatsappService.sendTextMessage(
-          phone,
-          `✅ Your order *#${order.order_number}* has been cancelled successfully.\n\nIf you have any questions, reply *help* to talk to our team.`,
-          brandId
-        );
-        logger.info(`Order ${order.order_number} cancelled via WhatsApp by ${phone}`);
+        logger.info(`Order ${target.order_number} cancelled via WhatsApp by …${String(phone).slice(-4)}`);
       } catch (cancelErr) {
         logger.error('WA cancel order error: ' + cancelErr.message);
-        await whatsappService.sendTextMessage(phone, `Sorry, we couldn't process your cancellation right now. Please contact support.`, brandId);
+        await say(`Sorry, we couldn't cancel this order on WhatsApp. Please contact support with your order number.`, false).catch(() => {});
       }
       return;
     }
@@ -1152,11 +1130,27 @@ async function processCodReply(phone, kind, value, brandId) {
     if (confirmKeywords.includes(normalised)) intent = 'confirm';
     else if (rejectionKeywords.includes(normalised)) intent = 'reject';
     if (!intent) return;
-    const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+    // Shipping phones are encrypted → match orders by phone hash. Prefer the
+    // order the most recent COD-confirmation message was about.
+    const mine = (await recentOrdersByPhone(phone)).filter((o) =>
+      o.status === 'awaiting_confirmation' && String(o.payment_type).toLowerCase() === 'cod');
+    if (!mine.length) return;
+    let preferred = null;
+    try {
+      const { WhatsappConversation: WC, WhatsappMessage: WM } = require('../model/whatsappConversationModel.js');
+      const d = String(phone).replace(/\D/g, ''); const t10 = d.slice(-10);
+      const conv = await WC.findOne({ where: { customer_phone: [...new Set([d, t10, `91${t10}`, `+91${t10}`])] }, attributes: ['id'] });
+      if (conv) {
+        const last = await WM.findOne({
+          where: { conversation_id: conv.id, direction: 'outbound', template_name: { [OpCod.like]: 'cod_order_confirmation%' } },
+          order: [['id', 'DESC']], attributes: ['body'],
+        });
+        if (last?.body) preferred = mine.find((o) => String(last.body).includes(o.order_number)) || null;
+      }
+    } catch (_) { /* fall back to the newest */ }
+    const pick = preferred || mine[0];
     pendingOrder = await Order.findOne({
-      where: { status: 'awaiting_confirmation', payment_type: 'cod', cod_address_confirmed: false },
-      include: [{ model: ShippingAddress, as: 'ShippingAddress', where: { phone: { [OpCod.like]: `%${phoneDigits}` } }, required: true }],
-      order: [['created_at', 'DESC']],
+      where: { id: pick.id, status: 'awaiting_confirmation', payment_type: 'cod', cod_address_confirmed: false },
     });
   }
 
@@ -1406,12 +1400,15 @@ exports.receiveWebhook = async (req, res) => {
             const contactName = waName || await resolveCustomerNameByPhone(phone);
             const fc = await WhatsappConversation.findOrCreate({
               where: { customer_phone: phone },
-              defaults: { brand_id: phoneBrand, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, unread_count: 1, status: 'open' },
+              defaults: { brand_id: phoneBrand, customer_name: contactName, wa_contact_id: phone, last_message: lastMsgPreview, last_message_at: sentAt, last_inbound_at: sentAt, unread_count: 1, status: 'open' },
             });
             conv = fc[0]; created = fc[1]; // created=false only if a concurrent inbound won the race
           }
           if (!created) {
             const upd = { status: 'open' };
+            // Any customer message (re)opens the 24-hour reply window.
+            const prevIn = conv.last_inbound_at ? new Date(conv.last_inbound_at) : null;
+            if (!prevIn || sentAt > prevIn) upd.last_inbound_at = sentAt;
             // Fill the name only when we actually have a better one; never run an
             // extra order scan for a thread that already has a name.
             if (waName && waName !== conv.customer_name) upd.customer_name = waName;
@@ -1530,7 +1527,12 @@ exports.receiveWebhook = async (req, res) => {
                   const e = status.errors[0];
                   logger.warn(`[WhatsApp] message ${status.id} failed: ${(e.title || e.message || 'error')}${e.code ? ' (code ' + e.code + ')' : ''}`);
                 }
-                await WhatsappMessage.update({ status: next }, { where: { id: existing.id } });
+                const statusUpd = { status: next };
+                if (next === 'failed' && Array.isArray(status.errors) && status.errors.length) {
+                  const e = status.errors[0];
+                  statusUpd.error_reason = String(e.error_data?.details || e.title || e.message || 'Failed').slice(0, 240) + (e.code ? ` (code ${e.code})` : '');
+                }
+                await WhatsappMessage.update(statusUpd, { where: { id: existing.id } });
                 existing.status = next; // keep the map current if the same id recurs in this batch
               }
             } catch (statusErr) {
@@ -1654,37 +1656,33 @@ exports.seedCannedResponses = async (req, res) => {
   try {
     const brandId = parseInt(req.body.brandId) || 1;
 
+    // Brand-neutral: one shared number serves every store, so the wording uses
+    // the {name} {order} {courier} {tracking_link} {brand} placeholders the
+    // inbox fills per customer (never a hard-coded store name or URL).
     const defaults = [
-      // Order related
-      { shortcut: '/track',      title: 'Track Order',           body: `📦 To track your order, please visit:\nhttps://crosscoin.in/OrderTracking\n\nOr share your order number (e.g. ORD-20240101-0001) and I'll check it for you right away!` },
-      { shortcut: '/orderstatus',title: 'Order Status',          body: `✅ Your order is currently being processed. You'll receive a shipping notification with tracking details once it's dispatched.\n\nUsually takes 1-2 business days. 😊` },
-      { shortcut: '/delay',      title: 'Order Delay',           body: `🙏 We sincerely apologize for the delay in your order. Our team is working on it and it will be dispatched within 24 hours.\n\nWe appreciate your patience!` },
-      { shortcut: '/shipped',    title: 'Order Shipped',         body: `🚚 Great news! Your order has been shipped.\n\nAWB: {{awb}}\nCourier: {{courier}}\n\nTrack here: https://crosscoin.in/OrderTracking` },
-      { shortcut: '/cancel',     title: 'Cancel Order',          body: `We're sorry to hear you'd like to cancel. Please note:\n\n• Orders can be cancelled before dispatch\n• Once shipped, cancellation is not possible\n\nPlease share your order number and we'll check the status for you.` },
-
-      // Returns & Refunds
-      { shortcut: '/return',     title: 'Return Policy',         body: `↩️ *Return Policy*\n\nWe accept returns within *7 days* of delivery for:\n• Wrong product received\n• Damaged/defective item\n\nTo initiate a return, share:\n1. Order number\n2. Photo of the product\n3. Reason for return\n\nRefund is processed within 5-7 business days.` },
-      { shortcut: '/refund',     title: 'Refund Status',         body: `💰 Refunds are processed within *5-7 business days* after we receive the returned item.\n\nThe amount will be credited to your original payment method.\n\nPlease share your order number to check the status.` },
-      { shortcut: '/damaged',    title: 'Damaged Product',       body: `😔 We're really sorry you received a damaged product! This is not the experience we want for you.\n\nPlease share:\n1. Order number\n2. Clear photos of the damage\n\nWe'll arrange a replacement or full refund immediately.` },
-
-      // Payment
-      { shortcut: '/payment',    title: 'Payment Methods',       body: `💳 *Payment Options at Cross Coin:*\n\n• UPI (GPay, PhonePe, Paytm)\n• Credit/Debit Card\n• Net Banking\n• Cash on Delivery (COD)\n\nAll online payments are 100% secure. 🔒` },
-      { shortcut: '/cod',        title: 'COD Info',              body: `🏠 *Cash on Delivery is available!*\n\nJust select COD at checkout. Please keep the exact amount ready at the time of delivery.\n\nNote: COD orders may take 1 extra day to process.` },
-      { shortcut: '/paymentfail',title: 'Payment Failed',        body: `❌ Sorry your payment didn't go through! Here's what you can try:\n\n1. Check your bank balance\n2. Try a different payment method\n3. Clear browser cache and retry\n\nIf the amount was deducted but order wasn't placed, it will be auto-refunded in 5-7 days.` },
-
-      // Product & Stock
-      { shortcut: '/size',       title: 'Size Guide',            body: `📏 *Size Guide for Cross Coin Socks:*\n\n• S/M — Fits shoe size 5-8\n• L/XL — Fits shoe size 9-12\n\nWhen in doubt, size up! Our socks have good stretch. 😊\n\nNeed more help? Share your shoe size and I'll recommend the right size.` },
-      { shortcut: '/stock',      title: 'Stock Availability',    body: `🔍 Let me check the stock for you! Please share the product name or link and I'll confirm availability right away.` },
-      { shortcut: '/restock',    title: 'Restock Notification',  body: `🔔 I've noted your interest! We'll notify you on WhatsApp as soon as this product is back in stock.\n\nYou can also add it to your Wishlist on our website to get automatic alerts.` },
-      { shortcut: '/bulk',       title: 'Bulk Order',            body: `📦 *Bulk Orders Welcome!*\n\nFor orders of 10+ pairs, we offer special pricing.\n\nPlease share:\n1. Product name\n2. Quantity needed\n3. Delivery timeline\n\nOur team will get back with a custom quote within 24 hours.` },
-
-      // Shipping
-      { shortcut: '/shipping',   title: 'Shipping Info',         body: `🚚 *Shipping Details:*\n\n• Prepaid orders: FREE shipping\n• COD orders: ₹50 shipping charge\n• Delivery time: 3-7 business days\n• We ship across India 🇮🇳\n\nExpress delivery available in select cities.` },
-      { shortcut: '/address',    title: 'Change Address',        body: `📍 Address can be changed only *before the order is dispatched*.\n\nPlease share your order number and new address quickly and we'll update it for you!` },
-
+      // Orders
+      { category: 'orders', shortcut: '/track',       title: 'Track Order',         body: `📦 Hi {name}, your order {order} is with {courier}. Track it here: {tracking_link}` },
+      { category: 'orders', shortcut: '/orderstatus', title: 'Order Status',        body: `✅ Your order {order} is being processed. You'll get a shipping message with tracking details once it's dispatched — usually within 1-2 working days. 😊` },
+      { category: 'orders', shortcut: '/delay',       title: 'Order Delay',         body: `🙏 Sorry for the delay with order {order}. Our team is on it and it will be dispatched within 24 hours. Thank you for your patience!` },
+      { category: 'orders', shortcut: '/shipped',     title: 'Order Shipped',       body: `🚚 Good news {name}! Order {order} has shipped with {courier}.\n\nTrack here: {tracking_link}` },
+      { category: 'orders', shortcut: '/cancel',      title: 'Cancel Order',        body: `We're sorry to hear you'd like to cancel. Orders can be cancelled before dispatch; once shipped it isn't possible.\n\nPlease share your order number and we'll check it for you.` },
+      { category: 'orders', shortcut: '/address',     title: 'Change Address',      body: `📍 The address can be changed only *before the order is dispatched*. Please share the new address for {order} with house number, landmark and PIN code.` },
+      // Returns & refunds
+      { category: 'returns', shortcut: '/return',     title: 'Return Policy',       body: `↩️ You can request a return within *7 days* of delivery for a wrong, damaged or defective item.\n\nPlease share:\n1. Order number\n2. A photo of the product\n3. Reason for return` },
+      { category: 'returns', shortcut: '/refund',     title: 'Refund Status',       body: `💰 Refunds reach your original payment method in *5-7 working days* after we receive the returned item. Please share your order number to check the status.` },
+      { category: 'returns', shortcut: '/damaged',    title: 'Damaged Product',     body: `😔 We're really sorry you received a damaged product, {name}! Please share the order number and clear photos of the damage — we'll arrange a replacement or refund right away.` },
+      // Payment / product
+      { category: 'other', shortcut: '/payment',      title: 'Payment Methods',     body: `💳 *Payment options at {brand}:*\n\n• UPI (GPay, PhonePe, Paytm)\n• Credit/Debit Card\n• Net Banking\n• Cash on Delivery (COD)\n\nAll online payments are 100% secure. 🔒` },
+      { category: 'other', shortcut: '/cod',          title: 'COD Info',            body: `🏠 *Cash on Delivery is available!* Just pick COD at checkout and keep the amount ready at delivery.` },
+      { category: 'other', shortcut: '/paymentfail',  title: 'Payment Failed',      body: `❌ Sorry your payment didn't go through! Please check your balance or try another method.\n\nIf money was deducted but no order was placed, it is refunded automatically in 5-7 days.` },
+      { category: 'products', shortcut: '/size',      title: 'Size Guide',          body: `📏 Tell us your shoe size and we'll recommend the right {brand} size for you. When in doubt, size up! 😊` },
+      { category: 'products', shortcut: '/stock',     title: 'Stock Availability',  body: `🔍 Let me check the stock for you! Please share the product name or link.` },
+      { category: 'products', shortcut: '/restock',   title: 'Restock Notification', body: `🔔 Noted! We'll message you here as soon as this product is back in stock.` },
+      { category: 'products', shortcut: '/bulk',      title: 'Bulk Order',          body: `📦 *Bulk orders welcome!* For 10+ pairs we offer special pricing. Please share the product, quantity and when you need it — we'll reply with a quote within 24 hours.` },
+      { category: 'other', shortcut: '/shipping',     title: 'Shipping Info',       body: `🚚 We ship across India 🇮🇳 — delivery usually takes 3-7 working days.` },
       // General
-      { shortcut: '/hi',         title: 'Welcome Greeting',      body: `👋 Hi! Welcome to *Cross Coin* — India's premium sock brand!\n\nHow can I help you today?\n\n• 📦 Track order → type /track\n• ↩️ Returns & refunds → type /return\n• 💳 Payment help → type /payment\n• 📏 Size guide → type /size\n\nOr just type your question!` },
-      { shortcut: '/thanks',     title: 'Thank You',             body: `🙏 Thank you for shopping with *Cross Coin*! We hope you love your purchase.\n\nDon't forget to leave us a review — it means the world to us! ⭐\n\nSee you again soon! 😊` },
+      { category: 'other', shortcut: '/hi',           title: 'Welcome Greeting',    body: `👋 Hi {name}! Welcome to *{brand}*. How can I help you today?` },
+      { category: 'other', shortcut: '/thanks',       title: 'Thank You',           body: `🙏 Happy to help, {name}! Anything else, just message here. — Team {brand}` },
     ];
 
     // Create-only: a default whose shortcut already exists is skipped, so
@@ -1901,28 +1899,9 @@ exports.sendProductLink = async (req, res) => {
     const { Product } = require('../model/productModel.js');
     const { ProductVariation } = require('../model/productVariationModel.js');
     const { ProductImage } = require('../model/productImageModel.js');
-    const Brand = require('../model/brandModel.js');
-    const settingsHelper = require('../services/settingsHelper.js');
-
-    // Build the product link from the brand's OWN live domain. Prefer the Brand's
-    // `domain` field (the authoritative custom domain), then its STORE_URL setting.
-    const brandRow = await Brand.findByPk(brand);
-    const storeUrl = String(
-      brandRow?.domain
-      || (await settingsHelper.getSetting(brand, 'STORE_URL', ''))
-      || 'crosscoin.in'
-    ).trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    // Product-detail URL segment differs per storefront: 6 brands use
-    // /products/<slug>, Velmique uses /product/<slug>. Allow a per-brand override
-    // via the STORE_PRODUCT_PATH setting; otherwise default to 'products' and
-    // special-case Velmique.
-    let productPath = String(await settingsHelper.getSetting(brand, 'STORE_PRODUCT_PATH', '') || '').trim();
-    if (!productPath) {
-      const hint = `${brandRow?.domain || ''} ${brandRow?.name || ''} ${brandRow?.slug || ''}`.toLowerCase();
-      productPath = /velmique/.test(hint) ? 'product' : 'products';
-    }
-    productPath = productPath.replace(/^\/+|\/+$/g, '');
+    // The brand's LIVE domain + its own PDP route (Brand.domain was seeded
+    // with dead domains for several stores).
+    const storeUrl = await whatsappService.getBrandDomain(brand);
 
     let sent = 0, lastSaved = null;
     for (const pid of productIds) {
@@ -1933,12 +1912,12 @@ exports.sendProductLink = async (req, res) => {
       const price = variation?.price || product.price || null;
       let img = image?.image_url || null;
       if (img && !/^https?:\/\//i.test(img)) img = `https://${storeUrl}/${String(img).replace(/^\//, '')}`;
-      const url = `https://${storeUrl}/${productPath}/${product.slug}`;
+      const url = await whatsappService.getProductUrl(brand, product.slug);
       const caption = `*${product.name}*${price ? `\n💰 ₹${price}` : ''}\n\n🛒 View & order:\n${url}`;
 
       let result;
       if (img) result = await whatsappService.sendImageLink(conv.customer_phone, img, caption, brand);
-      else result = await whatsappService.sendTextMessage(conv.customer_phone, caption, brand);
+      else result = await whatsappService.sendTextMessage(conv.customer_phone, caption, brand, null, { staff: true });
       if (result?.rate_limited) return res.status(429).json({ success: false, message: 'Hourly message limit reached for this customer. Try again later.' });
 
       lastSaved = await WhatsappMessage.create({

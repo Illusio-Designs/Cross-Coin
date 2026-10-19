@@ -161,6 +161,11 @@ async function tokenForServerCart({ phone, name, brandId, userId, cartItems, sum
         cartValue: Number(value) || 0, userId: userId || null,
         items, recoverToken: newToken(), status: 'messaged', waSent: true,
       });
+      try {
+        await require('./whatsappInsightsService.js').ensureSchema();
+        const { sequelize } = require('../config/db.js');
+        await sequelize.query('UPDATE abandoned_carts SET wa_sent_at = :now, updated_at = updated_at WHERE id = :id', { replacements: { id: row.id, now: new Date() } });
+      } catch (_) { /* optional */ }
       return row.recoverToken;
     }
     // Keep a storefront-captured snapshot (richer — it carries the store's own
@@ -169,7 +174,12 @@ async function tokenForServerCart({ phone, name, brandId, userId, cartItems, sum
     // recovery timing.
     const hasStoreSnapshot = (row.items || []).some((i) => i && i.line);
     if (items && !hasStoreSnapshot) await row.update({ items }, { silent: true });
-    return ensureToken(row);
+    const token = await ensureToken(row);
+    // This is called right before the hourly cron messages the shopper, so
+    // mark the capture row messaged too — otherwise the 5-minute capture cron
+    // would send the same shopper a second cart message.
+    if (row.status === 'pending') await markMessaged(row).catch(() => {});
+    return token;
   } catch (e) {
     logger.warn('[cart-recover] server-cart token failed: ' + e.message);
     return null;
@@ -250,12 +260,13 @@ async function buildRestoreLines(row) {
 // ─── Cart recovery rules (WhatsApp Studio → Abandoned carts → Rules) ─────────
 // Admins tune the recovery message in the dashboard; the rules live as JSON in
 // whatsapp_settings under `cart_rules` (written by whatsappInsightsService).
-// The defaults reproduce the behaviour from before the rules existed: message
-// right away (the capture endpoint sends immediately, the 5-minute cron is the
-// backstop after ABANDONED_CART_DELAY_MIN), any time of day, code CART10, no
-// minimum cart value.
+// Defaults: wait 1 hour after the shopper left (never message someone who is
+// still mid-checkout), not between 9 pm and 9 am IST, code CART10, no minimum
+// cart value. One message per cart; a shopper messaged in the last 7 days is
+// not messaged again.
 const CART_RULES_KEY = 'cart_rules';
-const DEFAULT_CART_RULES = Object.freeze({ waitHours: 0, quietStart: null, quietEnd: null, coupon: 'CART10', minValue: 0 });
+const DEFAULT_CART_RULES = Object.freeze({ waitHours: 1, quietStart: '21:00', quietEnd: '09:00', coupon: 'CART10', minValue: 0 });
+const RESEND_AFTER_DAYS = 7;
 const RULES_TTL_MS = 60 * 1000;
 const IST_MS = 330 * 60000;
 const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -266,9 +277,12 @@ function normaliseCartRules(raw) {
   const out = { ...DEFAULT_CART_RULES };
   const wh = Number(r.waitHours);
   if (Number.isFinite(wh) && wh >= 0 && wh <= 23) out.waitHours = Math.round(wh * 4) / 4; // quarter-hour steps
-  const qs = typeof r.quietStart === 'string' && HHMM_RE.test(r.quietStart) ? r.quietStart : null;
-  const qe = typeof r.quietEnd === 'string' && HHMM_RE.test(r.quietEnd) ? r.quietEnd : null;
-  if (qs && qe && qs !== qe) { out.quietStart = qs; out.quietEnd = qe; }
+  // Quiet hours: absent → defaults; explicitly null/'' → none (send any time).
+  if ('quietStart' in r || 'quietEnd' in r) {
+    const qs = typeof r.quietStart === 'string' && HHMM_RE.test(r.quietStart) ? r.quietStart : null;
+    const qe = typeof r.quietEnd === 'string' && HHMM_RE.test(r.quietEnd) ? r.quietEnd : null;
+    if (qs && qe && qs !== qe) { out.quietStart = qs; out.quietEnd = qe; } else { out.quietStart = null; out.quietEnd = null; }
+  }
   const coupon = String(r.coupon == null ? '' : r.coupon).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32);
   if (coupon) out.coupon = coupon;
   const mv = Number(r.minValue);
@@ -323,10 +337,9 @@ function afterQuietHours(date, rules) {
   return out;
 }
 
-// When the recovery message for a cart left at `leftAt` is due under `rules`.
-// waitHours 0 = "right away" (sent on capture; the cron backstop retries after
-// ABANDONED_CART_DELAY_MIN), otherwise leftAt + waitHours. Quiet hours push it
-// to the end of the quiet window.
+// When the recovery message for a cart left at `leftAt` is due under `rules`:
+// leftAt + waitHours, pushed to the end of the quiet hours when it lands inside
+// them. (The 5-minute cron picks it up on its next run after that.)
 function nextSendAt(leftAt, rules = DEFAULT_CART_RULES) {
   const left = new Date(leftAt || Date.now());
   const waitMs = rules.waitHours > 0 ? rules.waitHours * 3600 * 1000 : 0;
@@ -353,6 +366,121 @@ function cronWindow(rules = DEFAULT_CART_RULES, now = new Date()) {
   const to = new Date(now.getTime() - waitMin * 60000);
   const from = new Date(now.getTime() - (24 + (rules.waitHours || 0) + 12) * 3600 * 1000);
   return { from, to };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const _q = (sql, replacements) => {
+  const { sequelize } = require('../config/db.js');
+  const { QueryTypes } = require('sequelize');
+  return sequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+};
+const _ten = (phone) => String(phone || '').replace(/\D/g, '').slice(-10);
+
+// When this capture row was last messaged: wa_sent_at (set by markMessaged),
+// else — for rows messaged before that column existed — updated_at of a row
+// flagged wa_sent. null = never messaged.
+async function lastMessagedAt(rowOrId) {
+  const id = typeof rowOrId === 'object' && rowOrId ? rowOrId.id : Number(rowOrId);
+  if (!id) return null;
+  await require('./whatsappInsightsService.js').ensureSchema();
+  const [r] = await _q('SELECT wa_sent, wa_sent_at, updated_at, status FROM abandoned_carts WHERE id = :id', { id });
+  if (!r) return null;
+  if (r.wa_sent_at) return new Date(r.wa_sent_at);
+  return Number(r.wa_sent) ? new Date(r.updated_at) : null;
+}
+
+// Record a successful recovery send. `silent` keeps updated_at = when the cart
+// was left (the dashboard and the timing rules read it).
+async function markMessaged(row) {
+  await row.update({ status: 'messaged', waSent: true }, { silent: true });
+  try {
+    await require('./whatsappInsightsService.js').ensureSchema();
+    const { sequelize } = require('../config/db.js');
+    await sequelize.query('UPDATE abandoned_carts SET wa_sent_at = :now, updated_at = updated_at WHERE id = :id',
+      { replacements: { id: row.id, now: new Date() } });
+  } catch (e) { logger.warn('[cart-recover] could not stamp wa_sent_at: ' + e.message); }
+}
+
+// Has this shopper (same phone, same brand) placed an order after `after`?
+// Matches the shipping/guest phone by hash and the account phone by digits.
+async function orderedSince({ phone, brandId, after }) {
+  const p10 = _ten(phone);
+  if (p10.length !== 10) return false;
+  const { phoneHash } = require('../utils/encryption.js');
+  const h = phoneHash(p10);
+  const rows = await _q(
+    `SELECT o.id FROM orders o
+       LEFT JOIN shipping_addresses a ON a.id = o.shipping_address_id
+       LEFT JOIN guest_users g ON g.id = o.guest_user_id
+       LEFT JOIN users u ON u.id = o.user_id
+      WHERE o.brand_id = :brandId AND o.created_at > :after
+        AND (${h ? 'a.phone_hash = :h OR g.phone_hash = :h OR ' : ''}RIGHT(u.phone, 10) = :p10)
+      LIMIT 1`, { brandId: brandId || 1, after: new Date(after || 0), h, p10 });
+  return rows.length > 0;
+}
+
+// The full pre-send check for a CAPTURE row (5-minute cron). Call right
+// before sendAbandonedCart. Returns { ok, reason, coupon, sendAt }:
+//   below_min / too_soon / quiet_hours — from the cart rules (see checkSend)
+//   messaged_recently — this shopper got a cart message in the last 7 days
+//   ordered           — they ordered after leaving the cart (row is marked recovered)
+// Never throws (a failed check → { ok:false, reason:'check_failed' }).
+async function checkBeforeSend(row, { now = new Date() } = {}) {
+  try {
+    const rules = await getCartRules();
+    const gate = checkSend({ value: row.cartValue, leftAt: row.updatedAt }, rules, now);
+    if (!gate.ok) return { ...gate, coupon: rules.coupon };
+    const last = await lastMessagedAt(row);
+    if (last && now - last < RESEND_AFTER_DAYS * DAY_MS) return { ok: false, reason: 'messaged_recently', coupon: rules.coupon, sendAt: null };
+    if (await orderedSince({ phone: row.phone, brandId: row.brandId, after: row.updatedAt })) {
+      const { sequelize } = require('../config/db.js');
+      await sequelize.query(`UPDATE abandoned_carts SET status = 'recovered', updated_at = updated_at WHERE id = :id`, { replacements: { id: row.id } });
+      return { ok: false, reason: 'ordered', coupon: rules.coupon, sendAt: null };
+    }
+    return { ok: true, reason: null, coupon: rules.coupon, sendAt: gate.sendAt };
+  } catch (e) {
+    logger.warn('[cart-recover] pre-send check failed: ' + e.message);
+    return { ok: false, reason: 'check_failed', coupon: DEFAULT_CART_RULES.coupon, sendAt: null };
+  }
+}
+
+// The same check for the HOURLY server-cart cron (logged-in shoppers). Skips
+// when the shopper's capture row for this brand was messaged in the last 24 h
+// (so a logged-in shopper never gets two cart messages), when they ordered
+// after leaving the cart, or when the cart rules say not now / never.
+// Returns { ok, reason, coupon }. Never throws.
+async function shouldSendServerCart({ phone, brandId, value, leftAt, now = new Date() } = {}) {
+  try {
+    const rules = await getCartRules();
+    const gate = checkSend({ value, leftAt }, rules, now);
+    if (!gate.ok) return { ok: false, reason: gate.reason, coupon: rules.coupon };
+    const p10 = _ten(phone);
+    if (p10.length !== 10) return { ok: false, reason: 'no_number', coupon: rules.coupon };
+    const { phoneHash } = require('../utils/encryption.js');
+    const h = phoneHash(p10);
+    if (h) {
+      await require('./whatsappInsightsService.js').ensureSchema();
+      const rows = await _q(
+        `SELECT id FROM abandoned_carts WHERE phone_hash = :h AND brand_id = :b AND wa_sent = 1
+            AND COALESCE(wa_sent_at, updated_at) >= :since LIMIT 1`,
+        { h, b: brandId || 1, since: new Date(now.getTime() - DAY_MS) });
+      if (rows.length) return { ok: false, reason: 'messaged_recently', coupon: rules.coupon };
+    }
+    if (await orderedSince({ phone: p10, brandId, after: leftAt })) return { ok: false, reason: 'ordered', coupon: rules.coupon };
+    return { ok: true, reason: null, coupon: rules.coupon };
+  } catch (e) {
+    logger.warn('[cart-recover] server-cart check failed: ' + e.message);
+    return { ok: false, reason: 'check_failed', coupon: DEFAULT_CART_RULES.coupon };
+  }
+}
+
+// Capture endpoint: should a fresh capture re-arm this row (status pending →
+// the cron messages it again)? Not when it was messaged in the last 7 days.
+async function canRearm(row, now = new Date()) {
+  try {
+    const last = await lastMessagedAt(row);
+    return !last || now - last >= RESEND_AFTER_DAYS * DAY_MS;
+  } catch (_) { return false; }
 }
 
 // Stamp the first time a recovery link was opened (the /api/cart-recover
@@ -386,6 +514,13 @@ module.exports = {
   checkSend,
   cronWindow,
   markLinkOpened,
+  lastMessagedAt,
+  markMessaged,
+  orderedSince,
+  checkBeforeSend,
+  shouldSendServerCart,
+  canRearm,
+  RESEND_AFTER_DAYS,
   TOKEN_TTL_DAYS,
   newToken,
   isToken,

@@ -71,14 +71,10 @@ const AUDIENCE_SQL = `
      AND u.id NOT IN (SELECT l.user_id FROM product_alert_log l
                        WHERE l.product_id = :pid AND l.type = :type AND l.sent_at >= NOW() - INTERVAL 7 DAY)`;
 
-async function optedOut(phone, brandId) {
-  const { Op } = require('sequelize');
-  const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
-  const conv = await WhatsappConversation.findOne({
-    where: { customer_phone: { [Op.like]: `%${String(phone).slice(-10)}` }, brand_id: brandId },
-    attributes: ['opted_out'],
-  });
-  return !!conv?.opted_out;
+// STOP is per phone on the shared WhatsApp number (one thread per phone), so
+// the check is by phone only — never scoped to a brand.
+async function optedOut(phone) {
+  return require('./whatsappService.js').isPhoneOptedOut(phone);
 }
 
 async function notify(event) {
@@ -89,7 +85,7 @@ async function notify(event) {
   let sent = 0;
   for (const u of people) {
     const brandId = event.product.brand_id || 1;
-    if (await optedOut(u.phone, brandId)) continue;
+    if (await optedOut(u.phone)) continue;
     try {
       const data = { customerName: u.username, productName: event.product.name, productSlug: event.product.slug };
       if (event.type === 'back_in_stock') {

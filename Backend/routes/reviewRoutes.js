@@ -4,7 +4,7 @@ const {
     getReview,
     deleteReview, moderateReview, deleteReviewImage,
     getAllReviews, getPublicProductReviews, createPublicReview, getAllPublicReviews,
-    bulkUploadReviews
+    bulkUploadReviews, bulkModerateReviews
 } = require('../controller/reviewController.js');
 const { authenticate, isOrderManager } = require('../middleware/authMiddleware.js');
 const { upload } = require('../middleware/uploadMiddleware.js');
@@ -36,6 +36,7 @@ router.post('/submit',              upload.array('files', 5), createPublicReview
 // Admin
 router.post('/admin/bulk-upload',   authenticate, isOrderManager, sheetUpload.single('file'), bulkUploadReviews);
 router.get('/admin/all',            authenticate, isOrderManager, getAllReviews);
+router.post('/admin/bulk',          authenticate, isOrderManager, bulkModerateReviews);
 router.get('/admin/:reviewId',      authenticate, isOrderManager, getReview);
 router.put('/admin/:reviewId/moderate', authenticate, isOrderManager, moderateReview);
 router.delete('/admin/:reviewId',   authenticate, isOrderManager, deleteReview);

@@ -30,10 +30,17 @@ router.get('/templates',              isAuthenticated, isWhatsappManager, ctrl.l
 router.get('/templates/defaults',     isAuthenticated, isWhatsappManager, ctrl.listDefaultTemplates);
 router.post('/templates',             isAuthenticated, isWhatsappManager, ctrl.createTemplate);
 router.post('/templates/seed',        isAuthenticated, isAdmin, ctrl.seedTemplates);
+// Submit our ready-made templates that don't exist on WhatsApp yet.
+router.post('/templates/submit-missing', isAuthenticated, isAdmin, ctrl.submitMissingTemplates);
 // sync-all MUST come before /:name so Express does not treat "sync-all" as a template name param
 router.put('/templates/sync-all',     isAuthenticated, isAdmin, ctrl.syncAllTemplates);
 router.put('/templates/:name',        isAuthenticated, isAdmin, ctrl.updateTemplate);
-router.delete('/templates/:name',     isAuthenticated, isWhatsappManager, ctrl.deleteTemplate);
+// Deleting locks the name on Meta for ~4 weeks — admin only.
+router.delete('/templates/:name',     isAuthenticated, isAdmin, ctrl.deleteTemplate);
+
+// ── Automatic messages (on/off + 7-day results) ──────────────────────────────
+router.get('/automations',            isAuthenticated, isWhatsappManager, ctrl.getAutomations);
+router.put('/automations/:key',       isAuthenticated, isAdmin, ctrl.setAutomation);
 
 // ── Test connection ───────────────────────────────────────────────────────────
 router.post('/test', isAuthenticated, isAdmin, ctrl.testConnection);
@@ -53,6 +60,9 @@ router.get('/conversations/:id/context',        isAuthenticated, isWhatsappManag
   }
 });
 router.post('/conversations/:id/reply',         isAuthenticated, isWhatsappManager, ctrl.sendReply);
+// Approved template in a chat — the only thing allowed after the 24 h window.
+router.get('/conversations/:id/template-options', isAuthenticated, isWhatsappManager, ctrl.getTemplateOptions);
+router.post('/conversations/:id/template',      isAuthenticated, isWhatsappManager, ctrl.sendTemplateMessage);
 router.post('/conversations/:id/send-media',    isAuthenticated, isWhatsappManager, waMediaUpload.single('file'), ctrl.sendMediaReply);
 router.put('/conversations/:id/resolve',        isAuthenticated, isWhatsappManager, ctrl.resolveConversation);
 router.put('/conversations/:id/brand',          isAuthenticated, isWhatsappManager, ctrl.setConversationBrand);
@@ -63,10 +73,14 @@ router.get('/canned-responses',     isAuthenticated, isWhatsappManager, ctrl.get
 router.post('/canned-responses',    isAuthenticated, isWhatsappManager, ctrl.createCannedResponse);
 router.put('/canned-responses/:id', isAuthenticated, isWhatsappManager, ctrl.updateCannedResponse);
 router.delete('/canned-responses/:id', isAuthenticated, isWhatsappManager, ctrl.deleteCannedResponse);
+router.post('/canned-responses/:id/used', isAuthenticated, isWhatsappManager, ctrl.markCannedResponseUsed);
 
 // ── Broadcast Campaigns ───────────────────────────────────────────────────────
-router.get('/broadcasts',         isAuthenticated, isWhatsappManager, ctrl.getBroadcasts);
-router.post('/broadcasts',        isAuthenticated, isWhatsappManager, ctrl.createBroadcast);
+router.get('/broadcasts',          isAuthenticated, isWhatsappManager, ctrl.getBroadcasts);
+// /broadcasts/audience MUST stay a fixed path (no /:id GET route shadows it).
+router.get('/broadcasts/audience', isAuthenticated, isWhatsappManager, ctrl.getBroadcastAudience);
+router.post('/broadcasts',         isAuthenticated, isWhatsappManager, ctrl.createBroadcast);
+router.put('/broadcasts/:id/cancel', isAuthenticated, isWhatsappManager, ctrl.cancelBroadcast);
 router.post('/broadcasts/:id/run', isAuthenticated, isAdmin, ctrl.runBroadcast);
 
 // ── Media proxy ───────────────────────────────────────────────────────────────

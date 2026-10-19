@@ -243,7 +243,9 @@ async function _trackingUrl(brandId, orderNumber) {
 // effect immediately instead of after the 5-minute TTL. Call from the settings
 // update path when a WHATSAPP_* key changes. Omit brandId to clear all.
 function clearCredentialsCache(brandId) {
-  if (brandId == null) { _credentialsCache.clear(); return; }
+  // Every brand falls back to the shared holder's creds, so a change there
+  // affects all cached entries.
+  if (brandId == null || Number(brandId) === SHARED_WA_BRAND_ID) { _credentialsCache.clear(); return; }
   _credentialsCache.delete(`wa_creds_${brandId}`);
 }
 
@@ -374,7 +376,7 @@ async function _templateShape(name, brandId = 1) {
     const data = await listTemplates(brandId);
     const list = data?.data || [];
     const tpl = list.find(t => t.name === name && String(t.status).toUpperCase() === 'APPROVED');
-    if (!tpl) return { headerFormat: null, urlButtonIndex: -1 };
+    if (!tpl) return { headerFormat: null, urlButtonIndex: -1, language: null, category: null, bodyVars: null };
     const comps = tpl.components || [];
     const header = comps.find(c => c.type === 'HEADER');
     const btns = comps.find(c => c.type === 'BUTTONS');
@@ -383,9 +385,15 @@ async function _templateShape(name, brandId = 1) {
       // Dynamic URL buttons (url contains a {{n}} variable) need a param on send.
       urlButtonIndex = btns.buttons.findIndex(b => b.type === 'URL' && /\{\{\d+\}\}/.test(b.url || ''));
     }
-    return { headerFormat: header?.format || null, urlButtonIndex };
+    const bodyText = comps.find(c => c.type === 'BODY')?.text || '';
+    let bodyVars = 0;
+    bodyText.replace(/\{\{(\d+)\}\}/g, (m, i) => { bodyVars = Math.max(bodyVars, Number(i)); return m; });
+    // Language + category of the LIVE template: templates made in Meta's UI are
+    // usually en_US, and sending them as 'en' fails ("template does not exist
+    // in en"). Category decides whether the hourly marketing cap applies.
+    return { headerFormat: header?.format || null, urlButtonIndex, language: tpl.language || null, category: String(tpl.category || '').toUpperCase() || null, bodyVars };
   } catch (_) {
-    return { headerFormat: null, urlButtonIndex: -1 };
+    return { headerFormat: null, urlButtonIndex: -1, language: null, category: null, bodyVars: null };
   }
 }
 
@@ -960,9 +968,12 @@ async function seedDefaultTemplates(brandId = 1, names = null) {
   return results.map(r => r.value);
 }
 
-// ─── Update a single template (delete + recreate) ─────────────────────────────
-// Meta has no PATCH for templates — the only way to update content is delete + recreate.
-// The template re-enters PENDING review after recreation.
+// ─── Update a single template (edit in place — never delete) ─────────────────
+// Deleting a template locks its name on Meta for ~4 weeks, so the old
+// delete-then-recreate left every sender using that name broken for a month.
+// Instead: if the template exists, EDIT it in place (POST /{template_id} with
+// the new components — it re-enters review while the approved version keeps
+// sending); if it doesn't exist yet, create it.
 async function updateTemplate(name, brandId = 1) {
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
   const storeUrl  = await _brandDomain(brandId);
@@ -970,49 +981,25 @@ async function updateTemplate(name, brandId = 1) {
   const tpl = templates.find(t => t.name === name);
   if (!tpl) throw new Error(`Template "${name}" is not defined in the default template list`);
 
-  // Step 1 — delete the existing template (ignore 404 — may not exist yet)
+  const live = ((await listTemplates(brandId, { force: true }))?.data || []).find(t => t.name === name);
+  if (!live) {
+    const created = await createTemplate(tpl, brandId);
+    logger.info(`[WhatsApp] Template "${name}" did not exist — created (id ${created.id})`);
+    return { name, status: 'updated', id: created.id, action: 'created' };
+  }
+  const { token } = await getCredentials(brandId);
   try {
-    await deleteTemplate(name, brandId);
-    logger.info(`[WhatsApp] Deleted template "${name}" for brand ${brandId}`);
-  } catch (delErr) {
-    const msg = metaError(delErr);
-    // A "doesn't exist" delete is benign — we then just create it fresh. Meta's
-    // wording varies: "not found", "wasn't found", "does not exist", "no such".
-    const m = msg.toLowerCase();
-    const benignMissing = m.includes('not found') || m.includes("n't found")
-      || m.includes('does not exist') || m.includes('no such') || m.includes('doesn');
-    if (!benignMissing) {
-      throw new Error(`Failed to delete template "${name}": ${msg}`);
-    }
-    logger.info(`[WhatsApp] Template "${name}" did not exist — proceeding to create`);
+    await WA_HTTP.post(`${GRAPH_API_URL}/${live.id}`, { components: tpl.components }, { headers: authHeader(token) });
+  } catch (err) {
+    throw new Error(`WhatsApp did not accept the edit for "${name}": ${metaError(err)}`);
   }
-
-  // Step 2 — wait for Meta propagation before recreating
-  await new Promise(r => setTimeout(r, 3000));
-
-  // Step 3 — recreate with latest content. Meta sometimes hasn't freed the old
-  // name yet ("template already exists") — retry a few times before giving up.
-  let result, lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try { result = await createTemplate(tpl, brandId); break; }
-    catch (err) {
-      lastErr = err;
-      const msg = metaError(err).toLowerCase();
-      if (msg.includes('already exists') || msg.includes('duplicate')) {
-        logger.info(`[WhatsApp] "${name}" name not freed yet — retry ${attempt}/3 in 5s`);
-        await new Promise(r => setTimeout(r, 5000));
-        continue;
-      }
-      throw err; // a real validation error — surface it immediately
-    }
-  }
-  if (!result) throw new Error(`Failed to recreate template "${name}": ${metaError(lastErr)}`);
-  logger.info(`[WhatsApp] Recreated template "${name}" for brand ${brandId} — id: ${result.id}`);
-  return { name, status: 'updated', id: result.id };
+  invalidateTemplateCache(brandId);
+  logger.info(`[WhatsApp] Edited template "${name}" in place for brand ${brandId} — id: ${live.id}`);
+  return { name, status: 'updated', id: live.id, action: 'edited' };
 }
 
 // ─── Update all default templates ─────────────────────────────────────────────
-// Sequentially deletes + recreates every template.  Sequential (not parallel) to
+// Sequentially edits (or creates) every template — never deletes.  Sequential (not parallel) to
 // avoid hitting Meta's template-management rate limit.
 async function updateAllTemplates(brandId = 1, names = null) {
   const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
@@ -1039,6 +1026,23 @@ async function updateAllTemplates(brandId = 1, names = null) {
 }
 
 // ─── Rate limiting helper ──────────────────────────────────────────────────────
+// Applies to business-initiated MARKETING messages and bot auto-replies only —
+// staff replies and transactional (UTILITY) templates are never capped (an
+// order update must not be dropped because the customer chatted a lot).
+// A capped send THROWS (err.code = 'RATE_LIMITED') so no caller can mistake it
+// for a delivered message.
+function rateLimitError() {
+  const e = new Error(RATE_LIMIT_REASON);
+  e.code = 'RATE_LIMITED';
+  e.rate_limited = true;
+  return e;
+}
+
+// Template parameters can't contain newlines/tabs or 4+ spaces, nor be empty.
+function cleanParam(p) {
+  return String(p == null ? '' : p).replace(/[\r\n\t]+/g, ' ').replace(/ {4,}/g, '   ').trim() || '-';
+}
+
 // Max 10 messages per phone per hour. Uses an atomic INCR and sets the 1-hour
 // TTL only on the FIRST message of the window, so the window is a true fixed
 // hour instead of sliding forward on every message (which never expired).
@@ -1069,20 +1073,20 @@ async function checkRateLimit(to) {
 
 // ─── Send messages ────────────────────────────────────────────────────────────
 
-async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null) {
+// opts.staff = typed by an agent (never rate-capped).
+async function sendTextMessage(phone, text, brandId = 1, contextMessageId = null, opts = {}) {
   const { token, phoneNumberId } = await getCredentials(brandId);
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
-  // Rate limit: max 10 messages per phone per hour
-  const rateLimited = await checkRateLimit(to);
-  if (rateLimited) {
+  if (!opts.staff && await checkRateLimit(to)) {
     await _recordAutomatic({ to, brandId, type: 'text', body: text, failed: RATE_LIMIT_REASON });
-    return rateLimited;
+    throw rateLimitError();
   }
 
-  // Sanitize user input in message text
-  const sanitizedText = text.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
+  // WhatsApp renders plain text — no HTML to strip (stripping <...> mangled
+  // legitimate text like "<3" or "size <M>").
+  const sanitizedText = String(text);
 
   const payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: sanitizedText } };
   if (contextMessageId) {
@@ -1122,14 +1126,21 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
-  // Rate limit: max 10 messages per phone per hour
-  const rateLimited = await checkRateLimit(to);
-  if (rateLimited) {
+  const shape = await _templateShape(templateName, brandId);
+
+  // Hourly cap only for marketing templates sent automatically.
+  if (!opts.staff && shape.category !== 'UTILITY' && shape.category !== 'AUTHENTICATION' && await checkRateLimit(to)) {
     await _recordAutomatic({ to, brandId, templateName, params: bodyParams, failed: RATE_LIMIT_REASON });
-    return rateLimited;
+    throw rateLimitError();
   }
 
-  const shape = await _templateShape(templateName, brandId);
+  // Match the live template's declared variable count (extra params make
+  // Meta reject the whole message) and clean every value.
+  let cleanParams = Array.isArray(bodyParams) ? bodyParams.map(cleanParam) : [];
+  if (Number.isInteger(shape.bodyVars) && shape.bodyVars >= 0 && cleanParams.length > shape.bodyVars) {
+    cleanParams = cleanParams.slice(0, shape.bodyVars);
+  }
+  bodyParams = cleanParams;
   const components = [];
 
   // Header image — only when the live template declares an IMAGE header.
@@ -1153,7 +1164,7 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
     if (btnParam != null) {
       components.push({
         type: 'button', sub_type: 'url', index: String(shape.urlButtonIndex),
-        parameters: [{ type: 'text', text: String(btnParam) }],
+        parameters: [{ type: 'text', text: cleanParam(btnParam) }],
       });
     }
   }
@@ -1166,7 +1177,7 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
         messaging_product: 'whatsapp',
         to,
         type: 'template',
-        template: { name: templateName, language: { code: 'en' }, components },
+        template: { name: templateName, language: { code: opts.language || shape.language || 'en' }, components },
       },
       { headers: authHeader(token) }
     );
@@ -1257,11 +1268,11 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
     const { token, phoneNumberId } = await getCredentials(brandId);
     const to = formatE164(phone);
     if (!to) throw new Error('Invalid phone number: ' + phone);
-    const rateLimited = await checkRateLimit(to);
-    if (rateLimited) return rateLimited;
+    // Transactional — not subject to the hourly marketing cap.
     const orderNumber = String(data.orderNumber);
     const qr = (index, payload) => ({ type: 'button', sub_type: 'quick_reply', index: String(index), parameters: [{ type: 'payload', payload }] });
-    const ndrParams = [String(data.name || 'there'), await _brandName(brandId), orderNumber, String(data.reason || 'The courier could not reach you').slice(0, 120)];
+    const ndrParams = [data.name || 'there', await _brandName(brandId), orderNumber, String(data.reason || 'The courier could not reach you').slice(0, 120)].map(cleanParam);
+    const ndrShape = await _templateShape(tName('delivery_failed_action'), brandId);
     const res = await WA_HTTP.post(
       `${GRAPH_API_URL}/${phoneNumberId}/messages`,
       {
@@ -1270,16 +1281,11 @@ async function sendDeliveryFailed(phone, data, brandId = 1) {
         type: 'template',
         template: {
           name: tName('delivery_failed_action'),
-          language: { code: 'en' },
+          language: { code: ndrShape.language || 'en' },
           components: [
             {
               type: 'body',
-              parameters: [
-                { type: 'text', text: String(data.name || 'there') },
-                { type: 'text', text: await _brandName(brandId) },
-                { type: 'text', text: orderNumber },
-                { type: 'text', text: String(data.reason || 'The courier could not reach you').slice(0, 120) },
-              ],
+              parameters: ndrParams.map((t) => ({ type: 'text', text: t })),
             },
             qr(0, `ndr_retry_${orderNumber}`),
             qr(1, `ndr_address_${orderNumber}`),
@@ -1383,11 +1389,10 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
   const to = formatE164(phone);
   if (!to) throw new Error('Invalid phone number: ' + phone);
 
-  const rateLimited = await checkRateLimit(to);
-  if (rateLimited) return rateLimited;
-
+  // Transactional — not subject to the hourly marketing cap.
   const orderNumber = String(data.orderNumber);
-  const codParams = [String(data.name || 'there'), await _brandName(brandId), orderNumber, String(data.amount), String(data.fullAddress || data.address || 'your address')];
+  const codParams = [data.name || 'there', await _brandName(brandId), orderNumber, data.amount, data.fullAddress || data.address || 'your address'].map(cleanParam);
+  const codShape = await _templateShape(tName('cod_order_confirmation'), brandId);
 
   // Build template with body params + Quick Reply button payloads keyed to the order number.
   // When customer taps "Confirm Address" → webhook receives payload "confirm_cod_<orderNumber>"
@@ -1400,17 +1405,11 @@ async function sendCodConfirmation(phone, data, brandId = 1) {
       type: 'template',
       template: {
         name: tName('cod_order_confirmation'),
-        language: { code: 'en' },
+        language: { code: codShape.language || 'en' },
         components: [
           {
             type: 'body',
-            parameters: [
-              { type: 'text', text: String(data.name || 'there') },
-              { type: 'text', text: await _brandName(brandId) },
-              { type: 'text', text: orderNumber },
-              { type: 'text', text: String(data.amount) },
-              { type: 'text', text: String(data.fullAddress || data.address || 'your address') },
-            ],
+            parameters: codParams.map((t) => ({ type: 'text', text: t })),
           },
           {
             type: 'button',
@@ -1605,14 +1604,11 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
   for (let i = 0; i < phones.length; i++) {
     try {
       const params = Array.isArray(paramsArray[i]) ? paramsArray[i] : paramsArray[0] || [];
-      const r = await sendTemplate(phones[i], templateName, params, brandId);
-      // checkRateLimit RETURNS { rate_limited:true } instead of throwing, so a
-      // throttled recipient was previously counted as "sent" and silently never
-      // delivered. Count it as failed/throttled so the report is truthful.
-      if (r && r.rate_limited) { throttled++; failed++; }
-      else sent++;
+      await sendTemplate(phones[i], templateName, params, brandId);
+      sent++;
     } catch (err) {
-      logger.warn(`Broadcast failed for ${phones[i]}: ${metaError(err)}`);
+      if (err && err.code === 'RATE_LIMITED') throttled++;
+      logger.warn(`Broadcast failed for …${String(phones[i]).slice(-4)}: ${metaError(err)}`);
       failed++;
     }
     // Checkpoint progress periodically so a long broadcast's sent/failed counts
@@ -1980,16 +1976,18 @@ async function ordersForPhones(phones, { since = null, until = null, brandId = n
     if (brandId) cond.push('o.brand_id = :brandId');
     if (excludeCancelled) cond.push("o.status NOT IN ('cancelled','order cancelled') AND (o.payment_status IS NULL OR o.payment_status <> 'failed')");
     const extra = cond.length ? ` AND ${cond.join(' AND ')}` : '';
-    const cols = 'o.id, o.order_number, o.status, o.payment_type, o.payment_status, o.final_amount, o.created_at, o.brand_id';
+    const cols = 'o.id, o.order_number, o.status, o.payment_type, o.payment_status, o.final_amount, o.created_at, o.brand_id, o.user_id, o.guest_user_id, o.shipping_address_id';
     const parts = [];
     if (hashes.length) {
-      parts.push(`SELECT ${cols}, a.phone_hash AS h, NULL AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone_hash IN (:hashes)${extra}`);
-      parts.push(`SELECT ${cols}, g.phone_hash AS h, NULL AS up FROM orders o JOIN guest_users g ON g.id = o.guest_user_id WHERE g.phone_hash IN (:hashes)${extra}`);
+      // (Selected strings get one explicit collation so the UNION never hits
+      // "illegal mix of collations" when tables were created differently.)
+      parts.push(`SELECT ${cols}, CONVERT(a.phone_hash USING utf8mb4) COLLATE utf8mb4_unicode_ci AS h, NULL AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone_hash IN (:hashes)${extra}`);
+      parts.push(`SELECT ${cols}, CONVERT(g.phone_hash USING utf8mb4) COLLATE utf8mb4_unicode_ci AS h, NULL AS up FROM orders o JOIN guest_users g ON g.id = o.guest_user_id WHERE g.phone_hash IN (:hashes)${extra}`);
     } else {
       // No DATA_ENCRYPTION_KEY (local/dev): stored phones are plain text.
-      parts.push(`SELECT ${cols}, NULL AS h, a.phone AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone IN (:plain)${extra}`);
+      parts.push(`SELECT ${cols}, NULL AS h, CONVERT(a.phone USING utf8mb4) COLLATE utf8mb4_unicode_ci AS up FROM orders o JOIN shipping_addresses a ON a.id = o.shipping_address_id WHERE a.phone IN (:plain)${extra}`);
     }
-    parts.push(`SELECT ${cols}, NULL AS h, u.phone AS up FROM orders o JOIN users u ON u.id = o.user_id WHERE u.phone IN (:plain)${extra}`);
+    parts.push(`SELECT ${cols}, NULL AS h, CONVERT(u.phone USING utf8mb4) COLLATE utf8mb4_unicode_ci AS up FROM orders o JOIN users u ON u.id = o.user_id WHERE u.phone IN (:plain)${extra}`);
     const rows = await _db().query(parts.join(' UNION ALL '), {
       replacements: { hashes, plain, since, until, brandId }, type: QueryTypes.SELECT,
     });
@@ -2571,9 +2569,9 @@ async function resolveAudiencePhones(members) {
     const chunk = need.slice(i, i + 500);
     const hashes = chunk.map((m) => m.key);
     const rows = await sq.query(
-      `SELECT phone_hash AS h, phone FROM shipping_addresses WHERE phone_hash IN (:hashes)
-       UNION ALL SELECT phone_hash AS h, phone FROM guest_users WHERE phone_hash IN (:hashes)
-       UNION ALL SELECT phone_hash AS h, phone FROM abandoned_carts WHERE phone_hash IN (:hashes)`,
+      `SELECT CONVERT(phone_hash USING utf8mb4) COLLATE utf8mb4_unicode_ci AS h, CONVERT(phone USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phone FROM shipping_addresses WHERE phone_hash IN (:hashes)
+       UNION ALL SELECT CONVERT(phone_hash USING utf8mb4) COLLATE utf8mb4_unicode_ci AS h, CONVERT(phone USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phone FROM guest_users WHERE phone_hash IN (:hashes)
+       UNION ALL SELECT CONVERT(phone_hash USING utf8mb4) COLLATE utf8mb4_unicode_ci AS h, CONVERT(phone USING utf8mb4) COLLATE utf8mb4_unicode_ci AS phone FROM abandoned_carts WHERE phone_hash IN (:hashes)`,
       { replacements: { hashes }, type: QueryTypes.SELECT }).catch(() => []);
     const byHash = new Map();
     for (const r of rows) {
@@ -2670,9 +2668,9 @@ async function runBroadcastJob(id, { delayMs = 200 } = {}) {
         return vals[k] != null ? vals[k] : '';
       });
       try {
-        const r = await _autoCtx.run({ automationKey: key, customerName: m.name, brandId: brand },
+        await _autoCtx.run({ automationKey: key, customerName: m.name, brandId: brand },
           () => sendTemplate(`91${m.p10}`, b.template_name, params, brand, { shopBrandId: brand }));
-        if (r && r.rate_limited) failed++; else sent++;
+        sent++;
       } catch (err) {
         failed++;
         logger.warn(`[Broadcast ${id}] send to …${m.p10.slice(-4)} failed: ${metaError(err)}`);
@@ -2689,6 +2687,19 @@ async function runBroadcastJob(id, { delayMs = 200 } = {}) {
   } finally {
     _runningBroadcasts.delete(Number(id));
   }
+}
+
+// Which values a broadcast template needs beyond the per-customer name/store.
+async function checkBroadcastParams(templateName, params) {
+  const body = (await _templateBodyText(templateName)) || '';
+  const keys = templateParamKeys(templateName, body);
+  const missing = [];
+  keys.forEach((k, i) => {
+    const given = Array.isArray(params) ? params[i] : null;
+    if ((k === 'name' || k === 'brand') && (given == null || given === '')) return;
+    if (given == null || String(given).trim() === '') missing.push(PARAM_LABELS[k] || `Value ${i + 1}`);
+  });
+  return { ok: missing.length === 0, missing, vars: keys.map((k, i) => ({ key: k, label: PARAM_LABELS[k] || `Value ${i + 1}`, auto: k === 'name' || k === 'brand' })) };
 }
 
 // Cron entry: start/resume every due broadcast (scheduled, paused or stale).
@@ -2861,4 +2872,6 @@ module.exports = {
   runBroadcastJob,
   runDueBroadcasts,
   broadcastResults,
+  checkBroadcastParams,
+  cleanParam,
 };

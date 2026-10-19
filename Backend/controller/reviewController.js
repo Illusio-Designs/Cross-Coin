@@ -12,6 +12,7 @@ const cacheManager = require('../services/cacheManager.js');
 const redisService = require('../services/redisService.js');
 const { logger } = require('../config/logging.js');
 const XLSX = require('xlsx');
+const reviewModeration = require('../services/reviewModerationService.js');
 
 // Helper to update product review statistics
 const updateProductReviewStats = async (productIdToUpdate, transaction) => {
@@ -69,6 +70,21 @@ const updateProductReviewStats = async (productIdToUpdate, transaction) => {
         logger.error('Error updating product review stats:', error);
         // Do not re-throw error if called from multiple places, let the original caller handle it
     }
+};
+
+
+// Remove a stored review photo/video file (ImageKit path or local fallback).
+const removeReviewFile = (fileName) => {
+    if (!fileName) return Promise.resolve();
+    if (fileName.startsWith('/reviews/') || fileName.includes('ik.imagekit.io')) {
+        return imagekitService.deleteImage(fileName).catch(err =>
+            logger.error('Failed to delete review image from ImageKit:', err.message));
+    }
+    if (/^https?:\/\//i.test(fileName)) return Promise.resolve();
+    const imagePath = path.join(__dirname, '../uploads/reviews', path.basename(fileName));
+    return fs.promises.unlink(imagePath).catch(err => {
+        if (err.code !== 'ENOENT') logger.error('Failed to delete review image file:', err.message);
+    });
 };
 
 
@@ -406,30 +422,12 @@ module.exports.deleteReview = async (req, res) => {
             return res.status(404).json({ message: 'Review not found' });
         }
 
-        // Authorization check: only owner or admin can delete
-        if (req.user.id !== reviewToDelete.userId && req.user.role !== 'admin') {
-            await transaction.rollback();
-            return res.status(403).json({ message: 'Access denied. You can only delete your own reviews.' });
-        }
-
         const productId = reviewToDelete.productId;
         const oldStatus = reviewToDelete.status;
 
-        // Delete associated images from storage and database
+        // Delete associated files from storage (DB rows cascade with the review)
         if (reviewToDelete.ReviewImages && reviewToDelete.ReviewImages.length > 0) {
-            const deleteFilePromises = reviewToDelete.ReviewImages.map(image => {
-                // Delete from ImageKit if it's an ImageKit path
-                if (image.fileName && (image.fileName.startsWith('/reviews/') || image.fileName.includes('ik.imagekit.io'))) {
-                    return imagekitService.deleteImage(image.fileName).catch(err =>
-                        logger.error('Failed to delete review image from ImageKit:', err.message)
-                    );
-                }
-                // Otherwise delete from local storage
-                const imagePath = path.join(__dirname, '../uploads/reviews', image.fileName);
-                return fs.promises.unlink(imagePath).catch(err => logger.error("Failed to delete image file:", err));
-            });
-            await Promise.all(deleteFilePromises);
-            // DB records for ReviewImages will be cascade deleted due to Review.hasMany association with onDelete: 'CASCADE'
+            await Promise.all(reviewToDelete.ReviewImages.map(image => removeReviewFile(image.fileName)));
         }
 
         await reviewToDelete.destroy({ transaction });
@@ -446,6 +444,7 @@ module.exports.deleteReview = async (req, res) => {
         }
 
         await transaction.commit();
+        await cacheManager.invalidate(`reviews:${productId}:*`).catch(() => {});
         res.json({ message: 'Review deleted successfully' });
     } catch (error) {
         await transaction.rollback();
@@ -454,77 +453,79 @@ module.exports.deleteReview = async (req, res) => {
     }
 };
 
-// Get all reviews (Admin purpose)
+// Admin moderation list: one page of review cards for a tab (pending /
+// approved / rejected / photos) plus tab counts, the approved average rating
+// and today's review-request sends. Brand: ?brandId= (or X-Brand-Name).
 module.exports.getAllReviews = async (req, res) => {
     try {
-        const { page = 1, limit = 10, status, search, sort = 'createdAt_desc' } = req.query;
-        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
-        const offset = (parseInt(page) - 1) * cappedLimit;
-
-        let order = [['createdAt', 'DESC']];
-        if (sort === 'createdAt_asc') order = [['createdAt', 'ASC']];
-        if (sort === 'rating_desc') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
-        if (sort === 'rating_asc') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
-
-        const whereClause = {};
-        if (status && status !== 'all') whereClause.status = status;
-        if (req.brandId) whereClause.brandId = req.brandId;
-
-        // Server-side search so it matches across ALL pages, not just the loaded
-        // page. Spans the review text, the guest name, and the joined registered
-        // user / product names (subQuery must be off for the $assoc.col$ filters
-        // to apply alongside limit/offset; distinct still counts unique reviews).
-        const q = (search || '').trim();
-        if (q) {
-            whereClause[Op.or] = [
-                { review: { [Op.like]: `%${q}%` } },
-                { guestName: { [Op.like]: `%${q}%` } },
-                { '$User.username$': { [Op.like]: `%${q}%` } },
-                { '$Product.name$': { [Op.like]: `%${q}%` } },
-            ];
-        }
-
-        const productInclude = {
-            model: Product,
-            as: 'Product',
-            attributes: ['id', 'name'],
-        };
-
-        const reviews = await Review.findAndCountAll({
-            where: whereClause,
-            include: [
-                { model: User, as: 'User', attributes: ['id', 'username'] },
-                productInclude,
-                { model: ReviewImage, as: 'ReviewImages' },
-                { model: Brand, as: 'Brand', attributes: ['id', 'name', 'display_name', 'slug'] }
-            ],
-            order,
-            limit: cappedLimit,
-            offset,
-            distinct: true,
-            ...(q ? { subQuery: false } : {}),
+        const { tab, status, search, page, limit } = req.query;
+        const data = await reviewModeration.listForModeration({
+            tab: tab || (status && status !== 'all' ? status : 'pending'),
+            brandId: req.query.brandId || req.brandId || null,
+            search, page, limit,
         });
-        
-        res.json({
-            reviews: reviews.rows.map(r => {
-                const json = r.toJSON();
-                return {
-                    ...json,
-                    productName: r.Product ? r.Product.name : 'N/A',
-                    customerName: r.User ? r.User.username : r.guestName || 'Guest',
-                    brandName: r.Brand ? (r.Brand.display_name || r.Brand.name) : null,
-                };
-            }),
-            pagination: {
-                total: reviews.count,
-                page: parseInt(page),
-                limit: cappedLimit,
-                totalPages: Math.ceil(reviews.count / cappedLimit)
-            }
-        });
+        res.json(data);
     } catch (error) {
         logger.error('Error fetching all reviews:', error);
         res.status(500).json({ message: 'Failed to fetch reviews', error: error.message });
+    }
+};
+
+// Approve / reject / feature / unfeature several reviews in one transaction.
+// Body: { ids: number[], action }. "feature" also approves (a featured review
+// must be visible); "reject" also un-features. Approving stamps the stored
+// verified_purchase flag when the writer has a delivered order for the product.
+const BULK_ACTIONS = ['approve', 'reject', 'feature', 'unfeature'];
+module.exports.bulkModerateReviews = async (req, res) => {
+    const action = req.body?.action;
+    const ids = [...new Set((Array.isArray(req.body?.ids) ? req.body.ids : [])
+        .map((n) => parseInt(n, 10)).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!BULK_ACTIONS.includes(action)) {
+        return res.status(400).json({ success: false, message: `action must be one of ${BULK_ACTIONS.join(', ')}` });
+    }
+    if (!ids.length) return res.status(400).json({ success: false, message: 'Pick at least one review.' });
+    if (ids.length > 200) return res.status(400).json({ success: false, message: 'At most 200 reviews at a time.' });
+
+    const transaction = await sequelize.transaction();
+    const touched = new Set();
+    try {
+        const rows = await Review.findAll({ where: { id: ids }, transaction, lock: transaction.LOCK.UPDATE });
+        const bought = (action === 'approve' || action === 'feature')
+            ? new Set(await reviewModeration.boughtIds(rows.map((r) => r.id), { transaction }))
+            : new Set();
+        const statsProducts = new Set();
+        let changed = 0;
+        for (const r of rows) {
+            const wasApproved = r.status === 'approved';
+            const wasFeatured = !!r.is_featured;
+            if (action === 'approve') r.status = 'approved';
+            if (action === 'reject') { r.status = 'rejected'; r.is_featured = false; }
+            if (action === 'feature') { r.status = 'approved'; r.is_featured = true; }
+            if (action === 'unfeature') r.is_featured = false;
+            if (r.status === 'approved' && bought.has(r.id) && !r.verified_purchase) r.verified_purchase = true;
+            if (!r.changed()) continue;
+            await r.save({ transaction });
+            changed += 1;
+            touched.add(r.productId);
+            if (wasApproved !== (r.status === 'approved')) statsProducts.add(r.productId);
+            if (r.is_featured && !wasFeatured) {
+                await Product.update({ featured_review_id: r.id }, { where: { id: r.productId }, transaction });
+            } else if (!r.is_featured && wasFeatured) {
+                await Product.update({ featured_review_id: null }, { where: { id: r.productId, featured_review_id: r.id }, transaction });
+            }
+        }
+        for (const pid of statsProducts) await updateProductReviewStats(pid, transaction);
+        await transaction.commit();
+        for (const pid of touched) await cacheManager.invalidate(`reviews:${pid}:*`).catch(() => {});
+        const verb = { approve: 'approved', reject: 'rejected', feature: 'featured', unfeature: 'un-featured' }[action];
+        res.json({
+            success: true, action, requested: ids.length, found: rows.length, changed,
+            message: `${changed} review${changed === 1 ? '' : 's'} ${verb}`,
+        });
+    } catch (error) {
+        await transaction.rollback();
+        logger.error('Error in bulk review moderation:', error);
+        res.status(500).json({ success: false, message: 'Could not update the reviews', error: error.message });
     }
 };
 
@@ -563,72 +564,31 @@ module.exports.getReview = async (req, res) => {
     }
 };
 
-// Delete a review image (by owner or admin)
+// Delete one photo/video from a review (admin / order manager — see route).
 module.exports.deleteReviewImage = async (req, res) => {
+    const imgId = parseInt(req.params.imageId, 10);
+    if (isNaN(imgId)) return res.status(400).json({ message: 'Invalid Image ID' });
     const transaction = await sequelize.transaction();
     try {
-        const { imageId } = req.params;
-        const imgId = parseInt(imageId);
-        if (isNaN(imgId)) {
-            await transaction.rollback();
-            return res.status(400).json({ message: "Invalid Image ID" });
-        }
-        
         const image = await ReviewImage.findByPk(imgId, {
-            include: [{ model: Review, as: 'Review' }], // Assuming ReviewImage.belongsTo(Review, {as: 'Review'})
-            transaction
+            include: [{ model: Review, as: 'Review', attributes: ['id', 'productId', 'status'] }],
+            transaction,
         });
-        
         if (!image) {
             await transaction.rollback();
             return res.status(404).json({ message: 'Image not found' });
         }
-        
-        if (!image.Review) { // Should not happen if FK is enforced
-            await transaction.rollback();
-            return res.status(500).json({ message: 'Image is orphaned or Review association is missing.' });
-        }
-
-        // Permission check
-        if (req.user.id !== image.Review.userId && req.user.role !== 'admin') {
-            await transaction.rollback();
-            return res.status(403).json({ message: 'Access denied to delete this image' });
-        }
-        
-        const imagePath = path.join(__dirname, '../uploads/reviews', image.fileName);
-        try {
-        if (fs.existsSync(imagePath)) {
-                await fs.promises.unlink(imagePath);
-            }
-        } catch (fileError) {
-            logger.error("Error deleting image file from disk:", fileError);
-            // Potentially log this but don't fail the DB operation if file is already gone
-        }
-
+        const { fileName, fileType } = image;
+        const productId = image.Review ? image.Review.productId : null;
         await image.destroy({ transaction });
-        
-        // If this was a video, check if the product still has video reviews
-        if (image.fileType === 'video') {
-            const product = await Product.findByPk(image.Review.productId, { transaction });
-            if (product) {
-                 // Re-check if any other approved video reviews exist for this product
-                const otherVideoReviews = await ReviewImage.findOne({
-                    where: { fileType: 'video', reviewId: { [Op.ne]: image.Review.id } }, // Exclude current review if it has other videos
-                include: [{
-                        model: Review, as: 'Review',
-                        where: { productId: image.Review.productId, status: 'approved' }
-                    }],
-                    transaction
-                });
-                if (!otherVideoReviews) {
-                    await Product.update({ has_video_reviews: false }, 
-                        { where: { id: image.Review.productId }, transaction });
-                }
-            }
+        // A removed video can flip the product's "has video reviews" flag.
+        if (productId && fileType === 'video' && image.Review.status === 'approved') {
+            await updateProductReviewStats(productId, transaction);
         }
-        
         await transaction.commit();
-        res.json({ message: 'Image deleted successfully' });
+        await removeReviewFile(fileName);
+        if (productId) await cacheManager.invalidate(`reviews:${productId}:*`).catch(() => {});
+        res.json({ success: true, message: 'Image deleted successfully' });
     } catch (error) {
         await transaction.rollback();
         logger.error('Error deleting review image:', error);

@@ -112,13 +112,26 @@ const isNotificationPoll = (req) => {
   return path.startsWith('/api/notifications/poll');
 };
 
+// Inbound provider webhooks (Meta WhatsApp, couriers, payments) arrive in
+// bursts from a few provider IPs; a 429 makes Meta/couriers drop or delay
+// deliveries. They are signature-verified by their own middleware, so exempt
+// them from the per-IP general limiter.
+const WEBHOOK_PATHS = [
+  '/whatsapp/webhook', '/orders/shipping/webhook', '/orders/fship/webhook',
+  '/payment/razorpay/webhook', '/payments/razorpay/webhook', '/custom-checkout/order-webhook',
+];
+const isProviderWebhook = (req) => {
+  const path = (req.originalUrl || req.url || '').split('?')[0].replace(/^\/api(\/v1)?/, '');
+  return WEBHOOK_PATHS.some((p) => path === p || path.endsWith(p));
+};
+
 // General: all other API routes (120 req / min), skipping public cached reads.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req),
+  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
@@ -1402,6 +1415,9 @@ const startServer = async () => {
         await ensureColumn('whatsapp_canned_responses', 'category', "category VARCHAR(20) NOT NULL DEFAULT 'other'");
         await ensureColumn('whatsapp_canned_responses', 'uses', 'uses INT NOT NULL DEFAULT 0');
         await ensureColumn('whatsapp_broadcasts', 'skipped_count', 'skipped_count INT NOT NULL DEFAULT 0');
+        // Review / upsell crons stamp the order so they never message twice.
+        await ensureColumn('orders', 'review_requested_at', 'review_requested_at DATETIME NULL');
+        await ensureColumn('orders', 'upsell_sent_at', 'upsell_sent_at DATETIME NULL');
         try {
             const [[col]] = await sequelize.query(
                 `SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS

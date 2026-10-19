@@ -126,6 +126,9 @@ export default function PackBuilder({ products = [], tiers = [] }) {
           </div>
 
           <div className="m-packshead">Choose your fragrances</div>
+          {products.length ? null : (
+            <div className="m-empty"><h3>Fragrances are being bottled</h3><p>Pack building opens as soon as scents are back in stock.</p></div>
+          )}
           <div className="m-packgrid">
             {products.map((p) => {
               const n = qty[String(p.id)] || 0;

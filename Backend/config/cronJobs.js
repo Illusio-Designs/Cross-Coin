@@ -37,7 +37,10 @@ function initializeCronJobs() {
   function queued(jobName, handler) {
     registerProcessor(jobName, 1, async () => { await handler(); });
     return () => {
-      enqueue(jobName, {}, { attempts: 1 })
+      // jobId per minute-slot: with several app instances each firing the same
+      // cron tick, Bull keeps ONE job for that slot (no duplicate customer sends).
+      const slot = Math.floor(Date.now() / 60000);
+      enqueue(jobName, {}, { attempts: 1, jobId: `${jobName}:${slot}`, removeOnComplete: true })
         .then(() => console.log(`✅ [CRON] enqueued ${jobName}`))
         .catch((e) => console.error(`❌ [CRON] enqueue ${jobName} failed:`, e.message));
     };
@@ -190,9 +193,8 @@ function initializeCronJobs() {
         const firstItem = cart.CartItems[0];
         const brandId = firstItem?.Product?.brand_id || 1;
 
-        // Check opted out (scoped to the cart's own brand)
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${user.phone.slice(-10)}` }, brand_id: brandId } });
-        if (conv?.opted_out) continue;
+        // STOP is per phone on the shared number (not per brand).
+        if (await whatsappService.isPhoneOptedOut(user.phone)) continue;
 
         const productName = firstItem?.Product?.name || 'your items';
         const extra = cart.CartItems.length > 1 ? ` (+${cart.CartItems.length - 1} more)` : '';
@@ -270,9 +272,8 @@ function initializeCronJobs() {
         if (last10.length !== 10) continue;
         const brandId = row.brandId || 1;
 
-        // Respect WhatsApp marketing opt-out (scoped to the cart's brand).
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${last10}` }, brand_id: brandId } });
-        if (conv?.opted_out) { await row.update({ status: 'messaged', waSent: true }); continue; }
+        // Respect WhatsApp marketing opt-out (per phone — one shared number).
+        if (await whatsappService.isPhoneOptedOut(last10)) { await row.update({ status: 'messaged', waSent: true }); continue; }
 
         try {
           await whatsappService.sendAbandonedCart(phone, {
@@ -298,6 +299,7 @@ function initializeCronJobs() {
   // ── Review Request — daily at 10 AM ──────────────────────────────────────
   // Finds orders delivered 3 days ago with no review yet
   cron.schedule('0 10 * * *', queued('cron:review-request', async () => {
+    const { sequelize: reviewDb } = require('../config/db.js');
     console.log('\n⏰ [CRON] Review request started at:', new Date().toISOString());
     try {
       const { Order } = require('../model/orderModel.js');
@@ -314,7 +316,11 @@ function initializeCronJobs() {
       const fourDaysAgo  = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
 
       const deliveredOrders = await Order.findAll({
-        where: { status: 'delivered', updatedAt: { [Op.between]: [fourDaysAgo, threeDaysAgo] }, user_id: { [Op.ne]: null } },
+        where: {
+          status: 'delivered', updatedAt: { [Op.between]: [fourDaysAgo, threeDaysAgo] }, user_id: { [Op.ne]: null },
+          // Never ask twice for the same order (updatedAt moves on any edit).
+          [Op.and]: [reviewDb.literal('`Order`.`review_requested_at` IS NULL')],
+        },
         include: [
           { model: User, attributes: ['id', 'username', 'phone'] },
           { model: ShippingAddress, as: 'ShippingAddress', attributes: ['phone'] },
@@ -327,9 +333,8 @@ function initializeCronJobs() {
         const phone = order.User?.phone || order.ShippingAddress?.phone;
         if (!phone) continue;
 
-        // Check opted out
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${phone.slice(-10)}` }, brand_id: order.brand_id || 1 } });
-        if (conv?.opted_out) continue;
+        // Check opted out (per phone)
+        if (await whatsappService.isPhoneOptedOut(phone)) continue;
 
         // Check if review already exists for this order's products
         const productIds = order.OrderItems.map(i => i.product_id);
@@ -345,6 +350,7 @@ function initializeCronJobs() {
             productName: firstProduct.name,
             productSlug: firstProduct.slug,
           }, order.brand_id || 1);
+          await reviewDb.query('UPDATE orders SET review_requested_at = ? WHERE id = ?', { replacements: [new Date(), order.id] });
           sent++;
         } catch (e) { console.warn('Review request WA failed:', e.message); }
       }
@@ -352,7 +358,7 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Review request error:', error.message);
     }
-  }));
+  }), { timezone: 'Asia/Kolkata' });
 
   // ── Win-back Campaign — daily at 11 AM ───────────────────────────────────
   // One message per customer per brand: those whose LAST non-cancelled order
@@ -372,13 +378,16 @@ function initializeCronJobs() {
       const settingsHelper = require('../services/settingsHelper.js');
       const whatsappService = require('../services/whatsappService.js');
 
+      // orders is underscored → created_at (MAX(createdAt) threw every run).
+      // Window bounds computed in JS (stored times are UTC; NOW() is server TZ).
       const [rows] = await db.query(
-        `SELECT user_id, brand_id, MAX(createdAt) AS last_at
+        `SELECT user_id, brand_id, MAX(created_at) AS last_at
            FROM orders
           WHERE user_id IS NOT NULL
             AND status NOT IN ('cancelled', 'order cancelled')
           GROUP BY user_id, brand_id
-         HAVING last_at >= NOW() - INTERVAL 31 DAY AND last_at < NOW() - INTERVAL 30 DAY`
+         HAVING last_at >= :from AND last_at < :to`,
+        { replacements: { from: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000), to: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
       );
 
       const couponByBrand = new Map();
@@ -408,10 +417,7 @@ function initializeCronJobs() {
         if (!couponCode) continue;
         const user = await User.findByPk(row.user_id, { attributes: ['id', 'username', 'phone', 'deleted_at'] });
         if (!user?.phone || user.deleted_at) continue;
-        const conv = await WhatsappConversation.findOne({
-          where: { customer_phone: { [Op.like]: `%${String(user.phone).slice(-10)}` }, brand_id: brandId },
-        });
-        if (conv?.opted_out) continue;
+        if (await whatsappService.isPhoneOptedOut(user.phone)) continue;
         try {
           await whatsappService.sendWinBack(user.phone, { customerName: user.username, couponCode }, brandId);
           sent++;
@@ -421,11 +427,12 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Win-back error:', error.message);
     }
-  }));
+  }), { timezone: 'Asia/Kolkata' });
 
   // ── Post-purchase Upsell — daily at 3 PM ─────────────────────────────────
   // Targets orders delivered exactly 1 day ago
   cron.schedule('0 15 * * *', queued('cron:upsell', async () => {
+    const { sequelize: upsellDb } = require('../config/db.js');
     console.log('\n⏰ [CRON] Post-purchase upsell started at:', new Date().toISOString());
     try {
       const { Order } = require('../model/orderModel.js');
@@ -441,7 +448,10 @@ function initializeCronJobs() {
       const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
 
       const deliveredOrders = await Order.findAll({
-        where: { status: 'delivered', updatedAt: { [Op.between]: [twoDaysAgo, oneDayAgo] }, user_id: { [Op.ne]: null } },
+        where: {
+          status: 'delivered', updatedAt: { [Op.between]: [twoDaysAgo, oneDayAgo] }, user_id: { [Op.ne]: null },
+          [Op.and]: [upsellDb.literal('`Order`.`upsell_sent_at` IS NULL')],
+        },
         include: [
           { model: User, attributes: ['id', 'username', 'phone'] },
           { model: OrderItem, as: 'OrderItems', include: [{ model: Product, as: 'Product', attributes: ['id', 'name', 'slug'] }] },
@@ -453,8 +463,7 @@ function initializeCronJobs() {
         const phone = order.User?.phone;
         if (!phone) continue;
 
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${phone.slice(-10)}` }, brand_id: order.brand_id || 1 } });
-        if (conv?.opted_out) continue;
+        if (await whatsappService.isPhoneOptedOut(phone)) continue;
 
         const purchasedProduct = order.OrderItems[0]?.Product;
         if (!purchasedProduct) continue;
@@ -475,6 +484,7 @@ function initializeCronJobs() {
             suggestedProduct: suggestedProduct.name,
             suggestedSlug: suggestedProduct.slug,
           }, order.brand_id || 1);
+          await upsellDb.query('UPDATE orders SET upsell_sent_at = ? WHERE id = ?', { replacements: [new Date(), order.id] });
           sent++;
         } catch (e) { console.warn('Upsell WA failed:', e.message); }
       }
@@ -482,7 +492,20 @@ function initializeCronJobs() {
     } catch (error) {
       console.error('❌ [CRON] Post-purchase upsell error:', error.message);
     }
-  }));
+  }), { timezone: 'Asia/Kolkata' });
+
+  // ── WhatsApp broadcasts — every 5 minutes ────────────────────────────────
+  // Starts scheduled broadcasts when due and resumes ones paused at 20:00 IST
+  // (they only send 10:00–20:00 IST). The runner claims each broadcast
+  // atomically, so the API's "send now" kick and this tick never double-send.
+  cron.schedule('*/5 * * * *', queued('cron:wa-broadcasts', async () => {
+    try {
+      const r = await require('../services/whatsappService.js').runDueBroadcasts();
+      if (r.ran) console.log(`✅ [CRON] WhatsApp broadcasts: ${r.ran} started/resumed`);
+    } catch (error) {
+      console.error('❌ [CRON] WhatsApp broadcasts error:', error.message);
+    }
+  }), { timezone: 'Asia/Kolkata' });
 
   // ── Product alerts — every 30 min, 9 AM–9 PM IST only ────────────────────
   // WhatsApp customers who wishlisted a product or still have it in their
