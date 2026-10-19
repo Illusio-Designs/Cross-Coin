@@ -56,7 +56,7 @@ async function buildProductSeoData(ctx) {
   const brandName = brand?.display_name || brand?.name || (await settingsHelper.getSetting(brandId, 'SEO_ORGANIZATION_NAME', 'CrossCoin'));
   const titleTemplate = await settingsHelper.getSetting(brandId, 'SEO_DEFAULT_TITLE_TEMPLATE', '{name} | {brand}');
   const returnPolicyUrl = await settingsHelper.getSetting(brandId, 'SEO_RETURN_POLICY_URL', `${FRONTEND_URL()}/policy?policy=return`);
-  const returnDays = parseInt(await settingsHelper.getSetting(brandId, 'SEO_RETURN_WINDOW_DAYS', '7'), 10) || 7;
+  const returnDays = 7; // same 7-day return window on every store (returnController)
   const shippingDays = parseInt(await settingsHelper.getSetting(brandId, 'SEO_DEFAULT_SHIPPING_PROMISE_DAYS', '3'), 10) || 3;
 
   const baseTitle = product.name || 'Product';

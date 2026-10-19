@@ -57,10 +57,11 @@ async function getDeliveredAt(orderId) {
   return row ? row.created_at : null;
 }
 
-async function getWindowDays(brandId) {
-  const raw = await settingsHelper.getSetting(brandId, 'RETURN_WINDOW_DAYS', '7');
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : 7;
+// Every store offers the same 7-day return window from delivery (owner
+// decision) — not a per-brand setting.
+const RETURN_WINDOW_DAYS = 7;
+async function getWindowDays() {
+  return RETURN_WINDOW_DAYS;
 }
 
 async function notify(fnName, phone, data, brandId) {

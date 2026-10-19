@@ -2,7 +2,7 @@ import Icon from '@/components/Icon';
 
 const ITEMS = [
   { icon: 'Truck',       title: 'Free shipping',      sub: 'on all orders' },
-  { icon: 'RefreshCw',   title: '14-day returns',     sub: 'for unworn items' },
+  { icon: 'RefreshCw',   title: '7-day returns',     sub: 'for unworn items' },
   { icon: 'ShieldCheck', title: 'Authentic products', sub: 'quality guaranteed' },
   { icon: 'Clock',       title: '24/7 support',       sub: 'we are always here' },
 ];

@@ -1411,7 +1411,7 @@ export default function CartDrawer() {
                   Proceed to checkout · {fmt(baseTotal)} <ArrowRight size={13} />
                 </button>
                 <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
-                  Secure checkout · 14-day returns
+                  Secure checkout · 7-day returns
                 </p>
               </>
             ) : (
@@ -1429,7 +1429,7 @@ export default function CartDrawer() {
                   }
                 </button>
                 <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
-                  Secure checkout · 14-day returns
+                  Secure checkout · 7-day returns
                 </p>
               </>
             )}
