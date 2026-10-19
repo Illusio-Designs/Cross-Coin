@@ -643,9 +643,16 @@ exports.deleteTemplate = async (req, res) => {
 
 // GET /templates/defaults — the canonical template definitions (names, category,
 // preview) so the dashboard can list them and seed/update them individually.
-exports.listDefaultTemplates = async (_req, res) => {
+exports.listDefaultTemplates = async (req, res) => {
   try {
-    res.json({ success: true, defaults: whatsappService.listDefaultTemplateDefs() });
+    // Brand-aware when the dashboard passes ?brandId= (it does): names and
+    // button URLs then show the brand's real domain template, so seeding by
+    // the displayed name matches what gets created.
+    const brandId = parseInt(req.query.brandId, 10);
+    const defaults = Number.isFinite(brandId)
+      ? await whatsappService.listBrandTemplateDefs(brandId)
+      : whatsappService.listDefaultTemplateDefs();
+    res.json({ success: true, defaults });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }

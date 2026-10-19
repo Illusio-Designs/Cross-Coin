@@ -757,21 +757,29 @@ function buildTemplates(storeName, storeUrl) {
 // ─── Default template definitions (brand-neutral, for the management UI) ──────
 // Returns the canonical template list with a readable preview, so the dashboard
 // can show one card per template and let staff seed/update them individually.
+function _defPreview(t) {
+  const comp = (type) => t.components.find((c) => c.type === type) || {};
+  const buttons = (comp('BUTTONS').buttons || []).map((b) => b.text);
+  return {
+    name: t.name,
+    category: t.category,
+    language: t.language,
+    header: comp('HEADER').text || '',
+    body: comp('BODY').text || '',
+    footer: comp('FOOTER').text || '',
+    buttons,
+  };
+}
 function listDefaultTemplateDefs() {
-  const templates = buildTemplates('{{1}}', 'your-store.in');
-  return templates.map((t) => {
-    const comp = (type) => t.components.find((c) => c.type === type) || {};
-    const buttons = (comp('BUTTONS').buttons || []).map((b) => b.text);
-    return {
-      name: t.name,
-      category: t.category,
-      language: t.language,
-      header: comp('HEADER').text || '',
-      body: comp('BODY').text || '',
-      footer: comp('FOOTER').text || '',
-      buttons,
-    };
-  });
+  return buildTemplates('{{1}}', 'your-store.in').map(_defPreview);
+}
+// Brand-aware variant: real store name + domain, so per-brand template names
+// (e.g. cart_abandoned_velmique_v1) and button URLs show exactly as they will
+// be created — and seeding by the displayed name matches.
+async function listBrandTemplateDefs(brandId = 1) {
+  const storeName = (await settingsHelper.getSetting(brandId, 'STORE_NAME')) || 'Cross Coin';
+  const storeUrl  = await _brandDomain(brandId);
+  return buildTemplates(storeName, storeUrl).map(_defPreview);
 }
 
 // ─── Seed default templates (skip if already exist) ───────────────────────────
@@ -781,7 +789,13 @@ async function seedDefaultTemplates(brandId = 1, names = null) {
   const storeUrl  = await _brandDomain(brandId);
   let templates = buildTemplates(storeName, storeUrl);
   if (Array.isArray(names) && names.length) {
-    const want = new Set(names);
+    // A dashboard that listed the brand-neutral defaults shows the per-brand
+    // domain cart template under a placeholder name; translate any
+    // cart_abandoned_<something> request (that isn't the versioned generic)
+    // to THIS brand's real template name so the seed filter matches.
+    const domainName = cartDomainTemplateName(storeUrl);
+    const isDomainish = (n) => /^cart_abandoned_(?!v\d+$)/.test(String(n));
+    const want = new Set(names.map((n) => (isDomainish(n) ? domainName : n)));
     templates = templates.filter((t) => want.has(t.name));
   }
 
@@ -1498,6 +1512,7 @@ module.exports = {
   // Template management
   listTemplates,
   listDefaultTemplateDefs,
+  listBrandTemplateDefs,
   createTemplate,
   deleteTemplate,
   seedDefaultTemplates,
