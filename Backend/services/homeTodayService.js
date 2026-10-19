@@ -28,6 +28,23 @@ async function safe(promise, fallback) {
   try { return await promise; } catch (_) { return fallback; }
 }
 
+// ── Work-queue counts ─────────────────────────────────────────────────────
+// Shared by the home (getToday) and the menu badges (getNavCounts), so the
+// number next to "Orders" in the menu is the same one the home card shows.
+// Each returns one row; R = { brandId, overdue }.
+const brandAnd = (brandId, col) => (brandId ? ` AND ${col} = :brandId` : '');
+const first = (rows) => rows[0] || {};
+const queueCounts = {
+  toConfirm: (R) => q(`SELECT COUNT(*) AS n, SUM(o.created_at < :overdue) AS overdue, MIN(o.created_at) AS oldest
+                         FROM orders o WHERE ${TO_CONFIRM}${brandAnd(R.brandId, 'o.brand_id')}`, R).then(first),
+  whatsapp: (R) => safe(q(`SELECT COUNT(*) AS chats, COALESCE(SUM(unread_count), 0) AS messages, MIN(last_message_at) AS oldest
+                             FROM whatsapp_conversations WHERE unread_count > 0${brandAnd(R.brandId, 'brand_id')}`, R).then(first), {}),
+  stock: (R) => safe(q(`SELECT SUM(pv.stock <= 0) AS out_n, SUM(pv.stock > 0 AND pv.stock < 10) AS low_n
+                          FROM product_variations pv JOIN products p ON p.id = pv.productId
+                         WHERE p.status = 'active'${R.brandId ? ' AND EXISTS (SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId)' : ''}`, R).then(first), {}),
+  reviews: (R) => safe(q(`SELECT COUNT(*) AS n FROM reviews WHERE status = 'pending'${brandAnd(R.brandId, 'brandId')}`, R).then(first), {}),
+};
+
 async function getToday({ brandId = null } = {}) {
   const now = new Date();
   const today = istYmd(now);
@@ -39,11 +56,10 @@ async function getToday({ brandId = null } = {}) {
   const R = { brandId, todayStart, yStart, yNow, now, overdue: new Date(now.getTime() - 24 * 3600 * 1000) };
 
   const [
-    [confirm], [ship], [transit], [deliveredToday], [closedToday],
-    [ret], [ndr], [refundFailed], [bookingFailed], [wa], [stock], [reviews],
+    confirm, [ship], [transit], [deliveredToday], [closedToday],
+    [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews,
   ] = await Promise.all([
-    q(`SELECT COUNT(*) AS n, SUM(o.created_at < :overdue) AS overdue, MIN(o.created_at) AS oldest
-         FROM orders o WHERE ${TO_CONFIRM}${b}`, R),
+    queueCounts.toConfirm(R),
     q(`SELECT COUNT(*) AS n,
               SUM(o.shipping_label_url IS NOT NULL AND (o.shipping_label_downloaded IS NULL OR o.shipping_label_downloaded = 0)) AS labels_pending,
               SUM(o.shipping_waybill IS NULL) AS not_booked
@@ -69,12 +85,9 @@ async function getToday({ brandId = null } = {}) {
              WHERE p.amount_paid < 0 AND p.status = 'failed' AND LOWER(o.payment_status) = 'refund_pending'${b}`, R), [{}]),
     q(`SELECT COUNT(*) AS n, MAX(o.shipping_sync_error) AS sample
          FROM orders o WHERE ${TO_SHIP} AND o.shipping_waybill IS NULL AND LOWER(o.shipping_sync_status) = 'failed'${b}`, R),
-    safe(q(`SELECT COUNT(*) AS chats, COALESCE(SUM(unread_count), 0) AS messages, MIN(last_message_at) AS oldest
-              FROM whatsapp_conversations WHERE unread_count > 0${bPlain}`, R), [{}]),
-    safe(q(`SELECT SUM(pv.stock <= 0) AS out_n, SUM(pv.stock > 0 AND pv.stock < 10) AS low_n
-              FROM product_variations pv JOIN products p ON p.id = pv.productId
-             WHERE p.status = 'active'${brandId ? ' AND EXISTS (SELECT 1 FROM product_brands pb WHERE pb.product_id = p.id AND pb.brand_id = :brandId)' : ''}`, R), [{}]),
-    safe(q(`SELECT COUNT(*) AS n FROM reviews WHERE status = 'pending'${brandId ? ' AND brandId = :brandId' : ''}`, R), [{}]),
+    queueCounts.whatsapp(R),
+    queueCounts.stock(R),
+    queueCounts.reviews(R),
   ]);
 
   const hoursSince = (d) => (d ? Math.floor((now - new Date(d)) / 3600000) : null);
@@ -214,4 +227,39 @@ async function getToday({ brandId = null } = {}) {
   };
 }
 
-module.exports = { getToday };
+// ── Menu badges (GET /api/admin/nav-counts) ──────────────────────────────
+// Only the keys asked for are counted (the route passes the ones the user's
+// roles can open). Problems = the Orders → Problems tab's own total, so the
+// badge always matches the tab; health = scheduled jobs with a failed run in
+// the last 24 h. Cached for 20 s per brand + key set — every open dashboard
+// tab polls this once a minute.
+const NAV_TTL_MS = 20 * 1000;
+const navCache = new Map();
+
+async function getNavCounts({ brandId = null, keys = [] } = {}) {
+  const want = new Set(keys);
+  const cacheKey = `${brandId || 'all'}|${[...want].sort().join(',')}`;
+  const hit = navCache.get(cacheKey);
+  if (hit && hit.until > Date.now()) return hit.counts;
+
+  const R = { brandId, overdue: new Date(Date.now() - 24 * 3600 * 1000) };
+  const jobs = {
+    orders: () => queueCounts.toConfirm(R).then((r) => num(r.n)),
+    whatsapp: () => queueCounts.whatsapp(R).then((r) => num(r.chats)),
+    products: () => queueCounts.stock(R).then((r) => num(r.out_n)),
+    reviews: () => queueCounts.reviews(R).then((r) => num(r.n)),
+    problems: () => require('./exceptionsService.js').listQueue({ brandId, limit: 1 }).then((r) => num(r.counts?.all)),
+    health: () => q(`SELECT COUNT(DISTINCT job_key) AS n FROM job_runs WHERE status = 'failed' AND started_at >= :since`,
+      { since: R.overdue }).then((r) => num(first(r).n)),
+  };
+  const picked = Object.keys(jobs).filter((k) => want.has(k));
+  // One slow or missing table must not hide the other badges.
+  const values = await Promise.all(picked.map((k) => safe(Promise.resolve().then(jobs[k]), null)));
+  const counts = Object.fromEntries(picked.map((k, i) => [k, values[i]]));
+
+  navCache.set(cacheKey, { counts, until: Date.now() + NAV_TTL_MS });
+  if (navCache.size > 200) navCache.delete(navCache.keys().next().value);
+  return counts;
+}
+
+module.exports = { getToday, getNavCounts };
