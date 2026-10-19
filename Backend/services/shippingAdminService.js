@@ -70,7 +70,6 @@ async function webhookSummary() {
 async function overview() {
   const brands = await q('SELECT id, name, display_name, slug, status FROM brands ORDER BY id');
   const fees = await q('SELECT id, orderType, fee, brand_id FROM shipping_fees WHERE brand_id IS NOT NULL');
-  const shippingService = require('./shippingService.js');
 
   const out = [];
   for (const b of brands) {
@@ -79,12 +78,6 @@ async function overview() {
     const cod = mine.find((f) => f.orderType === 'cod');
     const freeOver = await settingWithSource(b.id, 'FREE_SHIPPING_THRESHOLD', '0');
     const codMax = await settingWithSource(b.id, 'COD_MAX_ORDER_VALUE', '1500');
-    // What the server really adds to a COD order today (orderController →
-    // shippingService.computeShippingFee), so the page can flag a COD fee the
-    // cart shows but the order total doesn't include.
-    let codCharged = null;
-    try { codCharged = Number(await shippingService.computeShippingFee({ orderType: 'cod', subtotal: 1, brandId: b.id })); } catch (_) { /* unknown */ }
-
     const creds = {
       accessToken: await present(b.id, 'ITHINK_ACCESS_TOKEN'),
       secretKey: await present(b.id, 'ITHINK_SECRET_KEY'),
@@ -97,7 +90,6 @@ async function overview() {
       cod: cod ? { id: cod.id, fee: Number(cod.fee) } : null,
       freeOver: { value: Number(freeOver.value) || 0, source: freeOver.source },
       codMax: { value: Number(codMax.value) || 0, source: codMax.source },
-      codChargedByServer: codCharged,
       courier: {
         ...creds,
         connected: !!(creds.accessToken && creds.secretKey && creds.pickupId),

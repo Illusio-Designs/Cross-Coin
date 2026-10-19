@@ -601,8 +601,6 @@ async function productAlerts() {
 async function staleCleanup() {
   const { Order, OrderItem, ProductVariation } = require('../model/associations.js');
   const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-  const { Coupon } = require('../model/couponModel.js');
-  const { CouponUsage } = require('../model/couponUsageModel.js');
   const { Op } = require('sequelize');
   const { sequelize } = require('../config/db.js');
 
@@ -645,18 +643,8 @@ async function staleCleanup() {
         }
       }
 
-      // Restore coupon usage if applicable
-      if (order.coupon_id) {
-        await Coupon.decrement('usageCount', {
-          by: 1,
-          where: { id: order.coupon_id },
-          transaction,
-        });
-        await CouponUsage.destroy({
-          where: { orderId: order.id },
-          transaction,
-        });
-      }
+      // Give the coupon use back — only if a usage row existed, never below zero.
+      await require('../services/couponRulesService.js').releaseCouponUse(order, transaction);
 
       // Log status change
       await OrderStatusHistory.create({

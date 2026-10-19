@@ -162,12 +162,20 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(400).json({ message: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required' });
     }
 
-    // Verify signature using centralized Razorpay service
+    // The Razorpay order belongs to one brand's account: take the brand from
+    // our pending payment row (or the checkout session) and verify with that
+    // brand's secret — not always brand 1.
+    const stockReservation = require('../services/stockReservationService.js');
+    const orderCreationService = require('../services/orderCreationService.js');
+    const pendingRow = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId }, order: [['id', 'ASC']] });
+    const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
+    const brandId = (pendingRow && pendingRow.brand_id) || (session && session.brand_id) || 1;
+
     const isValidSignature = await razorpayService.verifySignature(
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,
-      1
+      brandId
     );
 
     if (!isValidSignature) {
@@ -190,11 +198,9 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // ── NEW FLOW: Payment-first (reservation exists) ──────────────────────
-    // Check if this razorpay order has a checkout session (new flow)
-    const stockReservation = require('../services/stockReservationService.js');
-    const orderCreationService = require('../services/orderCreationService.js');
-    const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
-
+    // The session comes from Redis, or from its durable MySQL copy when the
+    // Redis keys already expired (slow payer), so a paid checkout always
+    // becomes an order.
     if (session) {
       logger.info('Payment-first flow: creating order from session', session.reservation_id);
 
@@ -215,20 +221,30 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // ── OLD FLOW: Legacy (order already exists) ───────────────────────────
-    // Try to find orderId from payment record if not provided
-    let resolvedOrderId = orderId;
-    if (!resolvedOrderId) {
-      // Fallback: find order via payment record linked to this razorpay_order_id
-      const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId } });
-      if (paymentRecord && paymentRecord.order_id) {
-        resolvedOrderId = paymentRecord.order_id;
-        logger.info(`Resolved orderId ${resolvedOrderId} from payment record for rzp_order ${razorpayOrderId}`);
-      }
+    // Only for an order WE linked to this Razorpay order (our payment row),
+    // and only when Razorpay really took the order's full amount. A signature
+    // alone proves nothing about which order or how much: anyone can pay ₹1
+    // on some other Razorpay order and send that signature with a random
+    // orderId.
+    if (!pendingRow || !pendingRow.order_id) {
+      logger.error(`No order found for razorpay_order_id: ${razorpayOrderId} (no checkout session, no linked payment row)`);
+      return res.status(400).json({ message: 'No checkout found for this payment. Please contact support with your payment ID.' });
     }
-
-    if (!resolvedOrderId) {
-      logger.error(`No order found for razorpay_order_id: ${razorpayOrderId}, no session, no orderId`);
-      return res.status(400).json({ message: 'orderId is required (no checkout session found for this payment)' });
+    if (orderId && String(orderId) !== String(pendingRow.order_id)) {
+      logger.warn(`Verify rejected: orderId ${orderId} is not linked to razorpay order ${razorpayOrderId}`);
+      return res.status(400).json({ message: 'This payment does not belong to that order.' });
+    }
+    const resolvedOrderId = pendingRow.order_id;
+    {
+      const linkedOrder = await Order.findByPk(resolvedOrderId, { attributes: ['id', 'final_amount'] });
+      let rp;
+      try { rp = await razorpayService.getPayment(razorpayPaymentId, brandId); }
+      catch (e) { return res.status(502).json({ message: 'Could not confirm the payment with Razorpay. Please try again.' }); }
+      const expected = linkedOrder ? toSmallestUnit(parseFloat(linkedOrder.final_amount), 'INR') : null;
+      if (!linkedOrder || rp.order_id !== razorpayOrderId || !['captured', 'authorized'].includes(rp.status) || Number(rp.amount) !== Number(expected)) {
+        logger.warn(`Verify rejected for order ${resolvedOrderId}: Razorpay ${rp.id} ${rp.status} ${rp.amount} on ${rp.order_id}, expected ${expected} on ${razorpayOrderId}`);
+        return res.status(400).json({ message: 'The amount paid does not match this order.' });
+      }
     }
 
     // Use row-level lock to prevent race condition between verify/callback/webhook

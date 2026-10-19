@@ -11,6 +11,13 @@
  *   stock:reservation:{reservation_id}  → JSON session (10 min TTL)
  *   stock:reserved:{variation_id}       → total reserved qty (no TTL, managed by service)
  *   checkout:rzp:{razorpay_order_id}    → reservation_id (15 min TTL, for webhook recovery)
+ *
+ * The session is also kept in MySQL (checkout_session_store, keyed by the
+ * Razorpay order id, 7 days) so a payment captured after the Redis keys
+ * expired — a late webhook, a slow verify, the nightly reconciliation — can
+ * still create the order instead of leaving the customer charged with none.
+ *   checkout_session_store (razorpay_order_id PK, reservation_id, brand_id,
+ *                           session LONGTEXT, created_at) — created lazily.
  */
 
 const crypto = require('crypto');
@@ -225,20 +232,78 @@ async function linkRazorpayOrder(razorpayOrderId, reservationId) {
     session.razorpay_order_id = razorpayOrderId;
     const ttl = await client.ttl(KEY_RESERVATION(reservationId));
     await client.set(KEY_RESERVATION(reservationId), JSON.stringify(session), 'EX', Math.max(ttl, 60));
+    await persistSession(razorpayOrderId, session);
+  }
+}
+
+// ── Durable copy of the session (MySQL) ────────────────────────────────────
+const STORE_KEEP_DAYS = 7;
+let storeSchema = null;
+function ensureStore() {
+  if (!storeSchema) {
+    const { sequelize } = require('../config/db.js');
+    storeSchema = sequelize.query(`CREATE TABLE IF NOT EXISTS checkout_session_store (
+        razorpay_order_id VARCHAR(64) NOT NULL PRIMARY KEY,
+        reservation_id VARCHAR(100) NOT NULL,
+        brand_id INT NULL,
+        session LONGTEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_css_reservation (reservation_id),
+        KEY idx_css_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`).catch((e) => { storeSchema = null; throw e; });
+  }
+  return storeSchema;
+}
+
+let lastPrune = 0;
+async function persistSession(razorpayOrderId, session) {
+  try {
+    await ensureStore();
+    const { sequelize } = require('../config/db.js');
+    await sequelize.query(
+      `INSERT INTO checkout_session_store (razorpay_order_id, reservation_id, brand_id, session, created_at)
+       VALUES (?, ?, ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE session = VALUES(session), reservation_id = VALUES(reservation_id)`,
+      { replacements: [razorpayOrderId, session.reservation_id, session.brand_id || null, JSON.stringify(session)] }
+    );
+    if (Date.now() - lastPrune > 6 * 3600 * 1000) {
+      lastPrune = Date.now();
+      await sequelize.query(`DELETE FROM checkout_session_store WHERE created_at < NOW() - INTERVAL ${STORE_KEEP_DAYS} DAY`);
+    }
+  } catch (e) {
+    logger.warn(`[StockReservation] Couldn't keep a durable copy of ${session.reservation_id}: ${e.message}`);
+  }
+}
+
+/** The durable copy, or null. */
+async function getStoredSession(razorpayOrderId) {
+  if (!razorpayOrderId) return null;
+  try {
+    await ensureStore();
+    const { sequelize } = require('../config/db.js');
+    const [rows] = await sequelize.query('SELECT session FROM checkout_session_store WHERE razorpay_order_id = ? LIMIT 1',
+      { replacements: [razorpayOrderId] });
+    return rows && rows[0] ? JSON.parse(rows[0].session) : null;
+  } catch (e) {
+    logger.warn(`[StockReservation] Durable session lookup failed for ${razorpayOrderId}: ${e.message}`);
+    return null;
   }
 }
 
 /**
- * Find reservation by Razorpay order ID (webhook recovery).
+ * Find reservation by Razorpay order ID (webhook recovery). Falls back to the
+ * durable MySQL copy once the Redis keys have expired.
  */
 async function getReservationByRazorpayOrder(razorpayOrderId) {
   const redis = getRedis();
-  if (!redis) return null;
-
-  const reservationId = await redis.get(KEY_RZP_MAP(razorpayOrderId));
-  if (!reservationId) return null;
-
-  return getReservation(reservationId);
+  if (redis) {
+    const reservationId = await redis.get(KEY_RZP_MAP(razorpayOrderId));
+    if (reservationId) {
+      const live = await getReservation(reservationId);
+      if (live) return live;
+    }
+  }
+  return getStoredSession(razorpayOrderId);
 }
 
 /**
@@ -321,6 +386,7 @@ module.exports = {
   getAvailableStock,
   linkRazorpayOrder,
   getReservationByRazorpayOrder,
+  getStoredSession,
   cleanupLeakedReservations,
   RESERVATION_TTL,
   RETRY_EXTEND_TTL,

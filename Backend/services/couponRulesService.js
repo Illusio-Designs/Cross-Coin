@@ -173,7 +173,7 @@ async function evaluateCoupon(o) {
     const tier = [...tiers].sort((a, b) => Number(b.minQuantity) - Number(a.minQuantity)).find((x) => qty >= Number(x.minQuantity));
     if (!tier) {
       const minQty = Math.min(...tiers.map((x) => Number(x.minQuantity)));
-      return fail(400, `You need at least ${minQty} items in your cart to use this coupon`, coupon);
+      return fail(400, `You need at least ${minQty} ${cats.length || prods.length ? 'of the selected items' : 'items'} in your cart to use this coupon`, coupon);
     }
     discount = Number(tier.discount);
   }

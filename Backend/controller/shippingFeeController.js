@@ -84,7 +84,7 @@ module.exports.updateShippingFee = async (req, res) => {
         // Check for duplicate orderType if it's being changed to an already existing one
         if (orderType && orderType !== shippingFee.orderType) {
             const existingFeeWithNewType = await ShippingFee.findOne({
-                where: { orderType },
+                where: { orderType, brand_id: shippingFee.brand_id }, // one row per type PER BRAND
                 transaction
             });
             if (existingFeeWithNewType && existingFeeWithNewType.id !== shippingFee.id) {

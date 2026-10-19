@@ -39,6 +39,7 @@ class RazorpayService {
    * @returns {Promise<Razorpay>} Razorpay instance
    */
   async getInstance(brandId = 1) {
+    brandId = Number(brandId) || 1;
     // Return cached instance if available
     if (this.instances.has(brandId)) {
       return this.instances.get(brandId);
@@ -249,10 +250,15 @@ class RazorpayService {
    * Clear cached instances (useful for testing or credential updates)
    * @param {number} brandId - Brand identifier (optional, clears all if not specified)
    */
+  // Call after RAZORPAY_* settings change so the next call uses the new keys
+  // (also drops settingsHelper's 5-minute cache for that brand).
   clearCache(brandId = null) {
     if (brandId) {
-      this.instances.delete(brandId);
+      this.instances.delete(Number(brandId));
+      this.instances.delete(String(brandId));
+      settingsHelper.clearCache(Number(brandId));
     } else {
+      for (const id of this.instances.keys()) settingsHelper.clearCache(Number(id));
       this.instances.clear();
     }
   }

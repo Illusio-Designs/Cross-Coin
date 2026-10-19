@@ -359,6 +359,9 @@ module.exports.adminLogin = async (req, res) => {
         const userResponse = user.toJSON();
         delete userResponse.password;
 
+        // "Last signed in" on Dashboard → Staff (fire-and-forget).
+        require('../services/staffActivityService.js').recordLogin(user.id);
+
         res.json({ message: 'Admin login successful', token, user: userResponse });
     } catch (error) {
         logger.error('Admin login error:', error);
@@ -720,7 +723,13 @@ module.exports.getStaffUsers = async (req, res) => {
             order: [['createdAt', 'DESC']],
             limit: 500,
         });
-        res.json({ users });
+        // Last sign-in + what each person did in the last 7 days (real rows only).
+        const activity = require('../services/staffActivityService.js');
+        const ids = users.map((u) => u.id);
+        const [logins, week] = await Promise.all([activity.lastLogins(ids), activity.weekActivity(ids)]);
+        res.json({
+            users: users.map((u) => ({ ...u.toJSON(), last_login_at: logins[u.id] || null, this_week: week[u.id] || [] })),
+        });
     } catch (error) {
         logger.error('Get staff users error:', error);
         res.status(500).json({ message: 'Error getting staff users' });
