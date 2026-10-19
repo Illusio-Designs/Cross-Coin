@@ -703,6 +703,13 @@ export const orderService = {
         timeout: 60000 // 60 seconds timeout for large exports
       });
 
+      // An empty range returns JSON (not a blob) — detect and surface it.
+      if (response.data?.type === 'application/json') {
+        const text = await response.data.text();
+        const json = JSON.parse(text || '{}');
+        return { success: false, message: json.message || 'No delivered orders found for the selected range' };
+      }
+
       // Create a download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');

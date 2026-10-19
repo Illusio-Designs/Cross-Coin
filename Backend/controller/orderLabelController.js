@@ -399,7 +399,14 @@ module.exports.exportDeliveredOrders = async (req, res) => {
 module.exports.exportDeliveredGSTReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const HOME_STATE = String(process.env.GST_HOME_STATE || 'gujarat').trim().toLowerCase();
+    // GST comes from each order's brand settings (GST_PERCENTAGE, GST_STATE) —
+    // the same rule the invoice uses, so the report and invoices always agree.
+    const { getBrandGst, splitGst } = require('../services/invoiceService.js');
+    const brandGst = new Map();
+    const gstFor = async (brandId) => {
+      if (!brandGst.has(brandId)) brandGst.set(brandId, await getBrandGst(brandId));
+      return brandGst.get(brandId);
+    };
 
     const where = { status: 'delivered' };
     const { buildCreatedAtRange } = require('../utils/dateRange.js');
@@ -413,7 +420,7 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
         {
           model: OrderItem, as: 'OrderItems', required: false,
           include: [
-            { model: Product, as: 'Product', attributes: ['id', 'name', 'gst_rate'], required: false },
+            { model: Product, as: 'Product', attributes: ['id', 'name'], required: false },
             { model: ProductVariation, as: 'ProductVariation', attributes: ['id', 'sku'], required: false },
           ],
         },
@@ -433,16 +440,14 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
     const rows = [];
     for (const order of orders) {
       const placeOfSupply = String(order.ShippingAddress?.state || '').trim().toLowerCase();
-      const intra = placeOfSupply === HOME_STATE;
+      const gst = await gstFor(order.brand_id || 1);
       const items = order.OrderItems || [];
       for (const item of items) {
         const units = n(item.quantity) || 1;
         // AMOUNT = the line total the customer paid for this item (gross, incl GST).
         const amount = n(item.subtotal) || n(item.price) * units;
         const rate = units ? amount / units : amount;
-        const gstRate = n(item.Product?.gst_rate) || 5; // % — per product
-        const taxable = amount / (1 + gstRate / 100);
-        const taxTotal = amount - taxable;
+        const split = splitGst(amount, gst.rate, gst.gstState, placeOfSupply);
         rows.push({
           'Order Date': fmtDateTime(order.createdAt),
           'Order ID': order.order_number,
@@ -454,10 +459,10 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
           'Unit Sold': units,
           'RATE': rate,
           'AMOUNT': amount,
-          'TAXABLE VELUE': taxable,
-          'SGST': intra ? taxTotal / 2 : 0,
-          'CGST': intra ? taxTotal / 2 : 0,
-          'IGST': intra ? 0 : taxTotal,
+          'TAXABLE VELUE': split.taxable,
+          'SGST': split.sgst,
+          'CGST': split.cgst,
+          'IGST': split.igst,
           'NET AMOUNT': amount,
         });
       }

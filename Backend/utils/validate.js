@@ -91,7 +91,7 @@ const schemas = {
     'guest_info.email': { label: 'Email', rules: ['required', 'email'] },
     'guest_info.firstName': { label: 'First name', rules: ['required', ['min', 2]] },
     items: { label: 'Items', rules: ['required', 'array', ['minItems', 1]] },
-    payment_type: { label: 'Payment type', rules: ['required', ['enum', ['cod', 'razorpay', 'upi', 'credit_card', 'debit_card', 'wallet']]] },
+    payment_type: { label: 'Payment type', rules: ['required', ['enum', ['cod']]] }, // online payments use /api/checkout
   },
 
   cancelOrder: {

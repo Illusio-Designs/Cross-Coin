@@ -266,6 +266,14 @@
         });
       }
 
+      // This endpoint places COD orders only. Online payments go through
+      // /api/checkout/initiate → Razorpay → /api/payments/razorpay/verify,
+      // which creates the order once the payment is captured.
+      if (payment_type !== 'cod') {
+        await transaction.rollback();
+        return res.status(400).json({ message: "Online payments must use the checkout flow. Please retry from your cart." });
+      }
+
       logger.debug("createOrder: Validating shipping address...");
       // Validate shipping address belongs to user
       const shippingAddress = await ShippingAddress.findOne({
@@ -490,13 +498,9 @@
       logger.debug("shippingFee:", shippingFee);
       logger.debug("finalAmount:", finalAmount);
 
-      // ── Task 5: Server-side discount verification ─────────────────────────
-      // Allow prepaid instant discount without coupon (configured via env)
-      const PREPAID_DISCOUNT = payment_type !== 'cod'
-        ? parseFloat(await settingsHelper.getSetting(req.brand?.id || 1, 'PREPAID_INSTANT_DISCOUNT', '50'))
-        : 0;
-
-      if (appliedDiscount > 0 && !coupon_id && appliedDiscount > PREPAID_DISCOUNT + 1) {
+      // ── Server-side discount verification ─────────────────────────────────
+      // A discount without a coupon is never valid on a COD order.
+      if (appliedDiscount > 1 && !coupon_id) {
         await transaction.rollback();
         return res.status(400).json({ message: "Invalid discount amount." });
       }
@@ -717,21 +721,6 @@
         },
         { transaction }
       );
-
-      // If payment type is not COD, create a payment record
-      if (payment_type !== "cod") {
-        await Payment.create(
-          {
-            order_id: order.id,
-            user_id: userId,
-            payment_type,
-            amount_paid: finalAmount,
-            status: "pending",
-            brand_id: req.brand ? req.brand.id : 1, // ✅ Store brand context in payment record
-          },
-          { transaction }
-        );
-      }
 
       logger.debug("createOrder: Committing transaction...");
 

@@ -344,53 +344,69 @@ function initializeCronJobs() {
   }));
 
   // ── Win-back Campaign — daily at 11 AM ───────────────────────────────────
-  // Targets users with no order in 30 days
+  // One message per customer per brand: those whose LAST non-cancelled order
+  // with that brand was placed 30–31 days ago (the daily window slides, so each
+  // customer is picked up exactly once). The coupon is the brand's
+  // WINBACK_COUPON_CODE setting (falls back to CART10) and is only offered when
+  // that coupon exists and is active for the brand — otherwise the brand is
+  // skipped, so customers never receive a code that fails at checkout.
   cron.schedule('0 11 * * *', queued('cron:winback', async () => {
     console.log('\n⏰ [CRON] Win-back campaign started at:', new Date().toISOString());
     try {
-      const { Order } = require('../model/orderModel.js');
+      const { Op } = require('sequelize');
+      const { sequelize: db } = require('../config/db.js');
       const { User } = require('../model/userModel.js');
-      const { Op, sequelize: sq } = require('sequelize');
-      const whatsappService = require('../services/whatsappService.js');
+      const { Coupon } = require('../model/couponModel.js');
       const { WhatsappConversation } = require('../model/whatsappConversationModel.js');
+      const settingsHelper = require('../services/settingsHelper.js');
+      const whatsappService = require('../services/whatsappService.js');
 
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const sixtyDaysAgo  = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+      const [rows] = await db.query(
+        `SELECT user_id, brand_id, MAX(createdAt) AS last_at
+           FROM orders
+          WHERE user_id IS NOT NULL
+            AND status NOT IN ('cancelled', 'order cancelled')
+          GROUP BY user_id, brand_id
+         HAVING last_at >= NOW() - INTERVAL 31 DAY AND last_at < NOW() - INTERVAL 30 DAY`
+      );
 
-      // Users whose last order was 30-60 days ago
-      const usersWithRecentOrders = await Order.findAll({
-        where: { createdAt: { [Op.gte]: thirtyDaysAgo } },
-        attributes: ['user_id'],
-        raw: true,
-      });
-      const activeUserIds = [...new Set(usersWithRecentOrders.map(o => o.user_id).filter(Boolean))];
-
-      const inactiveOrders = await Order.findAll({
-        where: {
-          user_id: { [Op.notIn]: activeUserIds.length ? activeUserIds : [0] },
-          createdAt: { [Op.between]: [sixtyDaysAgo, thirtyDaysAgo] },
-          status: { [Op.in]: ['delivered'] },
-        },
-        attributes: ['user_id'],
-        group: ['user_id'],
-        raw: true,
-      });
+      const couponByBrand = new Map();
+      const couponFor = async (brandId) => {
+        if (couponByBrand.has(brandId)) return couponByBrand.get(brandId);
+        const code = String(await settingsHelper.getSetting(brandId, 'WINBACK_COUPON_CODE', 'CART10', { brandOnly: true }) || 'CART10').trim();
+        const now = new Date();
+        const coupon = await Coupon.findOne({
+          where: {
+            code, brand_id: brandId, status: 'active',
+            [Op.and]: [
+              { [Op.or]: [{ startDate: null }, { startDate: { [Op.lte]: now } }] },
+              { [Op.or]: [{ endDate: null }, { endDate: { [Op.gte]: now } }] },
+            ],
+          },
+        });
+        const usable = coupon ? code : null;
+        if (!usable) console.warn(`⚠️ [CRON] Win-back: brand ${brandId} has no active coupon "${code}" — skipping its customers`);
+        couponByBrand.set(brandId, usable);
+        return usable;
+      };
 
       let sent = 0;
-      for (const row of inactiveOrders) {
-        if (!row.user_id) continue;
-        const user = await User.findByPk(row.user_id, { attributes: ['id', 'username', 'phone'] });
-        if (!user?.phone) continue;
-
-        const conv = await WhatsappConversation.findOne({ where: { customer_phone: { [Op.like]: `%${user.phone.slice(-10)}` }, brand_id: 1 } });
+      for (const row of rows) {
+        const brandId = row.brand_id || 1;
+        const couponCode = await couponFor(brandId);
+        if (!couponCode) continue;
+        const user = await User.findByPk(row.user_id, { attributes: ['id', 'username', 'phone', 'deleted_at'] });
+        if (!user?.phone || user.deleted_at) continue;
+        const conv = await WhatsappConversation.findOne({
+          where: { customer_phone: { [Op.like]: `%${String(user.phone).slice(-10)}` }, brand_id: brandId },
+        });
         if (conv?.opted_out) continue;
-
         try {
-          await whatsappService.sendWinBack(user.phone, { customerName: user.username, couponCode: 'COMEBACK10' }, 1);
+          await whatsappService.sendWinBack(user.phone, { customerName: user.username, couponCode }, brandId);
           sent++;
         } catch (e) { console.warn('Win-back WA failed:', e.message); }
       }
-      console.log(`✅ [CRON] Win-back: ${sent} sent`);
+      console.log(`✅ [CRON] Win-back: ${sent} sent (${rows.length} eligible)`);
     } catch (error) {
       console.error('❌ [CRON] Win-back error:', error.message);
     }

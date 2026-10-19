@@ -704,6 +704,19 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      name: tName('win_back'), category: 'MARKETING', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'We Miss You!' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}! It's been a while since your last *{{2}}* order. 💛\n\nHere's a little something to welcome you back — use code *{{3}}* at checkout on your next order.`,
+          example: { body_text: [['Rushikesh', storeName, 'CART10']] },
+        },
+        { type: 'FOOTER', text: footer },
+        shopButton,
+      ],
+    },
+    {
       name: tName('popup_coupon'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Exclusive Offer Just for You!' },
@@ -1324,11 +1337,14 @@ async function sendLoyaltyNotification(phone, data, brandId = 1) {
   return sendTextMessage(phone, text, brandId);
 }
 
+// Win-back (business-initiated, so it must be an approved template — free-form
+// text is rejected outside the 24-hour customer-service window).
 async function sendWinBack(phone, data, brandId = 1) {
-  const storeName = await _brandName(brandId);
-  const link = await _brandUrl(brandId);
-  const text = `Hey ${data.customerName || 'there'}! 👋\n\nWe miss you at *${storeName}*. It's been a while since your last order.\n\nHere's *${data.couponCode || '10% OFF'}* just for you — use it on your next order!\n\n👉 ${link}`;
-  return sendTextMessage(phone, text, brandId);
+  return sendTemplate(phone, tName('win_back'), [
+    data.customerName || 'there',
+    await _brandName(brandId),
+    data.couponCode,
+  ], brandId, { shopBrandId: brandId });
 }
 
 async function sendPostPurchaseUpsell(phone, data, brandId = 1) {

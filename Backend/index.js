@@ -504,7 +504,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v19';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v20';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -522,6 +522,16 @@ const startServer = async () => {
             let migrationErrors = 0;
             const baseLogError = logger.error;
             logger.error = (...args) => { migrationErrors++; return baseLogError.apply(logger, args); };
+
+            // Data seeds run ONCE EVER (own flag), not on every gate bump —
+            // otherwise a row an admin deleted would reappear after each deploy
+            // that adds a migration.
+            const seedOnce = async (flag, fn) => {
+                const [seeded] = await sequelize.query(`SELECT 1 FROM migration_flags WHERE flag = ? LIMIT 1`, { replacements: [flag] });
+                if (seeded.length) return;
+                await fn();
+                await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [flag] });
+            };
 
         // ── Idempotent migration: bundle_tiers table (pack / bundle pricing) ─
         // Per-brand buy-more-save-more tiers. Production doesn't run sequelize
@@ -731,52 +741,23 @@ const startServer = async () => {
             logger.error('policies.brand_id nullable migration failed: ' + err.message);
         }
 
-        // ── Idempotent seed: DPDP global policies (brand_id NULL) ─────────
+        // ── One-time seed: DPDP global policies (brand_id NULL) ───────────
         // Four shared policies served to every store (policyController fills a
         // global row for all brands and substitutes {{BRAND}} / {{GSTIN}}).
-        // Each is inserted only if a global row with that title is absent, so
-        // later admin edits are never overwritten on reboot.
+        // Seeded once on a database that has no global policies yet; after
+        // that, admin edits, renames and deletions are permanent.
         try {
-            const { Policy } = require('./model/policyModel.js');
-            const seeds = require('./config/dpdpPolicySeeds.js');
-            for (const seed of seeds) {
-                const existing = await Policy.findOne({ where: { brand_id: null, title: seed.title } });
-                if (!existing) {
+            await seedOnce('seed-dpdp-global-policies', async () => {
+                const { Policy } = require('./model/policyModel.js');
+                if (await Policy.count({ where: { brand_id: null } })) return;
+                const seeds = require('./config/dpdpPolicySeeds.js');
+                for (const seed of seeds) {
                     await Policy.create({ title: seed.title, content: seed.content, brand_id: null });
                     logger.info('Seeded global DPDP policy: ' + seed.title);
                 }
-            }
+            });
         } catch (err) {
             logger.error('DPDP global policy seed failed: ' + err.message);
-        }
-
-        // ── Idempotent seed: CART10 cart-recovery coupon (per brand) ──────
-        // The abandoned-cart WhatsApp + exit-intent popup offer CART10 (10% off),
-        // so a REAL, checkout-enforced coupon must exist for every brand. Created
-        // only when absent (findOrCreate), so admin edits are never overwritten
-        // on reboot.
-        try {
-            const { Coupon } = require('./model/couponModel.js');
-            const Brand = require('./model/brandModel.js');
-            const brands = await Brand.findAll({ attributes: ['id'] });
-            const startDate = new Date();
-            const endDate = new Date('2099-12-31T23:59:59Z');
-            for (const b of brands) {
-                const [, created] = await Coupon.findOrCreate({
-                    where: { code: 'CART10', brand_id: b.id },
-                    defaults: {
-                        code: 'CART10', type: 'percentage', value: 10,
-                        minPurchase: null, maxDiscount: null,
-                        paymentModeRestriction: 'all', firstOrderOnly: false,
-                        startDate, endDate, usageLimit: null, perUserLimit: null,
-                        status: 'active', description: 'Cart recovery — 10% off',
-                        brand_id: b.id,
-                    },
-                });
-                if (created) logger.info('Seeded CART10 coupon for brand ' + b.id);
-            }
-        } catch (err) {
-            logger.error('CART10 coupon seed failed: ' + err.message);
         }
 
         // ── Idempotent migration: orders.scheduled_pickup_date ────────────
@@ -1389,25 +1370,21 @@ const startServer = async () => {
             logger.error('cart_items pack columns migration failed: ' + err.message);
         }
 
-        // ── Seed per-brand GST invoice settings (v16). INSERT IGNORE keeps any
-        // value an admin has already saved; new brands get the same defaults
-        // from the Dashboard settings page itself.
+        // ── One-time seed: empty per-brand GST invoice settings so the keys
+        // show up in Dashboard → Settings. No default rate — each brand enters
+        // its own GST_PERCENTAGE. INSERT IGNORE keeps any value already saved;
+        // brands added later get the keys from the Dashboard settings page.
         try {
-            const GST_DEFAULTS = [
-                ['GST_PERCENTAGE', '18'],
-                ['GSTIN', ''],
-                ['GST_LEGAL_NAME', ''],
-                ['GST_ADDRESS', ''],
-                ['GST_STATE', ''],
-            ];
-            for (const [key, value] of GST_DEFAULTS) {
-                await sequelize.query(
-                    `INSERT IGNORE INTO brand_settings (brand_id, \`key\`, value, is_encrypted, category, created_at, updated_at)
-                     SELECT id, ?, ?, 0, 'general', NOW(), NOW() FROM brands`,
-                    { replacements: [key, value] }
-                );
-            }
-            logger.info('✓ GST settings seeded for all brands');
+            await seedOnce('seed-gst-settings', async () => {
+                for (const key of ['GST_PERCENTAGE', 'GSTIN', 'GST_LEGAL_NAME', 'GST_ADDRESS', 'GST_STATE']) {
+                    await sequelize.query(
+                        `INSERT IGNORE INTO brand_settings (brand_id, \`key\`, value, is_encrypted, category, created_at, updated_at)
+                         SELECT id, ?, '', 0, 'general', NOW(), NOW() FROM brands`,
+                        { replacements: [key] }
+                    );
+                }
+                logger.info('✓ GST settings seeded for all brands');
+            });
         } catch (err) {
             logger.error('GST settings seed failed: ' + err.message);
         }
@@ -1539,9 +1516,10 @@ const startServer = async () => {
             } else {
                 logger.info('✓ SEO data already initialized (v3), skipping');
             }
-        } catch {
-            // Fallback: run it anyway if the check fails
-            await initializeSeoData();
+        } catch (err) {
+            // Never re-seed blindly when the marker can't be read — that would
+            // recreate SEO rows an admin deleted. It runs on the next boot.
+            logger.error('SEO init check failed, skipping seed: ' + err.message);
         }
 
         // ── Run cron jobs in-process (saves ~80MB vs child process) ─────────

@@ -4,7 +4,8 @@
  * GST invoice generation (pdf-lib, A4).
  *
  * Per-brand tax settings (brand_settings, category 'general'):
- *   GST_PERCENTAGE  – tax rate applied to the order total (default 18)
+ *   GST_PERCENTAGE  – tax rate applied to the order total (no default: unset
+ *                     means the invoice carries no GST breakdown)
  *   GSTIN           – the brand's GST registration number (blank = plain invoice)
  *   GST_LEGAL_NAME  – registered legal name (falls back to the brand name)
  *   GST_ADDRESS     – registered address printed in the header
@@ -74,36 +75,60 @@ async function loadOrderForInvoice(where) {
   });
 }
 
-// Compute the GST breakdown for an order under a brand's settings.
-async function gstBreakdown(order) {
+// A brand's GST settings — the single source of truth for tax, used by the
+// invoice and the GST report. There is NO default rate: a brand without
+// GST_PERCENTAGE configured gets rate=null (no tax breakdown) until an admin
+// sets it in Brand Settings → General.
+async function getBrandGst(brandId) {
   const settingsHelper = require('./settingsHelper.js');
-  const brandId = order.brand_id || 1;
+  const get = async (key) => String(await settingsHelper.getSetting(brandId, key, '', { brandOnly: true }) || '').trim();
+  const rawRate = await get('GST_PERCENTAGE');
+  const parsed = parseFloat(rawRate);
+  return {
+    rate: rawRate !== '' && Number.isFinite(parsed) && parsed >= 0 ? parsed : null,
+    gstin: await get('GSTIN'),
+    legalName: await get('GST_LEGAL_NAME'),
+    address: await get('GST_ADDRESS'),
+    gstState: await get('GST_STATE'),
+  };
+}
 
-  const rate = parseFloat(await settingsHelper.getSetting(brandId, 'GST_PERCENTAGE', '18', { brandOnly: true })) || 18;
-  const gstin = (await settingsHelper.getSetting(brandId, 'GSTIN', '', { brandOnly: true }) || '').trim();
-  const legalName = (await settingsHelper.getSetting(brandId, 'GST_LEGAL_NAME', '', { brandOnly: true }) || '').trim();
-  const address = (await settingsHelper.getSetting(brandId, 'GST_ADDRESS', '', { brandOnly: true }) || '').trim();
-  const gstState = (await settingsHelper.getSetting(brandId, 'GST_STATE', '', { brandOnly: true }) || '').trim();
-
-  const total = parseFloat(order.final_amount) || 0;
+// Prices are GST-inclusive, so tax is backed out of the charged amount. Same
+// state as the brand's GST_STATE → CGST+SGST; different → IGST; brand state
+// unknown → CGST+SGST.
+function splitGst(amount, rate, gstState, placeOfSupply) {
+  const total = Number(amount) || 0;
+  if (rate == null) return { taxable: total, tax: 0, interState: false, cgst: 0, sgst: 0, igst: 0 };
   const taxable = total / (1 + rate / 100);
   const tax = total - taxable;
-
-  const shipState = String(order.ShippingAddress?.state || '').trim().toLowerCase();
-  const interState = Boolean(gstState) && Boolean(shipState) && gstState.toLowerCase() !== shipState;
-
+  const ship = String(placeOfSupply || '').trim().toLowerCase();
+  const home = String(gstState || '').trim().toLowerCase();
+  const interState = Boolean(home) && Boolean(ship) && home !== ship;
   return {
-    rate, gstin, legalName, address, gstState,
+    taxable, tax, interState,
+    cgst: interState ? 0 : tax / 2,
+    sgst: interState ? 0 : tax / 2,
+    igst: interState ? tax : 0,
+  };
+}
+
+// Compute the GST breakdown for an order under its brand's settings.
+async function gstBreakdown(order) {
+  const brand = await getBrandGst(order.brand_id || 1);
+  const total = parseFloat(order.final_amount) || 0;
+  const split = splitGst(total, brand.rate, brand.gstState, order.ShippingAddress?.state);
+  const rate = brand.rate;
+  return {
+    ...brand,
     total,
-    taxable: Math.round(taxable * 100) / 100,
-    tax: Math.round(tax * 100) / 100,
-    interState,
-    // split for display
-    parts: interState
-      ? [{ label: `IGST @ ${rate}%`, amount: tax }]
+    taxable: Math.round(split.taxable * 100) / 100,
+    tax: Math.round(split.tax * 100) / 100,
+    interState: split.interState,
+    parts: rate == null ? [] : split.interState
+      ? [{ label: `IGST @ ${rate}%`, amount: split.igst }]
       : [
-          { label: `CGST @ ${rate / 2}%`, amount: tax / 2 },
-          { label: `SGST @ ${rate / 2}%`, amount: tax / 2 },
+          { label: `CGST @ ${rate / 2}%`, amount: split.cgst },
+          { label: `SGST @ ${rate / 2}%`, amount: split.sgst },
         ],
   };
 }
@@ -148,7 +173,7 @@ async function buildInvoicePdf(where) {
 
   // ── Header ────────────────────────────────────────────────────────────────
   text(brandName, L, y, { size: 16, bold: true });
-  right(gst.gstin ? 'TAX INVOICE' : 'INVOICE', R, y, { size: 13, bold: true, color: grey });
+  right(gst.gstin && gst.rate != null ? 'TAX INVOICE' : 'INVOICE', R, y, { size: 13, bold: true, color: grey });
   y -= 16;
   if (gst.address) { text(gst.address, L, y, { size: 8.5, color: grey, maxWidth: 300 }); y -= 12 * Math.ceil(gst.address.length / 68); }
   if (gst.gstin) { text(`GSTIN: ${gst.gstin}`, L, y, { size: 9, bold: true }); y -= 14; }
@@ -217,19 +242,21 @@ async function buildInvoicePdf(where) {
   right(money(gst.total), C_AMT, y, { size: 10.5, bold: true });
   y -= 24;
 
-  // ── GST breakdown ─────────────────────────────────────────────────────────
-  text('GST breakdown (prices are tax-inclusive)', L, y, { size: 8, color: grey, bold: true }); y -= 14;
-  right('Taxable value', C_PRICE, y, { size: 9, color: grey });
-  right(money(gst.taxable), C_AMT, y, { size: 9 });
-  y -= 13;
-  for (const part of gst.parts) {
-    right(part.label, C_PRICE, y, { size: 9, color: grey });
-    right(money(part.amount), C_AMT, y, { size: 9 });
+  // ── GST breakdown (only when the brand has a GST rate configured) ─────────
+  if (gst.rate != null) {
+    text('GST breakdown (prices are tax-inclusive)', L, y, { size: 8, color: grey, bold: true }); y -= 14;
+    right('Taxable value', C_PRICE, y, { size: 9, color: grey });
+    right(money(gst.taxable), C_AMT, y, { size: 9 });
     y -= 13;
+    for (const part of gst.parts) {
+      right(part.label, C_PRICE, y, { size: 9, color: grey });
+      right(money(part.amount), C_AMT, y, { size: 9 });
+      y -= 13;
+    }
+    right('Total tax', C_PRICE, y, { size: 9, bold: true });
+    right(money(gst.tax), C_AMT, y, { size: 9, bold: true });
+    y -= 26;
   }
-  right('Total tax', C_PRICE, y, { size: 9, bold: true });
-  right(money(gst.tax), C_AMT, y, { size: 9, bold: true });
-  y -= 26;
 
   hr(y); y -= 14;
   text('This is a computer-generated invoice and does not require a signature.', L, y, { size: 8, color: grey });
@@ -239,4 +266,4 @@ async function buildInvoicePdf(where) {
   return { bytes, filename, order };
 }
 
-module.exports = { buildInvoicePdf, invoiceToken, verifyInvoiceToken, publicInvoiceUrl, gstBreakdown };
+module.exports = { buildInvoicePdf, invoiceToken, verifyInvoiceToken, publicInvoiceUrl, gstBreakdown, getBrandGst, splitGst };

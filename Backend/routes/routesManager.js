@@ -52,7 +52,6 @@ router.use('/order-status-history', optionalBrand, require('./orderStatusHistory
 
 // ── Integrations ──────────────────────────────────────────────────────────
 router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
-router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
 
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
