@@ -914,7 +914,7 @@ module.exports.upload = upload;
 module.exports.updateUserRole = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role, roles, password } = req.body;
+        const { role, roles, password, username, email, phone } = req.body;
 
         const VALID_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager', 'consumer'];
 
@@ -932,12 +932,37 @@ module.exports.updateUserRole = async (req, res) => {
         }
 
         const user = await User.findByPk(id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user || user.deleted_at) return res.status(404).json({ message: 'User not found' });
 
         const updates = {};
         if (roleList) {
+            const losesAdmin = isAdminUser(user) && !roleList.includes('admin');
+            if (losesAdmin && String(user.id) === String(req.user.id)) {
+                return res.status(400).json({ message: 'You cannot remove your own admin role.' });
+            }
+            if (losesAdmin && (await countActiveAdmins()) <= 1) {
+                return res.status(400).json({ message: 'This is the last admin — add another admin first.' });
+            }
             updates.role = roleList.includes('admin') ? 'admin' : roleList[0];
             updates.roles = roleList;
+        }
+        if (username !== undefined) {
+            const name = String(username).trim();
+            if (!name) return res.status(400).json({ message: 'Name cannot be empty' });
+            updates.username = name.slice(0, 100);
+        }
+        if (email !== undefined) {
+            const mail = String(email).trim().toLowerCase();
+            if (!/^\S+@\S+\.\S+$/.test(mail)) return res.status(400).json({ message: 'Enter a valid email' });
+            const { Op } = require('sequelize');
+            const clash = await User.findOne({ where: { email: mail, id: { [Op.ne]: user.id }, deleted_at: null, source_brand_id: user.source_brand_id ?? null } });
+            if (clash) return res.status(400).json({ message: 'Another account already uses this email' });
+            updates.email = mail;
+        }
+        if (phone !== undefined) {
+            const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+            if (digits && digits.length !== 10) return res.status(400).json({ message: 'Enter a valid 10-digit phone number' });
+            updates.phone = digits || null;
         }
         if (password) {
             const strengthCheck = validatePasswordStrength(password);
@@ -955,6 +980,55 @@ module.exports.updateUserRole = async (req, res) => {
         res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
 };
+
+// **Delete another user (admin only)**
+// Customers go through the DPDP erasure (orders/payments are kept but
+// anonymised, personal data removed) — the same path as self-service delete.
+// Staff accounts are deactivated rather than erased: their id stays on the
+// orders, returns and audit rows they touched. Access ends on their next
+// request because authentication rejects deleted accounts.
+module.exports.adminDeleteUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user || user.deleted_at) return res.status(404).json({ message: 'User not found' });
+        if (String(user.id) === String(req.user.id)) {
+            return res.status(400).json({ message: 'You cannot delete your own account here.' });
+        }
+        if (isAdminUser(user) && (await countActiveAdmins()) <= 1) {
+            return res.status(400).json({ message: 'This is the last admin — add another admin first.' });
+        }
+
+        if (!isStaffUser(user)) {
+            const { eraseUser } = require('../services/userErasureService.js');
+            const { summary } = await eraseUser(user.id);
+            logger.info(`Admin ${req.user.id} erased customer ${user.id}`);
+            return res.json({ success: true, message: 'Customer account and personal data deleted.', summary });
+        }
+
+        await user.update({
+            deleted_at: new Date(),
+            password: await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10),
+        });
+        logger.info(`Admin ${req.user.id} deactivated staff user ${user.id}`);
+        return res.json({ success: true, message: 'Staff account deleted. Their access ends immediately.' });
+    } catch (error) {
+        logger.error('Admin delete user error:', error);
+        res.status(500).json({ message: 'Failed to delete user', error: error.message });
+    }
+};
+
+const STAFF_ROLE_LIST = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
+function userRoleSet(user) {
+    const set = new Set([user.role, ...(Array.isArray(user.roles) ? user.roles : [])].filter(Boolean));
+    return set;
+}
+function isAdminUser(user) { return userRoleSet(user).has('admin'); }
+function isStaffUser(user) { return [...userRoleSet(user)].some((r) => STAFF_ROLE_LIST.includes(r)); }
+async function countActiveAdmins() {
+    // role is the primary column; additional roles live in the JSON `roles`.
+    const users = await User.findAll({ where: { deleted_at: null }, attributes: ['role', 'roles'] });
+    return users.filter(isAdminUser).length;
+}
 
 // **Create Staff User (admin only)**
 module.exports.createStaffUser = async (req, res) => {
@@ -978,7 +1052,7 @@ module.exports.createStaffUser = async (req, res) => {
         const strengthCheck = validatePasswordStrength(password);
         if (!strengthCheck.valid) return res.status(400).json({ message: strengthCheck.message });
 
-        const existing = await User.findOne({ where: { email } });
+        const existing = await User.findOne({ where: { email, deleted_at: null } });
         if (existing) return res.status(400).json({ message: 'Email already exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);

@@ -124,7 +124,7 @@ export default function ProfileMenu() {
 }
 
 function EditProfileModal({ user, onClose, onSaved }) {
-  const [form, setForm] = useState({ username: user.username || '', email: user.email || '' });
+  const [form, setForm] = useState({ username: user.username || '', email: user.email || '', currentPassword: '', newPassword: '', confirmPassword: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -134,9 +134,22 @@ function EditProfileModal({ user, onClose, onSaved }) {
     setErr(null);
     if (!form.username.trim()) { setErr('Name is required.'); return; }
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) { setErr('Enter a valid email.'); return; }
+    // Password change is optional — only when any password field is filled.
+    const changingPw = !!(form.currentPassword || form.newPassword || form.confirmPassword);
+    if (changingPw) {
+      if (!form.currentPassword || !form.newPassword) { setErr('Enter your current and new password.'); return; }
+      if (form.newPassword !== form.confirmPassword) { setErr('New passwords do not match.'); return; }
+    }
     setSaving(true);
     try {
       await userService.updateProfile({ username: form.username.trim(), email: form.email.trim() });
+      if (changingPw) {
+        await userService.updatePassword({
+          currentPassword: form.currentPassword,
+          newPassword: form.newPassword,
+          confirmPassword: form.confirmPassword,
+        });
+      }
       showProfileUpdateSuccessToast();
       await onSaved();
     } catch (e) {
@@ -171,6 +184,19 @@ function EditProfileModal({ user, onClose, onSaved }) {
         <label className="dh-field">
           <span className="dh-field-lbl">Email</span>
           <input className="dh-input" type="email" value={form.email} onChange={set('email')} placeholder="you@example.com" />
+        </label>
+        <div className="dh-field-lbl" style={{ marginTop: 6 }}>Change password <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span></div>
+        <label className="dh-field">
+          <span className="dh-field-lbl">Current password</span>
+          <input className="dh-input" type="password" autoComplete="current-password" value={form.currentPassword} onChange={set('currentPassword')} />
+        </label>
+        <label className="dh-field">
+          <span className="dh-field-lbl">New password</span>
+          <input className="dh-input" type="password" autoComplete="new-password" value={form.newPassword} onChange={set('newPassword')} />
+        </label>
+        <label className="dh-field">
+          <span className="dh-field-lbl">Confirm new password</span>
+          <input className="dh-input" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} />
         </label>
         {err && <div className="dh-field-err">{err}</div>}
       </div>

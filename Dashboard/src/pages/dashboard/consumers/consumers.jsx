@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Table, Pagination, Modal } from "../../../components/ui";
 import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
 import Loader from "../../../components/common/Loader";
+import { ConfirmModal } from "../../../components/common/AlertModal";
+import { showSuccess, showError } from "../../../utils/toastNotification";
 import { userService } from '../../../services';
 import { queryKeys } from '../../../lib/queryClient';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { ViewIcon, UserMultiple02Icon } from '@hugeicons/core-free-icons';
+import { ViewIcon, UserMultiple02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 
 const IC = {
   view: <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />,
   users: <HugeiconsIcon icon={UserMultiple02Icon} size={20} strokeWidth={2} />,
+  del: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
 };
 
 const STAFF_ROLES = ['admin', 'product_manager', 'order_manager', 'whatsapp_manager'];
@@ -21,6 +24,25 @@ export default function Consumers() {
   const [search, setSearch] = useState("");
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedConsumer, setSelectedConsumer] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
+  const queryClient = useQueryClient();
+
+  // Registered customers only — guest rows come from a different table whose
+  // ids can collide with user ids, so they never get a delete action.
+  const confirmDelete = (row) => setConfirmState({
+    message: `Delete ${row.username || row.email || 'this customer'}? Their personal data is erased permanently; their orders are kept anonymised for tax records.`,
+    onConfirm: async () => {
+      try {
+        const res = await userService.adminDeleteUser(row.id);
+        setConfirmState(null);
+        showSuccess('customerDeleted', res?.message || 'Customer deleted');
+        queryClient.invalidateQueries({ queryKey: queryKeys.consumersAdmin });
+      } catch (err) {
+        setConfirmState(null);
+        showError('customerDeleteFailed', err?.message || 'Failed to delete customer.');
+      }
+    },
+  });
 
   // ── React Query: consumers list ──────────────────────────────────
   const { data: consumers = [], isLoading: loading, error } = useQuery({
@@ -80,6 +102,9 @@ export default function Consumers() {
       cell: (row) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="View Details" onClick={() => handleView(row.id)}>{IC.view}</button>
+          {!row.isGuest && (
+            <button className="sl-btn-delete" title="Delete customer" onClick={() => confirmDelete(row)}>{IC.del}</button>
+          )}
         </div>
       ),
     },
@@ -150,6 +175,14 @@ export default function Consumers() {
           </div>
         )}
       </Modal>
+
+      {confirmState && (
+        <ConfirmModal
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </>
   );
 }

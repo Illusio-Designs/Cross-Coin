@@ -5,7 +5,9 @@ import Loader from "../../../components/common/Loader";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import { userService } from "../../../services";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { UserCheck01Icon, PencilEdit02Icon, Add01Icon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons';
+import { UserCheck01Icon, PencilEdit02Icon, Add01Icon, ViewIcon, ViewOffIcon, Delete02Icon } from '@hugeicons/core-free-icons';
+import { useAuth } from "../../../context/AuthContext";
+import { showSuccess, showError } from "../../../utils/toastNotification";
 
 const ROLES = [
   { value: 'admin',            label: 'Admin',            color: '#ef4444', desc: 'Full access to everything' },
@@ -18,6 +20,7 @@ const STAFF_ROLE_VALUES = ROLES.map(r => r.value);
 
 const IC = {
   users:  <HugeiconsIcon icon={UserCheck01Icon} size={20} strokeWidth={2} />,
+  del:    <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />,
   edit:   <HugeiconsIcon icon={PencilEdit02Icon} size={16} strokeWidth={2} />,
   add:    <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
   eye:    <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />,
@@ -87,6 +90,7 @@ export default function StaffUsers() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [confirmState, setConfirmState] = useState(null);
+  const { user: me } = useAuth();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -159,7 +163,7 @@ export default function StaffUsers() {
     setSaving(true);
     try {
       if (editUser) {
-        const payload = { roles: form.roles };
+        const payload = { roles: form.roles, username: form.username.trim(), email: form.email.trim() };
         if (form.password.trim()) payload.password = form.password;
         await userService.updateUser(editUser.id, payload);
       } else {
@@ -173,6 +177,21 @@ export default function StaffUsers() {
       setSaving(false);
     }
   };
+
+  const confirmDelete = (user) => setConfirmState({
+    message: `Delete ${user.username}? They lose Dashboard access immediately. Orders and history they handled are kept.`,
+    onConfirm: async () => {
+      try {
+        const res = await userService.adminDeleteUser(user.id);
+        setConfirmState(null);
+        showSuccess('staffDeleted', res?.message || 'User deleted');
+        fetchUsers();
+      } catch (err) {
+        setConfirmState(null);
+        showError('staffDeleteFailed', err?.message || 'Failed to delete user.');
+      }
+    },
+  });
 
   const columns = [
     { header: '#',       accessor: '_sn',       cell: r => <span style={{ color: '#9ca3af', fontSize: 13 }}>{r._sn}</span> },
@@ -190,6 +209,9 @@ export default function StaffUsers() {
       cell: r => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" onClick={() => openEdit(r)}>{IC.edit}</button>
+          {String(r.id) !== String(me?.id) && (
+            <button className="sl-btn-delete" title="Delete" onClick={() => confirmDelete(r)}>{IC.del}</button>
+          )}
         </div>
       )
     },
@@ -260,8 +282,8 @@ export default function StaffUsers() {
         <form onSubmit={handleSave}>
           <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* User info — create mode */}
-            {!editUser && (
+            {/* User info */}
+            {(
               <div className="dm-2col">
                 <Input
                   label="Username"
@@ -279,20 +301,6 @@ export default function StaffUsers() {
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 />
-              </div>
-            )}
-
-            {/* User info — edit mode */}
-            {editUser && (
-              <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ds-color-surface-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ds-color-text)', flexShrink: 0 }}>
-                  {IC.users}
-                </div>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: 'var(--ds-color-text)' }}>{editUser.username}</p>
-                  <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{editUser.email}</p>
-                </div>
-                <RoleBadges roles={getUserRoles(editUser)} />
               </div>
             )}
 

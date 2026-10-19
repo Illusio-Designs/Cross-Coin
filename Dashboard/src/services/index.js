@@ -1142,24 +1142,7 @@ export const userService = {
     }
   },
 
-  updateUser: async (userData) => {
-    try {
-      const response = await adminApi.put("/api/users/me", userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 
-  deleteUser: async () => {
-    try {
-      const response = await adminApi.delete("/api/users/delete");
-      localStorage.removeItem("token");
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 
   getAllUsers: async () => {
     try {
@@ -1202,6 +1185,24 @@ export const userService = {
   },
 
   // Create a staff user (admin only)
+  // Admin: delete another user (customers are erased, staff deactivated).
+  adminDeleteUser: async (id) => {
+    try {
+      const response = await adminApi.delete(`/api/users/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  // Change the signed-in user's own password.
+  updatePassword: async ({ currentPassword, newPassword, confirmPassword }) => {
+    try {
+      const response = await adminApi.put("/api/users/update-password", { currentPassword, newPassword, confirmPassword });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
   createStaffUser: async (userData) => {
     try {
       const response = await adminApi.post("/api/users/staff", userData);

@@ -77,5 +77,6 @@ router.get('/staff-list', isAuthenticated, isAdmin, getStaffUsers);
 router.get('/guests', isAuthenticated, isAdmin, getGuestUsers);
 router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
 router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
+router.delete('/:id', isAuthenticated, isAdmin, require('../controller/userController.js').adminDeleteUser);
 
 module.exports = router;
