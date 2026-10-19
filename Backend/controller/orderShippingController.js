@@ -373,6 +373,9 @@ async function restoreRtoStockOnce(order, transaction, source, reason) {
   );
   if (Number(done?.n) > 0) return 0;
 
+  // An order that came back never counts for loyalty points.
+  loyaltyService.reversePointsLater(order.id, { reason: 'returned to us (RTO)' });
+
   const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
   let units = 0;
   for (const item of items) {

@@ -74,15 +74,8 @@ export const MENU = [
   {
     key: 'settings', label: 'Settings', items: [
       { key: 'brands', label: 'Brands', view: 'brands', also: ['brand-settings'], icon: Store01Icon, roles: ADMIN },
-      {
-        // Courier updates (webhook-events) stays its own sub-item until the
-        // Shipping page shows them itself; then drop `children`, set
-        // view: 'shippingFees' and also: ['webhook-events'].
-        key: 'shipping', label: 'Shipping & courier', icon: DeliveryTruck01Icon, roles: ADMIN, children: [
-          { key: 'shipping-fees', label: 'Delivery charges', view: 'shippingFees' },
-          { key: 'courier-updates', label: 'Courier updates', view: 'webhook-events' },
-        ],
-      },
+      // Courier updates (the old 'webhook-events' view) live on the Shipping page.
+      { key: 'shipping', label: 'Shipping & courier', view: 'shippingFees', also: ['webhook-events'], icon: DeliveryTruck01Icon, roles: ADMIN },
       { key: 'staff', label: 'Staff', view: 'staff-users', icon: UserCheck01Icon, roles: ADMIN },
       { key: 'health', label: 'System health', view: 'system-health', icon: Activity01Icon, roles: ADMIN, count: 'health', countText: 'failed job in the last 24 hours', alert: true },
     ],

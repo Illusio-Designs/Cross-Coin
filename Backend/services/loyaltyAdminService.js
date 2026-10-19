@@ -18,9 +18,8 @@
  * customer account belongs to one brand (users.source_brand_id), so the brand
  * filter scopes balances by account and history by loyalty_transactions.brand_id.
  *
- * Schema (lazy, once per process — see ensureSchema):
- *   loyalty_transactions.created_by INT NULL  — staff user behind an 'adjusted' row
- *   INDEX idx_lt_created (created_at)
+ * Schema: loyaltyService.ensureSchema (created_by column, 'reversed' type,
+ * created_at index).
  */
 
 const { QueryTypes } = require('sequelize');
@@ -39,25 +38,7 @@ const maskEmail = (e) => {
 };
 const LIVE_USER = 'u.deleted_at IS NULL AND u.deletedAt IS NULL';
 
-// ── Schema ─────────────────────────────────────────────────────────────────
-let schemaPromise = null;
-function ensureSchema() {
-  if (!schemaPromise) {
-    schemaPromise = (async () => {
-      const cols = await q(`SELECT LOWER(column_name) AS c FROM information_schema.columns
-                             WHERE table_schema = DATABASE() AND table_name = 'loyalty_transactions'`);
-      if (!cols.some((r) => r.c === 'created_by')) {
-        await sequelize.query('ALTER TABLE loyalty_transactions ADD COLUMN created_by INT NULL');
-      }
-      const idx = await q(`SELECT DISTINCT index_name AS i FROM information_schema.statistics
-                            WHERE table_schema = DATABASE() AND table_name = 'loyalty_transactions'`);
-      if (!idx.some((r) => r.i === 'idx_lt_created')) {
-        await sequelize.query('ALTER TABLE loyalty_transactions ADD INDEX idx_lt_created (created_at)');
-      }
-    })().catch((e) => { schemaPromise = null; throw e; });
-  }
-  return schemaPromise;
-}
+const { ensureSchema, expiringBetween } = require('./loyaltyService');
 
 // ── Rules ──────────────────────────────────────────────────────────────────
 // Same keys, defaults and parsing as loyaltyService / loyaltyController.
@@ -147,12 +128,7 @@ async function summary(query = {}) {
         WHERE lt.type = 'earned' AND lt.created_at >= :since ${bT}`, repl),
     q(`SELECT COALESCE(SUM(-lt.points), 0) AS pts, COUNT(*) AS times FROM loyalty_transactions lt
         WHERE lt.type = 'redeemed' AND lt.created_at >= :since ${bT}`, repl),
-    q(`SELECT COUNT(*) AS customers, COALESCE(SUM(x.pts), 0) AS pts FROM (
-         SELECT LEAST(SUM(lt.points), MAX(u.loyalty_points)) AS pts
-           FROM loyalty_transactions lt JOIN users u ON u.id = lt.user_id
-          WHERE lt.type = 'earned' AND lt.points > 0 AND lt.expires_at > :now AND lt.expires_at <= :until
-            AND u.loyalty_points > 0 AND ${LIVE_USER} ${bT}
-          GROUP BY lt.user_id HAVING pts > 0) x`, repl),
+    expiringBetween(repl.until, brandId).then((r) => [r]),
     getRules(brandId),
     require('./jobRunService.js').recentRuns(['loyalty-expiry'], 1).catch(() => ({ 'loyalty-expiry': [] })),
   ]);
@@ -170,7 +146,7 @@ async function summary(query = {}) {
     earned30: { points: num(earned.pts), orders: num(earned.orders) },
     spent30: { points: num(spent.pts), times: num(spent.times) },
     customers: { withPoints: customers, canRedeem100: n100 },
-    expiring30: { points: num(expiring.pts), customers: num(expiring.customers) },
+    expiring30: { points: num(expiring.points), customers: num(expiring.customers) },
     rules,
     expiryJob: lastRun ? { at: lastRun.started_at, status: lastRun.status, summary: lastRun.summary } : null,
   };
@@ -189,6 +165,7 @@ function describe(r) {
     case 'redeemed': return { what: 'Spent at checkout', reason: null };
     case 'refunded': return { what: 'Given back — order cancelled', reason: null };
     case 'expired': return { what: 'Expired — not used in time', reason: null };
+    case 'reversed': return { what: 'Taken back — order refunded or returned', reason: null };
     case 'adjusted': return { what: `${pts >= 0 ? 'Given' : 'Taken back'}${staff ? ` by ${staff}` : ' by staff'}`, reason };
     default: return { what: r.type, reason: r.description || null };
   }
@@ -202,7 +179,7 @@ async function listTransactions(query = {}) {
   const repl = { limit, offset: (page - 1) * limit };
   const brandId = brandOf(query.brandId);
   if (brandId) { where.push('lt.brand_id = :brandId'); repl.brandId = brandId; }
-  const type = TAB_TYPE[query.tab] || (['earned', 'redeemed', 'expired', 'adjusted', 'refunded'].includes(query.type) ? query.type : null);
+  const type = TAB_TYPE[query.tab] || (['earned', 'redeemed', 'expired', 'adjusted', 'refunded', 'reversed'].includes(query.type) ? query.type : null);
   if (type) { where.push('lt.type = :type'); repl.type = type; }
   if (brandOf(query.userId)) { where.push('lt.user_id = :userId'); repl.userId = brandOf(query.userId); }
   if (brandOf(query.orderId)) { where.push('lt.order_id = :orderId'); repl.orderId = brandOf(query.orderId); }

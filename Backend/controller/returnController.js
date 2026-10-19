@@ -223,6 +223,9 @@ async function issueReturnRefund(ret, order, adminId, brandId) {
   } catch (e) { logger.warn(`audit skipped: ${e.message}`); }
   await ret.update({ status: 'refunded', refunded_at: new Date() });
   await closeReturnedOrder(order, adminId, ret);
+  require('../services/loyaltyService.js').reversePointsLater(order.id, {
+    amount: refundAmount >= eligible ? null : refundAmount, ref: `return-${ret.return_number}`, reason: `returned (${ret.return_number})`,
+  });
   const user = await User.findByPk(ret.user_id);
   notify('sendRefundProcessed', user && user.phone, {
     name: user && user.username, orderNumber: order.order_number, amount: refundAmount, paymentMethod: 'UPI/Bank',

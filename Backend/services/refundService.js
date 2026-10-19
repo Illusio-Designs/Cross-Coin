@@ -151,6 +151,11 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       reason,
     }, t);
 
+    // Take back the loyalty points this order earned (prorated for a partial refund).
+    require('./loyaltyService.js').reversePointsLater(order.id, {
+      amount: isPartial ? refundAmount : null, ref: refundId, reason: isPartial ? 'part refunded' : 'refunded',
+    });
+
     // Send WhatsApp notification (after commit)
     setImmediate(async () => {
       try {

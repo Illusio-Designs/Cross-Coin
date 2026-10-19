@@ -1,341 +1,764 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Input, Modal, Table, Pagination, Select } from "../../../components/ui";
-import { PageHeader, Panel, StatTile, StatGrid, FilterBar, EmptyState } from "../../../components/Dashboard/primitives";
-import Loader from "../../../components/common/Loader";
-import { ConfirmModal } from '../../../components/common/AlertModal';
-import { couponService } from "../../../services";
-import { queryKeys } from '../../../lib/queryClient';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import {
+  Button, Pagination, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, SidePanel,
+  ConfirmBar, EmptyState, ErrorState, SkeletonRows,
+} from '../../../components/ui';
+import Dropdown from '../../../components/ui/Dropdown';
+import { couponService, brandService } from '../../../services';
+import { useAuth } from '../../../context/AuthContext';
+import { showSuccess, showError } from '../../../utils/toastNotification';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Add01Icon, Search01Icon, PencilEdit02Icon, Delete02Icon, Ticket01Icon } from '@hugeicons/core-free-icons';
+import { Add01Icon, Search01Icon, Cancel01Icon, Delete02Icon, Alert02Icon } from '@hugeicons/core-free-icons';
 
-const IC = {
-  add: <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />,
-  search: <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />,
-  edit: <HugeiconsIcon icon={PencilEdit02Icon} size={15} strokeWidth={2} />,
-  trash: <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />,
-  coupon: <HugeiconsIcon icon={Ticket01Icon} size={48} strokeWidth={1.5} />,
+/* ──────────────────────────────────────────────────────────────
+   Coupons — what each code costs and what it brings in.
+   Data (all server-side):
+     GET  /api/coupons?tab&search&brandId&page&days   list + counts + per-code stats
+     GET  /api/coupons/admin/summary                   orders with a coupon, discount, sales, live codes
+     GET  /api/coupons/admin/dependencies              automations whose code would fail
+     POST /api/coupons/:id/switch-on                   one-click fix (admin)
+   Stats count orders that weren't cancelled. "Used by" = the WhatsApp
+   automations / pop-ups that hand the code out automatically.
+   ────────────────────────────────────────────────────────────── */
+
+const PAGE_SIZE = 25;
+const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWidth={2} aria-hidden="true" />;
+const TABS = [
+  { value: 'live', label: 'Live' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'off', label: 'Switched off' },
+  { value: 'ended', label: 'Ended' },
+  { value: 'all', label: 'All' },
+];
+const EMPTY_TEXT = {
+  live: ['No live coupons', 'Codes that are switched on and in date show here.'],
+  scheduled: ['Nothing scheduled', 'Coupons with a start date in the future show here.'],
+  off: ['Nothing switched off', 'Coupons you switch off are kept here.'],
+  ended: ['No ended coupons', 'Coupons past their end date or use limit show here.'],
+  all: ['No coupons yet', 'Make one for a sale or a WhatsApp offer.'],
+};
+const TYPE_OPTIONS = [
+  { value: 'percentage', label: '% off' },
+  { value: 'fixed', label: '₹ off' },
+  { value: 'tiered', label: 'Spend more, save more (₹ steps)' },
+  { value: 'quantity_based', label: 'Buy more, save more (item steps)' },
+];
+const PAY_OPTIONS = [
+  { value: 'all', label: 'Any payment' },
+  { value: 'prepaid', label: 'Prepaid orders only' },
+  { value: 'cod', label: 'Cash on delivery only' },
+];
+const FAR_YEAR = 2090;
+const NO_END = '2099-12-31';
+
+// ── Formatting ───────────────────────────────────────────────────────
+const num = (n) => Number(n || 0).toLocaleString('en-IN');
+const inr = (n) => `₹${num(Math.round(Number(n) || 0))}`;
+const plural = (n, w) => `${num(n)} ${w}${Number(n) === 1 ? '' : 's'}`;
+const istDay = (d = new Date()) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+const addDays = (ymd, n) => { const d = new Date(`${ymd}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const isNever = (d) => d && new Date(d).getFullYear() >= FAR_YEAR;
+const dayText = (d) => {
+  const x = new Date(d);
+  const sameYear = istDay(x).slice(0, 4) === istDay().slice(0, 4);
+  return x.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), timeZone: 'Asia/Kolkata' });
+};
+const ymdText = (ymd) => dayText(`${ymd}T12:00:00+05:30`);
+const listText = (arr) => (arr.length <= 1 ? arr.join('') : `${arr.slice(0, -1).join(', ')} and ${arr[arr.length - 1]}`);
+const shortList = (arr, max = 2) => (arr.length <= max ? arr.join(', ') : `${arr.slice(0, max).join(', ')} +${arr.length - max}`);
+const jsonArr = (v) => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; } }
+  return [];
 };
 
-const EMPTY_FORM = { code: "", description: "", type: "percentage", value: "", minPurchase: "", maxDiscount: "", usageLimit: "", usageCount: "", perUserLimit: "", status: "active", applicableCategories: [], applicableProducts: [], startDate: "", endDate: "", paymentModeRestriction: "all", firstOrderOnly: false, tieredDiscounts: [], quantityBasedDiscounts: [] };
+// What the code gives, in a few words.
+function givesText(c) {
+  if (c.type === 'percentage') return `${Number(c.value)}% off`;
+  if (c.type === 'fixed') return `${inr(c.value)} off`;
+  if (c.type === 'tiered') {
+    const t = jsonArr(c.tieredDiscounts);
+    return t.map((x, i) => `${inr(x.discount)}${i === 0 ? ' off' : ''} over ${inr(x.minAmount)}`).join(', ') || 'Spend more, save more';
+  }
+  const t = jsonArr(c.quantityBasedDiscounts);
+  return t.map((x, i) => `${inr(x.discount)}${i === 0 ? ' off' : ''} for ${x.minQuantity}+ items`).join(', ') || 'Buy more, save more';
+}
 
-export default function Coupons() {
-  const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [confirmState, setConfirmState] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false); // opening edit must not reload the table
-  const [error, setError] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [statusFilter, setStatusFilter] = useState("");
+function ruleText(c) {
+  const parts = [];
+  if (c.minPurchase) parts.push(`over ${inr(c.minPurchase)}`);
+  else if (c.type === 'percentage' || c.type === 'fixed') parts.push('no minimum');
+  if (c.type === 'percentage' && c.maxDiscount) parts.push(`up to ${inr(c.maxDiscount)}`);
+  if (c.paymentModeRestriction === 'prepaid') parts.push('prepaid only');
+  if (c.paymentModeRestriction === 'cod') parts.push('COD only');
+  if (c.firstOrderOnly) parts.push('first order');
+  const items = [...(c.categories || []), ...(c.products || [])].map((x) => x.name);
+  if (items.length) parts.push(`on ${shortList(items)}`);
+  parts.push(!c.perUserLimit || c.perUserLimit === 1 ? 'once per customer' : `${c.perUserLimit}× per customer`);
+  if (c.usageLimit) parts.push(`${num(c.usageCount)} of ${num(c.usageLimit)} used`);
+  return parts.join(' · ');
+}
 
-  // ── React Query: coupons list ────────────────────────────────────
-  const { data: coupons = [], isLoading: queryLoading } = useQuery({
-    queryKey: queryKeys.couponsAdmin,
-    queryFn: async () => {
-      // React Query owns caching here — bypass the service-level list cache.
-      const data = await couponService.getAllCoupons(null, true);
-      return Array.isArray(data?.coupons) ? data.coupons : [];
-    },
-    staleTime: 30 * 1000,
+function statePill(c) {
+  if (c.state === 'live') return <StatusPill tone="done" size="sm">Live</StatusPill>;
+  if (c.state === 'scheduled') return <StatusPill tone="progress" size="sm">Starts {dayText(c.startDate)}</StatusPill>;
+  if (c.state === 'off') return <StatusPill tone="neutral" size="sm">Off</StatusPill>;
+  const usedUp = c.usageLimit && c.usageCount >= c.usageLimit;
+  return <StatusPill tone="neutral" size="sm" className="cpn-pill-ended">{usedUp ? 'Used up' : 'Ended'}</StatusPill>;
+}
+
+function endsText(c) {
+  if (isNever(c.endDate)) return 'Never';
+  if (c.state === 'ended' && new Date(c.endDate) < new Date()) return `Ended ${dayText(c.endDate)}`;
+  return dayText(c.endDate);
+}
+
+// ── Form ─────────────────────────────────────────────────────────────
+function emptyForm(prefill = {}) {
+  const today = istDay();
+  return {
+    id: null, code: '', type: 'percentage', value: '', maxDiscount: '', minPurchase: '',
+    tiers: [{ min: '', discount: '' }], worksOn: 'all', categories: [], products: [],
+    brandIds: [], perUserLimit: '1', usageLimit: '', startDate: today, endDate: addDays(today, 30), noEnd: false,
+    paymentModeRestriction: 'all', firstOrderOnly: false, description: '', active: true,
+    usedBy: [], usageCount: 0, original: null,
+    ...prefill,
+  };
+}
+
+function formFromCoupon(c, names = {}) {
+  const tiered = c.type === 'tiered' ? jsonArr(c.tieredDiscounts).map((t) => ({ min: String(t.minAmount), discount: String(t.discount) }))
+    : c.type === 'quantity_based' ? jsonArr(c.quantityBasedDiscounts).map((t) => ({ min: String(t.minQuantity), discount: String(t.discount) })) : [];
+  const categories = c.categories || jsonArr(c.applicableCategories).map((id) => ({ id: Number(id), name: names.categories?.get(Number(id)) || `Category ${id}` }));
+  const products = c.products || jsonArr(c.applicableProducts).map((id) => ({ id: Number(id), name: names.products?.get(Number(id)) || `Product ${id}` }));
+  const str = (v) => (v == null ? '' : String(Number(v)));
+  return emptyForm({
+    id: c.id, code: c.code, type: c.type,
+    value: c.type === 'percentage' || c.type === 'fixed' ? str(c.value) : '',
+    maxDiscount: str(c.maxDiscount), minPurchase: str(c.minPurchase),
+    tiers: tiered.length ? tiered : [{ min: '', discount: '' }],
+    worksOn: categories.length && products.length ? 'both' : categories.length ? 'categories' : products.length ? 'products' : 'all',
+    categories, products,
+    brandIds: (c.brands ? c.brands.map((b) => b.id) : c.brandIds || []).map(Number),
+    perUserLimit: c.perUserLimit ? String(c.perUserLimit) : '1',
+    usageLimit: c.usageLimit ? String(c.usageLimit) : '',
+    startDate: istDay(c.startDate), endDate: isNever(c.endDate) ? addDays(istDay(), 30) : istDay(c.endDate), noEnd: isNever(c.endDate),
+    paymentModeRestriction: c.paymentModeRestriction || 'all', firstOrderOnly: !!c.firstOrderOnly,
+    description: c.description || '', active: c.status !== 'inactive',
+    usedBy: c.usedBy || [], usageCount: Number(c.usageCount || 0), original: c,
   });
-  // Combined loading: React Query OR an in-flight mutation (we still
-  // call setLoading() during save / delete).
-  const isLoading = loading || queryLoading;
+}
 
-  // Mutations still use a manual loading flag (kept for the form UX).
-  // After they finish we invalidate the query to refetch.
-  const refetchCoupons = () => queryClient.invalidateQueries({ queryKey: queryKeys.couponsAdmin });
-  const fetchCoupons = refetchCoupons;  // legacy callers
+function validate(f) {
+  const e = {};
+  if (!/^[A-Z0-9_-]{3,32}$/.test(f.code)) e.code = 'Use 3–32 capital letters, numbers, - or _ (no spaces).';
+  if (f.type === 'percentage' || f.type === 'fixed') {
+    const v = Number(f.value);
+    if (!f.value || !(v > 0)) e.value = 'Enter the discount.';
+    else if (f.type === 'percentage' && v > 100) e.value = 'Must be between 1 and 100.';
+  } else {
+    const rows = f.tiers.filter((t) => t.min !== '' || t.discount !== '');
+    if (!rows.length) e.tiers = 'Add at least one step.';
+    else if (rows.some((t) => !(Number(t.min) > 0) || !(Number(t.discount) > 0))) e.tiers = 'Fill in both numbers on every step.';
+    else if (f.type === 'quantity_based' && rows.some((t) => !Number.isInteger(Number(t.min)))) e.tiers = 'Item counts must be whole numbers.';
+    else if (f.type === 'tiered' && rows.some((t) => Number(t.discount) >= Number(t.min))) e.tiers = 'Each discount must be less than its cart amount.';
+    else if (new Set(rows.map((t) => Number(t.min))).size !== rows.length) e.tiers = 'Two steps start at the same number.';
+  }
+  if (f.minPurchase !== '' && !(Number(f.minPurchase) >= 0)) e.minPurchase = 'Enter an amount or leave empty.';
+  if (f.maxDiscount !== '' && !(Number(f.maxDiscount) > 0)) e.maxDiscount = 'Enter an amount or leave empty.';
+  if ((f.worksOn === 'categories' || f.worksOn === 'both') && !f.categories.length) e.categories = 'Pick at least one category.';
+  if ((f.worksOn === 'products' || f.worksOn === 'both') && !f.products.length) e.products = 'Pick at least one product.';
+  for (const k of ['perUserLimit', 'usageLimit']) {
+    if (f[k] !== '' && !(Number.isInteger(Number(f[k])) && Number(f[k]) >= 1)) e[k] = 'A whole number, 1 or more (empty = no limit).';
+  }
+  if (!f.startDate) e.startDate = 'Pick a start date.';
+  if (!f.noEnd && (!f.endDate || f.endDate < f.startDate)) e.endDate = 'The end date must be on or after the start date.';
+  return e;
+}
 
-  useEffect(() => { setCurrentPage(1); }, [search]);
+function toPayload(f) {
+  const tiers = f.tiers.filter((t) => t.min !== '' && t.discount !== '').map((t) => ({ min: Number(t.min), discount: Number(t.discount) }));
+  const withCats = f.worksOn === 'categories' || f.worksOn === 'both';
+  const withProds = f.worksOn === 'products' || f.worksOn === 'both';
+  return {
+    code: f.code,
+    type: f.type,
+    ...(f.type === 'percentage' || f.type === 'fixed' ? { value: Number(f.value) } : {}),
+    maxDiscount: f.type === 'percentage' && f.maxDiscount !== '' ? Number(f.maxDiscount) : null,
+    minPurchase: f.minPurchase !== '' ? Number(f.minPurchase) : null,
+    tieredDiscounts: f.type === 'tiered' ? tiers.map((t) => ({ minAmount: t.min, discount: t.discount })) : null,
+    quantityBasedDiscounts: f.type === 'quantity_based' ? tiers.map((t) => ({ minQuantity: t.min, discount: t.discount })) : null,
+    applicableCategories: withCats ? f.categories.map((c) => c.id) : [],
+    applicableProducts: withProds ? f.products.map((p) => p.id) : [],
+    brandIds: f.brandIds,
+    perUserLimit: f.perUserLimit !== '' ? Number(f.perUserLimit) : null,
+    usageLimit: f.usageLimit !== '' ? Number(f.usageLimit) : null,
+    startDate: `${f.startDate}T00:00:00+05:30`,
+    endDate: `${f.noEnd ? NO_END : f.endDate}T23:59:59+05:30`,
+    paymentModeRestriction: f.paymentModeRestriction,
+    firstOrderOnly: !!f.firstOrderOnly,
+    description: f.description.trim() || null,
+    status: f.active ? 'active' : 'inactive',
+  };
+}
 
-  const filteredData = coupons.filter(item => {
-    if (statusFilter && item.status !== statusFilter) return false;
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return item.code?.toLowerCase().includes(s) || item.description?.toLowerCase().includes(s);
+// The sentence a shopper would read.
+function customerSees(f, brands) {
+  let gives;
+  if (f.type === 'percentage') gives = `${Number(f.value) || '…'}% off${f.maxDiscount ? ` (up to ${inr(f.maxDiscount)})` : ''}`;
+  else if (f.type === 'fixed') gives = `${f.value ? inr(f.value) : '₹…'} off`;
+  else {
+    const rows = f.tiers.filter((t) => t.min !== '' && t.discount !== '').sort((a, b) => Number(a.min) - Number(b.min));
+    gives = rows.length
+      ? rows.map((t, i) => (f.type === 'tiered'
+        ? `${inr(t.discount)}${i === 0 ? ' off' : ''} when you spend ${inr(t.min)}`
+        : `${inr(t.discount)}${i === 0 ? ' off' : ''} when you buy ${t.min}${i === rows.length - 1 ? ' or more' : ''}`)).join(', ')
+      : 'a discount (add the steps)';
+  }
+  const bits = [gives];
+  if (f.minPurchase && Number(f.minPurchase) > 0) bits.push(`on orders over ${inr(f.minPurchase)}`);
+  const items = [];
+  if (f.worksOn === 'categories' || f.worksOn === 'both') items.push(...f.categories.map((c) => c.name));
+  if (f.worksOn === 'products' || f.worksOn === 'both') items.push(...f.products.map((p) => p.name));
+  if (items.length) bits.push(`when your cart has ${items.length > 3 ? `one of ${items.length} chosen items` : `something from ${listText(items)}`}${f.type === 'percentage' || f.type === 'quantity_based' ? ' (counted on those items)' : ''}`);
+  const names = f.brandIds.map((id) => brands.find((b) => String(b.id) === String(id))?.display_name || brands.find((b) => String(b.id) === String(id))?.name).filter(Boolean);
+  bits.push(names.length ? `on ${listText(names)}` : 'on every store');
+  const today = istDay();
+  let when = f.noEnd ? '' : `till ${ymdText(f.endDate)}`;
+  if (f.startDate > today) when = `from ${ymdText(f.startDate)}${when ? ` ${when}` : ''}`;
+  let s = bits.join(' ') + (when ? `, ${when}` : '') + '.';
+  const extra = [];
+  if (f.paymentModeRestriction === 'prepaid') extra.push('Prepaid orders only.');
+  if (f.paymentModeRestriction === 'cod') extra.push('Cash on delivery only.');
+  if (f.firstOrderOnly) extra.push('First order only.');
+  const per = Number(f.perUserLimit);
+  extra.push(f.perUserLimit === '' ? 'No limit per customer.' : per === 1 ? 'Once per customer.' : `Up to ${per} times per customer.`);
+  if (f.usageLimit) extra.push(`First ${num(f.usageLimit)} orders only.`);
+  s = `${s.charAt(0).toUpperCase()}${s.slice(1)} ${extra.join(' ')}`;
+  return f.active ? s : `${s} (Switched off — nobody can use it yet.)`;
+}
+
+// ── Searchable picker (categories / products) ────────────────────────
+function Picker({ kind, label, value, onChange, error }) {
+  const [q, setQ] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+  useEffect(() => { const t = setTimeout(() => setDebounced(q.trim()), 300); return () => clearTimeout(t); }, [q]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+  const { data = [], isFetching, error: loadError } = useQuery({
+    queryKey: ['coupons', 'picker', kind, debounced],
+    queryFn: () => couponService.picker({ kind, search: debounced }),
+    enabled: open,
+    staleTime: 60 * 1000,
   });
-
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const start = (currentPage - 1) * itemsPerPage;
-  const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
-
-  const handleEdit = async (id) => {
-    try {
-      setEditLoading(true);
-      const data = await couponService.getCouponById(id);
-      const fmt = (d) => d ? new Date(d).toISOString().split('T')[0] : "";
-      setFormData({ id: data.id, code: data.code || "", description: data.description || "", type: data.type || "percentage", value: data.value || "", minPurchase: data.minPurchase || "", maxDiscount: data.maxDiscount || "", usageLimit: data.usageLimit || "", usageCount: data.usageCount || "", perUserLimit: data.perUserLimit || "", status: data.status || "active", applicableCategories: data.applicableCategories || [], applicableProducts: data.applicableProducts || [], startDate: fmt(data.startDate), endDate: fmt(data.endDate), paymentModeRestriction: data.paymentModeRestriction || "all", firstOrderOnly: data.firstOrderOnly || false, tieredDiscounts: data.tieredDiscounts || [], quantityBasedDiscounts: data.quantityBasedDiscounts || [] });
-      setIsModalOpen(true);
-    } catch (err) { setError(err.message); }
-    finally { setEditLoading(false); }
-  };
-
-  const handleDelete = (id) => {
-    setConfirmState({ message: "Delete this coupon?", onConfirm: async () => {
-      setConfirmState(null);
-      try {
-        setLoading(true);
-        await couponService.deleteCoupon(id);
-        await fetchCoupons();
-      } catch (err) { setError(err.message); }
-      finally { setLoading(false); }
-    }});
-  };
-
-  const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); setError(null); };
-  const handleInputChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    if (!formData.code.trim()) { setError("Coupon code is required"); return; }
-    if (!formData.value || formData.value <= 0) { setError("Discount value must be greater than 0"); return; }
-    if (formData.type === 'percentage' && formData.value > 100) { setError("Percentage cannot exceed 100%"); return; }
-    if (!formData.startDate || !formData.endDate) { setError("Start and end dates are required"); return; }
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) { setError("End date must be after start date"); return; }
-    try {
-      setLoading(true);
-      const payload = { ...formData };
-      if (typeof payload.applicableCategories === 'string') payload.applicableCategories = payload.applicableCategories.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
-      if (typeof payload.applicableProducts === 'string') payload.applicableProducts = payload.applicableProducts.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
-      ['value', 'minPurchase', 'maxDiscount', 'usageLimit', 'perUserLimit'].forEach(f => { payload[f] = payload[f] === '' || payload[f] == null ? null : Number(payload[f]); });
-      delete payload.usageCount;
-      if (formData.id) { delete payload.id; await couponService.updateCoupon(formData.id, payload); }
-      else await couponService.createCoupon(payload);
-      await fetchCoupons();
-      handleModalClose();
-    } catch (err) { setError(err.message || "Failed to save coupon"); }
-    finally { setLoading(false); }
-  };
-
-  const columns = [
-    { header: "Sr. No", accessor: "serial_number" },
-    { header: "Code", accessor: "code", cell: ({ code }) => <span className="cat-name-cell" style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}>{code}</span> },
-    { header: "Type", accessor: "type", cell: (row) => <span className="sl-cat-badge">{row.type === 'percentage' ? `${row.value}%` : `₹${row.value}`}</span> },
-    { header: "Min Purchase", accessor: "minPurchase", cell: ({ minPurchase }) => minPurchase ? `₹${minPurchase}` : <span className="sl-na">—</span> },
-    { header: "Usage", accessor: "usageCount", cell: (row) => <span>{row.usageCount || 0} / {row.usageLimit || '∞'}</span> },
-    { header: "Expires", accessor: "endDate", cell: ({ endDate }) => { if (!endDate) return <span className="sl-na">No expiry</span>; const d = new Date(endDate); const expired = d < new Date(); return <span style={{ color: expired ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>{d.toLocaleDateString()}</span>; } },
-    { header: "Status", accessor: "status", cell: ({ status }) => <span className={`sl-status-badge sl-status-${status}`}>{status}</span> },
-    {
-      header: "Actions", accessor: "actions",
-      cell: ({ id }) => (
-        <div className="sl-actions">
-          <button className="sl-btn-edit" title="Edit" onClick={() => handleEdit(id)}>{IC.edit}</button>
-          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
+  const chosen = new Set(value.map((v) => v.id));
+  const id = `cpn-pick-${kind}`;
+  return (
+    <div className="cpn-field cpn-span" ref={boxRef}>
+      <label htmlFor={id}>{label}</label>
+      {value.length > 0 && (
+        <div className="cpn-chips">
+          {value.map((v) => (
+            <span key={v.id} className="cpn-chip">
+              {v.name}
+              <button type="button" aria-label={`Remove ${v.name}`} onClick={() => onChange(value.filter((x) => x.id !== v.id))}>{ic(Cancel01Icon, 12)}</button>
+            </span>
+          ))}
         </div>
-      )
-    }
-  ];
+      )}
+      <div className="cpn-pick">
+        <input id={id} type="search" value={q} autoComplete="off" placeholder={kind === 'category' ? 'Search categories…' : 'Search products…'}
+          aria-invalid={!!error || undefined} aria-expanded={open} aria-controls={`${id}-list`}
+          onFocus={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+          onKeyDown={(e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); } }} />
+        {open && (
+          <ul id={`${id}-list`} className="cpn-pick-list" role="listbox" aria-label={label}>
+            {loadError ? <li className="cpn-pick-msg">Couldn’t search — {loadError.message}</li>
+              : isFetching && !data.length ? <li className="cpn-pick-msg">Searching…</li>
+                : !data.length ? <li className="cpn-pick-msg">Nothing found{debounced ? ` for “${debounced}”` : ''}.</li>
+                  : data.map((it) => {
+                    const on = chosen.has(Number(it.id));
+                    return (
+                      <li key={it.id} role="option" aria-selected={on}>
+                        <button type="button" className={on ? 'on' : ''} onClick={() => onChange(on ? value.filter((x) => x.id !== Number(it.id)) : [...value, { id: Number(it.id), name: it.name }])}>
+                          <span className="cpn-check" aria-hidden="true">{on ? '✓' : ''}</span>
+                          <span className="cpn-pick-name">{it.name}</span>
+                          <span className="cpn-faint">{[it.parent, it.brand, it.status !== 'active' ? it.status : null].filter(Boolean).join(' · ')}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+          </ul>
+        )}
+      </div>
+      {error && <span className="cpn-err">{error}</span>}
+    </div>
+  );
+}
 
-  const activeCount = coupons.filter(c => c.status === 'active').length;
-  const expiredCount = coupons.filter(c => c.endDate && new Date(c.endDate) < new Date()).length;
+// ── Steps editor (tiered / quantity) ─────────────────────────────────
+function StepsEditor({ type, tiers, onChange, error }) {
+  const isQty = type === 'quantity_based';
+  const set = (i, k, v) => onChange(tiers.map((t, j) => (j === i ? { ...t, [k]: v } : t)));
+  return (
+    <fieldset className="cpn-field cpn-span cpn-steps">
+      <legend>{isQty ? 'Steps — items in the cart → ₹ off' : 'Steps — cart amount → ₹ off'}</legend>
+      {tiers.map((t, i) => (
+        <div key={i} className="cpn-step">
+          <label>
+            <span>{isQty ? 'Buy' : 'Spend ₹'}</span>
+            <input type="number" inputMode="numeric" min="1" value={t.min} onChange={(e) => set(i, 'min', e.target.value)} aria-label={`Step ${i + 1}: ${isQty ? 'items' : 'cart amount'}`} />
+            {isQty && <span>items or more</span>}
+          </label>
+          <label>
+            <span>get ₹</span>
+            <input type="number" inputMode="numeric" min="1" value={t.discount} onChange={(e) => set(i, 'discount', e.target.value)} aria-label={`Step ${i + 1}: rupees off`} />
+            <span>off</span>
+          </label>
+          {tiers.length > 1 && (
+            <button type="button" className="cpn-icon-btn" aria-label={`Remove step ${i + 1}`} onClick={() => onChange(tiers.filter((_, j) => j !== i))}>{ic(Delete02Icon, 15)}</button>
+          )}
+        </div>
+      ))}
+      <button type="button" className="cpn-link" onClick={() => onChange([...tiers, { min: '', discount: '' }])}>+ Add a step</button>
+      <span className="cpn-hint">The biggest step the cart reaches applies.{isQty ? ' Items count only those the coupon works on.' : ''}</span>
+      {error && <span className="cpn-err">{error}</span>}
+    </fieldset>
+  );
+}
+
+// ── Create / edit panel ──────────────────────────────────────────────
+function CouponPanel({ open, initial, brands, onClose, onSaved }) {
+  const [f, setF] = useState(initial);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [serverErr, setServerErr] = useState(null);
+  const [confirm, setConfirm] = useState(null); // 'off' | 'delete'
+  useEffect(() => { setF(initial); setErrors({}); setServerErr(null); setConfirm(null); }, [initial]);
+
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  const isEdit = !!f.id;
+  const automations = (f.usedBy || []).filter((u) => u.enabled);
+  const usesText = automations.length ? listText(automations.map((u) => u.text)) : '';
+  const brandOpts = brands.map((b) => ({ id: Number(b.id), name: b.display_name || b.name }));
+
+  const save = async (skipConfirm = false) => {
+    const e = validate(f);
+    setErrors(e);
+    if (Object.keys(e).length) { setServerErr('Check the fields marked in red.'); return; }
+    if (!skipConfirm && isEdit && !f.active && f.original?.status !== 'inactive' && automations.length) { setConfirm('off'); return; }
+    setSaving(true); setServerErr(null); setConfirm(null);
+    try {
+      const payload = toPayload(f);
+      if (isEdit) await couponService.update(f.id, payload);
+      else await couponService.create(payload);
+      onSaved(isEdit ? `${f.code} saved` : `${f.code} created`);
+    } catch (err) {
+      setServerErr(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    setSaving(true); setServerErr(null);
+    try {
+      await couponService.remove(f.id);
+      onSaved(`${f.code} deleted`);
+    } catch (err) {
+      setServerErr(err.message); setConfirm(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fieldErr = (k) => (errors[k] ? <span className="cpn-err">{errors[k]}</span> : null);
+  const footer = confirm === 'off' ? (
+    <ConfirmBar
+      message={<>{usesText} sends <b>{f.code}</b>. Switched off, those messages hand out a code that fails (win-back skips the store). Switch it off anyway?</>}
+      confirmLabel="Switch off" cancelLabel="Keep it on" busy={saving}
+      onConfirm={() => save(true)} onCancel={() => setConfirm(null)} />
+  ) : confirm === 'delete' ? (
+    <ConfirmBar
+      message={<>Delete coupon <b>{f.code}</b>?{usesText ? ` ${usesText} sends it — they would hand out a code that doesn’t exist.` : ' It was never used.'}</>}
+      confirmLabel="Delete" cancelLabel="Keep" busy={saving}
+      onConfirm={remove} onCancel={() => setConfirm(null)} />
+  ) : (
+    <div className="cpn-foot">
+      {isEdit && (f.usageCount > 0
+        ? <span className="cpn-faint cpn-foot-note">Used on {plural(f.usageCount, 'order')} — switch it off instead of deleting.</span>
+        : <Button variant="danger" onClick={() => setConfirm('delete')} disabled={saving}>Delete</Button>)}
+      <span className="cpn-foot-gap" />
+      <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+      <Button onClick={() => save(false)} loading={saving} loadingText="Saving…">{isEdit ? 'Save' : 'Create coupon'}</Button>
+    </div>
+  );
 
   return (
-    <>
-      <ConfirmModal message={confirmState?.message} onConfirm={confirmState?.onConfirm} onCancel={() => setConfirmState(null)} />
-      <div className="dashboard-page">
-        <PageHeader
-          title="Coupons"
-          subtitle={`${coupons.length} coupon${coupons.length !== 1 ? 's' : ''} total`}
-          actions={
-            <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>
-              + Add Coupon
-            </Button>
-          }
-        />
+    <SidePanel open={open} onClose={() => { if (!saving) onClose(); }} width={640}
+      title={isEdit ? `Edit ${f.original?.code || f.code}` : 'New coupon'}
+      description={isEdit && usesText ? `Sent automatically by ${usesText}.` : 'Fill in the offer — the sentence at the bottom shows what shoppers see.'}
+      footer={footer}>
+      <form className="cpn-form" onSubmit={(e) => { e.preventDefault(); save(false); }} noValidate>
+        {serverErr && <div className="cpn-alert" role="alert">{serverErr}</div>}
+        <div className="cpn-grid">
+          <div className="cpn-field">
+            <label htmlFor="cpn-code">Code</label>
+            <input id="cpn-code" className="cpn-mono" value={f.code} maxLength={32} aria-invalid={!!errors.code || undefined}
+              onChange={(e) => set('code', e.target.value.toUpperCase().replace(/\s+/g, ''))} placeholder="DIWALI30" />
+            {fieldErr('code')}
+          </div>
+          <div className="cpn-field">
+            <span className="cpn-label">Discount</span>
+            <Dropdown value={f.type} onChange={(v) => set('type', v)} options={TYPE_OPTIONS} />
+          </div>
 
-        <StatGrid>
-          <StatTile label="Total coupons" value={coupons.length} />
-          <StatTile label="Active" value={activeCount} />
-          <StatTile label="Expired" value={expiredCount} sub="past end date" />
-        </StatGrid>
-
-        <Panel>
-          <FilterBar
-            search={search}
-            onSearchChange={setSearch}
-            placeholder="Search by code or description…"
-          >
-            <Select
-              options={[{ value: '', label: 'All Status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
-              value={statusFilter}
-              onChange={setStatusFilter}
-              placeholder="All Status"
-            />
-          </FilterBar>
-
-          {isLoading ? (
-            <div style={{ padding: 48, textAlign: 'center' }}><Loader /></div>
-          ) : error ? (
-            <EmptyState title="Couldn't load coupons" message={error} />
-          ) : filteredData.length === 0 ? (
-            <EmptyState
-              icon={IC.coupon}
-              title={search || statusFilter ? "No coupons match" : "No coupons yet"}
-              message={search || statusFilter ? "Try a different search or status filter." : "Create your first coupon to start running promotions."}
-              action={!search && !statusFilter && (
-                <Button variant="primary" onClick={() => { setFormData(EMPTY_FORM); setIsModalOpen(true); }}>+ Add Coupon</Button>
-              )}
-            />
-          ) : (
-            <>
-              <Table columns={columns} data={currentItems} striped hoverable cardOnMobile />
-              {filteredData.length > itemsPerPage && (
-                <div style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
-                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
-              )}
-            </>
+          {(f.type === 'percentage' || f.type === 'fixed') && (
+            <div className="cpn-field">
+              <label htmlFor="cpn-value">{f.type === 'percentage' ? 'Percent off' : 'Rupees off'}</label>
+              <input id="cpn-value" type="number" inputMode="decimal" min="1" max={f.type === 'percentage' ? 100 : undefined}
+                value={f.value} onChange={(e) => set('value', e.target.value)} aria-invalid={!!errors.value || undefined} />
+              {fieldErr('value')}
+            </div>
           )}
-        </Panel>
+          {f.type === 'percentage' && (
+            <div className="cpn-field">
+              <label htmlFor="cpn-max">Most it can take off (₹)</label>
+              <input id="cpn-max" type="number" inputMode="numeric" min="1" value={f.maxDiscount} placeholder="No cap"
+                onChange={(e) => set('maxDiscount', e.target.value)} aria-invalid={!!errors.maxDiscount || undefined} />
+              {fieldErr('maxDiscount')}
+            </div>
+          )}
+          {(f.type === 'tiered' || f.type === 'quantity_based') && (
+            <StepsEditor type={f.type} tiers={f.tiers} onChange={(v) => set('tiers', v)} error={errors.tiers} />
+          )}
+
+          <div className="cpn-field">
+            <label htmlFor="cpn-min">Minimum order (₹)</label>
+            <input id="cpn-min" type="number" inputMode="numeric" min="0" value={f.minPurchase} placeholder="No minimum"
+              onChange={(e) => set('minPurchase', e.target.value)} aria-invalid={!!errors.minPurchase || undefined} />
+            {fieldErr('minPurchase')}
+          </div>
+          <div className="cpn-field">
+            <span className="cpn-label">Works on</span>
+            <Dropdown value={f.worksOn} onChange={(v) => set('worksOn', v)} options={[
+              { value: 'all', label: 'Everything' },
+              { value: 'categories', label: 'Some categories…' },
+              { value: 'products', label: 'Some products…' },
+              { value: 'both', label: 'Some categories and products…' },
+            ]} />
+          </div>
+          {(f.worksOn === 'categories' || f.worksOn === 'both') && (
+            <Picker kind="category" label="Categories (sub-categories count too)" value={f.categories} onChange={(v) => set('categories', v)} error={errors.categories} />
+          )}
+          {(f.worksOn === 'products' || f.worksOn === 'both') && (
+            <Picker kind="product" label="Products" value={f.products} onChange={(v) => set('products', v)} error={errors.products} />
+          )}
+          {f.worksOn !== 'all' && (
+            <p className="cpn-hint cpn-span">The cart needs at least one of these. The discount is worked out on those items only{f.type === 'fixed' || f.type === 'tiered' ? ' (and is never more than they cost)' : ''}; the minimum order counts the whole cart.</p>
+          )}
+
+          <fieldset className="cpn-field cpn-span">
+            <legend>Stores</legend>
+            <div className="cpn-toggles">
+              <button type="button" className={`cpn-toggle${f.brandIds.length === 0 ? ' on' : ''}`} aria-pressed={f.brandIds.length === 0} onClick={() => set('brandIds', [])}>Every store</button>
+              {brandOpts.map((b) => {
+                const on = f.brandIds.includes(b.id);
+                return (
+                  <button key={b.id} type="button" className={`cpn-toggle${on ? ' on' : ''}`} aria-pressed={on}
+                    onClick={() => set('brandIds', on ? f.brandIds.filter((x) => x !== b.id) : [...f.brandIds, b.id])}>{b.name}</button>
+                );
+              })}
+            </div>
+            <span className="cpn-hint">A store’s win-back message only uses a code made for that store (pick just that store).</span>
+          </fieldset>
+
+          <div className="cpn-field">
+            <label htmlFor="cpn-per">Uses per customer</label>
+            <input id="cpn-per" type="number" inputMode="numeric" min="1" value={f.perUserLimit} placeholder="No limit"
+              onChange={(e) => set('perUserLimit', e.target.value)} aria-invalid={!!errors.perUserLimit || undefined} />
+            {fieldErr('perUserLimit')}
+          </div>
+          <div className="cpn-field">
+            <label htmlFor="cpn-total">Total uses</label>
+            <input id="cpn-total" type="number" inputMode="numeric" min="1" value={f.usageLimit} placeholder="No limit"
+              onChange={(e) => set('usageLimit', e.target.value)} aria-invalid={!!errors.usageLimit || undefined} />
+            {fieldErr('usageLimit')}
+            {isEdit && f.usageCount > 0 && <span className="cpn-hint">Used {plural(f.usageCount, 'time')} so far.</span>}
+          </div>
+
+          <div className="cpn-field">
+            <label htmlFor="cpn-start">Starts</label>
+            <input id="cpn-start" type="date" value={f.startDate} onChange={(e) => set('startDate', e.target.value)} aria-invalid={!!errors.startDate || undefined} />
+            {fieldErr('startDate')}
+          </div>
+          <div className="cpn-field">
+            <label htmlFor="cpn-end">Ends</label>
+            <input id="cpn-end" type="date" value={f.noEnd ? '' : f.endDate} disabled={f.noEnd} min={f.startDate}
+              onChange={(e) => set('endDate', e.target.value)} aria-invalid={!!errors.endDate || undefined} />
+            <label className="cpn-check-row"><input type="checkbox" checked={f.noEnd} onChange={(e) => set('noEnd', e.target.checked)} /> No end date</label>
+            {fieldErr('endDate')}
+          </div>
+
+          <div className="cpn-field">
+            <span className="cpn-label">Payment</span>
+            <Dropdown value={f.paymentModeRestriction} onChange={(v) => set('paymentModeRestriction', v)} options={PAY_OPTIONS} />
+          </div>
+          <div className="cpn-field cpn-field-checks">
+            <label className="cpn-check-row"><input type="checkbox" checked={f.firstOrderOnly} onChange={(e) => set('firstOrderOnly', e.target.checked)} /> First order only</label>
+            <label className="cpn-check-row"><input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} /> Switched on</label>
+          </div>
+
+          <div className="cpn-field cpn-span">
+            <label htmlFor="cpn-desc">Offer text in the store’s offers list (optional)</label>
+            <input id="cpn-desc" value={f.description} maxLength={500} onChange={(e) => set('description', e.target.value)} placeholder="e.g. Diwali sale — 30% off prepaid orders" />
+          </div>
+        </div>
+        <div className="cpn-sees" aria-live="polite">Customer sees: <b>{customerSees(f, brands)}</b></div>
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
+    </SidePanel>
+  );
+}
+
+// ── Warnings banner ──────────────────────────────────────────────────
+function Warnings({ warnings, isAdmin, busyKey, onFix }) {
+  if (!warnings.length) return null;
+  return (
+    <section className="cpn-warns" aria-label="Automations with a coupon problem">
+      {warnings.map((w) => (
+        <div key={w.key} className={`cpn-warn${w.problem === 'not_started' ? ' soft' : ''}`}>
+          <span className="cpn-warn-ic">{ic(Alert02Icon, 18)}</span>
+          <span className="cpn-warn-msg">{w.message}</span>
+          {w.fix && (
+            <Button size="sm" variant={w.fix.action === 'switch_on' ? 'primary' : 'secondary'}
+              disabled={w.fix.action === 'switch_on' && !isAdmin} loading={busyKey === w.key} loadingText="Fixing…"
+              title={w.fix.action === 'switch_on' && !isAdmin ? 'Only an admin can do this' : undefined}
+              onClick={() => onFix(w)}>
+              {w.fix.label}
+            </Button>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────
+export default function Coupons() {
+  const qc = useQueryClient();
+  const { isAdmin } = useAuth() || {};
+  const [tab, setTab] = useState('live');
+  const [brandId, setBrandId] = useState('');
+  const [days, setDays] = useState(30);
+  const [brands, setBrands] = useState([]);
+  const [search, setSearch] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [page, setPage] = useState(1);
+  const [panel, setPanel] = useState(null); // form initial state
+  const [opening, setOpening] = useState(null);
+  const [fixing, setFixing] = useState(null);
+
+  useEffect(() => {
+    let off = false;
+    brandService.getAllBrands().then((res) => {
+      if (!off) setBrands(res?.data || res?.brands || (Array.isArray(res) ? res : []));
+    }).catch(() => {});
+    return () => { off = true; };
+  }, []);
+  useEffect(() => { const t = setTimeout(() => setDebounced(search.trim()), 400); return () => clearTimeout(t); }, [search]);
+  useEffect(() => { setPage(1); }, [tab, brandId, debounced, days]);
+
+  const list = useQuery({
+    queryKey: ['coupons', 'list', tab, brandId, debounced, page, days],
+    queryFn: () => couponService.list({ tab, brandId, search: debounced, page, limit: PAGE_SIZE, days }),
+    placeholderData: keepPreviousData,
+    staleTime: 15 * 1000,
+  });
+  const summary = useQuery({
+    queryKey: ['coupons', 'summary', brandId, days],
+    queryFn: () => couponService.summary({ brandId, days }),
+    staleTime: 60 * 1000,
+  });
+  const deps = useQuery({
+    queryKey: ['coupons', 'deps'],
+    queryFn: couponService.dependencies,
+    staleTime: 60 * 1000,
+  });
+
+  const coupons = list.data?.coupons || [];
+  const counts = list.data?.counts || {};
+  const totalPages = list.data?.pagination?.totalPages || 1;
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const refresh = () => qc.invalidateQueries({ queryKey: ['coupons'] });
+
+  const openNew = (prefill = {}) => setPanel(emptyForm(prefill));
+  const openEdit = async (id, row) => {
+    if (row) { setPanel(formFromCoupon(row)); return; }
+    setOpening(id);
+    try {
+      const c = await couponService.get(id);
+      const catIds = jsonArr(c.applicableCategories);
+      const prodIds = jsonArr(c.applicableProducts);
+      const [cats, prods] = await Promise.all([
+        catIds.length ? couponService.picker({ kind: 'category', ids: catIds }) : [],
+        prodIds.length ? couponService.picker({ kind: 'product', ids: prodIds }) : [],
+      ]);
+      const usedBy = (deps.data || []).filter((w) => w.couponId === c.id).map((w) => ({ text: w.automationLabel + (w.brandName ? ` · ${w.brandName}` : ''), enabled: true }));
+      setPanel(formFromCoupon({ ...c, usedBy }, {
+        categories: new Map(cats.map((x) => [Number(x.id), x.name])),
+        products: new Map(prods.map((x) => [Number(x.id), x.name])),
+      }));
+    } catch (e) {
+      showError(null, `Couldn’t open the coupon — ${e.message}`);
+    } finally {
+      setOpening(null);
+    }
+  };
+
+  const fix = async (w) => {
+    const f = w.fix;
+    if (f.action === 'create') { openNew({ code: f.code, brandIds: f.brandIds || [] }); return; }
+    if (f.action === 'edit') { openEdit(f.couponId); return; }
+    if (f.action === 'settings') {
+      window.history.pushState({}, '', '/dashboard/brand-settings');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      return;
+    }
+    setFixing(w.key);
+    try {
+      await couponService.switchOn(f.couponId, { brandId: f.brandId || undefined, owner: !!f.owner, allBrands: !!f.allBrands });
+      showSuccess(null, `${w.code} is on — ${w.automationLabel} can use it again.`);
+      refresh();
+    } catch (e) {
+      showError(null, e.message);
+    } finally {
+      setFixing(null);
+    }
+  };
+
+  const s = summary.data;
+  const brandOpts = [{ value: '', label: 'All stores' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))];
+  const empty = EMPTY_TEXT[tab];
+  const panelBrands = useMemo(() => brands.filter((b) => b.status !== 'inactive'), [brands]);
+
+  return (
+    <div className="dashboard-sections cpn-page">
+      <PageHeader
+        title="Coupons"
+        description={`What each code costs you and what it brings in — last ${days} days.`}
+        actions={(
+          <div className="cpn-head-tools">
+            <Dropdown value={brandId} onChange={(v) => setBrandId(String(v))} options={brandOpts} className="cpn-dd" />
+            <Dropdown value={days} onChange={(v) => setDays(Number(v))} className="cpn-dd"
+              options={[{ value: 7, label: 'Last 7 days' }, { value: 30, label: 'Last 30 days' }, { value: 90, label: 'Last 90 days' }]} />
+            <Button icon={ic(Add01Icon)} onClick={() => openNew()}>New coupon</Button>
+          </div>
+        )}
+      />
+
+      {summary.error && !s ? (
+        <ErrorState message={`Couldn’t load the coupon numbers — ${summary.error.message}`} onRetry={() => summary.refetch()} retrying={summary.isFetching} />
+      ) : (
+        <KpiGrid className="cpn-kpis">
+          <KpiTile label="Orders with a coupon" value={s ? num(s.couponOrders) : '–'}
+            sub={s ? (s.orders ? `${s.couponShare}% of ${plural(s.orders, 'order')}` : 'no orders yet') : 'loading…'} />
+          <KpiTile label="Discount given" value={s ? inr(s.discount) : '–'} sub="what coupons cost you" />
+          <KpiTile label="Sales with coupons" value={s ? inr(s.sales) : '–'}
+            sub={s ? (s.salesPerRupee ? `₹${s.salesPerRupee} of sales per ₹1 of discount` : 'no coupon orders yet') : ''} />
+          <KpiTile label="Live codes" value={s ? num(s.liveCodes) : '–'}
+            sub={s ? (s.startingSoon ? `${s.startingSoon} start${s.startingSoon === 1 ? 's' : ''} this week` : 'switched on and in date') : ''} />
+        </KpiGrid>
+      )}
+
+      {deps.error ? (
+        <ErrorState message={`Couldn’t check which automations use a coupon — ${deps.error.message}`} onRetry={() => deps.refetch()} retrying={deps.isFetching} />
+      ) : (
+        <Warnings warnings={deps.data || []} isAdmin={!!isAdmin} busyKey={fixing} onFix={fix} />
+      )}
+
+      <div className="cpn-toolbar">
+        <FilterChips ariaLabel="Coupon status" controls="cpn-table" value={tab} onChange={setTab}
+          items={TABS.map((t) => ({ ...t, count: list.data ? counts[t.value] || 0 : undefined }))} />
+        <label className="cpn-search">
+          <span className="ds-sr-only">Search code</span>
+          {ic(Search01Icon)}
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search code or offer text" />
+        </label>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Coupon" : "Add Coupon"} closeOnOverlayClick={false}>
-        <form onSubmit={handleSubmit} className="seo-form">
-          {error && <div className="dm-error-banner">{error}</div>}
-          <div className="modal-body">
-            <div className="dm-2col">
-              <Input
-                label="Coupon Code"
-                required
-                name="code"
-                value={formData.code}
-                onChange={handleInputChange}
-                placeholder="e.g., SAVE20"
-              />
-              <div className="dm-field">
-                <label className="dm-label">Status <span className="dm-required">*</span></label>
-                <Select
-                  options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
-                  value={formData.status}
-                  onChange={v => setFormData(prev => ({ ...prev, status: v }))}
-                />
-              </div>
-            </div>
-            <Input
-              label="Description"
-              required
-              multiline
-              rows={3}
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Describe this coupon..."
-            />
-            <div className="dm-section-title">Discount</div>
-            <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Discount Type <span className="dm-required">*</span></label>
-                <Select
-                  options={[
-                    { value: 'percentage', label: 'Percentage' },
-                    { value: 'fixed', label: 'Fixed Amount' },
-                    // 'tiered' / 'quantity_based' removed — the form has no UI to
-                    // configure their tiers, so selecting them produced a coupon
-                    // with empty rules and a meaningless flat value. Re-add with
-                    // the tier/quantity editors when that UI exists.
-                  ]}
-                  value={formData.type}
-                  onChange={v => setFormData(prev => ({ ...prev, type: v }))}
-                />
-              </div>
-              <Input
-                label="Discount Value"
-                required
-                type="number"
-                name="value"
-                value={formData.value}
-                onChange={handleInputChange}
-                placeholder={formData.type === 'percentage' ? '0–100' : '0.00'}
-              />
-              <Input
-                label="Min Purchase (₹)"
-                type="number"
-                name="minPurchase"
-                value={formData.minPurchase}
-                onChange={handleInputChange}
-                placeholder="0.00"
-              />
-              <Input
-                label="Max Discount (₹)"
-                type="number"
-                name="maxDiscount"
-                value={formData.maxDiscount}
-                onChange={handleInputChange}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="dm-section-title">Usage Limits</div>
-            <div className="dm-2col">
-              <Input
-                label="Usage Limit"
-                type="number"
-                name="usageLimit"
-                value={formData.usageLimit}
-                onChange={handleInputChange}
-                placeholder="Unlimited"
-              />
-              <Input
-                label="Per User Limit"
-                type="number"
-                name="perUserLimit"
-                value={formData.perUserLimit}
-                onChange={handleInputChange}
-                placeholder="Unlimited"
-              />
-            </div>
-            <div className="dm-section-title">Validity</div>
-            <div className="dm-2col">
-              <Input
-                label="Start Date"
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
-              />
-              <Input
-                label="End Date"
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="dm-section-title">Restrictions</div>
-            <div className="dm-2col">
-              <div className="dm-field">
-                <label className="dm-label">Payment Mode</label>
-                <Select
-                  options={[
-                    { value: 'all', label: 'All Payment Modes' },
-                    { value: 'cod', label: 'Cash on Delivery Only' },
-                    { value: 'prepaid', label: 'Prepaid Only' },
-                  ]}
-                  value={formData.paymentModeRestriction}
-                  onChange={v => setFormData(prev => ({ ...prev, paymentModeRestriction: v }))}
-                />
-              </div>
-              <div className="dm-field">
-                <label className="dm-label">First Order Only</label>
-                <Select
-                  options={[{ value: false, label: 'No' }, { value: true, label: 'Yes' }]}
-                  value={formData.firstOrderOnly}
-                  onChange={v => setFormData(prev => ({ ...prev, firstOrderOnly: v }))}
-                />
-              </div>
-            </div>
+      <section className="cpn-card" id="cpn-table" aria-busy={list.isFetching || undefined}>
+        {list.isLoading ? (
+          <SkeletonRows rows={6} label="Loading coupons…" />
+        ) : list.error && !list.data ? (
+          <ErrorState message={`Couldn’t load coupons — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
+        ) : coupons.length === 0 ? (
+          <EmptyState compact
+            title={debounced ? 'No coupons match' : empty[0]}
+            description={debounced ? `Nothing in ${TABS.find((t) => t.value === tab).label} for “${debounced}”.` : empty[1]}
+            action={!debounced && (tab === 'all' || tab === 'live') ? <Button onClick={() => openNew()}>+ New coupon</Button> : null} />
+        ) : (
+          <div className="cpn-scroll">
+            <table className="cpn-table">
+              <thead>
+                <tr>
+                  <th scope="col">Code</th>
+                  <th scope="col">Gives</th>
+                  <th scope="col">Where</th>
+                  <th scope="col">Used by</th>
+                  <th scope="col" className="r">Used · {days} d</th>
+                  <th scope="col" className="r">Discount given</th>
+                  <th scope="col" className="r">Sales with it</th>
+                  <th scope="col">Ends</th>
+                  <th scope="col"><span className="ds-sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((c) => (
+                  <tr key={c.id}>
+                    <td><b className="cpn-mono">{c.code}</b><div className="cpn-sub">{statePill(c)}</div></td>
+                    <td className="cpn-gives">{givesText(c)}<div className="cpn-sub cpn-faint">{ruleText(c)}</div></td>
+                    <td>{c.brands.length ? shortList(c.brands.map((b) => b.name)) : 'All stores'}</td>
+                    <td>{c.usedBy.length
+                      ? c.usedBy.map((u) => <div key={u.key + u.text} className={u.enabled ? '' : 'cpn-faint'}>{u.text}</div>)
+                      : <span className="cpn-faint">—</span>}</td>
+                    <td className="r">{num(c.stats.used)}{c.usageCount > c.stats.used && <div className="cpn-sub cpn-faint">{num(c.usageCount)} all time</div>}</td>
+                    <td className="r">{c.stats.used ? inr(c.stats.discount) : <span className="cpn-faint">—</span>}</td>
+                    <td className="r"><b>{c.stats.used ? inr(c.stats.sales) : <span className="cpn-faint">—</span>}</b></td>
+                    <td className="cpn-faint cpn-nowrap">{endsText(c)}</td>
+                    <td className="r">
+                      <Button size="sm" variant="secondary" onClick={() => openEdit(c.id, c)} loading={opening === c.id} aria-label={`Edit ${c.code}`}>Edit</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="modal-footer">
-            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" size="medium" disabled={loading}>{loading ? "Saving..." : formData.id ? "Update Coupon" : "Add Coupon"}</Button>
+        )}
+        {totalPages > 1 && (
+          <div className="cpn-pager">
+            <span className="cpn-faint">{num((page - 1) * PAGE_SIZE + 1)}–{num(Math.min(page * PAGE_SIZE, list.data?.pagination?.total || 0))} of {num(list.data?.pagination?.total || 0)}</span>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
-        </form>
-      </Modal>
-    </>
+        )}
+      </section>
+
+      <p className="cpn-foot-note">
+        Numbers count orders placed in the period that weren’t cancelled. A coupon’s rules are checked again when the order is placed,
+        so a code that’s off, ended or used up never gives a discount.
+      </p>
+
+      {panel && (
+        <CouponPanel open={!!panel} initial={panel} brands={panelBrands} onClose={() => setPanel(null)}
+          onSaved={(msg) => { showSuccess(null, msg); setPanel(null); refresh(); }} />
+      )}
+    </div>
   );
 }

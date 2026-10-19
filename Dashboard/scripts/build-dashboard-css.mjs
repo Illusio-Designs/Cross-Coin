@@ -53,6 +53,7 @@ const FILES = [
   'reviews.css',
   'systemHealth.css',
   'customers.css',
+  'coupons.css',
   'ui-kit.css',
   'editor.css',
 ];
