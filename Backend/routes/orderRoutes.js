@@ -13,7 +13,6 @@ const {
     cancelOrdersInShipping,
     getShippingTrackingForOrder, getShippingLabelForOrder, getShippingCouriers,
     handleShippingWebhook, syncSingleOrderWithShipping, getShippingWebhookEvents,
-    bulkRefreshShippingStatus,
     getAvailableCouriers, syncWithCourier,
     generateLabelForOrder,
 } = require('../controller/orderShippingController.js');
@@ -61,7 +60,6 @@ router.get('/',                          isAuthenticated, isOrderManager, getAll
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
-router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshShippingStatus);
 router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInShipping);
 router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getShippingCouriers);
 router.get('/shipping/webhook-events',  isAuthenticated, isOrderManager, getShippingWebhookEvents);

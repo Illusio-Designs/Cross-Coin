@@ -115,7 +115,6 @@ const Orders = () => {
         paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0
     });
     const [syncingOrders, setSyncingOrders] = useState(new Set());
-    const [refreshingStatus, setRefreshingStatus] = useState(false);
     const [pickupOpen, setPickupOpen] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
@@ -265,42 +264,6 @@ const Orders = () => {
             setAllOrdersStats({ total: 0, prepaid: 0, cod: 0, paid: 0, pending: 0, totalRevenue: 0, averageOrderValue: 0, deliveredOrders: 0, cancelledOrders: 0, paymentStatusPending: 0, paymentStatusPaid: 0, paymentStatusFailed: 0, paymentStatusRefunded: 0, paymentStatusCancelled: 0, paymentStatusRefundPending: 0 });
         }
     }, [statsStartDate, statsEndDate]);
-
-    const refreshOrderStatuses = async () => {
-        if (refreshingStatus) return;
-        setRefreshingStatus(true);
-        try {
-            const result = await orderService.bulkRefreshShippingStatus();
-            const data = result.data || {};
-            let message = 'Status refresh completed! ';
-            if (data.updated > 0) message += `${data.updated} orders updated. `;
-            if (data.unchanged > 0) message += `${data.unchanged} unchanged. `;
-            if (data.errors > 0) message += `${data.errors} errors. `;
-            if ((data.total || 0) === 0) message += 'No active orders to refresh.';
-            showSuccess('orderSynced', message);
-            fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
-        } catch (error) {
-            showError('syncFailed', error.message || error.error || 'Failed to refresh order statuses');
-        } finally { setRefreshingStatus(false); }
-    };
-
-    const updateSingleOrder = async (orderId) => {
-        try {
-            // Refresh tracking from the shipping provider (iThink)
-            const result = await orderService.refreshOrderStatus(orderId);
-            if (result.success) {
-                let message = result.message;
-                if (result.update_result?.updated) {
-                    if (result.update_result.status_changed) message += ` Status: ${result.update_result.old_status} → ${result.update_result.new_status}`;
-                    if (result.update_result.tracking_updated) message += ` Tracking updated.`;
-                }
-                showSuccess('orderSynced', message);
-                // Silent refetch: swap in fresh rows without blanking the table
-                // to a full-page skeleton (the updated row still flashes).
-                fetchOrders(currentPage, { silent: true }); fetchAllOrdersForStats();
-            } else { showError('syncFailed', result.message || 'Failed to update order'); }
-        } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
-    };
 
     const downloadInvoice = async (orderId, orderNumber) => {
         try {
@@ -733,7 +696,7 @@ const Orders = () => {
                 const isFinal = row.status === 'delivered' || row.status === 'cancelled';
                 const isSyncing = syncingOrders.has(row.id);
                 // Once an order has a waybill it's already booked with a courier —
-                // hide the Sync button (the Refresh-tracking button takes over).
+                // hide the Sync button — courier webhooks keep its status current.
                 const isSynced = !!(row.Shipment?.waybill || row.shipping_waybill);
                 const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
                 // Confirming an order now books the courier automatically, so the
@@ -794,13 +757,6 @@ const Orders = () => {
                                     ) : (
                                         <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                                     )}
-                                </button>
-                            </Tooltip>
-                        )}
-                        {!canConfirm && !pendingSync && isSynced && (
-                            <Tooltip text="Refresh tracking information from courier" position="top">
-                                <button className="order-action-btn order-update-btn" onClick={() => updateSingleOrder(row.id)}>
-                                    <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />
                                 </button>
                             </Tooltip>
                         )}
@@ -877,12 +833,6 @@ const Orders = () => {
                                     <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB…"
                                         value={filterValue} onChange={handleSearchChange} />
                                 </div>
-                                <button className={`order-sync-main-btn${refreshingStatus ? ' syncing' : ''}`}
-                                    title="Update the tracking status of already-shipped, active orders"
-                                    onClick={refreshOrderStatuses} disabled={loading || refreshingStatus}>
-                                    <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} className={refreshingStatus ? 'animate-spin' : ''} />
-                                    {refreshingStatus ? 'Refreshing…' : 'Refresh Tracking'}
-                                </button>
                                 <button className="order-sync-main-btn" type="button"
                                     title="Set no-pickup days and blocked date ranges (shared across all stores)"
                                     onClick={() => setPickupOpen(true)}>

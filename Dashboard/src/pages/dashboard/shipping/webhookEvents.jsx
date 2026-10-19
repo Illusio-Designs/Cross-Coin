@@ -118,8 +118,8 @@ export default function WebhookEvents() {
           </div>
           <div style={{ fontSize: "0.85rem", opacity: 0.8, marginTop: 2 }}>
             {pushWorking
-              ? `Last update received ${fmt(summary?.lastReceivedAt)}. You do not need to press Sync.`
-              : "Until an event appears here, status only updates when you press Sync manually."}
+              ? `Last update received ${fmt(summary?.lastReceivedAt)}. Statuses update automatically.`
+              : "Until an event appears here, statuses only update through the twice-daily automatic sync (6 AM / 6 PM)."}
           </div>
         </div>
       </div>

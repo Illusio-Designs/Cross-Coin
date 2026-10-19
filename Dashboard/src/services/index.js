@@ -541,19 +541,6 @@ export const orderService = {
   },
 
   // Refresh order status from active shipping provider (works for both Shipping and iThink)
-  refreshOrderStatus: async (orderId) => {
-    try {
-      const response = await adminApi.put(
-        `/api/orders/${orderId}/shipping/sync`,
-        {},
-        { timeout: 30000 }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
   // Inbound shipping-webhook health: tells whether iThink/Shipping is actually
   // pushing status updates (so Shipped/Delivered/RTO WhatsApp fire in real time
   // instead of waiting for the twice-daily poll), plus the recent events.
@@ -566,19 +553,6 @@ export const orderService = {
     }
   },
 
-  // Bulk refresh order statuses from Shipping
-  bulkRefreshShippingStatus: async () => {
-    try {
-      const response = await adminApi.post(
-        "/api/orders/shipping/refresh-status",
-        {},
-        { timeout: 60000 }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 
   // Sync single order with Shipping
   syncSingleOrderWithShipping: async (orderId) => {
