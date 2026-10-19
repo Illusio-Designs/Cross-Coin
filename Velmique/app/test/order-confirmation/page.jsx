@@ -6,7 +6,10 @@ export const metadata = {
 };
 
 export default function TestOrderConfirmation({ searchParams }) {
-  const order = (searchParams?.order || '').toString();
+  // `order` comes from our own drawer checkout; `oid`/`ost` come from the
+  // custom-checkout redirect (?oid=<platform order>&ost=SUCCESS).
+  const ost = (searchParams?.ost || '').toString().toUpperCase();
+  const order = (searchParams?.order || (ost === 'SUCCESS' ? searchParams?.oid : '') || '').toString();
   return (
     <section className="m-section"><div className="m-wrap m-oc">
       <div className="m-oc__badge">

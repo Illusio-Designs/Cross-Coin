@@ -15,7 +15,11 @@
  */
 const crypto = require('crypto');
 const axios = require('axios');
-const { Product, ProductVariation, ProductImage, Category, Brand } = require('../model/associations.js');
+const {
+  Product, ProductVariation, ProductImage, Category, Brand,
+  Order, OrderItem, Payment, GuestUser, ShippingAddress,
+} = require('../model/associations.js');
+const { sequelize } = require('../config/db.js');
 const settingsHelper = require('./settingsHelper.js');
 const { logger } = require('../config/logging.js');
 
@@ -263,9 +267,115 @@ async function pushCollectionAllBrands(categoryId) {
 Product.addHook('afterSave', 'customCheckoutPush', (p) => { if (p?.id) setImmediate(() => pushProductAllBrands(p.id)); });
 Category.addHook('afterSave', 'customCheckoutPush', (c) => { if (c?.id) setImmediate(() => pushCollectionAllBrands(c.id)); });
 
+// ── Inbound order webhook → local order ─────────────────────────────────────
+// The provider POSTs the full order to our registered webhook once checkout
+// completes. Map it into a real Order (+ items, address, guest, payment) so
+// it shows in the Dashboard like any other order. Idempotent by
+// platform_order_id via the orders.idempotency_key column.
+async function ingestCheckoutOrder(brandId, p) {
+  const status = String(p?.status || '').toUpperCase();
+  if (status && status !== 'SUCCESS') return { skipped: `status_${status}` };
+  const platformId = String(p?.platform_order_id || p?.order_id || '').trim();
+  const items = p?.cart_data?.items || [];
+  if (!platformId || !items.length) { const e = new Error('platform_order_id and cart_data.items are required'); e.status = 400; throw e; }
+
+  const idemKey = `cco:${platformId}`.slice(0, 100);
+  const already = await Order.findOne({ where: { idempotency_key: idemKey } });
+  if (already) return { created: false, order_number: already.order_number };
+
+  const { generateUniqueOrderNumber } = require('./orderCreationService.js');
+  const { toSmallestUnit } = require('../utils/amountConverter.js');
+  const ship = p.shipping_address || {};
+  const phone = String(p.phone || ship.phone || '').replace(/\D/g, '').slice(-10);
+  const firstName = ship.first_name || 'Customer';
+  const lastName = ship.last_name || '';
+
+  return sequelize.transaction(async (t) => {
+    // Guest identity (custom-checkout shoppers have no local account).
+    let guest = phone ? await GuestUser.findOne({ where: { phone }, transaction: t }) : null;
+    if (!guest) {
+      guest = await GuestUser.create({ firstName, lastName, email: p.email || ship.email || null, phone: phone || null }, { transaction: t });
+    }
+
+    const address = await ShippingAddress.create({
+      user_id: null,
+      guest_user_id: guest.id,
+      full_name: `${firstName} ${lastName}`.trim(),
+      phone: phone || String(ship.phone || ''),
+      address: [ship.line1, ship.line2, ship.landmark].filter(Boolean).join(', '),
+      city: ship.city || '',
+      state: ship.state || '',
+      pincode: String(ship.pincode || ''),
+      country: ship.country || 'India',
+    }, { transaction: t });
+
+    // Resolve cart lines against real variations.
+    const lines = [];
+    for (const it of items) {
+      const v = await ProductVariation.findByPk(it.variant_id, { transaction: t });
+      if (!v) { const e = new Error(`Unknown variant_id ${it.variant_id}`); e.status = 400; throw e; }
+      const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+      const price = Number(v.price) || 0;
+      lines.push({ product_id: v.productId, variation_id: v.id, quantity: qty, price, discount: 0, subtotal: price * qty });
+    }
+
+    const subtotal = Number(p.subtotal_price) || lines.reduce((a, l) => a + l.subtotal, 0);
+    const discount = Number(p.total_discount) || 0;
+    const shippingFee = Number(p.shipping_charges) || 0;
+    const finalAmount = Number(p.total_amount_payable) || Math.max(0, subtotal - discount + shippingFee);
+    const isCod = String(p.payment_type || '').toUpperCase() === 'COD';
+    const paid = String(p.payment_status || '').toLowerCase() === 'success';
+
+    const order = await Order.create({
+      order_number: await generateUniqueOrderNumber(t, brandId),
+      user_id: null,
+      guest_user_id: guest.id,
+      total_amount: subtotal,
+      discount_amount: discount,
+      coupon_id: null,
+      shipping_fee: shippingFee,
+      final_amount: finalAmount,
+      payment_type: isCod ? 'cod' : 'prepaid',
+      payment_status: paid ? 'paid' : (isCod ? 'pending' : 'pending'),
+      status: 'confirmed',
+      notes: `Custom checkout order ${platformId}${p.fastrr_order_id ? ` / fastrr ${p.fastrr_order_id}` : ''}${(p.coupon_codes || []).length ? ` / coupon ${(p.coupon_codes || []).join(',')}` : ''}`,
+      shipping_address_id: address.id,
+      brand_id: brandId,
+      idempotency_key: idemKey,
+    }, { transaction: t });
+
+    await OrderItem.bulkCreate(lines.map((l) => ({ ...l, order_id: order.id })), { transaction: t });
+
+    for (const l of lines) {
+      await ProductVariation.decrement('stock', { by: l.quantity, where: { id: l.variation_id }, transaction: t });
+    }
+
+    const pay = (p.payments || [])[0];
+    if (pay) {
+      try {
+        await Payment.create({
+          order_id: order.id,
+          user_id: null,
+          payment_type: isCod ? 'cod' : 'razorpay',
+          transaction_id: pay.txn_id || pay.pg_transaction_id || null,
+          amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
+          status: String(pay.payment_status || '').toLowerCase() === 'success' ? 'successful' : 'pending',
+          payment_gateway: pay.gateway || 'CustomCheckout',
+          brand_id: brandId,
+        }, { transaction: t });
+      } catch (e) {
+        logger.warn(`[custom-checkout] payment record failed for order ${order.order_number}: ${e.message}`);
+      }
+    }
+
+    logger.info(`[custom-checkout] ingested order ${order.order_number} (platform ${platformId}, brand ${brandId})`);
+    return { created: true, order_number: order.order_number, order_id: order.id };
+  });
+}
+
 module.exports = {
   mapProduct, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
-  initiateRefund, refundReports,
+  initiateRefund, refundReports, ingestCheckoutOrder,
 };

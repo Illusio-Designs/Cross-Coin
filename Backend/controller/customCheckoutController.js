@@ -76,6 +76,14 @@ exports.listCollectionProducts = async (req, res) => {
   }
 };
 
+// GET /api/custom-checkout/points?mobile_number=… — loyalty points lookup the
+// checkout calls per shopper. No loyalty program runs here yet, so every
+// shopper has zero points; plug a real balance in when one exists.
+exports.getPoints = async (req, res) => {
+  const mobile = String(req.query.mobile_number || req.query.mobile || req.query.phone || '').replace(/\D/g, '');
+  res.json({ data: { mobile_number: mobile, available_points: 0, applicable_points: 0 } });
+};
+
 // POST /api/custom-checkout/token  { items:[{variant_id,quantity}], custom_attributes?, mobile_app?, redirect_url }
 // Called by the storefront; the HMAC secret stays server-side.
 exports.createToken = async (req, res) => {
@@ -134,6 +142,21 @@ exports.syncCollection = async (req, res) => {
   const brandId = parseInt(req.query.brand_id, 10) || req.brandId || 1;
   const result = await svc.pushCollection(req.params.id, brandId);
   res.json({ success: !result.error, ...result });
+};
+
+// POST /api/custom-checkout/order-webhook?brand=<slug>
+// The provider POSTs the full order here after checkout (register this URL,
+// with the brand query, as the seller webhook). Idempotent; non-SUCCESS
+// statuses are acknowledged and skipped.
+exports.orderWebhook = async (req, res) => {
+  try {
+    const brandId = req.brandId || 1;
+    const result = await svc.ingestCheckoutOrder(brandId, req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error('[custom-checkout] order webhook failed: ' + err.message);
+    res.status(err.status || 500).json({ ok: false, message: err.message });
+  }
 };
 
 // Admin: refunds — signed pass-throughs to the provider.
