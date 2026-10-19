@@ -616,9 +616,9 @@ export default function CartDrawer() {
 
   // ── Abandoned-cart recovery deep link ───────────────────────────────────
   // The WhatsApp "Complete Order" link comes back with `?recover=1`
-  // (`&coupon=CART10&cart=<token>`). The bag only lives in this tab's memory
-  // (and the link usually opens in WhatsApp's in-app browser), so an empty bag
-  // is rebuilt from the server copy behind the token; then, once the total is
+  // (`&coupon=CART10&cart=<token>`). The link usually opens in WhatsApp's
+  // in-app browser, which has no saved bag, so an empty bag is rebuilt from
+  // the server copy behind the token (a bag saved on this device wins); then, once the total is
   // known, the coupon is auto-applied down the same path as typing a code +
   // clicking Apply. Best-effort and SSR-guarded: it must never break the page.
   useEffect(() => {

@@ -29,6 +29,23 @@ import { fbTrack } from '@/utils/pixel';
 
 const StoreContext = createContext(undefined);
 
+// The bag is kept in this browser so a refresh, a new tab or coming back
+// later doesn't empty it. Entries older than 30 days are dropped.
+const CART_KEY = 'velmique_cart_v1';
+const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function readSavedCart() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    if (!raw) return [];
+    const saved = JSON.parse(raw);
+    if (!saved || !Array.isArray(saved.items) || Date.now() - Number(saved.at || 0) > CART_TTL_MS) return [];
+    return saved.items.filter((i) => i && i.id != null && Number(i.quantity) > 0);
+  } catch {
+    return [];
+  }
+}
+
 export function StoreProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
@@ -36,6 +53,31 @@ export function StoreProvider({ children }) {
   const [wishlistSyncing, setWishlistSyncing] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [cartHydrated, setCartHydrated] = useState(false);
+
+  // Load the saved bag after mount (not during render, so the server HTML and
+  // the first client render match). A cart already filled by then — e.g. a
+  // WhatsApp recovery link — wins over the saved one.
+  useEffect(() => {
+    const saved = readSavedCart();
+    if (saved.length) setCart((prev) => (prev.length ? prev : saved));
+    setCartHydrated(true);
+
+    // Keep other open tabs of the store in step.
+    const onStorage = (e) => {
+      if (e.key === CART_KEY) setCart(readSavedCart());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (!cartHydrated) return;
+    try {
+      if (cart.length) localStorage.setItem(CART_KEY, JSON.stringify({ at: Date.now(), items: cart }));
+      else localStorage.removeItem(CART_KEY);
+    } catch { /* storage full or blocked — the bag still works for this visit */ }
+  }, [cart, cartHydrated]);
 
   // Hydrate from the backend on mount.
   useEffect(() => {
@@ -155,10 +197,10 @@ export function StoreProvider({ children }) {
   }, []);
 
   // WhatsApp cart-recovery link: put a recovered cart back (lines from
-  // GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). The
-  // cart only lives in this tab's memory, so a shopper coming back from the
-  // WhatsApp message (often in its in-app browser) would otherwise find it
-  // empty. Only fills an EMPTY cart; no AddToCart pixel/toast.
+  // GET /api/abandoned-cart/restore/:token — see utils/cartRecovery.js). A
+  // shopper coming back from the WhatsApp message (often in its in-app
+  // browser, where nothing is saved) would otherwise find it empty. Only
+  // fills an EMPTY cart; no AddToCart pixel/toast.
   const restoreCart = useCallback((lines) => {
     const list = (Array.isArray(lines) ? lines : []).map((l) => {
       if (l.line && l.line.id != null) return { ...l.line, quantity: l.quantity || 1 };
