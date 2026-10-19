@@ -494,7 +494,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v14';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v15';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1125,7 +1125,16 @@ const startServer = async () => {
                 if (!/^enum\(/i.test(colType) || colType.indexOf(`'${value}'`) !== -1) return;
                 const newType = colType.replace(/\)$/, `,'${value}')`);
                 const nullSql = rows[0].n === 'NO' ? 'NOT NULL' : 'NULL';
-                const defSql = rows[0].d != null ? ` DEFAULT '${String(rows[0].d).replace(/'/g, "''")}'` : '';
+                // MariaDB (unlike MySQL) reports COLUMN_DEFAULT as a quoted SQL
+                // literal ('pending') or the word NULL; re-quoting that verbatim
+                // produced an invalid default and the ALTER was rejected.
+                let def = rows[0].d;
+                if (def != null) {
+                    def = String(def);
+                    if (def.toUpperCase() === 'NULL') def = null;
+                    else if (/^'[\s\S]*'$/.test(def)) def = def.slice(1, -1).replace(/''/g, "'");
+                }
+                const defSql = def != null ? ` DEFAULT '${def.replace(/'/g, "''")}'` : '';
                 await sequelize.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${newType} ${nullSql}${defSql}`);
                 logger.info(`✓ added '${value}' to ${table}.${column}`);
             } catch (err) {

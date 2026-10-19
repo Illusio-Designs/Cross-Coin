@@ -72,9 +72,9 @@ export async function getServerSideProps({ res }) {
 
   const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
     safeFetch('/api/products/catalog?limit=500'),
-    safeFetch('/api/categories?nocache=true'),
-    safeFetch('/api/public/blogs?limit=200'),
-    safeFetch('/api/public/policies'),
+    safeFetch('/api/categories/listing'),
+    safeFetch('/api/blogs/listing?limit=50'),
+    safeFetch('/api/policies'),
   ]);
 
   // Static routes that actually exist under src/pages (verified against the
@@ -103,7 +103,7 @@ export async function getServerSideProps({ res }) {
     }));
 
   // Categories → /collections/<slug>  (pages/collections/[slug].jsx)
-  const categories = categoriesResp?.data?.categories || categoriesResp?.categories || categoriesResp?.data || [];
+  const categories = categoriesResp?.data?.categories || categoriesResp?.categories || (Array.isArray(categoriesResp) ? categoriesResp : categoriesResp?.data) || [];
   const categoryUrls = (Array.isArray(categories) ? categories : [])
     .filter((c) => c?.slug || c?.handle)
     .map((c) => ({
@@ -125,11 +125,14 @@ export async function getServerSideProps({ res }) {
     }));
 
   // Policies → /policies/<slug>  (pages/policies/[slug].jsx)
-  const policies = policiesResp?.data?.policies || policiesResp?.policies || policiesResp?.data || [];
+  const policySlug = (t) => String(t || '')
+    .toLowerCase().replace(/&/g, ' and ').trim()
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+  const policies = policiesResp?.data?.policies || policiesResp?.policies || (Array.isArray(policiesResp) ? policiesResp : policiesResp?.data) || [];
   const policyUrls = (Array.isArray(policies) ? policies : [])
-    .filter((p) => p?.slug || p?.name)
+    .filter((p) => p?.slug || p?.name || p?.title)
     .map((p) => ({
-      loc: `/policies/${p.slug || p.name}`,
+      loc: `/policies/${policySlug(p.slug || p.name || p.title)}`,
       lastmod: lastmodOf(p.updatedAt || p.updated_at),
       changefreq: 'yearly',
       priority: '0.3',

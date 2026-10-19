@@ -103,9 +103,9 @@ export async function getServerSideProps({ res }) {
 
   const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
     safeFetch('/api/products/catalog?limit=500'),
-    safeFetch('/api/categories?nocache=true'),
-    safeFetch('/api/public/blogs?limit=200'),
-    safeFetch('/api/public/policies'),
+    safeFetch('/api/categories/listing'),
+    safeFetch('/api/blogs/listing?limit=50'),
+    safeFetch('/api/policies'),
   ]);
 
   // Products -> /products/<slug>

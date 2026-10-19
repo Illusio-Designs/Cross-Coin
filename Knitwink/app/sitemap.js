@@ -43,9 +43,9 @@ export default async function sitemap() {
 
   const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
     safeFetch('/api/products/catalog?limit=500'),
-    safeFetch('/api/categories?nocache=true'),
-    safeFetch('/api/public/blogs?limit=200'),
-    safeFetch('/api/public/policies'),
+    safeFetch('/api/categories/listing'),
+    safeFetch('/api/blogs/listing?limit=50'),
+    safeFetch('/api/policies'),
   ]);
 
   const productUrls = (productsResp?.data?.products || productsResp?.products || productsResp?.data || [])
@@ -61,7 +61,7 @@ export default async function sitemap() {
       };
     });
 
-  const categoryUrls = (categoriesResp?.data?.categories || categoriesResp?.categories || categoriesResp?.data || [])
+  const categoryUrls = (categoriesResp?.data?.categories || categoriesResp?.categories || (Array.isArray(categoriesResp) ? categoriesResp : categoriesResp?.data) || [])
     .filter((c) => c?.slug || c?.handle)
     .map((c) => ({
       url: `/collections/${c.slug || c.handle}`,
@@ -79,10 +79,13 @@ export default async function sitemap() {
       priority: 0.6,
     }));
 
-  const policyUrls = (policiesResp?.data?.policies || policiesResp?.policies || policiesResp?.data || [])
-    .filter((p) => p?.name || p?.slug)
+  const policySlug = (t) => String(t || '')
+    .toLowerCase().replace(/&/g, ' and ').trim()
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+  const policyUrls = (policiesResp?.data?.policies || policiesResp?.policies || (Array.isArray(policiesResp) ? policiesResp : policiesResp?.data) || [])
+    .filter((p) => p?.title || p?.name || p?.slug)
     .map((p) => ({
-      url: `/policies/${p.slug || p.name}`,
+      url: `/policies/${policySlug(p.slug || p.name || p.title)}`,
       lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
       changeFrequency: 'yearly',
       priority: 0.3,
