@@ -14,226 +14,39 @@ const { sendGAEvent } = require('../integration/googleAnalytics.js');
 const { OrderItem } = require('../model/orderItemModel.js');
 const { setImmediate } = require('timers');
 
-// Get all payments (admin only) — powers Dashboard → Payments.
-// Filters: status, payment_type ('online' | 'cod' | exact type), brand_id,
-// start_date/end_date (IST calendar days), search (order number, Razorpay
-// payment / refund id, Razorpay order id). Also returns a summary of the
-// filtered range (ignoring the status filter) for the page's tiles.
-//
-// Units: gateway rows store amount_paid in paise (refund rows negative);
-// COD rows store rupees. `amount` on each row is always rupees.
-const paymentRupees = (p) => {
-    const raw = parseFloat(p.amount_paid) || 0;
-    return p.payment_type === 'cod' ? raw : raw / 100;
-};
-const PAID_STATUSES = ['successful', 'completed'];
-
-module.exports.getAllPayments = async (req, res) => {
-    try {
-        const { status, payment_type, brand_id, start_date, end_date, search, page = 1, limit = 20 } = req.query;
-        const cappedLimit = Math.min(parseInt(limit) || 20, 100);
-        const pageNum = Math.max(parseInt(page) || 1, 1);
-        const offset = (pageNum - 1) * cappedLimit;
-
-        const base = {};
-        if (payment_type === 'online') base.payment_type = { [Op.ne]: 'cod' };
-        else if (payment_type && payment_type !== 'all') base.payment_type = payment_type;
-        if (brand_id && brand_id !== 'all') base.brand_id = parseInt(brand_id) || 0;
-
-        const { buildCreatedAtRange } = require('../utils/dateRange.js');
-        const { range, hasRange } = buildCreatedAtRange(start_date, end_date);
-        if (hasRange) base.createdAt = range;
-
-        const q = String(search || '').trim();
-        if (q) {
-            const like = { [Op.like]: `%${q}%` };
-            base[Op.or] = [
-                { transaction_id: like },
-                { razorpay_order_id: like },
-                { '$Order.order_number$': like },
-            ];
-        }
-
-        const where = { ...base };
-        if (status === 'successful') where.status = { [Op.in]: PAID_STATUSES };
-        else if (status === 'refunded') where.status = { [Op.in]: ['refunded', 'partial_refund'] };
-        else if (status && status !== 'all') where.status = status;
-
-        const orderInclude = {
-            model: Order,
-            attributes: ['id', 'order_number', 'final_amount', 'status', 'payment_status', 'brand_id'],
-            required: false,
-            include: [
-                { model: User, attributes: ['id', 'username', 'email', 'phone'], required: false },
-                { model: GuestUser, as: 'GuestUser', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false },
-            ],
-        };
-
-        const { count, rows } = await Payment.findAndCountAll({
-            where,
-            include: [orderInclude],
-            order: [['createdAt', 'DESC']],
-            limit: cappedLimit,
-            offset,
-            distinct: true,
-        });
-
-        // Summary over the same filters minus status (one pass over the
-        // lightweight columns; the range is bounded by the admin's filters).
-        const all = await Payment.findAll({
-            where: base,
-            attributes: ['status', 'payment_type', 'amount_paid'],
-            include: q ? [{ model: Order, attributes: [], required: false }] : [],
-            raw: true,
-        });
-        const summary = { collected: 0, collectedCount: 0, refunded: 0, refundedCount: 0, failedCount: 0, pendingCount: 0 };
-        for (const p of all) {
-            const amt = paymentRupees(p);
-            if (PAID_STATUSES.includes(p.status)) { summary.collected += amt; summary.collectedCount++; }
-            else if (['refunded', 'partial_refund'].includes(p.status) && amt < 0) { summary.refunded += -amt; summary.refundedCount++; }
-            else if (p.status === 'failed') summary.failedCount++;
-            else if (p.status === 'pending') summary.pendingCount++;
-        }
-        summary.collected = Math.round(summary.collected * 100) / 100;
-        summary.refunded = Math.round(summary.refunded * 100) / 100;
-
-        const payments = rows.map((r) => {
-            const p = r.get({ plain: true });
-            const o = p.Order || {};
-            const customer = o.User?.username
-                || [o.GuestUser?.firstName, o.GuestUser?.lastName].filter(Boolean).join(' ')
-                || null;
-            return {
-                id: p.id,
-                createdAt: p.createdAt,
-                status: p.status,
-                payment_type: p.payment_type,
-                gateway: p.payment_gateway,
-                amount: Math.round(paymentRupees(p) * 100) / 100,
-                is_refund: (parseFloat(p.amount_paid) || 0) < 0,
-                transaction_id: p.transaction_id,
-                razorpay_order_id: p.razorpay_order_id,
-                notes: p.notes,
-                brand_id: p.brand_id,
-                order: o.id ? {
-                    id: o.id, order_number: o.order_number, final_amount: o.final_amount,
-                    status: o.status, payment_status: o.payment_status,
-                } : null,
-                customer: customer ? {
-                    name: customer,
-                    email: o.User?.email || o.GuestUser?.email || null,
-                    phone: o.User?.phone || o.GuestUser?.phone || null,
-                } : null,
-            };
-        });
-
-        res.json({
-            success: true,
-            payments,
-            summary,
-            pagination: { total: count, page: pageNum, limit: cappedLimit, totalPages: Math.ceil(count / cappedLimit) },
-        });
-    } catch (error) {
-        logger.error('Error getting payments:', error);
-        res.status(500).json({ success: false, message: 'Failed to get payments', error: error.message });
-    }
+// ── Admin: Dashboard → Payments (services/paymentsAdminService.js) ─────────
+// GET  /api/payments/admin/list?period=1|7|30&tab=all|paid|failed|pending|refund|cod|cancelled&q=&brandId=&page=&limit=
+// GET  /api/payments/admin/summary?period=&brandId=
+// GET  /api/payments/admin/mismatches?brandId=&refresh=1   (dry-run vs Razorpay, cached 10 min)
+// POST /api/payments/admin/mismatches/fix { orderId } | { paymentId, action: 'create'|'refund' }   (admin only)
+const paymentsAdmin = require('../services/paymentsAdminService.js');
+const adminFail = (res, error, what) => {
+    logger.error(`Payments admin: ${what} failed: ${error.message}`);
+    res.status(500).json({ success: false, message: `Couldn’t load ${what} — please try again.` });
 };
 
-// Razorpay order creation
-module.exports.createRazorpayOrder = async (req, res) => {
+module.exports.adminListPayments = async (req, res) => {
+    try { res.json({ success: true, ...(await paymentsAdmin.listPayments(req.query)) }); }
+    catch (error) { adminFail(res, error, 'payments'); }
+};
+
+module.exports.adminPaymentsSummary = async (req, res) => {
+    try { res.json({ success: true, ...(await paymentsAdmin.summary(req.query)) }); }
+    catch (error) { adminFail(res, error, 'the payment totals'); }
+};
+
+module.exports.adminPaymentMismatches = async (req, res) => {
+    try { res.json({ success: true, ...(await paymentsAdmin.mismatches({ brandId: req.query.brandId, refresh: req.query.refresh === '1' })) }); }
+    catch (error) { adminFail(res, error, 'the Razorpay check'); }
+};
+
+module.exports.adminFixPaymentMismatch = async (req, res) => {
     try {
-        const { amount, currency = 'INR', receipt, brand_id, items, orderId } = req.body;
-        logger.info('Backend: Received amount to create Razorpay order:', amount);
-        if (!amount) {
-            return res.status(400).json({ message: 'Amount is required' });
-        }
-
-        const brandId = brand_id || (req.brand ? req.brand.id : 1);
-
-        // Create order using centralized Razorpay service
-        const order = await razorpayService.createOrder({
-            amount,
-            currency,
-            receipt,
-            brandId
-        });
-
-        logger.info('Backend: Razorpay order created:', { order_id: order.id, amount: order.amount });
-
-        // Store a pending payment record immediately so failed payments are tracked
-        if (orderId) {
-            try {
-                const dbOrder = await Order.findByPk(orderId);
-                if (dbOrder) {
-                    const existing = await Payment.findOne({ where: { order_id: orderId, razorpay_order_id: order.id } });
-                    if (!existing) {
-                        await Payment.create({
-                            order_id: orderId,
-                            user_id: dbOrder.user_id || null,
-                            guest_user_id: dbOrder.guest_user_id || null,
-                            payment_type: 'razorpay',
-                            razorpay_order_id: order.id,
-                            amount_paid: toSmallestUnit(parseFloat(amount) / 100, currency),
-                            status: 'pending',
-                            payment_gateway: 'Razorpay',
-                            brand_id: dbOrder.brand_id || brandId,
-                        });
-                        logger.info('Stored pending payment record for Razorpay order:', order.id);
-                    }
-                }
-            } catch (paymentErr) {
-                // Non-fatal — log but don't block the response
-                logger.error('Warning: Could not store pending payment record:', paymentErr.message);
-            }
-        }
-
-        res.json({ order });
-
-        // Fire InitiateCheckout + AddPaymentInfo events (non-blocking)
-        setImmediate(async () => {
-            try {
-                const amountInRupees = parseFloat(amount) / 100;
-                const eventPayload = {
-                    brand_id: brandId,
-                    order_number: receipt || order.id,
-                    total_amount: amountInRupees,
-                    final_amount: amountInRupees,
-                    currency: currency || 'INR',
-                    ip_address: req.ip || null,
-                    user_agent: req.headers['user-agent'] || null,
-                    fbc: req.body?.fbc || req.cookies?._fbc || null,
-                    fbp: req.body?.fbp || req.cookies?._fbp || null,
-                    items: items || [],
-                };
-
-                // If we have an orderId, enrich with user data
-                if (orderId) {
-                    const dbOrder = await Order.findByPk(orderId, { attributes: ['user_id', 'guest_user_id', 'brand_id'] });
-                    if (dbOrder) {
-                        const [orderUser, guestUser] = await Promise.all([
-                            dbOrder.user_id ? User.findByPk(dbOrder.user_id, { attributes: ['email', 'username'] }) : null,
-                            dbOrder.guest_user_id ? GuestUser.findByPk(dbOrder.guest_user_id, { attributes: ['email', 'firstName', 'lastName', 'phone'] }) : null,
-                        ]);
-                        eventPayload.email = orderUser?.email || guestUser?.email || null;
-                        eventPayload.phone = guestUser?.phone || null;
-                        const nameParts = (orderUser?.username || '').trim().split(/\s+/);
-                        eventPayload.first_name = orderUser ? (nameParts[0] || null) : (guestUser?.firstName || null);
-                        eventPayload.last_name = orderUser ? (nameParts.slice(1).join(' ') || null) : (guestUser?.lastName || null);
-                    }
-                }
-
-                // InitiateCheckout is sent (deduped) by the browser pixel + its
-                // CAPI relay when checkout begins — not re-sent server-side here.
-                // AddPaymentInfo has no browser counterpart, so keep it.
-                await sendFacebookEvent('AddPaymentInfo', eventPayload);
-                await sendGAEvent('add_payment_info', eventPayload);
-            } catch (err) {
-                logger.error('Analytics InitiateCheckout/AddPaymentInfo error:', err.message);
-            }
-        });
+        const r = await paymentsAdmin.fixMismatch(req.body || {}, { id: req.user.id, role: 'admin' });
+        res.status(r.ok ? 200 : r.status || 500).json({ success: r.ok, changed: !!r.changed, message: r.message });
     } catch (error) {
-        logger.error('Error creating Razorpay order:', error);
-        res.status(500).json({ message: 'Failed to create Razorpay order', error: error.message });
+        logger.error(`Payments admin: fix failed for ${JSON.stringify(req.body || {})}: ${error.message}`);
+        res.status(500).json({ success: false, message: 'Couldn’t fix it — nothing was changed. Please try again.' });
     }
 };
 
@@ -251,12 +64,20 @@ module.exports.updateOrderPayment = async (req, res) => {
       return res.status(400).json({ message: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required' });
     }
 
-    // Verify signature using centralized Razorpay service
+    // The Razorpay order belongs to one brand's account: take the brand from
+    // our pending payment row (or the checkout session) and verify with that
+    // brand's secret — not always brand 1.
+    const stockReservation = require('../services/stockReservationService.js');
+    const orderCreationService = require('../services/orderCreationService.js');
+    const pendingRow = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId }, order: [['id', 'ASC']] });
+    const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
+    const brandId = (pendingRow && pendingRow.brand_id) || (session && session.brand_id) || 1;
+
     const isValidSignature = await razorpayService.verifySignature(
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,
-      1
+      brandId
     );
 
     if (!isValidSignature) {
@@ -279,11 +100,9 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // ── NEW FLOW: Payment-first (reservation exists) ──────────────────────
-    // Check if this razorpay order has a checkout session (new flow)
-    const stockReservation = require('../services/stockReservationService.js');
-    const orderCreationService = require('../services/orderCreationService.js');
-    const session = await stockReservation.getReservationByRazorpayOrder(razorpayOrderId);
-
+    // The session comes from Redis, or from its durable MySQL copy when the
+    // Redis keys already expired (slow payer), so a paid checkout always
+    // becomes an order.
     if (session) {
       logger.info('Payment-first flow: creating order from session', session.reservation_id);
 
@@ -304,20 +123,30 @@ module.exports.updateOrderPayment = async (req, res) => {
     }
 
     // ── OLD FLOW: Legacy (order already exists) ───────────────────────────
-    // Try to find orderId from payment record if not provided
-    let resolvedOrderId = orderId;
-    if (!resolvedOrderId) {
-      // Fallback: find order via payment record linked to this razorpay_order_id
-      const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: razorpayOrderId } });
-      if (paymentRecord && paymentRecord.order_id) {
-        resolvedOrderId = paymentRecord.order_id;
-        logger.info(`Resolved orderId ${resolvedOrderId} from payment record for rzp_order ${razorpayOrderId}`);
-      }
+    // Only for an order WE linked to this Razorpay order (our payment row),
+    // and only when Razorpay really took the order's full amount. A signature
+    // alone proves nothing about which order or how much: anyone can pay ₹1
+    // on some other Razorpay order and send that signature with a random
+    // orderId.
+    if (!pendingRow || !pendingRow.order_id) {
+      logger.error(`No order found for razorpay_order_id: ${razorpayOrderId} (no checkout session, no linked payment row)`);
+      return res.status(400).json({ message: 'No checkout found for this payment. Please contact support with your payment ID.' });
     }
-
-    if (!resolvedOrderId) {
-      logger.error(`No order found for razorpay_order_id: ${razorpayOrderId}, no session, no orderId`);
-      return res.status(400).json({ message: 'orderId is required (no checkout session found for this payment)' });
+    if (orderId && String(orderId) !== String(pendingRow.order_id)) {
+      logger.warn(`Verify rejected: orderId ${orderId} is not linked to razorpay order ${razorpayOrderId}`);
+      return res.status(400).json({ message: 'This payment does not belong to that order.' });
+    }
+    const resolvedOrderId = pendingRow.order_id;
+    {
+      const linkedOrder = await Order.findByPk(resolvedOrderId, { attributes: ['id', 'final_amount'] });
+      let rp;
+      try { rp = await razorpayService.getPayment(razorpayPaymentId, brandId); }
+      catch (e) { return res.status(502).json({ message: 'Could not confirm the payment with Razorpay. Please try again.' }); }
+      const expected = linkedOrder ? toSmallestUnit(parseFloat(linkedOrder.final_amount), 'INR') : null;
+      if (!linkedOrder || rp.order_id !== razorpayOrderId || !['captured', 'authorized'].includes(rp.status) || Number(rp.amount) !== Number(expected)) {
+        logger.warn(`Verify rejected for order ${resolvedOrderId}: Razorpay ${rp.id} ${rp.status} ${rp.amount} on ${rp.order_id}, expected ${expected} on ${razorpayOrderId}`);
+        return res.status(400).json({ message: 'The amount paid does not match this order.' });
+      }
     }
 
     // Use row-level lock to prevent race condition between verify/callback/webhook
@@ -472,17 +301,25 @@ module.exports.handlePaymentFailure = async (req, res) => {
       return res.status(400).json({ message: 'orderId and razorpayOrderId are required' });
     }
 
-    // Validate that this razorpay order was actually created by us
+    // Validate that this razorpay order was actually created by us, for THIS
+    // order, and that the caller owns the order (route requires login).
     const existingPayment = await Payment.findOne({
       where: { razorpay_order_id: razorpayOrderId }
     });
     if (!existingPayment) {
       return res.status(403).json({ message: 'Unknown razorpay order' });
     }
+    if (String(existingPayment.order_id) !== String(orderId)) {
+      return res.status(403).json({ message: 'This payment does not belong to that order' });
+    }
 
     const order = await Order.findByPk(orderId);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+    const { hasAnyRole, STAFF_ROLES } = require('../middleware/authMiddleware.js');
+    if (order.user_id !== req.user.id && !hasAnyRole(req.user, STAFF_ROLES)) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     // Only update if not already paid (don't overwrite a successful payment)
@@ -505,7 +342,7 @@ module.exports.handlePaymentFailure = async (req, res) => {
         notes: errorDescription ? `${errorCode || 'PAYMENT_FAILED'}: ${errorDescription}` : 'Payment failed',
       });
     } else {
-      // Create a failed record if none exists (e.g. createRazorpayOrder was called without orderId)
+      // Create a failed record if none exists (an older checkout that never stored one)
       await Payment.create({
         order_id: orderId,
         user_id: order.user_id || null,
@@ -533,12 +370,6 @@ module.exports.handlePaymentFailure = async (req, res) => {
 // so req.rawBody is available for signature verification.
 module.exports.razorpayWebhook = async (req, res) => {
   try {
-    const webhookSecret = await settingsHelper.getSetting(1, 'RAZORPAY_WEBHOOK_SECRET');
-    if (!webhookSecret) {
-      logger.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
-      return res.status(400).json({ message: 'Webhook not configured' });
-    }
-
     // Verify x-razorpay-signature header
     const receivedSig = req.headers['x-razorpay-signature'];
     if (!receivedSig) {
@@ -547,23 +378,50 @@ module.exports.razorpayWebhook = async (req, res) => {
 
     const rawBody = req.rawBody || req.body;
     const bodyStr = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : JSON.stringify(rawBody);
-    const expectedSig = crypto.createHmac('sha256', webhookSecret).update(bodyStr).digest('hex');
 
-    if (expectedSig !== receivedSig) {
+    // Each brand has its own Razorpay account and webhook secret. Try the
+    // brand of the payment the event is about first, then every other brand
+    // that has a secret (refund events, payments we have no row for).
+    let parsed = req.body;
+    if (Buffer.isBuffer(parsed)) { try { parsed = JSON.parse(bodyStr); } catch (_) { parsed = {}; } }
+    const rzpOrderRef = parsed?.payload?.payment?.entity?.order_id || null;
+    const brandIds = [];
+    if (rzpOrderRef) {
+      const row = await Payment.findOne({ where: { razorpay_order_id: rzpOrderRef }, attributes: ['brand_id'] });
+      if (row && row.brand_id) brandIds.push(Number(row.brand_id));
+    }
+    const [secretRows] = await sequelize.query("SELECT DISTINCT brand_id FROM brand_settings WHERE `key` = 'RAZORPAY_WEBHOOK_SECRET'");
+    for (const r of secretRows || []) if (!brandIds.includes(Number(r.brand_id))) brandIds.push(Number(r.brand_id));
+    if (!brandIds.includes(1)) brandIds.push(1); // env fallback lives under brand 1
+
+    const received = Buffer.from(String(receivedSig));
+    let configured = false;
+    let verified = false;
+    for (const b of brandIds) {
+      const secret = await settingsHelper.getSetting(b, 'RAZORPAY_WEBHOOK_SECRET');
+      if (!secret) continue;
+      configured = true;
+      const expected = Buffer.from(crypto.createHmac('sha256', secret).update(bodyStr).digest('hex'));
+      if (expected.length === received.length && crypto.timingSafeEqual(expected, received)) { verified = true; break; }
+    }
+    if (!configured) {
+      logger.error('RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+      return res.status(400).json({ message: 'Webhook not configured' });
+    }
+    if (!verified) {
       logger.warn('Razorpay webhook: invalid signature');
       return res.status(400).json({ message: 'Invalid signature' });
     }
 
-    const event = req.body;
+    const event = parsed;
     const eventId = event.id;
     const eventType = event.event;
 
-    // Idempotency: skip if already processed
+    // Idempotency: skip if already processed. The event is recorded only
+    // AFTER it was handled, so a failure answers 5xx and Razorpay retries it.
     if (eventId) {
-      const { sequelize: db } = require('../config/db.js');
       try {
-        // Check if already processed BEFORE inserting
-        const [existing] = await db.query(
+        const [existing] = await sequelize.query(
           `SELECT id FROM webhooks_log WHERE event_id = ? LIMIT 1`,
           { replacements: [eventId] }
         );
@@ -571,14 +429,9 @@ module.exports.razorpayWebhook = async (req, res) => {
           logger.info(`Razorpay webhook: duplicate event ${eventId}, skipping`);
           return res.status(200).json({ status: 'duplicate' });
         }
-        // Mark as processed
-        await db.query(
-          `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
-          { replacements: [eventId, eventType] }
-        );
       } catch (dbErr) {
         // webhooks_log table may not exist yet — non-fatal, continue processing
-        logger.warn('webhooks_log insert skipped:', dbErr.message);
+        logger.warn('webhooks_log lookup skipped:', dbErr.message);
       }
     }
 
@@ -604,14 +457,17 @@ module.exports.razorpayWebhook = async (req, res) => {
             });
             logger.info(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
           } catch (e) {
+            // Answer 5xx so Razorpay retries; the nightly reconciliation and
+            // Dashboard → Payments also pick the captured payment up.
             logger.error(`Webhook: failed to create order from session: ${e.message}`);
+            throw e;
           }
         } else {
           // ── OLD FLOW: Find order via payment record ─────────────────────
           let paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
 
           // ── FALLBACK: If no payment record, find order by amount + time ──
-          // This handles cases where createRazorpayOrder was called without orderId
+          // This handles older checkouts that never stored a payment row
           if (!paymentRecord) {
             const rzpPayment = event.payload?.payment?.entity;
             const amountInRupees = rzpPayment ? parseFloat(rzpPayment.amount) / 100 : null;
@@ -752,6 +608,16 @@ module.exports.razorpayWebhook = async (req, res) => {
       }
     }
 
+    if (eventId) {
+      try {
+        await sequelize.query(
+          `INSERT IGNORE INTO webhooks_log (event_id, event_type, processed_at) VALUES (?, ?, NOW())`,
+          { replacements: [eventId, eventType] }
+        );
+      } catch (dbErr) {
+        logger.warn('webhooks_log insert skipped:', dbErr.message);
+      }
+    }
     res.status(200).json({ status: 'ok' });
   } catch (error) {
     logger.error('Razorpay webhook error:', error.message);

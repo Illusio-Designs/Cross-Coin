@@ -28,6 +28,7 @@
   const { Payment } = require("../model/paymentModel.js");
   const { User } = require("../model/userModel.js");
   const { GuestUser } = require("../model/guestUserModel.js");
+  const { verifyOrderCoupon } = require("../services/couponRulesService.js");
   const { ProductImage } = require("../model/productImageModel.js");
   const Brand = require("../model/brandModel.js");
   const ShippingLabelDownload = require("../model/shippingLabelDownloadModel.js");
@@ -95,60 +96,6 @@
     'booked', 'pickup initiated', 'manifested', 'in transit',
     'shipped', 'out for delivery', 'delivered', 'return_initiated', 'returned_rto'
   ];
-
-  /**
-   * Compute server-side discount for a coupon against a subtotal.
-   * Returns the discount amount in rupees.
-   */
-  async function computeCouponDiscount(couponId, subTotal, items = [], paymentType = null) {
-    if (!couponId) return 0;
-    const { Coupon } = require('../model/associations.js');
-    const coupon = await Coupon.findOne({
-      where: {
-        id: couponId,
-        status: 'active',
-        startDate: { [Op.lte]: new Date() },
-        endDate: { [Op.gte]: new Date() },
-      },
-    });
-    if (!coupon) return 0;
-    // Payment-mode restriction: a prepaid-only coupon must yield NO discount on
-    // a COD order (and vice-versa). This is the authoritative check at order
-    // creation, where paymentType is final — it closes the gap where a coupon
-    // applied under one mode in the cart is carried into an order placed under
-    // the other. paymentType null (legacy callers) skips the guard.
-    if (paymentType && coupon.paymentModeRestriction && coupon.paymentModeRestriction !== 'all') {
-      const mode = paymentType === 'cod' ? 'cod' : 'prepaid';
-      if (coupon.paymentModeRestriction !== mode) return 0;
-    }
-    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
-    if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
-
-    let discount = 0;
-    if (coupon.type === 'percentage') {
-      discount = (subTotal * parseFloat(coupon.value)) / 100;
-      if (coupon.maxDiscount) discount = Math.min(discount, parseFloat(coupon.maxDiscount));
-    } else if (coupon.type === 'fixed') {
-      discount = parseFloat(coupon.value);
-    } else if (coupon.type === 'tiered') {
-      let tiers = coupon.tieredDiscounts;
-      if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch { tiers = []; } }
-      if (!Array.isArray(tiers)) tiers = [];
-      const tier = tiers.sort((a, b) => b.minAmount - a.minAmount).find(t => subTotal >= t.minAmount);
-      if (tier) discount = parseFloat(tier.discount);
-    } else if (coupon.type === 'quantity_based') {
-      const totalQty = items.reduce((s, i) => s + (i.quantity || 0), 0);
-      let tiers = coupon.quantityBasedDiscounts;
-      if (typeof tiers === 'string') { try { tiers = JSON.parse(tiers); } catch { tiers = []; } }
-      if (!Array.isArray(tiers)) tiers = [];
-      const tier = tiers.sort((a, b) => b.minQuantity - a.minQuantity).find(t => totalQty >= t.minQuantity);
-      if (tier) discount = parseFloat(tier.discount);
-    }
-    // Round to a whole rupee so subTotal − discount stays an integer (product
-    // prices are whole). Keeps the order total decimal-free end-to-end and
-    // matches the rounding done in validateCoupon.
-    return Math.min(subTotal, Math.round(discount));
-  }
 
   /**
    * Get count of RTO orders for a phone number in the last 6 months.
@@ -371,6 +318,23 @@
       for (const it of items) { if (it.pack_id) packQtyById[it.pack_id] = (packQtyById[it.pack_id] || 0) + (Number(it.quantity) || 0); }
       const pricingQty = (it) => (it.pack_id && packQtyById[it.pack_id]) ? packQtyById[it.pack_id] : it.quantity;
 
+      // "Build Your Pack" (cross-product mix): lines sharing a `pack_group` get
+      // the store-wide % off for the group's TOTAL item count — the same rule
+      // prepaid checkout (checkoutController) applies, so COD charges the
+      // amount the cart showed.
+      const _bundleCtrl = require('./bundleController.js');
+      const mixQtyByGroup = {};
+      for (const it of items) { if (it.pack_group) mixQtyByGroup[it.pack_group] = (mixQtyByGroup[it.pack_group] || 0) + (Number(it.quantity) || 0); }
+      const mixPctByGroup = {};
+      for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(req.brand?.id || 1, mixQtyByGroup[g]); }
+      const linePrice = async (item, product_id, basePrice) => {
+        if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
+          return Math.round(parseFloat(basePrice) * (1 - mixPctByGroup[item.pack_group] / 100) * 100) / 100;
+        }
+        const _bu = await _bundleCtrl.bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item));
+        return _bu != null ? _bu : basePrice;
+      };
+
       // Validate items using pre-fetched data
       for (const item of items) {
         const { product_id, quantity } = item;
@@ -412,8 +376,7 @@
               .status(404)
               .json({ message: `Invalid variation for product ${product_id}` });
           }
-          price = variation.price;
-          { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
+          price = await linePrice(item, product_id, variation.price);
           stockAvailable = variation.stock;
           logger.debug(
             "createOrder: Variation validated, price:",
@@ -428,8 +391,7 @@
             // Default to the first variation
             variation = variations[0];
             variation_id = variation.id;
-            price = variation.price;
-            { const _bu = await require('./bundleController.js').bundlePerUnit(req.brand?.id || 1, product_id, pricingQty(item)); if (_bu != null) price = _bu; }
+            price = await linePrice(item, product_id, variation.price);
             stockAvailable = variation.stock;
           } else {
             // No variations exist
@@ -502,30 +464,20 @@
         await transaction.rollback();
         return res.status(400).json({ message: "Invalid discount amount." });
       }
-      if (coupon_id) {
-        // Reject a payment-mode-restricted coupon used with the wrong mode up
-        // front, with a message the shopper can act on — before the generic
-        // total-mismatch guard below turns it into a confusing refresh prompt.
-        const { Coupon } = require('../model/associations.js');
-        const restrictCoupon = await Coupon.findByPk(coupon_id, { transaction });
-        if (restrictCoupon && restrictCoupon.paymentModeRestriction && restrictCoupon.paymentModeRestriction !== 'all') {
-          const mode = payment_type === 'cod' ? 'cod' : 'prepaid';
-          if (restrictCoupon.paymentModeRestriction !== mode) {
-            await transaction.rollback();
-            const modeText = restrictCoupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
-            return res.status(400).json({ message: `This coupon is only valid for ${modeText} orders. Please remove it or change your payment method.` });
-          }
-        }
-        const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, validatedItems, payment_type);
-        // Coupon and the ₹50 prepaid instant discount DON'T stack: a coupon
-        // suppresses the instant discount on the storefront, so the expected
-        // discount is the coupon's value alone.
-        const expectedTotal = serverDiscount;
-        if (Math.abs(appliedDiscount - expectedTotal) > 1) {
-          await transaction.rollback();
-          return res.status(400).json({ message: "Order total mismatch. Please refresh and try again." });
-        }
+      // One rule set (services/couponRulesService.js): dates, store, payment
+      // mode, total + per-customer limits, first order, works-on lines, minimum,
+      // amount on the eligible lines. The client's discount must match. Coupon
+      // and the ₹50 prepaid instant discount DON'T stack, so the expected
+      // discount is the coupon's alone. A coupon with no discount isn't attached.
+      const couponCheck = await verifyOrderCoupon({
+        couponId: coupon_id, appliedDiscount, items: validatedItems, subtotal: subTotal,
+        userId, paymentType: payment_type, brandId: req.brand?.id || null, transaction,
+      });
+      if (!couponCheck.ok) {
+        await transaction.rollback();
+        return res.status(couponCheck.status).json({ message: couponCheck.message });
       }
+      const orderCouponId = couponCheck.couponId;
 
       // ── Task 6: RTO risk scoring for ALL payment types ────────────────────
       let rtoRiskScore = 0;
@@ -647,7 +599,7 @@
           shipping_address_id: shipping_address_id,
           total_amount: subTotal,
           discount_amount: appliedDiscount,
-          coupon_id: coupon_id || null,
+          coupon_id: orderCouponId,
           shipping_fee: shippingFee,
           final_amount: finalAmount,
           payment_type,
@@ -674,7 +626,7 @@
           rto_risk_score: rtoRiskScore,
           address_quality_score: addressQuality?.score ?? null,
           item_count: validatedItems.length,
-          coupon_id: coupon_id || null,
+          coupon_id: orderCouponId,
           utm_tracking_id: utmTrackingId,
         }, transaction);
       } catch (auditErr) {
@@ -723,12 +675,12 @@
       logger.debug("createOrder: Committing transaction...");
 
       // Record coupon usage atomically
-      if (coupon_id && appliedDiscount > 0) {
+      if (orderCouponId) {
         const { Coupon, CouponUsage } = require('../model/associations.js');
-        const coupon = await Coupon.findByPk(coupon_id, { transaction });
+        const coupon = await Coupon.findByPk(orderCouponId, { transaction });
         if (coupon) {
           await CouponUsage.create({
-            couponId: coupon_id,
+            couponId: orderCouponId,
             userId: userId,
             guestUserId: null,
             orderId: order.id,

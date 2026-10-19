@@ -285,17 +285,30 @@ export const abandonedCartService = {
   },
 };
 
+// Dashboard → Loyalty points (Backend services/loyaltyAdminService.js).
+const loyErr = (error) => new Error(error.response?.data?.message || error.message || 'Something went wrong');
 export const loyaltyService = {
-  getTransactions: async (page = 1, limit = 50) => {
-    const { data } = await adminApi.get('/api/admin/loyalty/transactions', { params: { page, limit } });
-    return data;
+  summary: async (brandId) => {
+    try { return (await adminApi.get('/api/admin/loyalty/summary', { params: { brandId: brandId || undefined } })).data.data; } catch (e) { throw loyErr(e); }
   },
-  // Admin add/deduct a customer's points (points may be negative to deduct).
-  adjustPoints: async ({ userId, points, description }) => {
-    const { data } = await adminApi.post('/api/admin/loyalty/adjust', {
-      userId: Number(userId), points: Number(points), description: description || '',
-    });
-    return data;
+  // { tab: all|earned|spent|staff|expired, q, brandId, page, limit }
+  getTransactions: async (params = {}) => {
+    try { return (await adminApi.get('/api/admin/loyalty/transactions', { params })).data.data; } catch (e) { throw loyErr(e); }
+  },
+  customer: async (userId) => {
+    try { return (await adminApi.get(`/api/admin/loyalty/customer/${userId}`)).data.data; } catch (e) { throw loyErr(e); }
+  },
+  // Give (+) or take (−) points; the reason is saved in the customer's points history.
+  adjustPoints: async ({ userId, points, description, brandId }) => {
+    try {
+      return (await adminApi.post('/api/admin/loyalty/adjust', {
+        userId: Number(userId), points: Number(points), description: description || '', brandId: brandId || undefined,
+      })).data;
+    } catch (e) { throw loyErr(e); }
+  },
+  // { brandId? (absent = every brand), earnRate, redeemRate, maxRedeemPercent, expiryDays } — admin only.
+  saveRules: async (body) => {
+    try { return (await adminApi.put('/api/admin/loyalty/rules', body)).data; } catch (e) { throw loyErr(e); }
   },
 };
 
@@ -346,12 +359,6 @@ export const systemHealthService = {
 // Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve
 // the brand from the X-Brand-Name header, so pass the brand's slug per call.
 export const facebookCapiService = {
-  getStatus: async (brandSlug) => {
-    const { data } = await adminApi.get('/api/facebook-pixel/status', {
-      headers: brandSlug ? { 'X-Brand-Name': brandSlug } : {},
-    });
-    return data;
-  },
   runTest: async (brandSlug) => {
     const { data } = await adminApi.post('/api/facebook-pixel/test', {}, {
       headers: brandSlug ? { 'X-Brand-Name': brandSlug } : {},
@@ -360,46 +367,22 @@ export const facebookCapiService = {
   },
 };
 
+// Dashboard → Shipping & courier (per-brand fees, free-delivery threshold,
+// COD limit, courier account + webhook summary).
 export const shippingFeeService = {
-  getAllShippingFees: async () => {
+  getAdminOverview: async () => {
     try {
-      const response = await adminApi.get("/api/shipping-fees");
-      return response.data.shippingFees;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  getShippingFeeByType: async (type) => {
-    try {
-      const response = await adminApi.get(`/api/shipping-fees/${type}`);
-      return response.data.shippingFee;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  createShippingFee: async (feeData) => {
-    try {
-      const response = await adminApi.post("/api/shipping-fees", feeData);
+      const response = await adminApi.get("/api/shipping-fees/admin/overview");
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
     }
   },
 
-  updateShippingFee: async (id, feeData) => {
+  // rules: { prepaidFee, codFee, offerCod, freeOver, codMax }
+  saveBrandRules: async (brandId, rules) => {
     try {
-      const response = await adminApi.put(`/api/shipping-fees/${id}`, feeData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  deleteShippingFee: async (id) => {
-    try {
-      const response = await adminApi.delete(`/api/shipping-fees/${id}`);
+      const response = await adminApi.put(`/api/shipping-fees/admin/brand/${brandId}`, rules);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -590,11 +573,10 @@ export const orderService = {
     }
   },
 
-  // Recent inbound shipping webhooks — proves whether the courier is actually
-  // pushing status updates to this backend (empty => callback URL not set).
-  getShippingWebhookEvents: async (limit = 50) => {
+  // Courier updates log — params: { page, pageSize, filter: all|problems|unmatched, q, brandId }.
+  getShippingWebhookEvents: async (params = {}) => {
     try {
-      const response = await adminApi.get(`/api/orders/shipping/webhook-events`, { params: { limit } });
+      const response = await adminApi.get(`/api/orders/shipping/webhook-events`, { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1016,52 +998,23 @@ export const exceptionsService = {
 };
 
 // Payment Services — Dashboard → Payments (admin / order manager)
+// Dashboard → Payments (Backend services/paymentsAdminService.js).
+const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
-  getPayments: async (params = {}) => {
-    try {
-      const response = await adminApi.get('/api/payments', { params });
-      return response.data;
-    } catch (error) {
-      throw new Error(getErrorMessage(error.response?.data || error.message));
-    }
+  // { period: 1|7|30, tab, q, brandId, page, limit } → { rows, total, pages, … }
+  list: async (params = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/list', { params })).data; } catch (error) { throw payErr(error); }
   },
-};
-
-export const settingsService = {
-  getAllSettings: async () => {
-    try {
-      const response = await adminApi.get("/api/admin/brand-settings");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+  summary: async (params = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/summary', { params })).data; } catch (error) { throw payErr(error); }
   },
-
-  getSettingByKey: async (key) => {
-    try {
-      const response = await adminApi.get(`/api/admin/brand-settings/${key}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+  // Payments pending/failed here but captured at Razorpay (cached 10 min; refresh forces a new check).
+  mismatches: async ({ brandId, refresh } = {}) => {
+    try { return (await adminApi.get('/api/payments/admin/mismatches', { params: { brandId: brandId || undefined, refresh: refresh ? 1 : undefined } })).data; } catch (error) { throw payErr(error); }
   },
-
-  upsertSetting: async (settingData) => {
-    try {
-      const response = await adminApi.post("/api/admin/brand-settings", settingData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  deleteSetting: async (key) => {
-    try {
-      const response = await adminApi.delete(`/api/admin/brand-settings/${key}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
+  // { orderId } = "Mark paid & confirm"; { paymentId, action: 'create' | 'refund' } = charged with no order.
+  fixMismatch: async (body) => {
+    try { return (await adminApi.post('/api/payments/admin/mismatches/fix', body)).data; } catch (error) { throw payErr(error); }
   },
 };
 
@@ -1142,19 +1095,8 @@ export const userService = {
     }
   },
 
-
-
-  getAllUsers: async () => {
-    try {
-      const response = await adminApi.get("/api/users/all?limit=1000");
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
-
-  // Staff users only — queried server-side by role so they never get pushed off
-  // the capped "all users" list by a large customer base.
+  // Staff users only — queried server-side by role, with last sign-in and
+  // what each person did in the last 7 days.
   getStaffUsers: async () => {
     try {
       const response = await adminApi.get("/api/users/staff-list");
@@ -1307,24 +1249,17 @@ export const sliderService = {
     }
   },
 
-  getAllSliders: async () => {
+  // params (optional): brandId, search, state (live|scheduled|ended|draft), page, limit
+  getAllSliders: async (params = {}) => {
     try {
-      const response = await adminApi.get("/api/sliders/admin/all");
-      // Return the response data directly since it already contains the sliders array
+      const response = await adminApi.get("/api/sliders/admin/all", { params });
+      // { sliders, total, page, limit, counts }
       return response.data;
     } catch (error) {
       throw handleApiError(error);
     }
   },
 
-  getSliderById: async (id) => {
-    try {
-      const response = await adminApi.get(`/api/sliders/${id}`);
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 
   updateSlider: async (id, sliderData) => {
     try {
@@ -1355,12 +1290,66 @@ export const sliderService = {
     }
   },
 
-  removeSliderFromBrand: async (sliderId, brandId) => {
+  // Homepage order: ids in the order they should show.
+  reorderSliders: async (ids) => {
     try {
-      const response = await adminApi.delete(`/api/sliders/${sliderId}/brands/${brandId}`);
+      const response = await adminApi.put("/api/sliders/admin/reorder", { ids });
       return response.data;
     } catch (error) {
       throw handleApiError(error);
+    }
+  },
+
+};
+
+// Website area: Photos library, policies list, SEO pages list.
+export const websiteService = {
+  // params: search, usage (all|used|unused|products|slides|posts), page, limit
+  listMedia: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/website/media", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  uploadMedia: async (files) => {
+    try {
+      const formData = new FormData();
+      for (const f of files) formData.append("images", f);
+      const response = await adminApi.post("/api/admin/website/media", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  // keys: photo file names; only photos used nowhere are deleted.
+  deleteMedia: async (keys) => {
+    try {
+      const response = await adminApi.delete("/api/admin/website/media", { data: { keys } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  // params: brandId (id | 'global' | ''), search
+  listPolicies: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/website/policies", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  // params: brandId, search, state (all|live|fix|hidden), page, limit
+  listSeoPages: async (params = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/website/seo-pages", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
     }
   },
 };
@@ -1559,94 +1548,32 @@ export const productService = {
     }
   },
 
-  deleteImages: async (imagePaths) => {
-    try {
-      const response = await adminApi.delete('/api/products/delete-images', {
-        data: { imagePaths }
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 };
 
-// Coupon Services
+// Coupon Services (admin). Every call throws an Error with the server's message.
+const couponCall = async (fn) => {
+  try {
+    return (await fn()).data;
+  } catch (error) {
+    throw new Error(error?.response?.data?.message || error?.message || 'Request failed');
+  }
+};
 export const couponService = {
-  createCoupon: async (couponData) => {
-    try {
-      const response = await adminApi.post("/api/coupons", couponData);
-      invalidateCache('/api/coupons');
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
-
-  getAllCoupons: async (signal = null, forceRefresh = false) => {
-    // Check cache first (unless force refresh)
-    if (!forceRefresh) {
-      const cached = dataCache.get('/api/coupons');
-      if (cached) return cached;
-    }
-
-    return makeRateLimitedCall('/api/coupons', async () => {
-      try {
-        const config = {};
-        if (signal) config.signal = signal;
-        const response = await adminApi.get("/api/coupons", config);
-        const coupons = validateListResponse(response.data, 'coupons') || validateListResponse(response.data);
-        const result = { coupons, data: coupons };
-        // Cache successful response
-        dataCache.set('/api/coupons', result, {}, 5 * 60 * 1000); // 5 min TTL
-        return result;
-      } catch (error) {
-        if (error.name === 'CanceledError') {
-          const emptyResult = { coupons: [], data: [] };
-          return emptyResult;
-        }
-        // Try to use stale cache on error
-        const stale = dataCache.getStale('/api/coupons');
-        if (stale) return stale;
-        throw new Error(getErrorMessage(error.response?.data || error.message));
-      }
-    }, 'coupons_list');
-  },
-
-  getCouponById: async (id, signal = null) => {
-    return makeRateLimitedCall(`/api/coupons/${id}`, async () => {
-      try {
-        const config = {};
-        if (signal) config.signal = signal;
-        const response = await adminApi.get(`/api/coupons/${id}`, config);
-        const coupon = validateItemResponse(response.data, 'coupon') || validateItemResponse(response.data, 'data');
-        return coupon || {};
-      } catch (error) {
-        if (error.name === 'CanceledError') return {};
-        throw new Error(getErrorMessage(error.response?.data || error.message));
-      }
-    }, `coupon_${id}`);
-  },
-
-  updateCoupon: async (id, couponData) => {
-    try {
-      const response = await adminApi.put(`/api/coupons/${id}`, couponData);
-      invalidateCache('/api/coupons');
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
-
-  deleteCoupon: async (id) => {
-    try {
-      const response = await adminApi.delete(`/api/coupons/${id}`);
-      invalidateCache('/api/coupons');
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
+  // { coupons, counts, pagination, period } — tab live|scheduled|off|ended|all, brandId '' = all stores
+  list: ({ tab = 'live', search = '', brandId = '', page = 1, limit = 25, days = 30 } = {}) =>
+    couponCall(() => adminApi.get('/api/coupons', { params: { tab, page, limit, days, ...(search ? { search } : {}), ...(brandId ? { brandId } : {}) } })),
+  summary: ({ brandId = '', days = 30 } = {}) =>
+    couponCall(() => adminApi.get('/api/coupons/admin/summary', { params: { days, ...(brandId ? { brandId } : {}) } })).then((d) => d.summary),
+  dependencies: () => couponCall(() => adminApi.get('/api/coupons/admin/dependencies')).then((d) => d.warnings || []),
+  // kind 'category' | 'product'; ids resolves names for chips already chosen
+  picker: ({ kind, search = '', ids = [] }) =>
+    couponCall(() => adminApi.get('/api/coupons/admin/picker', { params: { kind, ...(search ? { search } : {}), ...(ids.length ? { ids: ids.join(',') } : {}) } })).then((d) => d.items || []),
+  get: (id) => couponCall(() => adminApi.get(`/api/coupons/${id}`)).then((d) => d.coupon),
+  create: (data) => couponCall(() => adminApi.post('/api/coupons', data)),
+  update: (id, data) => couponCall(() => adminApi.put(`/api/coupons/${id}`, data)),
+  remove: (id) => couponCall(() => adminApi.delete(`/api/coupons/${id}`)),
+  // Admin: switch on and, when asked, make it usable for a store ({ brandId, owner, allBrands })
+  switchOn: (id, body = {}) => couponCall(() => adminApi.post(`/api/coupons/${id}/switch-on`, body)),
 };
 
 // Review Services
@@ -1729,14 +1656,6 @@ export const reviewService = {
 const seoBrandHeader = (brandSlug = 'crosscoin') => ({ 'X-Brand-Name': brandSlug || 'crosscoin' });
 
 export const seoService = {
-  getAllSEOData: async (brandSlug) => {
-    try {
-      const response = await adminApi.get("/api/seo/all", { headers: seoBrandHeader(brandSlug) });
-      return response.data;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  },
 
   getSEOData: async (pageName, brandSlug) => {
     try {
@@ -1910,14 +1829,6 @@ export const policyService = {
       throw error.response?.data || error.message;
     }
   },
-  getAllPolicies: async () => {
-    try {
-      const response = await adminApi.get("/api/policies");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
   // Shared company GSTIN — set once, substituted into every policy's {{GSTIN}}.
   getCompanyInfo: async () => {
     try {
@@ -2077,6 +1988,12 @@ export const dashboardService = {
     if (!data?.success) throw new Error(data?.message || "Failed to load today's dashboard");
     return data;
   },
+  // Menu badges — { orders, problems, whatsapp, products, reviews, health },
+  // only the ones this user's roles can open.
+  getNavCounts: async (brandId) => {
+    const { data } = await adminApi.get("/api/admin/nav-counts", { params: brandId ? { brandId } : {} });
+    return data?.counts || {};
+  },
 };
 
 // Brand Services
@@ -2151,11 +2068,57 @@ export const brandService = {
 
 // Brand Settings Services
 export const brandSettingsService = {
-  getAllSettings: async (brandId, category = null) => {
+  // ── Dashboard → Brands (plain forms; secrets come back masked) ──
+  getOverview: async () => {
     try {
-      const params = { brandId };
-      if (category) params.category = category;
-      const response = await adminApi.get("/api/admin/brand-settings", { params });
+      const response = await adminApi.get("/api/admin/brand-settings/overview");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getForm: async (brandId, { checkSite = true } = {}) => {
+    try {
+      const response = await adminApi.get("/api/admin/brand-settings/form", { params: { brandId, checkSite: checkSite ? 1 : 0 } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // body: { values: { KEY: value }, remove: [KEY], brand: { display_name, … } }
+  saveForm: async (brandId, body) => {
+    try {
+      const response = await adminApi.put("/api/admin/brand-settings/form", { brandId, ...body });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  testRazorpay: async (brandId) => {
+    try {
+      const response = await adminApi.post("/api/admin/brand-settings/test/razorpay", { brandId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Existing WhatsApp test send (shared number, this brand's name in the text).
+  sendWhatsAppTest: async (brandId, phone) => {
+    try {
+      const response = await adminApi.post("/api/whatsapp/settings/test", { brandId, phone });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getAudit: async (brandId, page = 1) => {
+    try {
+      const response = await adminApi.get("/api/admin/brand-settings/audit", { params: { brandId, page } });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -2165,17 +2128,6 @@ export const brandSettingsService = {
   getSettingsByCategory: async (brandId, category) => {
     try {
       const response = await adminApi.get(`/api/admin/brand-settings/category/${category}`, {
-        params: { brandId }
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  getSetting: async (brandId, key) => {
-    try {
-      const response = await adminApi.get(`/api/admin/brand-settings/${key}`, {
         params: { brandId }
       });
       return response.data;
@@ -2196,17 +2148,6 @@ export const brandSettingsService = {
   updateSetting: async (brandId, key, settingData) => {
     try {
       const response = await adminApi.put(`/api/admin/brand-settings/${key}`, settingData, {
-        params: { brandId }
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  deleteSetting: async (brandId, key) => {
-    try {
-      const response = await adminApi.delete(`/api/admin/brand-settings/${key}`, {
         params: { brandId }
       });
       return response.data;
@@ -2332,15 +2273,6 @@ export const blogService = {
     }
   },
 
-  // Tags
-  getAllTags: async () => {
-    try {
-      const response = await adminApi.get("/api/blogs/tags");
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
 };
 
 // ─── WhatsApp Service ─────────────────────────────────────────────────────────

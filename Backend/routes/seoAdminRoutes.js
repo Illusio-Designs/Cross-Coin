@@ -17,4 +17,7 @@ router.get('/admin/seo/health',         isAuthenticated, isProductManager, getSe
 router.get('/admin/seo/products',        isAuthenticated, isProductManager, listProductSeo);
 router.put('/admin/seo/products/bulk',   isAuthenticated, isProductManager, bulkUpdateProductSeo);
 
+// Website area (Photos library, policies list, SEO pages list) — /api/admin/website/*.
+router.use(require('./websiteAdminRoutes.js'));
+
 module.exports = router;

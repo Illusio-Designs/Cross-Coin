@@ -1,221 +1,116 @@
 const { Coupon, CouponUsage, Cart, CartItem, Product, ProductVariation } = require('../model/associations.js');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
 const { logger } = require('../config/logging.js');
+const couponAdmin = require('../services/couponAdminService.js');
+const { evaluateCoupon } = require('../services/couponRulesService.js');
+
+const fail = (res, error, message) => {
+    logger.error(`${message}:`, error);
+    return res.status(500).json({ success: false, message, error: error.message });
+};
+const brandIdParam = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
+const daysParam = (v) => ([7, 30, 90].includes(Number(v)) ? Number(v) : 30);
+
+// Admin: one coupon with its stores and the names of its categories/products.
+async function couponDetail(coupon) {
+    const restricted = (await couponAdmin.brandIdsFor([coupon.id])).get(coupon.id) || [];
+    return { ...coupon.toJSON(), brandIds: restricted, state: couponAdmin.statusOf(coupon) };
+}
 
 // Create a new coupon
 module.exports.createCoupon = async (req, res) => {
     try {
-        const {
-            code,
-            description,
-            type,
-            value,
-            minPurchase,
-            maxDiscount,
-            startDate,
-            endDate,
-            usageLimit,
-            perUserLimit,
-            status,
-            applicableCategories,
-            applicableProducts,
-            // New fields
-            paymentModeRestriction,
-            firstOrderOnly,
-            tieredDiscounts,
-            quantityBasedDiscounts
-        } = req.body;
-
-        // Check if coupon code already exists
-        const existingCoupon = await Coupon.findOne({
-            where: { code: code.toUpperCase() }
+        const { data, brandIds, error } = await couponAdmin.normaliseInput(req.body);
+        if (error) return res.status(400).json({ success: false, message: error });
+        if (await Coupon.findOne({ where: { code: data.code } })) {
+            return res.status(400).json({ success: false, message: `There is already a coupon called ${data.code}.` });
+        }
+        const coupon = await sequelize.transaction(async (t) => {
+            const c = await Coupon.create(data, { transaction: t });
+            await couponAdmin.setCouponBrands(c.id, brandIds || [], t);
+            return c;
         });
-
-        if (existingCoupon) {
-            return res.status(400).json({
-                success: false,
-                message: 'Coupon code already exists'
-            });
-        }
-
-        // Validate discount value based on type
-        if (type === 'percentage' && (value <= 0 || value > 100)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Percentage discount must be between 0 and 100'
-            });
-        }
-
-        if ((type === 'fixed' || type === 'tiered' || type === 'quantity_based') && value <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Discount value must be greater than 0'
-            });
-        }
-
-        // Validate tiered discounts
-        if (type === 'tiered' && (!tieredDiscounts || !Array.isArray(tieredDiscounts) || tieredDiscounts.length === 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Tiered discounts are required for tiered coupon type'
-            });
-        }
-
-        // Validate quantity-based discounts
-        if (type === 'quantity_based' && (!quantityBasedDiscounts || !Array.isArray(quantityBasedDiscounts) || quantityBasedDiscounts.length === 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Quantity-based discounts are required for quantity-based coupon type'
-            });
-        }
-
-        // Validate min purchase amount
-        if (minPurchase && minPurchase < 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Minimum purchase amount cannot be negative'
-            });
-        }
-
-        // Validate max discount
-        if (maxDiscount && maxDiscount < 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Maximum discount cannot be negative'
-            });
-        }
-
-        // Validate usage limit
-        if (usageLimit && usageLimit < 1) {
-            return res.status(400).json({
-                success: false,
-                message: 'Usage limit must be at least 1'
-            });
-        }
-
-        // Validate dates
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        if (end <= start) {
-            return res.status(400).json({
-                success: false,
-                message: 'End date must be after start date'
-            });
-        }
-
-        // Create the coupon
-        const newCoupon = await Coupon.create({
-            code: code.toUpperCase(),
-            description,
-            type,
-            value: Number(value),
-            minPurchase: minPurchase ? Number(minPurchase) : null,
-            maxDiscount: maxDiscount ? Number(maxDiscount) : null,
-            startDate: start,
-            endDate: end,
-            usageLimit: usageLimit || null,
-            perUserLimit: perUserLimit || null,
-            status: status || 'active',
-            applicableCategories: applicableCategories || null,
-            applicableProducts: applicableProducts || null,
-            // New fields
-            paymentModeRestriction: paymentModeRestriction || 'all',
-            firstOrderOnly: firstOrderOnly || false,
-            tieredDiscounts: tieredDiscounts || null,
-            quantityBasedDiscounts: quantityBasedDiscounts || null,
-            brand_id: req.brand ? req.brand.id : 1, // ✅ Multi-brand support
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'Coupon created successfully',
-            coupon: newCoupon
-        });
+        res.status(201).json({ success: true, message: 'Coupon created', coupon: await couponDetail(coupon) });
     } catch (error) {
-        logger.error('Error creating coupon:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create coupon',
-            error: error.message
-        });
+        fail(res, error, 'Failed to create coupon');
     }
 };
 
-// Get all coupons
+// Admin list — server-side search / status tab / store / paging, with stats for
+// the period (used, discount given, sales with it) and which automations use it.
+// GET /api/coupons?tab=live|scheduled|off|ended|all&search=&brandId=&page=&limit=&days=7|30|90
 module.exports.getAllCoupons = async (req, res) => {
     try {
-        // ✅ Multi-brand filtering
-        const whereOptions = {};
-        if (req.brand && req.brand.id) {
-            whereOptions.brand_id = req.brand.id;
-        }
-
-        const coupons = await Coupon.findAll({
-            where: whereOptions,
-            include: [{
-                model: CouponUsage,
-                as: 'CouponUsages',
-                attributes: ['userId', 'usedAt', 'discountAmount'],
-                required: false
-            }],
-            order: [['createdAt', 'DESC']]
+        const tab = ['live', 'scheduled', 'off', 'ended', 'all'].includes(req.query.tab) ? req.query.tab : 'all';
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+        const result = await couponAdmin.listCoupons({
+            tab,
+            search: String(req.query.search || '').trim().slice(0, 50),
+            brandId: brandIdParam(req.query.brandId),
+            page, limit,
+            days: daysParam(req.query.days),
         });
-
-        res.status(200).json({
-            success: true,
-            count: coupons.length,
-            coupons
-        });
+        res.status(200).json({ success: true, ...result });
     } catch (error) {
-        logger.error('Error fetching coupons:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch coupons',
-            error: error.message
-        });
+        fail(res, error, 'Failed to fetch coupons');
+    }
+};
+
+// GET /api/coupons/admin/summary?brandId=&days=30
+module.exports.getCouponSummary = async (req, res) => {
+    try {
+        const summary = await couponAdmin.summary({ brandId: brandIdParam(req.query.brandId), days: daysParam(req.query.days) });
+        res.status(200).json({ success: true, summary });
+    } catch (error) {
+        fail(res, error, 'Failed to load coupon summary');
+    }
+};
+
+// GET /api/coupons/admin/dependencies — automations whose coupon would fail.
+module.exports.getCouponDependencies = async (req, res) => {
+    try {
+        res.status(200).json({ success: true, ...(await couponAdmin.dependencies()) });
+    } catch (error) {
+        fail(res, error, 'Failed to check coupon automations');
+    }
+};
+
+// GET /api/coupons/admin/picker?kind=category|product&search=&ids=1,2
+module.exports.getCouponPicker = async (req, res) => {
+    try {
+        const kind = req.query.kind === 'category' ? 'category' : 'product';
+        const items = await couponAdmin.picker({ kind, search: req.query.search, ids: req.query.ids });
+        res.status(200).json({ success: true, items });
+    } catch (error) {
+        fail(res, error, 'Failed to search');
+    }
+};
+
+// POST /api/coupons/:id/switch-on { brandId?, owner?, allBrands? } (admin)
+module.exports.switchOnCoupon = async (req, res) => {
+    try {
+        const b = req.body || {};
+        const r = await couponAdmin.switchOn(req.params.id, { brandId: b.brandId, owner: !!b.owner, allBrands: !!b.allBrands });
+        if (r.status !== 200) return res.status(r.status).json({ success: false, message: r.message });
+        res.status(200).json({ success: true, message: `${r.coupon.code} is on`, coupon: await couponDetail(r.coupon) });
+    } catch (error) {
+        fail(res, error, 'Failed to switch the coupon on');
     }
 };
 
 // Get a single coupon by ID
 module.exports.getCouponById = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const whereClause = { id };
-        if (req.brandId) whereClause.brand_id = req.brandId;
-        else if (req.brand && req.brand.id) whereClause.brand_id = req.brand.id;
-
-        const coupon = await Coupon.findOne({
-            where: whereClause,
-            include: [{
-                model: CouponUsage,
-                as: 'CouponUsages',
-                attributes: ['userId', 'usedAt', 'discountAmount'],
-                required: false
-            }]
-        });
-        
-        if (!coupon) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Coupon not found' 
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            ...coupon.toJSON()
-        });
+        const coupon = await Coupon.findByPk(req.params.id);
+        if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+        res.status(200).json({ success: true, coupon: await couponDetail(coupon) });
     } catch (error) {
-        logger.error('Error fetching coupon:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch coupon',
-            error: error.message
-        });
+        fail(res, error, 'Failed to fetch coupon');
     }
 };
+
 
 // Validate a coupon (works for both authenticated and guest users)
 module.exports.validateCoupon = async (req, res) => {
@@ -224,126 +119,19 @@ module.exports.validateCoupon = async (req, res) => {
         const userId = req.user?.id; // Optional - works for guests too
 
         if (!code) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Coupon code is required' 
-            });
+            return res.status(400).json({ success: false, message: 'Coupon code is required' });
         }
-
         if (!cartTotal || cartTotal <= 0) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Cart total is required' 
-            });
+            return res.status(400).json({ success: false, message: 'Cart total is required' });
         }
 
-        const coupon = await Coupon.findOne({
-            where: {
-                code: code.toUpperCase(),
-                status: 'active',
-                startDate: { [Op.lte]: new Date() },
-                endDate: { [Op.gte]: new Date() }
-            }
-        });
+        const coupon = await Coupon.findOne({ where: { code: code.toUpperCase() } });
 
-        if (!coupon) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Invalid or expired coupon code' 
-            });
-        }
-
-        // Check payment mode restriction
-        if (coupon.paymentModeRestriction !== 'all' && paymentMode && coupon.paymentModeRestriction !== paymentMode) {
-            const modeText = coupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
-            return res.status(400).json({
-                success: false,
-                message: `This coupon is only valid for ${modeText} orders`
-            });
-        }
-
-        // Check first order restriction
-        if (coupon.firstOrderOnly && userId) {
-            // Check if user has any previous orders
-            const { Order } = require('../model/associations.js');
-            const previousOrders = await Order.count({
-                where: { user_id: userId }
-            });
-            
-            if (previousOrders > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This coupon is only valid for first orders'
-                });
-            }
-        }
-
-        // Check total usage limit
-        if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'This coupon has reached its usage limit.' 
-            });
-        }
-
-        // Check per-user usage limit (only for authenticated users)
+        // Signed-in customers: work from the server cart (prices + items);
+        // guests: the storefront's cart total and lines (re-checked at order time).
+        let subtotal = parseFloat(cartTotal);
+        let items = cartItems;
         if (userId) {
-            const userUsageCount = await CouponUsage.count({
-                where: { couponId: coupon.id, userId: userId }
-            });
-
-            if (coupon.perUserLimit && userUsageCount >= coupon.perUserLimit) {
-                return res.status(400).json({ 
-                    success: false,
-                    message: `You have already used this coupon the maximum number of times.` 
-                });
-            }
-
-            if (!coupon.perUserLimit && userUsageCount > 0) {
-                return res.status(400).json({ 
-                    success: false,
-                    message: 'You have already used this coupon.' 
-                });
-            }
-        }
-
-        // Check per-user usage limit for guest users via email
-        if (!userId && (req.body.email || req.body.guest_email)) {
-            const guestEmail = (req.body.email || req.body.guest_email).toLowerCase().trim();
-            const { GuestUser } = require('../model/associations.js');
-            // Find guest users with this email
-            const guestUsers = await GuestUser.findAll({
-                where: { email: guestEmail },
-                attributes: ['id']
-            });
-            if (guestUsers.length > 0) {
-                const guestUserIds = guestUsers.map(g => g.id);
-                // Check CouponUsage records linked to these guest users
-                const guestUsageCount = await CouponUsage.count({
-                    where: {
-                        couponId: coupon.id,
-                        guestUserId: { [Op.in]: guestUserIds }
-                    }
-                });
-                if (coupon.perUserLimit && guestUsageCount >= coupon.perUserLimit) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'You have already used this coupon the maximum number of times.'
-                    });
-                }
-                if (!coupon.perUserLimit && guestUsageCount > 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'You have already used this coupon.'
-                    });
-                }
-            }
-        }
-
-        // Check minimum purchase requirement — server-side calculation for authenticated users
-        let applicableAmount;
-        if (userId) {
-            // Task 12.4: Calculate cart total server-side from actual cart items
             const cart = await Cart.findOne({
                 where: { user_id: userId, status: 'active' },
                 include: [{
@@ -356,153 +144,33 @@ module.exports.validateCoupon = async (req, res) => {
                 }]
             });
             if (cart && cart.CartItems && cart.CartItems.length > 0) {
-                applicableAmount = cart.CartItems.reduce((sum, item) => {
-                    const itemPrice = item.ProductVariation
-                        ? parseFloat(item.ProductVariation.price || item.price)
-                        : parseFloat(item.price);
-                    return sum + (itemPrice * item.quantity);
-                }, 0);
-            } else {
-                applicableAmount = parseFloat(cartTotal);
-            }
-        } else {
-            // For guests, use provided cartTotal (will be re-verified at checkout)
-            applicableAmount = parseFloat(cartTotal);
-        }
-        
-        if (coupon.minPurchase && applicableAmount < coupon.minPurchase) {
-            return res.status(400).json({
-                success: false,
-                message: `You must spend at least ₹${coupon.minPurchase} to use this coupon. Add ₹${(coupon.minPurchase - applicableAmount).toFixed(2)} more to your cart.`
-            });
-        }
-
-        // Calculate discount based on coupon type
-        let discountAmount = 0;
-        
-        if (coupon.type === 'percentage') {
-            discountAmount = (applicableAmount * parseFloat(coupon.value)) / 100;
-            if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-                discountAmount = parseFloat(coupon.maxDiscount);
-            }
-        } else if (coupon.type === 'fixed') {
-            discountAmount = parseFloat(coupon.value);
-        } else if (coupon.type === 'tiered') {
-            // Find the applicable tier based on cart amount
-            let tiers = coupon.tieredDiscounts;
-            
-            // Ensure tiers is a valid array
-            if (!tiers) {
-                tiers = [];
-            } else if (typeof tiers === 'string') {
-                try {
-                    tiers = JSON.parse(tiers);
-                } catch (e) {
-                    tiers = [];
-                }
-            } else if (!Array.isArray(tiers)) {
-                tiers = [];
-            }
-            
-            let applicableTier = null;
-            
-            if (tiers.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This tiered coupon is not properly configured'
-                });
-            }
-            
-            for (const tier of tiers.sort((a, b) => b.minAmount - a.minAmount)) {
-                if (applicableAmount >= tier.minAmount) {
-                    applicableTier = tier;
-                    break;
-                }
-            }
-            
-            if (applicableTier) {
-                discountAmount = parseFloat(applicableTier.discount);
-            } else {
-                return res.status(400).json({
-                    success: false,
-                    message: `This coupon requires a minimum purchase amount that you haven't met`
-                });
-            }
-        } else if (coupon.type === 'quantity_based') {
-            // Calculate total quantity in cart
-            const totalQuantity = cartItems ? cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
-            
-            if (totalQuantity === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Cart items are required for quantity-based coupons'
-                });
-            }
-            
-            // Find the applicable quantity tier
-            let quantityTiers = coupon.quantityBasedDiscounts;
-            
-            // Ensure quantityTiers is a valid array
-            if (!quantityTiers) {
-                quantityTiers = [];
-            } else if (typeof quantityTiers === 'string') {
-                try {
-                    quantityTiers = JSON.parse(quantityTiers);
-                } catch (e) {
-                    quantityTiers = [];
-                }
-            } else if (!Array.isArray(quantityTiers)) {
-                quantityTiers = [];
-            }
-            
-            let applicableQuantityTier = null;
-            
-            if (quantityTiers.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'This quantity-based coupon is not properly configured'
-                });
-            }
-            
-            for (const tier of quantityTiers.sort((a, b) => b.minQuantity - a.minQuantity)) {
-                if (totalQuantity >= tier.minQuantity) {
-                    applicableQuantityTier = tier;
-                    break;
-                }
-            }
-            
-            if (applicableQuantityTier) {
-                discountAmount = parseFloat(applicableQuantityTier.discount);
-            } else {
-                const minQty = Math.min(...quantityTiers.map(t => t.minQuantity));
-                return res.status(400).json({
-                    success: false,
-                    message: `You need at least ${minQty} items in your cart to use this coupon`
-                });
+                items = cart.CartItems.map((item) => ({
+                    productId: item.Product?.id ?? item.product_id,
+                    quantity: item.quantity,
+                    price: item.ProductVariation ? parseFloat(item.ProductVariation.price || item.price) : parseFloat(item.price),
+                }));
+                subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
             }
         }
 
-        // Ensure discount doesn't exceed cart total
-        if (discountAmount > applicableAmount) {
-            discountAmount = applicableAmount;
-        }
+        const r = await evaluateCoupon({
+            coupon,
+            items,
+            subtotal,
+            userId,
+            guestEmail: req.body.email || req.body.guest_email,
+            paymentType: paymentMode,
+            brandId: req.brandId,
+        });
+        if (!r.ok) return res.status(r.status).json({ success: false, message: r.message });
 
-        // Round the discount to a whole rupee so the order total is always a
-        // whole number end-to-end (cart, payment, shipping). A percentage
-        // coupon like 10% of ₹499 = ₹49.90 would otherwise leave ₹449.10, and
-        // iThink rejects decimal totals on courier booking. Rounding the
-        // discount (not the total) keeps subtotal − discount an integer since
-        // product prices are whole.
-        discountAmount = Math.min(applicableAmount, Math.round(discountAmount));
-
-        const finalAmount = Math.max(0, applicableAmount - discountAmount);
-
+        const finalAmount = Math.max(0, subtotal - r.discount);
         res.status(200).json({
             success: true,
             message: 'Coupon is valid and can be applied!',
-            discountAmount: discountAmount.toFixed(2),
+            discountAmount: r.discount.toFixed(2),
             finalAmount: finalAmount.toFixed(2),
-            subtotal: applicableAmount.toFixed(2),
+            subtotal: subtotal.toFixed(2),
             coupon: {
                 id: coupon.id,
                 code: coupon.code,
@@ -513,174 +181,57 @@ module.exports.validateCoupon = async (req, res) => {
                 firstOrderOnly: coupon.firstOrderOnly
             }
         });
-
     } catch (error) {
-        logger.error('Error validating coupon:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to validate coupon',
-            error: error.message
-        });
+        fail(res, error, 'Failed to validate coupon');
     }
 };
 
 
-// Update a coupon
+// Update a coupon (partial: fields not sent keep their value)
 module.exports.updateCoupon = async (req, res) => {
     try {
-        const { id } = req.params;
-        const {
-            code,
-            description,
-            type,
-            value,
-            minPurchase,
-            maxDiscount,
-            startDate,
-            endDate,
-            usageLimit,
-            perUserLimit,
-            status,
-            applicableCategories,
-            applicableProducts
-        } = req.body;
-
-        const coupon = await Coupon.findByPk(id);
-        if (!coupon) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Coupon not found' 
-            });
+        const coupon = await Coupon.findByPk(req.params.id);
+        if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+        const { data, brandIds, error } = await couponAdmin.normaliseInput(req.body, coupon.toJSON());
+        if (error) return res.status(400).json({ success: false, message: error });
+        if (data.code !== coupon.code && await Coupon.findOne({ where: { code: data.code, id: { [Op.ne]: coupon.id } } })) {
+            return res.status(400).json({ success: false, message: `There is already a coupon called ${data.code}.` });
         }
-
-        // Check if updated code already exists (if changing the code)
-        if (code && code !== coupon.code) {
-            const existingCoupon = await Coupon.findOne({
-                where: { 
-                    code: code.toUpperCase(),
-                    id: { [Op.ne]: id }
-                }
-            });
-
-            if (existingCoupon) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Coupon code already exists'
-                });
-            }
-        }
-
-        // Validate discount value based on type
-        if (type === 'percentage' && (value <= 0 || value > 100)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Percentage discount must be between 0 and 100'
-            });
-        }
-
-        if (type === 'fixed' && value <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Fixed discount value must be greater than 0'
-            });
-        }
-
-        // Validate min purchase amount
-        if (minPurchase && minPurchase < 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Minimum purchase amount cannot be negative'
-            });
-        }
-
-        // Validate max discount
-        if (maxDiscount && maxDiscount < 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Maximum discount cannot be negative'
-            });
-        }
-
-        // Validate usage limit
-        if (usageLimit && usageLimit < 1) {
-            return res.status(400).json({
-                success: false,
-                message: 'Usage limit must be at least 1'
-            });
-        }
-
-        // Validate dates
-        let start = coupon.startDate;
-        let end = coupon.endDate;
-
-        if (startDate) start = new Date(startDate);
-        if (endDate) end = new Date(endDate);
-
-        if (end <= start) {
-            return res.status(400).json({
-                success: false,
-                message: 'End date must be after start date'
-            });
-        }
-
-        // Update the coupon
-        await coupon.update({
-            code: code ? code.toUpperCase() : coupon.code,
-            description: description !== undefined ? description : coupon.description,
-            type: type || coupon.type,
-            value: value !== undefined ? Number(value) : coupon.value,
-            minPurchase: minPurchase !== undefined ? (minPurchase ? Number(minPurchase) : null) : coupon.minPurchase,
-            maxDiscount: maxDiscount !== undefined ? (maxDiscount ? Number(maxDiscount) : null) : coupon.maxDiscount,
-            startDate: start,
-            endDate: end,
-            usageLimit: usageLimit !== undefined ? (usageLimit ? Number(usageLimit) : null) : coupon.usageLimit,
-            perUserLimit: perUserLimit !== undefined ? (perUserLimit ? Number(perUserLimit) : null) : coupon.perUserLimit,
-            status: status || coupon.status,
-            applicableCategories: applicableCategories !== undefined ? applicableCategories : coupon.applicableCategories,
-            applicableProducts: applicableProducts !== undefined ? applicableProducts : coupon.applicableProducts
+        await sequelize.transaction(async (t) => {
+            await coupon.update(data, { transaction: t });
+            if (brandIds) await couponAdmin.setCouponBrands(coupon.id, brandIds, t);
         });
-
-        res.status(200).json({
-            success: true,
-            message: 'Coupon updated successfully',
-            coupon
-        });
+        res.status(200).json({ success: true, message: 'Coupon saved', coupon: await couponDetail(coupon) });
     } catch (error) {
-        logger.error('Error updating coupon:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update coupon',
-            error: error.message
-        });
+        fail(res, error, 'Failed to update coupon');
     }
 };
 
-// Delete a coupon
+// Delete a coupon — only one that was never used on an order (deleting would
+// wipe the coupon from those orders and from the stats). Switch it off instead.
 module.exports.deleteCoupon = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const coupon = await Coupon.findByPk(id);
-        if (!coupon) {
-            return res.status(404).json({ 
+        const coupon = await Coupon.findByPk(req.params.id);
+        if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+        const { Order } = require('../model/associations.js');
+        const [usages, orders] = await Promise.all([
+            CouponUsage.count({ where: { couponId: coupon.id } }),
+            Order.count({ where: { coupon_id: coupon.id } }),
+        ]);
+        const used = Math.max(usages, orders);
+        if (used > 0) {
+            return res.status(409).json({
                 success: false,
-                message: 'Coupon not found' 
+                message: `${coupon.code} was used on ${used} order${used === 1 ? '' : 's'}, so it can't be deleted. Switch it off instead.`,
             });
         }
-
-        await coupon.destroy();
-
-        res.status(200).json({
-            success: true,
-            message: 'Coupon deleted successfully'
+        await sequelize.transaction(async (t) => {
+            await couponAdmin.setCouponBrands(coupon.id, [], t);
+            await coupon.destroy({ transaction: t });
         });
+        res.status(200).json({ success: true, message: 'Coupon deleted' });
     } catch (error) {
-        logger.error('Error deleting coupon:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to delete coupon',
-            error: error.message
-        });
+        fail(res, error, 'Failed to delete coupon');
     }
 };
 
@@ -688,28 +239,31 @@ module.exports.deleteCoupon = async (req, res) => {
 // Get all active public coupons
 module.exports.getPublicCoupons = async (req, res) => {
     try {
-        // Coupons are shared across every storefront: validateCoupon (the apply
-        // path) matches by code only, with no brand filter, so ANY brand can
-        // redeem ANY active coupon. The offers dropdown must show the same set —
-        // previously it filtered by brand_id, so a coupon created under one
-        // brand (creation stamps brand_id = the creating brand, default 1) never
-        // appeared in another brand's dropdown even though it was fully usable
-        // there. Listing all active coupons keeps the dropdown consistent with
-        // what can actually be applied.
+        // validateCoupon (the apply path) matches by code and then checks the
+        // coupon's store list (coupon_brands; no rows = every store), so the
+        // offers dropdown shows exactly the codes that work on this store.
         const where = {
             status: 'active',
             startDate: { [Op.lte]: new Date() },
             endDate: { [Op.gte]: new Date() }
         };
 
-        const coupons = await Coupon.findAll({
-            where,
-            attributes: [
-                'id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate',
-                'paymentModeRestriction', 'firstOrderOnly', 'tieredDiscounts', 'quantityBasedDiscounts'
-            ],
-            order: [['createdAt', 'DESC']]
-        });
+        const [all, blocked] = await Promise.all([
+            Coupon.findAll({
+                where,
+                attributes: [
+                    'id', 'code', 'description', 'type', 'value', 'minPurchase', 'maxDiscount', 'endDate',
+                    'paymentModeRestriction', 'firstOrderOnly', 'tieredDiscounts', 'quantityBasedDiscounts',
+                    'usageLimit', 'usageCount'
+                ],
+                order: [['createdAt', 'DESC']]
+            }),
+            couponAdmin.couponIdsBlockedForBrand(req.brandId),
+        ]);
+        // Used-up codes fail at checkout — leave them out of the offers list.
+        const coupons = all
+            .filter((c) => !blocked.has(c.id) && !(c.usageLimit && c.usageCount >= c.usageLimit))
+            .map((c) => { const j = c.toJSON(); delete j.usageLimit; delete j.usageCount; return j; });
 
         res.status(200).json({
             success: true,

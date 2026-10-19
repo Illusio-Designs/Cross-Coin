@@ -1,0 +1,135 @@
+/* Payments (pages/dashboard/payments/payments.jsx) and Loyalty points
+   (pages/dashboard/loyalty/loyalty.jsx). Scoped under .pl-*; colours only from
+   --ds-* tokens, so light + dark both work. Pills, tiles, chips, confirm bar,
+   empty/error/loading states come from components/ui. */
+
+.dashboard-sections.pl-page {
+  display: flex; flex-direction: column; gap: 16px;
+  background: var(--ds-color-bg); border-radius: 0; padding: 0;
+  max-width: 1280px; margin-inline: auto;
+}
+.pl-page .ds-pageheader { margin-bottom: 0; }
+.pl-head-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pl-head-tools .pl-dd { min-width: 150px; }
+.pl-head-tools .pl-dd .dropdown-trigger { height: 38px; border-radius: 10px; background: var(--ds-color-surface); }
+.pl-kpis { margin: 0; }
+.pl-nightly { margin: 6px 0 0; }
+
+.pl-faint { color: var(--ds-color-text-muted); }
+.pl-small { font-size: 12.5px; line-height: 1.45; }
+.pl-mono { font-family: var(--ds-font-mono); font-size: 11.5px; letter-spacing: .01em; }
+.pl-num { font-variant-numeric: tabular-nums; }
+.pl-nowrap { white-space: nowrap; }
+.pl-link {
+  background: none; border: 0; padding: 0; font: inherit; color: var(--ds-color-text);
+  font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.pl-link:hover { color: var(--ds-color-link); }
+.pl-link:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; border-radius: 3px; }
+.pl-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pl-err { color: var(--ds-color-danger); font-size: 12.5px; }
+
+/* Toolbar + search */
+.pl-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.pl-search {
+  display: flex; align-items: center; gap: 8px; flex: 0 1 280px; min-width: 0; height: 38px; padding: 0 12px; box-sizing: border-box;
+  border: 1px solid var(--ds-color-border); border-radius: 10px; background: var(--ds-color-surface); color: var(--ds-color-text-muted);
+}
+.pl-search:focus-within { border-color: var(--ds-color-text-faint); }
+.pl-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ds-color-text); font: 400 13.5px var(--ds-font-sans); }
+
+/* Cards + tables */
+.pl-card { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-xl); overflow: hidden; min-width: 0; }
+.pl-card[aria-busy="true"] .pl-table { opacity: .7; transition: opacity .15s; }
+.pl-card-head { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px 14px; }
+.pl-card-head .pl-search { background: var(--ds-color-bg); }
+.pl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pl-table--pay { min-width: 1040px; }
+.pl-table--loy { min-width: 760px; }
+.pl-table--mm { min-width: 860px; }
+.pl-table th {
+  text-align: left; font-family: var(--ds-font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ds-color-text-muted); font-weight: 500; padding: 10px 14px; border-bottom: 1px solid var(--ds-color-border); white-space: nowrap;
+}
+.pl-table td {
+  padding: 12px 14px; border-bottom: 1px solid var(--ds-color-border-soft); color: var(--ds-color-text);
+  font-variant-numeric: tabular-nums; vertical-align: middle;
+}
+.pl-table tbody tr:last-child td { border-bottom: 0; }
+.pl-table tbody tr:hover td { background: var(--ds-color-surface-soft); }
+.pl-table .r { text-align: right; }
+.pl-table td.pl-why { font-size: 12.5px; color: var(--ds-color-text-muted); max-width: 300px; white-space: normal; }
+.pl-table--loy td.pl-why { color: var(--ds-color-text); max-width: 340px; }
+.pl-amt.is-out b { color: var(--ds-color-accent2); }
+.pl-pts-cell.is-in b { color: var(--ds-color-success); }
+.pl-pts-cell.is-out b { color: var(--ds-color-danger); }
+.pl-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-top: 1px solid var(--ds-color-border); font-size: 12.5px;
+}
+.pl-pager { display: inline-flex; align-items: center; gap: 8px; color: var(--ds-color-text); }
+
+/* "Doesn't match Razorpay" */
+.pl-mm { background: var(--ds-color-surface); border: 1px solid var(--ds-color-warn-bd); border-radius: var(--ds-radius-xl); overflow: hidden; }
+.pl-mm--quiet {
+  border-color: var(--ds-color-border); padding: 10px 14px;
+  display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;
+}
+.pl-mm-head { padding: 14px 16px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pl-mm-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pl-mm-title { font-size: 14.5px; color: var(--ds-color-warn); }
+.pl-mm .ui-confirm { margin: 0 16px 12px; }
+.pl-mm td .ui-confirm { margin: 8px 0 0; }
+.pl-mm-foot { padding: 10px 16px; border-top: 1px solid var(--ds-color-border-soft); display: flex; gap: 6px 14px; flex-wrap: wrap; justify-content: space-between; }
+
+/* Loyalty layout */
+.pl-split { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.pl-main { flex: 999 1 560px; }
+.pl-aside { flex: 1 1 320px; max-width: 420px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 920px) { .pl-aside { max-width: none; } }
+.pl-side-card {
+  background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-xl);
+  padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+}
+.pl-side-card > b { font-size: 14.5px; color: var(--ds-color-text); }
+.pl-side-card > .btn { align-self: flex-start; }
+.pl-side-card--warn { border-color: var(--ds-color-warn-bd); }
+.pl-side-card--warn .pl-warn-title { color: var(--ds-color-warn); }
+.pl-rules { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.pl-rules > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.pl-rules dt { color: var(--ds-color-text-muted); }
+.pl-rules dd { margin: 0; text-align: right; color: var(--ds-color-text); }
+.pl-rules-split { display: flex; flex-direction: column; gap: 4px; }
+.pl-note { margin: 0; }
+
+/* Forms */
+.pl-form { display: flex; flex-direction: column; gap: 10px; }
+.pl-form .btn { align-self: flex-start; }
+.pl-field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--ds-color-text-muted); }
+.pl-form input {
+  min-height: 38px; padding: 0 12px; border-radius: 10px; box-sizing: border-box; width: 100%; min-width: 0;
+  border: 1px solid var(--ds-color-border); background: var(--ds-color-bg); color: var(--ds-color-text);
+  font: 400 13px var(--ds-font-sans);
+}
+.pl-form input:focus { outline: none; border-color: var(--ds-color-text-faint); }
+.pl-row2 { display: flex; gap: 8px; }
+.pl-row2 .pl-pts { flex: 0 0 110px; font-weight: 600; }
+@media (max-width: 420px) { .pl-row2 { flex-direction: column; } .pl-row2 .pl-pts { flex-basis: auto; } }
+.pl-picker { position: relative; }
+.pl-pick-list {
+  list-style: none; margin: 6px 0 0; padding: 4px; border: 1px solid var(--ds-color-border); border-radius: 10px;
+  background: var(--ds-color-surface); box-shadow: var(--ds-shadow-md); max-height: 260px; overflow-y: auto;
+}
+.pl-pick-list li { padding: 0; }
+.pl-pick-list li.pl-small { padding: 8px 10px; }
+.pl-pick-list button {
+  width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ds-color-text); font: inherit; font-size: 13px; cursor: pointer;
+}
+.pl-pick-list button:hover, .pl-pick-list button:focus-visible { background: var(--ds-color-surface-soft); outline: none; }
+.pl-picked {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px;
+  border: 1px solid var(--ds-color-border); border-radius: 10px; background: var(--ds-color-bg); font-size: 13px;
+}
+.pl-picked > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

@@ -135,7 +135,6 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
   const { OrderItem } = require('../model/orderItemModel.js');
   const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
   const { ProductVariation } = require('../model/productVariationModel.js');
-  const { Coupon, CouponUsage } = require('../model/associations.js');
   const loyaltyService = require('./loyaltyService.js');
   const { sequelize } = require('../config/db.js');
 
@@ -168,11 +167,9 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
       }
     }
 
-    // Decrement coupon usage
-    if (order.coupon_id) {
-      await Coupon.decrement('usageCount', { by: 1, where: { id: order.coupon_id }, transaction: t });
-      await CouponUsage.destroy({ where: { orderId: order.id }, transaction: t });
-    }
+    // Give the coupon use back — only if a usage row existed (usage is recorded
+    // only when a discount applied), never below zero.
+    await require('./couponRulesService.js').releaseCouponUse(order, t);
 
     // Refund loyalty points
     if (order.user_id) {

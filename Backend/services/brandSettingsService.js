@@ -4,6 +4,20 @@ const { BrandSetting } = require('../model/brandSettingModel');
 const settingsCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// After any write: drop every cache that holds this setting — settingsHelper
+// (booking / checkout reads), WhatsApp credentials, and the per-brand Razorpay
+// client (so new keys apply without a restart).
+function clearDependentCaches(brandId, key) {
+    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
+    if (String(key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(brandId); } catch (_) {} }
+    if (String(key).startsWith('RAZORPAY_')) {
+        try {
+            const rzp = require('./razorpayService');
+            if (typeof rzp.clearCache === 'function') { rzp.clearCache(Number(brandId)); rzp.clearCache(String(brandId)); }
+        } catch (_) {}
+    }
+}
+
 /**
  * Get a single brand setting
  */
@@ -85,8 +99,7 @@ async function setBrandSetting(
     // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
-    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
-    if (String(key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(brandId); } catch (_) {} }
+    clearDependentCaches(brandId, key);
 
     return setting;
 }
@@ -105,8 +118,7 @@ async function deleteBrandSetting(brandId, key) {
     // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
-    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
-    if (String(key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(brandId); } catch (_) {} }
+    clearDependentCaches(brandId, key);
 
     return deleted > 0;
 }
@@ -154,8 +166,7 @@ async function createSetting(data) {
     // stale value for up to settingsHelper's TTL, which looked like "didn't save".
     const cacheKey = `${data.brand_id}:${data.key}`;
     settingsCache.delete(cacheKey);
-    try { require('./settingsHelper').clearCache(data.brand_id); } catch (_) {}
-    if (String(data.key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(data.brand_id); } catch (_) {} }
+    clearDependentCaches(data.brand_id, data.key);
 
     return setting;
 }
@@ -185,8 +196,7 @@ async function updateSetting(brandId, key, data) {
     // address ID) for up to settingsHelper's 5-minute TTL after an admin edit.
     const cacheKey = `${brandId}:${key}`;
     settingsCache.delete(cacheKey);
-    try { require('./settingsHelper').clearCache(brandId); } catch (_) {}
-    if (String(key).startsWith('WHATSAPP_')) { try { require('./whatsappService').clearCredentialsCache(brandId); } catch (_) {} }
+    clearDependentCaches(brandId, key);
 
     return setting;
 }

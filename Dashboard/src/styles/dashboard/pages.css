@@ -1409,25 +1409,6 @@
   min-width: 0;
 }
 
-/* ---- Quill editor in modal ---- */
-.dm-quill-wrap .ql-container {
-  border-radius: 0 0 6px 6px;
-  border-color: var(--ds-color-border);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  min-height: 160px;
-}
-
-.dm-quill-wrap .ql-toolbar {
-  border-radius: 6px 6px 0 0;
-  border-color: var(--ds-color-border);
-  background: var(--ds-color-surface-soft);
-}
-
-.dm-quill-wrap .ql-editor {
-  min-height: 160px;
-}
-
 /* ---- seo-form reset (used as form wrapper) ---- */
 .seo-form {
   display: flex;

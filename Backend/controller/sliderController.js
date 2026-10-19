@@ -10,6 +10,9 @@ const multer = require('multer');
 const imagekitService = require('../services/imagekitService.js');
 const cacheManager = require('../services/cacheManager.js');
 const { logger } = require('../config/logging.js');
+const { Op } = require('sequelize');
+const { sequelize } = require('../config/db.js');
+const website = require('../services/websiteContentService.js');
 
 // Public sliders rarely change but are fetched on every homepage load. Cache
 // the fully-built response per brand and invalidate whenever a slider (or its
@@ -74,15 +77,33 @@ const formatSliderResponse = (slider) => {
     return sliderData;
 };
 
+// Normalise an optional category id: null/''/'0'/0/'null' → null.
+const normaliseCategoryId = (categoryId) => {
+    if (categoryId === undefined || categoryId === null || categoryId === '' || categoryId === 'null') return null;
+    const num = Number(categoryId);
+    return !isNaN(num) && num > 0 ? num : null;
+};
+
 // Create Slider
 const createSlider = async (req, res) => {
     try {
-        const { title, description, brand_id } = req.body;
+        await website.ensureSchema();
+        const { title, description, brand_id, buttonText, categoryId, status } = req.body;
 
         const desktopFile = req.files && req.files.image && req.files.image[0];
         const mobileFile = req.files && req.files.mobileImage && req.files.mobileImage[0];
         if (!desktopFile) {
             return res.status(400).json({ message: 'Desktop image is required' });
+        }
+
+        const categoryIdToUse = normaliseCategoryId(categoryId);
+        if (categoryIdToUse && !(await Category.findByPk(categoryIdToUse))) {
+            return res.status(400).json({ message: 'Category not found' });
+        }
+        const startsAt = website.parseDateInput(req.body.starts_at);
+        const endsAt = website.parseDateInput(req.body.ends_at);
+        if (startsAt && endsAt && endsAt < startsAt) {
+            return res.status(400).json({ message: 'The end date is before the start date' });
         }
 
         let image;
@@ -102,9 +123,18 @@ const createSlider = async (req, res) => {
         // Use brand_id from request body if provided, otherwise use req.brand or default to 1
         const brandIdToUse = brand_id || (req.brand ? req.brand.id : 1);
 
+        // New slides go to the end of the homepage order.
+        const maxPos = (await Slider.max('position')) || 0;
+
         const slider = await Slider.create({
             title,
             description,
+            buttonText: buttonText || null,
+            categoryId: categoryIdToUse,
+            status: status === 'inactive' ? 'inactive' : 'active',
+            starts_at: startsAt || null,
+            ends_at: endsAt || null,
+            position: maxPos + 1,
             image,
             mobile_image: mobileImage,
             brand_id: brandIdToUse,
@@ -127,66 +157,107 @@ const createSlider = async (req, res) => {
     }
 };
 
-// Get All Sliders
+// Get All Sliders (admin)
+// Query (all optional, backward compatible — no params returns every slide):
+//   brandId  only slides assigned to that store
+//   search   title / description contains
+//   state    live | scheduled | ended | draft
+//   page, limit
+// Response: { sliders, total, page, limit, counts: { all, live, scheduled, ended, draft } }
 const getAllSliders = async (req, res) => {
     try {
-        // ✅ Multi-brand filtering using many-to-many relationship
-        const whereOptions = {};
-        let includeOptions = [
-            {
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'name'],
-                include: [{
-                    model: Brand,
-                    as: 'Brands',
-                    through: { attributes: ['status'] }
-                }]
-            },
-            {
-                model: Brand,
-                as: 'Brands',
-                through: { 
-                    attributes: ['status'],
-                    where: { status: 'active' }
-                },
-                required: false // LEFT JOIN to get sliders even without brand assignments
-            }
-        ];
-
-        // If brand is specified, filter sliders by brand
-        if (req.brand && req.brand.id) {
-            includeOptions[1].where = { id: req.brand.id };
-            includeOptions[1].required = true; // INNER JOIN to only get sliders for this brand
+        await website.ensureSchema();
+        const now = new Date();
+        const base = {};
+        const brandId = parseInt(req.query.brandId, 10) || (req.brand && req.brand.id) || null;
+        if (brandId) {
+            base.id = { [Op.in]: sequelize.literal(`(SELECT slider_id FROM slider_brands WHERE brand_id = ${Number(brandId)} AND status = 'active')`) };
+        }
+        const search = String(req.query.search || '').trim();
+        if (search) {
+            base[Op.or] = [
+                { title: { [Op.like]: `%${search}%` } },
+                { description: { [Op.like]: `%${search}%` } },
+            ];
         }
 
-        const sliders = await Slider.findAll({
-            where: whereOptions,
-            include: includeOptions
+        const counts = { all: await Slider.count({ where: base }) };
+        for (const st of ['live', 'scheduled', 'ended', 'draft']) {
+            counts[st] = await Slider.count({ where: { ...base, ...website.sliderStateWhere(st, now) } });
+        }
+
+        const stateWhere = website.sliderStateWhere(req.query.state, now);
+        const where = stateWhere ? { ...base, ...stateWhere } : base;
+
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = req.query.limit ? Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200) : null;
+
+        const { count, rows: sliders } = await Slider.findAndCountAll({
+            where,
+            distinct: true,
+            include: [
+                { model: Category, as: 'category', attributes: ['id', 'name', 'slug'] },
+                {
+                    model: Brand,
+                    as: 'Brands',
+                    attributes: ['id', 'name', 'display_name', 'slug', 'domain'],
+                    through: { attributes: ['status'], where: { status: 'active' } },
+                    required: false,
+                },
+            ],
+            order: [['position', 'ASC'], ['createdAt', 'DESC']],
+            ...(limit ? { limit, offset: (page - 1) * limit } : {}),
         });
 
         const slidersResponse = sliders.map(slider => {
             const sliderData = formatSliderResponse(slider);
-            // Add brands array to response
+            sliderData.preview = website.previewUrl(slider.image, 640, 'sliders');
+            sliderData.mobile_preview = website.previewUrl(slider.mobile_image, 360, 'sliders');
+            sliderData.state = website.sliderState(slider, now);
             sliderData.brands = slider.Brands ? slider.Brands.map(brand => ({
                 id: brand.id,
                 name: brand.name,
+                display_name: brand.display_name,
+                slug: brand.slug,
+                domain: brand.domain,
                 status: brand.SliderBrand ? brand.SliderBrand.status : 'active'
             })) : [];
+            delete sliderData.Brands;
             return sliderData;
         });
-        logger.info('All sliders image paths:', slidersResponse.map(s => s.image));
 
-        res.status(200).json({ sliders: slidersResponse });
+        res.status(200).json({ sliders: slidersResponse, total: count, page, limit: limit || count, counts });
     } catch (error) {
         logger.error('Get all sliders error:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
+// Reorder (admin): body { ids: [sliderId, …] } in the order they should show.
+// Positions are written 1..n for the given ids; slides not listed keep theirs.
+const reorderSliders = async (req, res) => {
+    try {
+        await website.ensureSchema();
+        const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+        if (!ids.length) return res.status(400).json({ success: false, message: 'ids must be a non-empty array' });
+        if (new Set(ids).size !== ids.length) return res.status(400).json({ success: false, message: 'ids must not repeat' });
+        await sequelize.transaction(async (t) => {
+            for (let i = 0; i < ids.length; i++) {
+                await Slider.update({ position: i + 1 }, { where: { id: ids[i] }, transaction: t });
+            }
+        });
+        await invalidateSliderCache();
+        res.json({ success: true, order: ids });
+    } catch (error) {
+        logger.error('Reorder sliders error:', error);
+        res.status(500).json({ success: false, message: 'Failed to reorder sliders' });
+    }
+};
+
 // Get Slider by ID
 const getSliderById = async (req, res) => {
     try {
+        await website.ensureSchema();
         const slider = await Slider.findByPk(req.params.id, {
             include: [
                 {
@@ -221,6 +292,7 @@ const getSliderById = async (req, res) => {
 // Update Slider
 const updateSlider = async (req, res) => {
     try {
+        await website.ensureSchema();
         const { id } = req.params;
         const { title, description, buttonText, categoryId, status, brand_id } = req.body;
 
@@ -229,15 +301,16 @@ const updateSlider = async (req, res) => {
             return res.status(404).json({ message: 'Slider not found' });
         }
 
-        // Normalize categoryId — treat null/undefined/''/'0'/0 as "no category".
-        // Number(null) and Number('') both return 0 (not NaN), so the previous
-        // check let 0 through and triggered an FK constraint violation.
-        let categoryIdToUse = null;
-        if (categoryId !== undefined && categoryId !== null && categoryId !== '' && categoryId !== 'null') {
-            const num = Number(categoryId);
-            if (!isNaN(num) && num > 0) {
-                categoryIdToUse = num;
-            }
+        // Normalize categoryId — treat null/undefined/''/'0'/0 as "no category"
+        // (0 would trigger an FK constraint violation).
+        const categoryIdToUse = normaliseCategoryId(categoryId);
+
+        const startsAt = website.parseDateInput(req.body.starts_at);
+        const endsAt = website.parseDateInput(req.body.ends_at);
+        const effStart = startsAt === undefined ? slider.starts_at : startsAt;
+        const effEnd = endsAt === undefined ? slider.ends_at : endsAt;
+        if (effStart && effEnd && new Date(effEnd) < new Date(effStart)) {
+            return res.status(400).json({ message: 'The end date is before the start date' });
         }
 
         if (categoryIdToUse) {
@@ -274,6 +347,8 @@ const updateSlider = async (req, res) => {
         if (status !== undefined) updateData.status = status;
         if (categoryId !== undefined) updateData.categoryId = categoryIdToUse;
         if (brand_id) updateData.brand_id = brand_id;
+        if (startsAt !== undefined) updateData.starts_at = startsAt;
+        if (endsAt !== undefined) updateData.ends_at = endsAt;
 
         // Update slider
         await slider.update(updateData);
@@ -300,6 +375,11 @@ const getPublicSliders = async (req, res) => {
     try {
         // Get brand from header
         const brandName = req.headers['x-brand-name'];
+        await website.ensureSchema();
+        // Slides outside their schedule window are dropped at serve time, so a
+        // cached list never shows a slide too early or after it ends.
+        const now = new Date();
+        const visible = (list) => list.filter((s) => website.inWindow(s, now)).map(({ starts_at, ends_at, ...rest }) => rest);
 
         // Serve from cache when available (falls through to the query on a
         // cache miss or when Redis is unavailable — cacheManager is graceful).
@@ -307,7 +387,7 @@ const getPublicSliders = async (req, res) => {
         const cached = await cacheManager.get(cacheKey);
         if (cached) {
             res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=60');
-            return res.status(200).json({ sliders: cached });
+            return res.status(200).json({ sliders: visible(cached) });
         }
 
         let includeOptions = [
@@ -329,7 +409,9 @@ const getPublicSliders = async (req, res) => {
 
         // If brand is specified, filter by brand
         if (brandName) {
-            includeOptions[1].where = { name: brandName };
+            // Storefronts send their slug (e.g. 'crosscoin'); the name ('Cross
+            // Coin') never matched it, so those stores got no slides.
+            includeOptions[1].where = { [Op.or]: [{ slug: brandName }, { name: brandName }] };
             includeOptions[1].required = true; // Only get sliders for this brand
         }
 
@@ -338,8 +420,10 @@ const getPublicSliders = async (req, res) => {
                 status: 'active'
             },
             include: includeOptions,
-            order: [['createdAt', 'DESC']],
-            attributes: ['id', 'title', 'description', 'buttonText', 'image', 'mobile_image', 'categoryId']
+            // Homepage order set in the dashboard; ties (e.g. never reordered,
+            // all 0) keep the old newest-first order.
+            order: [['position', 'ASC'], ['createdAt', 'DESC']],
+            attributes: ['id', 'title', 'description', 'buttonText', 'image', 'mobile_image', 'categoryId', 'starts_at', 'ends_at']
         });
 
         const slidersResponse = sliders.map(slider => {
@@ -394,7 +478,7 @@ const getPublicSliders = async (req, res) => {
         // immediately, but a long s-maxage would let a CDN serve the old slider
         // for minutes after an edit. 60s keeps admin changes near-instant.
         res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=60');
-        res.status(200).json({ sliders: slidersResponse });
+        res.status(200).json({ sliders: visible(slidersResponse) });
     } catch (error) {
         logger.error('Get public sliders error:', error);
         res.status(500).json({ message: error.message });
@@ -404,6 +488,7 @@ const getPublicSliders = async (req, res) => {
 // Delete Slider
 const deleteSlider = async (req, res) => {
     try {
+        await website.ensureSchema();
         const { id } = req.params;
 
         const slider = await Slider.findByPk(id);
@@ -419,6 +504,7 @@ const deleteSlider = async (req, res) => {
         await slider.destroy();
 
         await invalidateSliderCache();
+        website.invalidateMediaCache();
 
         res.json({
             success: true,
@@ -441,6 +527,7 @@ module.exports = {
     updateSlider,
     getPublicSliders,
     deleteSlider,
+    reorderSliders,
     upload,
     assignSliderToBrands,
     removeSliderFromBrand
@@ -459,6 +546,7 @@ async function assignSliderToBrands(req, res) {
             });
         }
 
+        await website.ensureSchema();
         const slider = await Slider.findByPk(id);
         if (!slider) {
             return res.status(404).json({ 

@@ -63,12 +63,29 @@ async function collectReferenced() {
   const sources = [
     ['ProductImage.image_url', async () => (await M('../model/productImageModel.js').ProductImage.findAll({ attributes: ['image_url'], raw: true })).map((r) => r.image_url)],
     ['Category.image/ogImage',  async () => (await M('../model/categoryModel.js').Category.findAll({ attributes: ['image', 'ogImage'], raw: true })).flatMap((r) => [r.image, r.ogImage])],
-    ['Slider.image',            async () => (await M('../model/sliderModel.js').Slider.findAll({ attributes: ['image'], raw: true })).map((r) => r.image)],
+    ['Slider.image/mobile',     async () => (await M('../model/sliderModel.js').Slider.findAll({ attributes: ['image', 'mobile_image'], raw: true })).flatMap((r) => [r.image, r.mobile_image])],
     ['User.profileImage',       async () => (await M('../model/userModel.js').User.findAll({ attributes: ['profileImage'], raw: true })).map((r) => r.profileImage)],
     ['Brand.logo_url',          async () => (await M('../model/brandModel.js').findAll({ attributes: ['logo_url'], raw: true })).map((r) => r.logo_url)],
     ['ProductSEO.ogImage',      async () => (await M('../model/productSEOModel.js').ProductSEO.findAll({ attributes: ['ogImage'], raw: true })).map((r) => r.ogImage)],
     ['SeoMetadata.meta_image',  async () => (await M('../model/seoMetadataModel.js').SeoMetadata.findAll({ attributes: ['meta_image'], raw: true })).map((r) => r.meta_image)],
-    ['BlogPost.hero_image',     async () => (await M('../model/blogPostModel.js').BlogPost.findAll({ attributes: ['hero_image'], raw: true })).map((r) => r.hero_image)],
+    ['BlogPost.hero/thumbnail', async () => (await M('../model/blogPostModel.js').BlogPost.findAll({ attributes: ['hero_image', 'thumbnail_image'], raw: true })).flatMap((r) => [r.hero_image, r.thumbnail_image])],
+    // Images inserted with the rich-text editor live inside HTML/JSON text.
+    ['inline <img> in text',    async () => {
+      const out = [];
+      const re = /<img[^>]+src=\\?["']([^"'\\]+)\\?["']/gi;
+      const scan = (txt) => { if (!txt) return; const s = String(txt); let m; re.lastIndex = 0; while ((m = re.exec(s))) out.push(m[1]); };
+      for (const r of await sequelize.query("SELECT description AS t FROM products WHERE description LIKE '%<img%'", { type: 'SELECT' })) scan(r.t);
+      for (const r of await sequelize.query("SELECT sections AS t FROM blog_posts WHERE sections LIKE '%<img%'", { type: 'SELECT' })) scan(r.t);
+      for (const r of await sequelize.query("SELECT content AS t FROM policies WHERE content LIKE '%<img%'", { type: 'SELECT' })) scan(r.t);
+      return out;
+    }],
+    // Photos uploaded straight into Dashboard → Website → Photos are kept even
+    // while unused (staff delete them there). Table is created lazily.
+    ['media_assets.path',       async () => {
+      const [t] = await sequelize.query("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'media_assets'", { type: 'SELECT' });
+      if (!t || !Number(t.n)) return [];
+      return (await sequelize.query('SELECT path FROM media_assets', { type: 'SELECT' })).map((r) => r.path);
+    }],
     ['ReviewImage.fileName',    async () => (await M('../model/reviewImageModel.js').ReviewImage.findAll({ attributes: ['fileName'], raw: true })).map((r) => r.fileName)],
     ['Return.photos+proof',     async () => {
       const rows = await M('../model/returnModel.js').Return.findAll({ attributes: ['photos', 'payout_proof'], raw: true });

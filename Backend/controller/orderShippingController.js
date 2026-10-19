@@ -373,6 +373,9 @@ async function restoreRtoStockOnce(order, transaction, source, reason) {
   );
   if (Number(done?.n) > 0) return 0;
 
+  // An order that came back never counts for loyalty points.
+  loyaltyService.reversePointsLater(order.id, { reason: 'returned to us (RTO)' });
+
   const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
   let units = 0;
   for (const item of items) {
@@ -778,38 +781,17 @@ module.exports.handleShippingWebhook = async (req, res) => {
 // backend yet (callback URL not set to api.<domain>/api/orders/shipping/webhook).
 module.exports.getShippingWebhookEvents = async (req, res) => {
   try {
-    // Clamped to a safe integer and inlined (LIMIT placeholders bind as
-    // strings in MySQL and can error); never user-controlled SQL text.
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 200));
-
-    const [rows] = await sequelize.query(
-      `SELECT id, provider, event_key, waybill, order_ref, courier_status,
-              mapped_status, processed, processing_error, createdAt, processedAt
-         FROM shipment_webhook_events
-        ORDER BY id DESC
-        LIMIT ${limit}`
-    );
-
-    const [[summary]] = await sequelize.query(
-      `SELECT
-          COUNT(*)                                                   AS total,
-          MAX(createdAt)                                             AS last_received_at,
-          SUM(CASE WHEN createdAt >= (NOW() - INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS last_24h,
-          SUM(CASE WHEN processed = 0 AND processing_error IS NOT NULL THEN 1 ELSE 0 END) AS failed
-         FROM shipment_webhook_events`
-    );
-
-    res.json({
-      success: true,
-      summary: {
-        total: Number(summary?.total || 0),
-        last24h: Number(summary?.last_24h || 0),
-        failed: Number(summary?.failed || 0),
-        lastReceivedAt: summary?.last_received_at || null,
-        pushWorking: !!summary?.last_received_at,
-      },
-      events: rows,
+    // Server-side filter / search / paging (Dashboard → Shipping & courier).
+    // ?limit= alone still returns the newest N, as before.
+    const { listWebhookEvents } = require('../services/shippingAdminService.js');
+    const data = await listWebhookEvents({
+      page: req.query.page,
+      pageSize: req.query.pageSize || req.query.limit,
+      filter: req.query.filter,
+      q: req.query.q,
+      brandId: req.query.brandId,
     });
+    res.json({ success: true, ...data });
   } catch (error) {
     logger.error('getShippingWebhookEvents error:', error.message);
     res.status(500).json({ success: false, message: 'Failed to load webhook events', error: error.message });

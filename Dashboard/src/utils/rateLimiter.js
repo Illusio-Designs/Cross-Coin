@@ -10,7 +10,6 @@ class RateLimiter {
       '/api/products': { maxRequests: 5, windowMs: 1000 },
       '/api/payments': { maxRequests: 3, windowMs: 2000 },
       '/api/categories': { maxRequests: 5, windowMs: 1000 },
-      '/api/coupons': { maxRequests: 5, windowMs: 1000 },
       '/api/shipping': { maxRequests: 3, windowMs: 2000 },
     };
   }

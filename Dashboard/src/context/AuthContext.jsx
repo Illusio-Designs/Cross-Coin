@@ -35,12 +35,14 @@ export const ROLE_LABELS = {
   consumer:          'Consumer',
 };
 
-// Which sidebar views each role can access
+// Which views each role can open — kept identical to what the menu shows
+// (components/Sidebar/menu.js), so a page that isn't in someone's menu can't be
+// opened by typing its address either.
 export const ROLE_VIEWS = {
   admin: null, // null = all views (incl. admin-only ones like 'system-health')
   product_manager: [
     'main', 'products', 'categories', 'attributes', 'media-gallery',
-    'brands', 'slider', 'blogs',
+    'slider', 'blogs',
     // Product managers can use every SEO tab except global brand-wide
     // settings (which lives behind admin in the hub but is the one tab
     // the legacy permission system wants to gate separately).
@@ -48,7 +50,7 @@ export const ROLE_VIEWS = {
   ],
   order_manager: [
     'main', 'orders', 'ndr', 'returns', 'payments', 'reports', 'coupons',
-    'shippingFees', 'reviews', 'consumers', 'customer', 'loyalty',
+    'reviews', 'consumers', 'customer', 'loyalty',
   ],
   whatsapp_manager: [
     'main', 'whatsapp', 'whatsapp-chat',

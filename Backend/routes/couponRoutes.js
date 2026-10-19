@@ -1,9 +1,10 @@
 const express = require('express');
 const {
     createCoupon, getAllCoupons, getCouponById, updateCoupon, deleteCoupon,
-    validateCoupon, getPublicCoupons
+    validateCoupon, getPublicCoupons,
+    getCouponSummary, getCouponDependencies, getCouponPicker, switchOnCoupon
 } = require('../controller/couponController.js');
-const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager, isAdmin } = require('../middleware/authMiddleware.js');
 const { validateBody, z } = require('../middleware/validate.js');
 
 const router = express.Router();
@@ -35,7 +36,11 @@ router.post('/validate',  validateBody(validateCouponSchema), validateCoupon);
 
 // Admin
 router.post('/',          isAuthenticated, isOrderManager, createCoupon);
-router.get('/',           isAuthenticated, isOrderManager, getAllCoupons);
+router.get('/',           isAuthenticated, isOrderManager, getAllCoupons);   // ?tab&search&brandId&page&limit&days
+router.get('/admin/summary',      isAuthenticated, isOrderManager, getCouponSummary);
+router.get('/admin/dependencies', isAuthenticated, isOrderManager, getCouponDependencies);
+router.get('/admin/picker',       isAuthenticated, isOrderManager, getCouponPicker);
+router.post('/:id/switch-on',     isAuthenticated, isAdmin, switchOnCoupon);
 router.get('/:id',        isAuthenticated, isOrderManager, getCouponById);
 router.put('/:id',        isAuthenticated, isOrderManager, updateCoupon);
 router.delete('/:id',    isAuthenticated, isOrderManager, deleteCoupon);

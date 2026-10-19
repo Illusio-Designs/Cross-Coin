@@ -44,6 +44,17 @@ const Slider = sequelize.define('Slider', {
         type: DataTypes.INTEGER,
         defaultValue: 0
     },
+    // Optional schedule window. Columns are added lazily by
+    // services/websiteContentService.ensureSchema() — every slider query in
+    // sliderController awaits it first.
+    starts_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    ends_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
     brand_id: {
         type: DataTypes.INTEGER,
         allowNull: true, // Changed to nullable since we'll use many-to-many

@@ -157,10 +157,13 @@ async function paymentReconciliation() {
   const useQueue = process.env.RECON_USE_QUEUE !== 'false';
   const s = await reconcileRecentPayments({ sinceHours: 48, limit: 500, useQueue });
   if (s.mode === 'queue') {
-    if (!s.total) return 'No unpaid online payments to check';
+    // Payments charged at Razorpay with no order yet are handled inline.
+    const o = s.orphans || {};
+    const orphanParts = [[o.corrected || 0, 'charged-without-order fixed'], [o.skipped || 0, 'charged-without-order left for an admin'], [o.errors || 0, "charged-without-order couldn't be checked"]];
+    if (!s.total && !o.checked) return 'No unpaid online payments to check';
     return {
-      status: statusFor(s.enqueued, s.total - s.enqueued),
-      summary: countLine(`${plural(s.enqueued, 'unpaid online payment', 'unpaid online payments')} sent for checking with Razorpay`, [[s.total - s.enqueued, "couldn't be queued"]]),
+      status: statusFor(s.enqueued + (o.corrected || 0), (s.total - s.enqueued) + (o.errors || 0)),
+      summary: countLine(`${plural(s.enqueued, 'unpaid online payment', 'unpaid online payments')} sent for checking with Razorpay`, [[s.total - s.enqueued, "couldn't be queued"], ...orphanParts]),
     };
   }
   if (!s.checked) return 'No unpaid online payments to check';
@@ -601,8 +604,6 @@ async function productAlerts() {
 async function staleCleanup() {
   const { Order, OrderItem, ProductVariation } = require('../model/associations.js');
   const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
-  const { Coupon } = require('../model/couponModel.js');
-  const { CouponUsage } = require('../model/couponUsageModel.js');
   const { Op } = require('sequelize');
   const { sequelize } = require('../config/db.js');
 
@@ -645,18 +646,8 @@ async function staleCleanup() {
         }
       }
 
-      // Restore coupon usage if applicable
-      if (order.coupon_id) {
-        await Coupon.decrement('usageCount', {
-          by: 1,
-          where: { id: order.coupon_id },
-          transaction,
-        });
-        await CouponUsage.destroy({
-          where: { orderId: order.id },
-          transaction,
-        });
-      }
+      // Give the coupon use back — only if a usage row existed, never below zero.
+      await require('../services/couponRulesService.js').releaseCouponUse(order, transaction);
 
       // Log status change
       await OrderStatusHistory.create({

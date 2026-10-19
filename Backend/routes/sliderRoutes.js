@@ -3,7 +3,7 @@ const { isAuthenticated, isProductManager } = require('../middleware/authMiddlew
 const { etagMiddleware } = require('../middleware/etagMiddleware.js');
 const {
     createSlider, getAllSliders, getSliderById, updateSlider, deleteSlider,
-    getPublicSliders, assignSliderToBrands, removeSliderFromBrand, upload
+    getPublicSliders, assignSliderToBrands, removeSliderFromBrand, reorderSliders, upload
 } = require('../controller/sliderController.js');
 
 const router = express.Router();
@@ -13,6 +13,7 @@ router.get('/listing',              etagMiddleware, getPublicSliders);
 
 // Admin
 router.get('/admin/all',            isAuthenticated, isProductManager, getAllSliders);
+router.put('/admin/reorder',        isAuthenticated, isProductManager, reorderSliders);
 router.get('/:id',                  getSliderById);
 router.post('/',                    isAuthenticated, isProductManager, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), createSlider);
 router.put('/:id',                  isAuthenticated, isProductManager, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'mobileImage', maxCount: 1 }]), updateSlider);

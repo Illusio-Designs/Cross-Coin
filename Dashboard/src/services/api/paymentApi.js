@@ -1,21 +1,6 @@
 import axios from "axios";
 import { API_URL, addBrandHeader } from "./config";
 
-export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
-  try {
-    const endpoint = isGuest
-      ? `${API_URL}/api/payments/guest/razorpay/order`
-      : `${API_URL}/api/payments/razorpay/order`;
-    const headers = { "X-Brand-Name": "crosscoin" };
-    if (!isGuest) {
-      const token = localStorage.getItem("token");
-      if (token) headers.Authorization = `Bearer ${token}`;
-    }
-    const response = await axios.post(endpoint, { amount, currency, receipt }, { headers });
-    return response.data.order;
-  } catch (error) { throw error.response?.data || error.message; }
-};
-
 export const updateOrderPayment = async ({ orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, reservation_id }) => {
   try {
     const response = await axios.post(`${API_URL}/api/payments/razorpay/verify`, {

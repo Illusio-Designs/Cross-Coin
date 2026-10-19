@@ -1,42 +1,55 @@
 import { getPageTitle } from "../../utils/dashboardRouting";
+import { findInMenu } from "../Sidebar/menu";
 import NotificationBell from "./NotificationBell";
 import ProfileMenu from "./ProfileMenu";
 import GlobalSearch from "./GlobalSearch";
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Menu01Icon, Maximize01Icon, Minimize01Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons';
+import { Menu01Icon, Sun03Icon, Moon02Icon, ComputerIcon } from '@hugeicons/core-free-icons';
 
-const IC = {
-  menu:     <HugeiconsIcon icon={Menu01Icon} size={20} strokeWidth={2} />,
-  maximize: <HugeiconsIcon icon={Maximize01Icon} size={17} strokeWidth={2} />,
-  minimize: <HugeiconsIcon icon={Minimize01Icon} size={17} strokeWidth={2} />,
-  sun:      <HugeiconsIcon icon={Sun03Icon} size={17} strokeWidth={2} />,
-  moon:     <HugeiconsIcon icon={Moon02Icon} size={17} strokeWidth={2} />,
+const icon = (i, size = 18) => <HugeiconsIcon icon={i} size={size} strokeWidth={2} aria-hidden="true" />;
+
+const THEME = {
+  auto:  { icon: ComputerIcon, label: (eff) => `Theme: automatic (dark at night, now ${eff}). Switch to light` },
+  light: { icon: Sun03Icon,    label: () => 'Theme: light. Switch to dark' },
+  dark:  { icon: Moon02Icon,   label: () => 'Theme: dark. Switch to automatic' },
 };
 
-function DashboardHeader({ isFullscreen, onToggleFullscreen, currentView, isMobile, onMobileMenuToggle, theme, themeMode, onToggleTheme }) {
+// Top bar: where you are (menu group + page name), search, notifications,
+// light/dark and your profile. On phones: ☰ opens the menu and the actions
+// are icons only.
+function DashboardHeader({ currentView, isMobile, isMobileMenuOpen, onMobileMenuToggle, theme, themeMode, onToggleTheme }) {
+  const place = findInMenu(currentView);
+  const crumb = place ? [place.group.label, place.child ? place.item.label : null].filter(Boolean).join(' · ') : null;
+  const t = THEME[themeMode] || THEME.auto;
+
   return (
     <header className="dh">
       <div className="dh-left">
         {isMobile && (
-          <button className="dh-hamburger" onClick={onMobileMenuToggle} aria-label="Open menu">
-            {IC.menu}
+          <button
+            type="button"
+            className="dh-hamburger"
+            onClick={onMobileMenuToggle}
+            aria-label="Open the menu"
+            aria-controls="dashboard-menu"
+            aria-expanded={!!isMobileMenuOpen}
+          >
+            {icon(Menu01Icon, 20)}
           </button>
         )}
-        <span className="dh-title">{getPageTitle(currentView)}</span>
+        <div className="dh-heading">
+          {crumb && <span className="dh-crumb">{crumb}</span>}
+          <span className="dh-title">{getPageTitle(currentView)}</span>
+        </div>
       </div>
       <div className="dh-right">
         <GlobalSearch />
         <NotificationBell />
         {onToggleTheme && (
-          <button className="dh-action" onClick={onToggleTheme}
-            title={themeMode === 'auto' ? `Theme: Auto — follows IST time (now ${theme}). Click for Light.` : themeMode === 'light' ? 'Theme: Light. Click for Dark.' : 'Theme: Dark. Click for Auto.'}
-            aria-label="Toggle theme">
-            {theme === 'dark' ? IC.sun : IC.moon}
+          <button type="button" className="dh-action" onClick={onToggleTheme} aria-label={t.label(theme)} title={t.label(theme)}>
+            {icon(t.icon, 17)}
           </button>
         )}
-        <button className="dh-action" onClick={onToggleFullscreen} title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
-          {isFullscreen ? IC.minimize : IC.maximize}
-        </button>
         <span className="dh-divider" aria-hidden="true" />
         <ProfileMenu />
       </div>

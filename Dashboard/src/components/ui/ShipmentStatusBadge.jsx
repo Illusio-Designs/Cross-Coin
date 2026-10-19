@@ -1,45 +1,28 @@
 import React from 'react';
 import Tooltip from './Tooltip';
+import StatusPill from './StatusPill';
 import { showError } from '../../utils/toastNotification';
 
-const ShipmentStatusBadge = ({ status, syncError }) => {
-  const statusConfig = {
-    pending: { icon: '⏳', label: 'Pending Sync', color: 'var(--ds-color-warn)', bg: 'var(--ds-color-warn-bg)' },
-    syncing: { icon: '🔄', label: 'Syncing...', color: 'var(--ds-color-info)', bg: 'var(--ds-color-info-bg)' },
-    synced: { icon: '✓', label: 'Synced', color: 'var(--ds-color-success)', bg: 'var(--ds-color-success-bg)' },
-    failed: { icon: '❌', label: 'Sync Failed', color: 'var(--ds-color-danger)', bg: 'var(--ds-color-danger-bg)' }
-  };
+const SYNC_STATUS = {
+  pending: ['needs', 'Pending Sync'],
+  syncing: ['progress', 'Syncing…'],
+  synced: ['done', 'Synced'],
+  failed: ['problem', 'Sync Failed'],
+};
 
+const ShipmentStatusBadge = ({ status, syncError }) => {
   // A serviceability failure isn't a "sync error" the operator can retry away —
   // the pincode simply isn't served by any courier. Show it as its own clear
   // state so staff know to fix the address, not re-click Sync.
   const isNotServiceable =
     status === 'failed' && /not\s+serviceable|serviceab/i.test(String(syncError || ''));
-  const config = isNotServiceable
-    ? { icon: '📍', label: 'Not Serviceable', color: 'var(--ds-color-danger)', bg: 'var(--ds-color-danger-bg)' }
-    : (statusConfig[status] || statusConfig.pending);
+  const [tone, label] = isNotServiceable ? ['problem', 'Not Serviceable'] : (SYNC_STATUS[status] || SYNC_STATUS.pending);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <span style={{ fontSize: '16px' }}>{config.icon}</span>
-      <span
-        style={{
-          display: 'inline-block',
-          backgroundColor: config.bg,
-          color: config.color,
-          padding: '4px 12px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          fontWeight: '500',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        {config.label}
-      </span>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      <StatusPill tone={tone}>{label}</StatusPill>
       {syncError && status === 'failed' && (
-        // Real hover tooltip (the old native `title` was unreliable and never
-        // showed). Click reveals the full reason too, since a sync error can be
-        // long and the tooltip is single-line (shown as an error toast).
+        // Hover shows the reason; click shows it in full (it can be long).
         <Tooltip text={syncError} position="top">
           <span
             role="button"
@@ -53,7 +36,7 @@ const ShipmentStatusBadge = ({ status, syncError }) => {
           </span>
         </Tooltip>
       )}
-    </div>
+    </span>
   );
 };
 

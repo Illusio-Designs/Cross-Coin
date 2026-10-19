@@ -81,25 +81,16 @@ export default function NotificationBell() {
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
+        type="button"
+        className="dh-action dh-bell"
         onClick={toggle}
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} new` : 'Notifications'}
+        aria-expanded={open}
         title="Notifications"
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          padding: '6px', borderRadius: 8, display: 'flex', alignItems: 'center',
-          color: 'var(--ds-color-text-muted)', position: 'relative',
-        }}
       >
-        <HugeiconsIcon icon={Notification01Icon} size={20} strokeWidth={2} />
+        <HugeiconsIcon icon={Notification01Icon} size={18} strokeWidth={2} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute', top: 2, right: 2,
-            background: 'var(--ds-color-brand)', color: 'var(--ds-color-bg)',
-            borderRadius: '50%', fontSize: 10, fontWeight: 700,
-            minWidth: 16, height: 16, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: '0 3px', lineHeight: 1,
-          }}>
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
+          <span className="dh-bell-count" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
       </button>
 

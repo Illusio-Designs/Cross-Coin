@@ -45,15 +45,27 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        // Generate unique filename
+        // Generate unique filename. The extension comes from the (allowlisted)
+        // MIME type, never from the client's file name: /uploads is served
+        // statically, so a client-chosen ".html" must never reach the disk.
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+        const ext = EXT_BY_MIME[file.mimetype];
+        if (!ext) return cb(new Error('Invalid file type'));
+        const field = String(file.fieldname || 'file').replace(/[^a-zA-Z0-9_-]/g, '') || 'file';
+        cb(null, field + '-' + uniqueSuffix + ext);
     }
 });
 
-// Allowlist of permitted MIME types (Requirement 4.1, 7.8)
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
+// Allowlist of permitted MIME types (Requirement 4.1, 7.8) and the only
+// extensions a saved file can get.
+const EXT_BY_MIME = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+};
+const ALLOWED_MIME_TYPES = Object.keys(EXT_BY_MIME);
 
 // File filter function — rejects disallowed MIME types before any bytes are written to disk
 const fileFilter = (req, file, cb) => {
@@ -64,34 +76,67 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
+// Files multer wrote for this request (single, array or fields).
+const uploadedFiles = (req) => (req.files
+    ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
+    : (req.file ? [req.file] : []));
+
+// Delete this request's uploaded temp files when the request ends in an error
+// (any 4xx/5xx, or the client hanging up) — covers every early-return in the
+// controllers. Successful requests keep them: controllers move them to
+// ImageKit and some deliberately keep a local copy when ImageKit fails.
+const cleanupOnFailure = (req, res) => {
+    let done = false;
+    const sweep = () => {
+        if (done) return;
+        done = true;
+        if (res.statusCode < 400 && res.writableFinished) return;
+        for (const f of uploadedFiles(req)) {
+            if (f && f.path) fs.unlink(f.path, () => {});
+        }
+    };
+    res.once('finish', sweep);
+    res.once('close', sweep);
+};
+
+// Wrap a multer instance so every middleware it builds also registers the
+// failure cleanup above.
+const withCleanup = (instance) => {
+    const wrap = (method) => (...args) => {
+        const mw = instance[method](...args);
+        return (req, res, next) => { cleanupOnFailure(req, res); return mw(req, res, next); };
+    };
+    return { single: wrap('single'), array: wrap('array'), fields: wrap('fields'), any: wrap('any'), none: wrap('none') };
+};
+
 // Create multer upload instance
-const upload = multer({
+const upload = withCleanup(multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
         files: 5 // Maximum 5 files per upload for products
     }
-});
+}));
 
 // Create specific upload instances for different routes
-const productUpload = multer({
+const productUpload = withCleanup(multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
         files: 100 // Increased limit to handle many product and variation images
     }
-});
+}));
 
-const categoryUpload = multer({
+const categoryUpload = withCleanup(multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024,
         files: 1 // Single file for categories
     }
-});
+}));
 
 
 // Magic byte signatures for supported image types
@@ -106,9 +151,7 @@ const MAGIC_BYTES = {
  * Must be used AFTER multer middleware.
  */
 const validateMagicBytes = (req, res, next) => {
-  const files = req.files
-    ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
-    : (req.file ? [req.file] : []);
+  const files = uploadedFiles(req);
 
   if (files.length === 0) return next();
 
@@ -124,8 +167,8 @@ const validateMagicBytes = (req, res, next) => {
 
       const matches = expected.every((byte, i) => header[i] === byte);
       if (!matches) {
-        // Remove the invalid file
-        fs.unlink(file.path, () => {});
+        // Remove every file of this request, not just the bad one
+        for (const f of files) fs.unlink(f.path, () => {});
         return next(new Error('Invalid file type. File content does not match declared type.'));
       }
     }

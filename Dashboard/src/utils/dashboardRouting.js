@@ -1,47 +1,49 @@
 // Separate routing utilities to avoid Fast Refresh issues
+// Page names shown in the header (and matching the menu labels in
+// components/Sidebar/menu.js).
 export const getPageTitle = (view) => {
   const titles = {
-    'main': 'Dashboard',
-    'products': 'Products',
+    'main': 'Today',
+    'products': 'Products & stock',
     'categories': 'Categories',
-    'pack-pricing': 'Pack pricing',
+    'pack-pricing': 'Pack prices',
     'attributes': 'Attributes',
     'orders': 'Orders',
-    'returns': 'Orders · Returns',
+    'returns': 'Problems',
     'payments': 'Payments',
-    'ndr': 'Orders · Delivery problems',
-    'consumers': 'Consumers',
+    'ndr': 'Problems',
+    'consumers': 'Customers',
     'customer': 'Customer',
-    'shippingFees': 'Shipping Fees',
-    'webhook-events': 'Courier Webhooks',
+    'shippingFees': 'Shipping & courier',
+    'webhook-events': 'Shipping & courier',
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',
     // Legacy deep-link views — all open the unified SEO hub on the
-    // matching tab. Titles describe the tab so the browser title stays
-    // accurate when an admin navigates from a bookmark.
+    // matching tab. Titles describe the tab so the header stays accurate
+    // when an admin arrives from a bookmark.
     'seo-global': 'SEO — Settings',
     'seo-health': 'SEO — Overview',
     'seo-bulk':   'SEO — Products',
     'seo-pages':  'SEO — Pages',
     'faqs':       'SEO — FAQs',
     'policies': 'Policies',
-    'blogs': 'Blogs',
+    'blogs': 'Blog',
     'whatsapp': 'WhatsApp',
     'whatsapp-chat': 'WhatsApp',
     'brands': 'Brands',
-    'brand-settings': 'Brand Settings',
-    'slider': 'Slider',
-    'media-gallery': 'Media Gallery',
+    'brand-settings': 'Brands',
+    'slider': 'Sliders',
+    'media-gallery': 'Photos',
     'reports': 'Reports',
     'revenue-profit': 'Revenue & Profit',
-    'traffic-report': 'Traffic & Conversion',
+    'traffic-report': 'Traffic',
     'leads': 'Leads',
     'loyalty': 'Loyalty',
-    'staff-users': 'Staff Users',
+    'staff-users': 'Staff',
     'system-health': 'System health',
   };
-  return titles[view] || 'Dashboard';
+  return titles[view] || 'Today';
 };
 
 export const handleViewChange = (view, setCurrentView) => {

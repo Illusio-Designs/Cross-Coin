@@ -3,8 +3,8 @@ import Sidebar from "../../components/Sidebar/Sidebar.jsx";
 import CardGrid from '../../components/Dashboard/Card';
 import DashboardHeader from '../../components/Dashboard/DashboardHeader';
 import DashboardFooter from '../../components/Dashboard/DashboardFooter';
-import { useState, useEffect } from "react";
-import { useAuth, ROLE_VIEWS } from "../../context/AuthContext";
+import { useState, useEffect, Fragment } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting";
 
 import Products from "./products/products";
@@ -18,13 +18,8 @@ import CustomerProfile from "./consumers/customer";
 import Payments from "./payments/payments";
 import Loyalty from "./loyalty/loyalty";
 import ShippingFees from "./shipping/shippingFees";
-import WebhookEvents from "./shipping/webhookEvents";
 import Coupons from "./coupon/coupons";
 import Reviews from "./reviews/reviews";
-import SEO from "./seo/seo";
-import FaqsManager from "./seo/faqs";
-import GlobalSeoSettings from "./seo/global";
-import SeoHealth from "./seo/health";
 import SeoHub from "./seo/hub";
 import Slider from "./slider/slider";
 import MediaGallery from "./media/gallery";
@@ -40,7 +35,7 @@ import SystemHealth from "./system/systemHealth";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
-const SB_EXPANDED = 260;
+const SB_EXPANDED = 248;
 const SB_COLLAPSED = 72;
 
 // Unauthorized placeholder with accessibility
@@ -106,12 +101,16 @@ function LoadingAccess() {
 }
 
 function Dashboard() {
-  const { role, canAccessView, loading } = useAuth();
+  const { canAccessView, loading } = useAuth();
   const [currentView, setCurrentView] = useState('main');
+  // Bumped on every menu click so picking the page you're already on opens it
+  // fresh (e.g. Orders → Problems reads its tab hint on mount).
+  const [visit, setVisit] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Desktop only: full menu or icon rail, remembered in localStorage. Phones
+  // always get the full menu as a drawer.
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [themeMode, setThemeMode] = useState('auto'); // 'auto' | 'light' | 'dark'
   const [theme, setTheme] = useState('light');        // effective theme (drives the icon)
 
@@ -157,30 +156,23 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    const mobile = window.innerWidth <= 900;
-    setIsMobile(mobile);
-    if (mobile) {
-      setIsCollapsed(true);
-      localStorage.removeItem('sidebarCollapsed');
-    } else {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      setIsCollapsed(saved !== null ? JSON.parse(saved) : false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isMobile) localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
-  }, [isCollapsed, isMobile]);
-
-  useEffect(() => {
+    try { setIsCollapsed(localStorage.getItem('sidebarCollapsed') === 'true'); } catch { /* storage blocked */ }
     const check = () => {
       const mobile = window.innerWidth <= 900;
       setIsMobile(mobile);
-      if (mobile) setIsCollapsed(true);
+      if (!mobile) setIsMobileMenuOpen(false);
     };
+    check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      try { localStorage.setItem('sidebarCollapsed', String(!prev)); } catch { /* storage blocked */ }
+      return !prev;
+    });
+  };
 
   useEffect(() => { setCurrentView(getViewFromPath()); }, []);
 
@@ -197,35 +189,11 @@ function Dashboard() {
 
   const onViewChange = (v) => {
     handleViewChange(v, setCurrentView);
+    setVisit((n) => n + 1);
     if (isMobile) setIsMobileMenuOpen(false);
   };
 
   const handleMobileMenuToggle = () => setIsMobileMenuOpen(p => !p);
-
-  const handleToggleFullscreen = () => {
-    const el = document.documentElement;
-    if (!isFullscreen) {
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!(
-      document.fullscreenElement || document.webkitFullscreenElement ||
-      document.mozFullScreenElement || document.msFullscreenElement
-    ));
-    const evts = ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'];
-    evts.forEach(e => document.addEventListener(e, onChange));
-    return () => evts.forEach(e => document.removeEventListener(e, onChange));
-  }, []);
 
   const renderContent = () => {
     switch (currentView) {
@@ -242,7 +210,7 @@ function Dashboard() {
       case 'payments':        return <Payments />;
       case 'ndr':             return <Orders key="ndr" initialTab="problems" />;
       case 'shippingFees':    return <ShippingFees />;
-      case 'webhook-events':  return <WebhookEvents />;
+      case 'webhook-events':  return <ShippingFees focus="log" />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
       // The new unified SEO hub. Legacy seo-* views still work as
@@ -279,39 +247,33 @@ function Dashboard() {
   return (
     <ProtectedRoute>
       <div className="dl">
-        <nav aria-label="Dashboard navigation" role="navigation">
-          <Sidebar
-            isCollapsed={isCollapsed}
-            onToggleCollapse={() => setIsCollapsed(p => !p)}
-            onViewChange={onViewChange}
-            currentView={currentView}
-            isMobileMenuOpen={isMobileMenuOpen}
-            onMobileMenuToggle={handleMobileMenuToggle}
-          />
-        </nav>
-        <header role="banner" aria-label="Dashboard header">
-          <DashboardHeader
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={handleToggleFullscreen}
-            currentView={currentView}
-            isMobile={isMobile}
-            onMobileMenuToggle={handleMobileMenuToggle}
-            theme={theme}
-            themeMode={themeMode}
-            onToggleTheme={handleToggleTheme}
-          />
-        </header>
-        <footer role="contentinfo" aria-label="Dashboard footer">
-          <DashboardFooter />
-        </footer>
+        <Sidebar
+          collapsed={isCollapsed}
+          isMobile={isMobile}
+          onToggleCollapse={handleToggleCollapse}
+          onViewChange={onViewChange}
+          currentView={currentView}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onMobileMenuToggle={handleMobileMenuToggle}
+        />
+        <DashboardHeader
+          currentView={currentView}
+          isMobile={isMobile}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onMobileMenuToggle={handleMobileMenuToggle}
+          theme={theme}
+          themeMode={themeMode}
+          onToggleTheme={handleToggleTheme}
+        />
+        <DashboardFooter />
         <div className="dl-main">
-          <main className="dl-content" role="main" aria-label="Dashboard main content">
+          <main className="dl-content" aria-label="Page content">
             {loading ? (
               <LoadingAccess />
             ) : currentView !== 'main' && !canAccessView(currentView) ? (
               <NoAccess />
             ) : (
-              renderContent()
+              <Fragment key={visit}>{renderContent()}</Fragment>
             )}
           </main>
         </div>

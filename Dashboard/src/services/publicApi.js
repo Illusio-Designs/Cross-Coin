@@ -30,7 +30,7 @@ export { getCart, addToCart, updateCartItem, removeFromCart, clearCart, getWishl
 export { getUserOrders, createOrder, createGuestOrder, trackOrderByOrderNumber, trackOrderByAWB, cancelOrder, initiateReturn } from './api/orderApi';
 
 // ── Payments & Checkout ───────────────────────────────────────────────────
-export { createRazorpayOrder, updateOrderPayment, initiateCheckout, initiateGuestCheckout, retryCheckout, sendCheckoutPhoneOtp, verifyCheckoutPhoneOtp, getShippingFees, checkPincodeServiceability } from './api/paymentApi';
+export { updateOrderPayment, initiateCheckout, initiateGuestCheckout, retryCheckout, sendCheckoutPhoneOtp, verifyCheckoutPhoneOtp, getShippingFees, checkPincodeServiceability } from './api/paymentApi';
 
 // ── Products, Categories, Content ─────────────────────────────────────────
 export { getPublicCategories, getPublicCategoryByName, getPublicSliders, getPublicProductBySlug, getAllPublicProducts, searchProducts, getPublicCoupons, validateCoupon, getPublicProductReviews, createPublicReview, getAllPublicReviews, getSeoByPageName, getPublicPolicyByName, getPublicBlogs, getPublicBlogBySlug, getPublicBlogTags, createShippingAddress, getUserShippingAddresses, updateShippingAddress, deleteShippingAddress, setDefaultShippingAddress, createGuestShippingAddress, getGuestShippingAddresses } from './api/productApi';
