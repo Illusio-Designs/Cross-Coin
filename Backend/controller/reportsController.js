@@ -13,7 +13,7 @@ const { isOwnHost } = require('../utils/ownHosts');
 // for rows recorded before ingestion-time bot filtering existed).
 const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
 
-const CHANNEL_ORDER = ['Direct', 'Facebook', 'Instagram', 'Google', 'AI chatbot', 'Email', 'SMS', 'Referral'];
+const CHANNEL_ORDER = ['Direct', 'Facebook', 'Instagram', 'Google', 'WhatsApp', 'AI chatbot', 'Email', 'SMS', 'Referral'];
 
 // Parse a YYYY-MM-DD (or ISO) range, defaulting to the last 30 days. Day
 // boundaries are anchored to the business timezone (IST, +05:30) — the SAME
@@ -209,6 +209,50 @@ exports.getBrandTraffic = async (req, res) => {
     }
     const sourceRows = [...srcMap.values()].sort((a, b) => b.sessions - a.sessions || b.orders - a.orders);
 
+    // Where visitors left, per channel: of the visits that started in the
+    // window, how many viewed a product, added to cart, began checkout and
+    // ordered (an order linked to that visit). Funnel events are matched to the
+    // visit by session id.
+    const funnelRows = await sequelize.query(
+      `SELECT COALESCE(u.utm_source,'direct') AS source,
+              COALESCE(u.utm_medium,'none')   AS medium,
+              COUNT(DISTINCT u.session_id) AS visits,
+              COUNT(DISTINCT CASE WHEN fe.event = 'view_item'      THEN u.session_id END) AS views,
+              COUNT(DISTINCT CASE WHEN fe.event = 'add_to_cart'    THEN u.session_id END) AS carts,
+              COUNT(DISTINCT CASE WHEN fe.event = 'begin_checkout' THEN u.session_id END) AS checkouts,
+              COUNT(DISTINCT CASE WHEN o.id IS NOT NULL            THEN u.session_id END) AS ordered
+       FROM utm_tracking u
+       LEFT JOIN funnel_events fe ON fe.session_id = u.session_id
+       LEFT JOIN orders o ON o.utm_tracking_id = u.id
+             AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
+       WHERE u.created_at BETWEEN :start AND :end
+         AND (u.user_agent IS NULL OR LOWER(u.user_agent) NOT REGEXP :bot)${bFiltU}
+       GROUP BY source, medium`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+    const dropAcc = new Map();
+    for (const r of funnelRows) {
+      const name = channelOf(r.source, r.medium, selfHosts);
+      const a = dropAcc.get(name) || { channel: name, visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 };
+      for (const k of ['visits', 'views', 'carts', 'checkouts', 'ordered']) a[k] += Number(r[k]) || 0;
+      dropAcc.set(name, a);
+    }
+    // A later stage can't exceed an earlier one for the drop-off maths (a
+    // shopper can land straight on checkout from a cart link) — clamp so each
+    // "left here" slice is never negative.
+    const dropOff = CHANNEL_ORDER.filter((n) => dropAcc.has(n)).map((n) => {
+      const a = dropAcc.get(n);
+      const views = Math.min(a.visits, Math.max(a.views, a.carts, a.checkouts, a.ordered));
+      const carts = Math.min(views, Math.max(a.carts, a.checkouts, a.ordered));
+      const checkouts = Math.min(carts, Math.max(a.checkouts, a.ordered));
+      const ordered = Math.min(checkouts, a.ordered);
+      return { channel: n, visits: a.visits, views, carts, checkouts, ordered };
+    });
+    const dropTotals = dropOff.reduce((t, r) => {
+      for (const k of ['visits', 'views', 'carts', 'checkouts', 'ordered']) t[k] += r[k];
+      return t;
+    }, { channel: 'All channels', visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 });
+
     const sessMap = new Map(sessions.map((r) => [r.brand_id, Number(r.sessions)]));
     const ordMap = new Map(orders.map((r) => [r.brand_id, r]));
     // Per-brand top channels, rolled up into the 5 headline buckets (readable
@@ -392,6 +436,7 @@ exports.getBrandTraffic = async (req, res) => {
       const sess = Number(r.sessions) || 0;
       const ord = Number(r.orders) || 0;
       return {
+        channel: channelOf(r.source, r.medium, selfHosts),
         source: cleanSource(r.source), medium: r.medium, campaign: r.campaign,
         // Ad set (utm_term), ad (utm_content) and the operator's creative code
         // (utm_creative) so the report mirrors Meta's campaign → ad set → ad.
@@ -402,7 +447,7 @@ exports.getBrandTraffic = async (req, res) => {
         revenue: Math.round(Number(r.revenue) || 0),
         conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : null,
       };
-    }).slice(0, 200);
+    }).slice(0, 1000);
 
     // Reconciliation row: the campaign rows above only count orders matched to
     // a tracked visit (utm_tracking_id). Surface the remainder — real orders
@@ -415,6 +460,7 @@ exports.getBrandTraffic = async (req, res) => {
     const campUntrackedRev = Math.max(0, Math.round(Number(totals.revenue) || 0) - campAttrRev);
     if (campUntracked > 0) {
       campaigns.push({
+        channel: 'Direct / untracked',
         source: '(untracked)', medium: 'none', campaign: 'none', adset: 'none', ad: 'none', creative: 'none',
         sessions: 0, share: 0, orders: campUntracked, revenue: campUntrackedRev, conversion_rate: null,
       });
@@ -462,6 +508,7 @@ exports.getBrandTraffic = async (req, res) => {
       sources,
       trafficSplit,
       campaigns,
+      dropOff: { channels: dropOff, totals: dropTotals },
     });
   } catch (error) {
     logger.error('getBrandTraffic report failed: ' + error.message);
@@ -543,7 +590,7 @@ exports.getRevenueProfit = async (req, res) => {
         brand: b.display_name,
         orders: n(r.delivered),          // delivered orders (the revenue base)
         shippedOrders: n(r.shipped),     // forward shipping was paid on these
-        rtoOrders: n(r.rto),             // return shipping on these too
+        rtoOrders: n(r.rto),             // already inside shippedOrders — not charged again
         units: n(c.units),
         unitsWithoutCost: n(c.units_without_cost),
         grossRevenue: Math.round(gross),
@@ -570,7 +617,7 @@ exports.getRevenueProfit = async (req, res) => {
       // Cost assumptions the UI applies live (editable there):
       // shipping per shipped order, return shipping per RTO order, payment
       // gateway % on prepaid revenue, COD handling % on COD revenue.
-      defaults: { shippingPerOrder: 90, rtoShippingPerOrder: 90, gatewayPct: 2, codPct: 2 },
+      defaults: { shippingPerOrder: 90, gatewayPct: 2, codPct: 2 }, // shipping rate already covers the RTO return leg
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
     });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import Loader from '../../../components/common/Loader';
 import { trafficReportService, brandService } from '../../../services';
@@ -26,7 +26,26 @@ import { Download04Icon } from '@hugeicons/core-free-icons';
 const CHANNEL_COLORS = {
   Direct: '#0f766e', Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335',
   'AI chatbot': '#8b5cf6', Email: '#d97706', SMS: '#16a34a', Referral: '#6366f1',
-  Other: '#94a3b8', 'Direct / untracked': '#64748b',
+  WhatsApp: '#25d366', Other: '#94a3b8', 'Direct / untracked': '#64748b',
+};
+// Display names: "Referral" is any other website or app (YouTube, blogs…).
+const CHANNEL_LABEL = { Referral: 'Other websites & apps', 'Direct / untracked': 'No tracked visit' };
+const chLabel = (name) => CHANNEL_LABEL[name] || name;
+// Where visitors left — one colour per exit point, green for "ordered".
+const LEFT_STAGES = [
+  { key: 'landing',  label: 'Left without opening a product', short: 'Left on landing', color: '#94a3b8' },
+  { key: 'product',  label: 'Viewed a product, left before cart', short: 'Left after product', color: '#f59e0b' },
+  { key: 'cart',     label: 'Added to cart, left before checkout', short: 'Left at cart', color: '#f97316' },
+  { key: 'checkout', label: 'Started checkout, didn’t order', short: 'Left at checkout', color: '#ef4444' },
+  { key: 'ordered',  label: 'Ordered', short: 'Ordered', color: '#16a34a' },
+];
+const leftSlices = (r) => {
+  const v = Number(r.visits) || 0;
+  const parts = {
+    landing: v - r.views, product: r.views - r.carts, cart: r.carts - r.checkouts,
+    checkout: r.checkouts - r.ordered, ordered: r.ordered,
+  };
+  return LEFT_STAGES.map((st) => ({ ...st, n: Math.max(0, parts[st.key] || 0), pct: v > 0 ? (Math.max(0, parts[st.key] || 0) / v) * 100 : 0 }));
 };
 const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-text-muted)';
 const SPLIT_COLORS = { Paid: '#2f6fed', Organic: '#16a34a', Direct: '#64748b' };
@@ -40,7 +59,6 @@ const srcLabel = (s) => {
   if (k === 'ig') return 'instagram';
   return s;
 };
-const blank = (v) => !v || v === 'none';
 const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 
 const istDate = (d = new Date()) =>
@@ -72,7 +90,8 @@ export default function TrafficReport() {
   const [to, setTo] = useState(istDate());
   const [brandId, setBrandId] = useState('');
   const [brandList, setBrandList] = useState([]);
-  const [showAllCampaigns, setShowAllCampaigns] = useState(false);
+  const [showAdsets, setShowAdsets] = useState(false);
+  const [openGroups, setOpenGroups] = useState({});
 
   useEffect(() => {
     let off = false;
@@ -103,13 +122,50 @@ export default function TrafficReport() {
   const campaigns = data?.campaigns || [];
   const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name) : 'All brands';
 
-  // Hide ad set / ad / creative columns when no campaign uses them.
-  const campCols = useMemo(() => ({
-    adset: campaigns.some((c) => !blank(c.adset)),
-    ad: campaigns.some((c) => !blank(c.ad)),
-    creative: campaigns.some((c) => !blank(c.creative)),
-  }), [campaigns]);
-  const shownCampaigns = showAllCampaigns ? campaigns : campaigns.slice(0, 15);
+  const drop = data?.dropOff || { channels: [], totals: { visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 } };
+
+  // Platform → campaign → ad set, merging every spelling of a platform (fb,
+  // facebook, m.facebook.com…) and every medium into one group.
+  const { platforms, hasAdsets, revenueByChannel } = useMemo(() => {
+    const totalVisits = campaigns.reduce((n, r) => n + (Number(r.sessions) || 0), 0) || 1;
+    const rate = (o, v) => (v > 0 ? (o / v) * 100 : null);
+    const groups = new Map();
+    for (const r of campaigns) {
+      const ch = r.channel || 'Referral';
+      const g = groups.get(ch) || { channel: ch, untracked: ch === 'Direct / untracked', sessions: 0, orders: 0, revenue: 0, camps: new Map() };
+      g.sessions += Number(r.sessions) || 0; g.orders += Number(r.orders) || 0; g.revenue += Number(r.revenue) || 0;
+      if (!g.untracked) {
+        const name = r.campaign || 'none';
+        const c = g.camps.get(name) || { name, sessions: 0, orders: 0, revenue: 0, sets: new Map() };
+        c.sessions += Number(r.sessions) || 0; c.orders += Number(r.orders) || 0; c.revenue += Number(r.revenue) || 0;
+        const an = r.adset || 'none';
+        const a = c.sets.get(an) || { name: an, sessions: 0, orders: 0, revenue: 0 };
+        a.sessions += Number(r.sessions) || 0; a.orders += Number(r.orders) || 0; a.revenue += Number(r.revenue) || 0;
+        c.sets.set(an, a);
+        g.camps.set(name, c);
+      }
+      groups.set(ch, g);
+    }
+    const fin = (x) => ({ ...x, share: (x.sessions / totalVisits) * 100, conversion: rate(x.orders, x.sessions) });
+    const byRev = (a, b) => b.revenue - a.revenue || b.orders - a.orders || b.sessions - a.sessions;
+    const list = [...groups.values()].map((g) => fin({
+      ...g,
+      campaigns: [...g.camps.values()].map((c) => fin({ ...c, adsets: [...c.sets.values()].map(fin).sort(byRev) })).sort(byRev),
+      // Only real (utm_campaign-tagged) campaigns count; untagged visits show
+      // as a sub-row only when the platform also has tagged campaigns.
+      tagged: [...g.camps.keys()].filter((n) => n !== 'none').length,
+    })).sort((a, b) => (a.untracked - b.untracked) || byRev(a, b));
+    return {
+      platforms: list,
+      hasAdsets: list.some((g) => g.campaigns.some((c) => c.adsets.length > 1)),
+      revenueByChannel: new Map(list.map((g) => [g.channel, g.revenue])),
+    };
+  }, [campaigns]);
+
+  // Source list for "Where visitors come from": channels with revenue added.
+  const sources = channels.map((c) => ({ ...c, revenue: revenueByChannel.get(c.channel) || 0 }))
+    .filter((c) => c.sessions > 0 || c.orders > 0);
+  const sourceTotal = channels.reduce((n, c) => n + (c.untracked ? 0 : Number(c.sessions) || 0), 0);
   const splitRevenue = split.reduce((n, r) => n + (Number(r.revenue) || 0), 0);
 
   const doExport = () => exportCsv(`traffic-conversion_${from}_${to}.csv`, [
@@ -127,6 +183,7 @@ export default function TrafficReport() {
   ], brands);
 
   const exportCampaigns = () => exportCsv(`campaigns_${from}_${to}.csv`, [
+    { label: 'Platform', value: (r) => chLabel(r.channel) },
     { label: 'Source', value: (r) => srcLabel(r.source) },
     { label: 'Medium', value: (r) => r.medium },
     { label: 'Campaign', value: (r) => r.campaign },
@@ -190,6 +247,85 @@ export default function TrafficReport() {
             </div>
           </div>
 
+          {/* ── 1. Where visitors come from ── */}
+          <div className="rep-panel">
+            <div className="rep-ph"><h3>Where visitors come from</h3><span className="hint">share of {num(sourceTotal)} tracked visits</span></div>
+            {sourceTotal > 0 && (
+              <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 16 }}>
+                {sources.filter((c) => c.sessions > 0).map((c) => (
+                  <div key={c.channel} title={`${chLabel(c.channel)}: ${pct(c.share)}`} style={{ width: `${c.share}%`, background: chColor(c.channel) }} />
+                ))}
+              </div>
+            )}
+            <div className="rep-tbl-wrap">
+              <table className="rep-table">
+                <thead><tr><th>Source</th><th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                <tbody>
+                  {sources.length === 0 ? <Empty cols={6} text="No visits in this period" /> : sources.map((c) => (
+                    <tr key={c.channel}>
+                      <td className="strong" style={{ whiteSpace: 'nowrap' }}><Dot color={chColor(c.channel)} />{chLabel(c.channel)}</td>
+                      <td className="r num">{c.untracked ? <Dash /> : num(c.sessions)}</td>
+                      <td>
+                        {c.untracked ? <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>orders with no tracked visit</span> : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
+                              <div style={{ width: `${Math.min(100, c.share)}%`, height: '100%', background: chColor(c.channel) }} />
+                            </div>
+                            <b className="num" style={{ fontSize: 12.5, minWidth: 46, textAlign: 'right' }}>{pct(c.share)}</b>
+                          </div>
+                        )}
+                      </td>
+                      <td className="r num">{num(c.orders)}</td>
+                      <td className="r num">{c.untracked ? <Dash /> : pct(c.conversion_rate)}</td>
+                      <td className="r strong num">{inr(c.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── 2. Where visitors left ── */}
+          <div className="rep-panel">
+            <div className="rep-ph"><h3>Where visitors left</h3><span className="hint">what each visitor did before leaving</span></div>
+            {drop.totals.visits > 0 ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 18 }}>
+                  {leftSlices(drop.totals).map((sl) => (
+                    <div key={sl.key} className="rep-tile" style={{ borderTop: `3px solid ${sl.color}` }}>
+                      <div className="rep-tl">{sl.label}</div>
+                      <div className="rep-tv num">{pct(sl.pct)}</div>
+                      <div className="rep-ts">{plural(sl.n, 'visitor')}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {drop.channels.map((r) => (
+                    <div key={r.channel} style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 160px) 1fr 70px', gap: 12, alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><Dot color={chColor(r.channel)} />{chLabel(r.channel)}</span>
+                      <div style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', background: 'var(--ds-color-surface-soft)' }}>
+                        {leftSlices(r).filter((sl) => sl.n > 0).map((sl) => (
+                          <div key={sl.key} title={`${sl.short}: ${plural(sl.n, 'visitor')} (${pct(sl.pct)})`}
+                            style={{ width: `${sl.pct}%`, background: sl.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {sl.pct >= 12 ? `${Math.round(sl.pct)}%` : ''}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="num" style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', textAlign: 'right' }}>{plural(r.visits, 'visit')}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 14, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>
+                  {LEFT_STAGES.map((st) => (
+                    <span key={st.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: st.color }} />{st.short}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : <span className="hint">No tracked visits in this period.</span>}
+          </div>
+
           <div className="rep-masonry">
             {/* Paid / Organic / Direct */}
             <div className="rep-panel">
@@ -210,49 +346,6 @@ export default function TrafficReport() {
                     <div className="rep-ts">{plural(r.orders, 'order')} · {plural(r.sessions, 'visit')}{r.conversion_rate != null ? ` · ${pct(r.conversion_rate)} conv.` : ''}</div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Funnel */}
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Funnel</h3><span className="hint">% of visits · step %</span></div>
-              <div className="rep-bars">
-                {(t?.stages || []).map((st) => {
-                  const w = Math.min(100, Math.max(0, Number(st.overall_rate) || 0));
-                  return (
-                    <div className="rep-bar-row" key={st.key}>
-                      <div className="rep-bar-top">
-                        <span className="rep-bar-name"><span className="lbl">{st.label}</span></span>
-                        <span className="rep-sb-pct num">
-                          {num(st.count)}
-                          {st.step_rate != null && st.count > 0 && <span style={{ color: 'var(--ds-color-text-faint)' }}> · {pct(st.step_rate)} of prev</span>}
-                        </span>
-                      </div>
-                      <div className="rep-track"><div className="rep-fill" style={{ width: `${w > 0 ? Math.max(1, w) : 0}%`, background: 'var(--rr1)' }} /></div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Channels */}
-            <div className="rep-panel rep-panel--flush">
-              <div className="rep-ph"><h3>Channels</h3><span className="hint">orders credited to the visit that led to them</span></div>
-              <div className="rep-tbl-wrap">
-                <table className="rep-table">
-                  <thead><tr><th>Channel</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th></tr></thead>
-                  <tbody>
-                    {channels.length === 0 ? <Empty cols={5} text="No visits in this period" /> : channels.map((c) => (
-                      <tr key={c.channel}>
-                        <td className="strong" style={{ whiteSpace: 'nowrap' }}><Dot color={chColor(c.channel)} />{c.channel}</td>
-                        <td className="r num">{c.untracked ? <Dash /> : num(c.sessions)}</td>
-                        <td className="r num">{c.untracked ? <Dash /> : pct(c.share)}</td>
-                        <td className="r strong num">{num(c.orders)}</td>
-                        <td className="r num">{c.untracked ? <Dash /> : pct(c.conversion_rate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
 
@@ -282,53 +375,67 @@ export default function TrafficReport() {
             )}
           </div>
 
-          {/* Campaigns — full width, it's the widest table */}
+          {/* ── 3. Ad campaigns, grouped by platform ── */}
           <div className="rep-panel rep-panel--flush">
             <div className="rep-ph">
-              <h3>Ad campaigns</h3>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="hint">from the ad link's utm tags</span>
+              <h3>Ad campaigns by platform</h3>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button type="button" className={`order-sync-main-btn${showAdsets ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setShowAdsets((v) => !v)} disabled={!hasAdsets}>
+                  {showAdsets ? 'Hide ad sets' : 'Show ad sets'}
+                </button>
                 <button type="button" className="order-sync-main-btn" onClick={exportCampaigns} disabled={!campaigns.length}><DlIcon /> CSV</button>
               </span>
             </div>
             <div className="rep-tbl-wrap">
               <table className="rep-table">
-                <thead>
-                  <tr>
-                    <th>Source</th><th>Campaign</th>
-                    {campCols.adset && <th>Ad set</th>}
-                    {campCols.ad && <th>Ad</th>}
-                    {campCols.creative && <th>Creative</th>}
-                    <th className="r">Visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Platform / campaign</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                 <tbody>
-                  {campaigns.length === 0 ? <Empty cols={9} text="No campaign traffic in this period" /> : shownCampaigns.map((r) => (
-                    <tr key={`${r.source}|${r.medium}|${r.campaign}|${r.adset}|${r.ad}|${r.creative}`}>
-                      <td className="strong" style={{ whiteSpace: 'nowrap' }}>
-                        {srcLabel(r.source)}
-                        {!blank(r.medium) && <span style={{ color: 'var(--ds-color-text-faint)', fontWeight: 400 }}> / {r.medium}</span>}
-                      </td>
-                      <td>{blank(r.campaign) ? <Dash /> : r.campaign}</td>
-                      {campCols.adset && <td>{blank(r.adset) ? <Dash /> : r.adset}</td>}
-                      {campCols.ad && <td>{blank(r.ad) ? <Dash /> : r.ad}</td>}
-                      {campCols.creative && <td>{blank(r.creative) ? <Dash /> : r.creative}</td>}
-                      <td className="r num">{r.source === '(untracked)' ? <Dash /> : num(r.sessions)}</td>
-                      <td className="r num">{num(r.orders)}</td>
-                      <td className="r num">{pct(r.conversion_rate)}</td>
-                      <td className="r strong num">{inr(r.revenue)}</td>
-                    </tr>
-                  ))}
+                  {platforms.length === 0 ? <Empty cols={6} text="No campaign traffic in this period" /> : platforms.map((g) => {
+                    const rows = g.tagged ? g.campaigns : [];
+                    const open = openGroups[g.channel] ?? g.campaigns.length <= 3;
+                    return (
+                      <React.Fragment key={g.channel}>
+                        <tr onClick={() => rows.length && setOpenGroups((m) => ({ ...m, [g.channel]: !open }))}
+                          style={{ cursor: rows.length ? 'pointer' : 'default', background: 'var(--ds-color-surface-soft)' }}>
+                          <td className="strong" style={{ whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-block', width: 14, color: 'var(--ds-color-text-faint)' }}>{rows.length ? (open ? '▾' : '▸') : ''}</span>
+                            <Dot color={chColor(g.channel)} />{chLabel(g.channel)}
+                            {g.tagged > 0 && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{plural(g.tagged, 'campaign')}</span>}
+                          </td>
+                          <td className="r strong num">{g.untracked ? <Dash /> : num(g.sessions)}</td>
+                          <td className="r num">{g.untracked ? <Dash /> : pct(g.share)}</td>
+                          <td className="r strong num">{num(g.orders)}</td>
+                          <td className="r num">{g.untracked ? <Dash /> : pct(g.conversion)}</td>
+                          <td className="r strong num">{inr(g.revenue)}</td>
+                        </tr>
+                        {open && rows.map((c) => (
+                          <React.Fragment key={c.name}>
+                            <tr>
+                              <td style={{ paddingLeft: 40 }}>{c.name === 'none' ? <span style={{ color: 'var(--ds-color-text-faint)' }}>Without a campaign tag (posts, bio links, shares)</span> : c.name}</td>
+                              <td className="r num">{num(c.sessions)}</td>
+                              <td className="r num">{pct(c.share)}</td>
+                              <td className="r num">{num(c.orders)}</td>
+                              <td className="r num">{pct(c.conversion)}</td>
+                              <td className="r num">{inr(c.revenue)}</td>
+                            </tr>
+                            {showAdsets && c.adsets.length > 1 && c.adsets.map((a) => (
+                              <tr key={a.name}>
+                                <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ {a.name === 'none' ? 'no ad set tag' : a.name}</td>
+                                <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
+                                <td className="r num" style={{ fontSize: 12 }}>{pct(a.share)}</td>
+                                <td className="r num" style={{ fontSize: 12 }}>{num(a.orders)}</td>
+                                <td className="r num" style={{ fontSize: 12 }}>{pct(a.conversion)}</td>
+                                <td className="r num" style={{ fontSize: 12 }}>{inr(a.revenue)}</td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            {campaigns.length > 15 && (
-              <div style={{ padding: '10px 16px' }}>
-                <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setShowAllCampaigns((v) => !v)}>
-                  {showAllCampaigns ? 'Show top 15' : `Show all ${campaigns.length}`}
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="rep-panel">
@@ -336,7 +443,9 @@ export default function TrafficReport() {
             <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
               <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are visits that started in this period from shoppers who allowed cookies; bots are left out. Page loads count every visitor but can't be tied to orders.</li>
               <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
-              <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>Direct / untracked</b>, so every table adds up to the Orders total.</li>
+              <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
+              <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
+              <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, blogs and other sites are “Other websites & apps”.</li>
               <li>Paid = ads tagged utm_medium paid / cpc. Direct = no source or our own sites. Everything else (search, social posts, email, referral) is Organic.</li>
             </ul>
           </div>

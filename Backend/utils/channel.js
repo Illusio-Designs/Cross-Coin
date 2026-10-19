@@ -46,7 +46,8 @@ function deriveMedium(referrer) {
 }
 
 // Roll a raw source/medium up into Shopify-style marketing channels:
-// Direct, Facebook, Instagram, Google, AI chatbot, Email, SMS, Referral.
+// Direct, Facebook, Instagram, Google, WhatsApp, AI chatbot, Email, SMS,
+// Referral (any other website or app).
 // `selfHosts` is an optional Set of extra own-domains (the live brand domains).
 function channelOf(source, medium, selfHosts) {
   const s = String(source || '').toLowerCase().trim();
@@ -58,6 +59,7 @@ function channelOf(source, medium, selfHosts) {
   if (/facebook|(^|[^a-z])fb([^a-z]|$)|meta$|meta\b/.test(s) || /facebook/.test(m)) return 'Facebook';
   if (s === 'instagram' || s === 'ig' || /instagram/.test(s)) return 'Instagram';
   if (/google/.test(s)) return 'Google';
+  if (/whatsapp|^wa$|wa\.me/.test(s)) return 'WhatsApp';
   if (/chatgpt|openai|perplexity|gemini|bard|copilot|claude|anthropic|poe|phind|deepseek|you\.com|grok|meta\.ai|(^|[^a-z])ai([^a-z]|$)/.test(s)) return 'AI chatbot';
   return 'Referral';
 }

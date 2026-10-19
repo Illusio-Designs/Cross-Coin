@@ -53,8 +53,10 @@ export default function RevenueProfitReport() {
 
   // Cost knobs, remembered in this browser between visits.
   const [knobs, setKnobs] = useState(() => {
-    const base = { shipping: '90', rtoShipping: '90', service: '30', gatewayPct: '2', codPct: '2' };
-    try { return { ...base, ...JSON.parse(localStorage.getItem('rp_knobs') || '{}') }; } catch { return base; }
+    const base = { shipping: '90', service: '30', gatewayPct: '2', codPct: '2' };
+    // rtoShipping was a separate knob earlier; the shipping rate already covers
+    // the RTO return leg, so drop any saved value instead of charging twice.
+    try { const { rtoShipping, ...saved } = JSON.parse(localStorage.getItem('rp_knobs') || '{}'); void rtoShipping; return { ...base, ...saved }; } catch { return base; }
   });
   const setKnob = (k) => (e) => setKnobs((m) => ({ ...m, [k]: e.target.value }));
   // Ad spend per UNIT, per brand (each brand runs its own ads). Keyed by brandId.
@@ -105,7 +107,9 @@ export default function RevenueProfitReport() {
     const revenue = Number(r.revenue) || 0;
     const revenueExGst = Number(r.revenueExGst ?? revenue) || 0;
     const cogs = Number(r.cogs) || 0;
-    const shipTotal = k('shipping') * (Number(r.shippedOrders) || 0) + k('rtoShipping') * (Number(r.rtoOrders) || 0);
+    // One shipping charge per shipped order. RTO orders are already in
+    // shippedOrders and the rate includes the return leg — never charged twice.
+    const shipTotal = k('shipping') * (Number(r.shippedOrders) || 0);
     const svcTotal = k('service') * orders;
     const feeTotal = (k('gatewayPct') / 100) * (Number(r.prepaidRevenue) || 0) + (k('codPct') / 100) * (Number(r.codRevenue) || 0);
     const beforeAds = revenueExGst - cogs - shipTotal - svcTotal - feeTotal;
@@ -182,7 +186,7 @@ export default function RevenueProfitReport() {
     { label: 'Revenue (after refunds)', value: (r) => r.revenue },
     { label: 'Revenue ex-GST', value: (r) => r.revenueExGst },
     { label: 'COGS (cost price)', value: (r) => r.cogs },
-    { label: `Shipping (@${k('shipping')}/shipped, @${k('rtoShipping')}/RTO)`, value: (r) => Math.round(r.shipTotal) },
+    { label: `Shipping (@${k('shipping')} per shipped order, RTO included)`, value: (r) => Math.round(r.shipTotal) },
     { label: `Service (@${k('service')}/order)`, value: (r) => r.svcTotal },
     { label: `Fees (${k('gatewayPct')}% prepaid, ${k('codPct')}% COD)`, value: (r) => Math.round(r.feeTotal) },
     { label: 'Gross profit (before ads)', value: (r) => Math.round(r.beforeAds) },
@@ -196,7 +200,7 @@ export default function RevenueProfitReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (incl. RTO return legs) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
+        subtitle="Orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -209,10 +213,9 @@ export default function RevenueProfitReport() {
       {error ? <Panel><span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{error}</span></Panel> : null}
 
       {/* ── Cost knobs ── */}
-      <Panel title="Cost assumptions" subtitle="Shipping is charged on every shipped order; RTO orders also pay the return leg. Fees are a % of prepaid and COD revenue.">
+      <Panel title="Cost assumptions" subtitle="Shipping is charged once per shipped order — the rate already includes the RTO return, so RTO orders aren't charged again. Fees are a % of prepaid and COD revenue.">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Shipping / shipped order (₹)" type="number" min="0" value={knobs.shipping} onChange={setKnob('shipping')} /></div>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="RTO return shipping (₹)" type="number" min="0" value={knobs.rtoShipping} onChange={setKnob('rtoShipping')} /></div>
+          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Shipping / shipped order, incl. RTO (₹)" type="number" min="0" value={knobs.shipping} onChange={setKnob('shipping')} /></div>
           <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Service charge / order (₹)" type="number" min="0" value={knobs.service} onChange={setKnob('service')} /></div>
           <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Payment gateway % (prepaid)" type="number" min="0" step="0.1" value={knobs.gatewayPct} onChange={setKnob('gatewayPct')} /></div>
           <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="COD fee % (courier)" type="number" min="0" step="0.1" value={knobs.codPct} onChange={setKnob('codPct')} /></div>
