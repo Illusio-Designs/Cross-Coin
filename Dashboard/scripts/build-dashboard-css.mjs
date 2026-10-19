@@ -45,6 +45,7 @@ const FILES = [
   'brandAssignment.css',
   'seo.css',
   'whatsapp.css',
+  'waPagesA.css',
   'globalSearch.css',
 ];
 
