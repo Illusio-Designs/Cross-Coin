@@ -479,7 +479,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v16';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v17';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1753,6 +1753,33 @@ const startServer = async () => {
             logger.info('✓ GST settings seeded for all brands');
         } catch (err) {
             logger.error('GST settings seed failed: ' + err.message);
+        }
+
+        // ── RTO stock-restoration ledger (v17). It doubles as the idempotency
+        // guard that stops stock being restored twice, so it must exist even
+        // on databases that never ran setupDatabase. No-op if present.
+        try {
+            await sequelize.query(`
+                CREATE TABLE IF NOT EXISTS rto_stock_restoration (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    order_id INT NOT NULL,
+                    order_number VARCHAR(255) NOT NULL,
+                    product_id INT NOT NULL,
+                    variation_id INT NULL,
+                    quantity_restored INT NOT NULL,
+                    stock_before INT NOT NULL DEFAULT 0,
+                    stock_after INT NOT NULL DEFAULT 0,
+                    restored_by VARCHAR(255) NULL,
+                    notes TEXT NULL,
+                    restoration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_order_id (order_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            logger.info('✓ rto_stock_restoration ledger ensured');
+        } catch (err) {
+            logger.error('rto_stock_restoration ensure failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future

@@ -363,6 +363,43 @@ async function upsertShipment(orderId, data, transaction = null) {
 }
 
 // Handle Shipping webhook for order updates
+// Restore stock for a returned (RTO) order exactly once. The
+// rto_stock_restoration ledger doubles as the idempotency guard: if any row
+// exists for the order, stock was already put back (by the webhook, polling,
+// or an earlier RTO stage) and nothing is done. Returns units restored.
+const RTO_FAMILY = ['rto', 'rto delivered', 'returned_rto'];
+async function restoreRtoStockOnce(order, transaction, source, reason) {
+  const [[done]] = await sequelize.query(
+    'SELECT COUNT(*) AS n FROM rto_stock_restoration WHERE order_id = ?',
+    { replacements: [order.id], transaction }
+  );
+  if (Number(done?.n) > 0) return 0;
+
+  const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
+  let units = 0;
+  for (const item of items) {
+    let before = 0, after = 0;
+    if (item.variation_id) {
+      const v = await ProductVariation.findByPk(item.variation_id, { transaction, lock: transaction ? transaction.LOCK.UPDATE : undefined });
+      if (v) {
+        before = Number(v.stock) || 0;
+        after = before + Number(item.quantity || 0);
+        await v.update({ stock: after }, { transaction });
+        units += Number(item.quantity || 0);
+      }
+    }
+    await sequelize.query(
+      `INSERT INTO rto_stock_restoration
+         (order_id, order_number, product_id, variation_id, quantity_restored, stock_before, stock_after, restored_by, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      { replacements: [order.id, order.order_number, item.product_id, item.variation_id || null,
+          item.quantity, before, after, source, `Auto-restored via ${source}. Reason: ${reason || 'RTO'}`], transaction }
+    );
+  }
+  logger.info(`📦 RTO stock restored for ${order.order_number}: ${units} unit(s) via ${source}`);
+  return units;
+}
+
 module.exports.handleShippingWebhook = async (req, res) => {
   const transaction = await sequelize.transaction();
   let webhookEventId = null;   // hoisted so the catch can flag a failed event
@@ -553,61 +590,12 @@ module.exports.handleShippingWebhook = async (req, res) => {
         }
       }
 
-      // Restore stock for each order item
-      const stockRestorations = [];
+    }
 
-      for (const item of order.OrderItems) {
-        let stockBefore = 0;
-        let stockAfter = 0;
-
-        if (item.variation_id && item.ProductVariation) {
-          // Restore variation stock
-          stockBefore = item.ProductVariation.stock || 0;
-          stockAfter = stockBefore + item.quantity;
-
-          await item.ProductVariation.update({
-            stock: stockAfter
-          }, { transaction });
-
-          logger.debug(`📦 Stock restored: ${item.ProductVariation.sku} - ${stockBefore} → ${stockAfter} (+${item.quantity})`);
-
-          stockRestorations.push({
-            product_id: item.product_id,
-            product_name: item.Product.name,
-            variation_sku: item.ProductVariation.sku,
-            quantity_restored: item.quantity,
-            stock_before: stockBefore,
-            stock_after: stockAfter
-          });
-        } else {
-          logger.warn(`⚠️ RTO stock restoration skipped for product ${item.Product.name} - no variation found`);
-        }
-
-        // Log stock restoration in database
-        await sequelize.query(`
-          INSERT INTO rto_stock_restoration (
-            order_id, order_number, product_id, variation_id,
-            quantity_restored, stock_before, stock_after, restored_by, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, {
-          replacements: [
-            order.id,
-            order.order_number,
-            item.product_id,
-            item.variation_id,
-            item.quantity,
-            stockBefore,
-            stockAfter,
-            'shipping_webhook',
-            `Auto-restored via Shipping webhook. Reason: ${rto_reason || 'RTO'}`
-          ],
-          transaction
-        });
-      }
-
-      logger.debug(`✅ RTO processing completed: ${stockRestorations.length} items, ${stockRestorations.reduce((sum, r) => sum + r.quantity_restored, 0)} units restored`);
-
-      webhookNotes += ` - Stock auto-restored: ${stockRestorations.length} items`;
+    // Stock comes back for every RTO-family status, once per order (ledger-guarded).
+    if (RTO_FAMILY.includes(orderStatus)) {
+      const units = await restoreRtoStockOnce(order, transaction, 'shipping_webhook', rto_reason);
+      if (units > 0) webhookNotes += ` - Stock auto-restored: ${units} unit(s)`;
     }
 
     // Update order
@@ -909,32 +897,20 @@ module.exports.cancelOrdersInShipping = async (req, res) => {
       errors: [],
     };
 
+    // Delegate each order to the full admin cancel (orderService.cancelOrder):
+    // it cancels at the courier AND restores stock, coupon usage and loyalty
+    // points, refunds prepaid orders, writes history/audit and notifies the
+    // customer. The old loop only flipped the status, leaking all of that.
+    const orderService = require('../services/orderService.js');
     for (const orderId of orderIds) {
       try {
-        const order = await Order.findByPk(orderId);
-        if (!order || !order.shipping_waybill) {
-          results.failed++;
-          results.errors.push(`Order ${orderId}: No waybill found`);
-          continue;
-        }
-
-        const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-        await provider.cancelOrder(order.shipping_waybill, "Bulk cancellation");
-
-        results.successful++;
-        logger.debug(`Order ${orderId} cancelled via ${providerName}`);
-
-        // Update local order status
-        await order.update({ status: "cancelled" });
-
-        // Add status history
-        await OrderStatusHistory.create({
-          order_id: order.id,
-          status: "cancelled",
-          notes: `Cancelled via ${providerName} bulk operation`,
-          created_by: "admin",
+        await orderService.cancelOrder(orderId, {
+          reason: 'Bulk cancellation',
+          cancelledBy: req.user?.id,
+          isAdmin: true,
         });
-
+        results.successful++;
+        logger.debug(`Order ${orderId} cancelled (bulk)`);
       } catch (error) {
         results.failed++;
         results.errors.push(`Order ${orderId}: ${error.message}`);
@@ -1581,6 +1557,11 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
 
         // Update order status and payment status
         await order.update(updateData, { transaction });
+
+        // RTO detected by polling must restore stock too (webhook-only before).
+        if (RTO_FAMILY.includes(newStatus)) {
+          await restoreRtoStockOnce(order, transaction, 'shipping_sync', 'RTO detected by status sync');
+        }
 
         // Credit loyalty points when an authenticated user's order is delivered.
         if (newStatus === 'delivered' && order.user_id) {
