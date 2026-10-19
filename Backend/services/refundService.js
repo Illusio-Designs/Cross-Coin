@@ -39,8 +39,13 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
     const payment = await Payment.findByPk(paymentId, { transaction: t });
     if (!payment) throw new Error('Payment not found');
 
-    // Must have a Razorpay payment ID to refund
-    if (!payment.transaction_id || !payment.transaction_id.startsWith('pay_')) {
+    // Custom-checkout payments refund through the provider's refund API, not
+    // our Razorpay keys (their pg transaction belongs to the provider's MID).
+    const isCustomCheckout = String(payment.payment_gateway || '').toLowerCase() === 'customcheckout'
+      || /custom checkout/i.test(payment.notes || '');
+
+    // Must have a Razorpay payment ID to refund (unless custom checkout)
+    if (!isCustomCheckout && (!payment.transaction_id || !payment.transaction_id.startsWith('pay_'))) {
       throw new Error('No Razorpay payment ID found — cannot process refund for COD orders');
     }
 
@@ -68,22 +73,44 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
 
     const isPartial = refundAmount < parseFloat(payment.amount_paid);
 
-    // Call Razorpay refund API
-    let razorpayRefund;
-    try {
-      razorpayRefund = await razorpayService.createRefund(payment.transaction_id, {
-        amount: refundAmount,
-        notes: { reason, order_number: order.order_number, admin_id: adminId },
-        brandId,
-      });
-    } catch (err) {
-      throw new Error(`Razorpay refund failed: ${err.message}`);
+    // Call the gateway's refund API (provider for custom checkout, else Razorpay)
+    let refundId, refundStatus;
+    if (isCustomCheckout) {
+      const customCheckout = require('./customCheckoutService.js');
+      const cartId = (payment.notes || '').match(/cart_id\s+([\w-]+)/i)?.[1];
+      try {
+        const resp = await customCheckout.initiateRefund(order.brand_id || brandId, {
+          transaction_id: payment.transaction_id,
+          ...(cartId && cartId !== '-' ? { cart_id: cartId } : {}),
+          amount: refundAmount,
+          refund_type: isPartial ? 'PARTIAL' : 'FULL',
+        });
+        const d = resp?.data?.data || resp?.data || resp || {};
+        refundId = d.id || d.transaction_id || 'requested';
+        refundStatus = d.status || 'INITIATED';
+      } catch (err) {
+        throw new Error(`Custom checkout refund failed: ${err.message}`);
+      }
+    } else {
+      let razorpayRefund;
+      try {
+        razorpayRefund = await razorpayService.createRefund(payment.transaction_id, {
+          amount: refundAmount,
+          notes: { reason, order_number: order.order_number, admin_id: adminId },
+          brandId,
+        });
+      } catch (err) {
+        throw new Error(`Razorpay refund failed: ${err.message}`);
+      }
+      refundId = razorpayRefund.id;
+      refundStatus = razorpayRefund.status;
     }
+    const gatewayLabel = isCustomCheckout ? 'Custom checkout refund ref' : 'Razorpay refund ID';
 
     // Update payment record
     await payment.update({
       status: isPartial ? 'partial_refund' : 'refunded',
-      notes: `${isPartial ? 'Partial' : 'Full'} refund: ₹${refundAmount}. Razorpay refund ID: ${razorpayRefund.id}. Reason: ${reason}`,
+      notes: `${isPartial ? 'Partial' : 'Full'} refund: ₹${refundAmount}. ${gatewayLabel}: ${refundId}. Reason: ${reason}`,
     }, { transaction: t });
 
     // Update order payment status
@@ -96,7 +123,7 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       order_id: order.id,
       user_id: order.user_id,
       payment_type: 'razorpay',
-      transaction_id: razorpayRefund.id,
+      transaction_id: refundId,
       razorpay_order_id: payment.razorpay_order_id,
       amount_paid: -refundAmount,
       status: 'refunded',
@@ -109,14 +136,14 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       order_id: order.id,
       status: order.status,
       updated_by: adminId,
-      notes: `${isPartial ? 'Partial' : 'Full'} refund of ₹${refundAmount} processed. Razorpay ID: ${razorpayRefund.id}`,
+      notes: `${isPartial ? 'Partial' : 'Full'} refund of ₹${refundAmount} processed. ${gatewayLabel}: ${refundId}`,
     }, { transaction: t });
 
     // Audit log
     await auditLog(order.id, 'refund', adminId, 'admin', {
       refundAmount,
       isPartial,
-      razorpayRefundId: razorpayRefund.id,
+      refundId, gateway: isCustomCheckout ? "custom-checkout" : "razorpay",
       reason,
     }, t);
 
@@ -135,15 +162,15 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       } catch (e) { logger.warn('WhatsApp refund notification failed:', e.message); }
     });
 
-    logger.info(`[Refund] ₹${refundAmount} refunded for order ${order.order_number} (Razorpay: ${razorpayRefund.id})`);
+    logger.info(`[Refund] ₹${refundAmount} refunded for order ${order.order_number} (${gatewayLabel}: ${refundId})`);
 
     return {
       success: true,
       refund: {
-        razorpay_refund_id: razorpayRefund.id,
+        razorpay_refund_id: refundId,
         amount: refundAmount,
         is_partial: isPartial,
-        status: razorpayRefund.status,
+        status: refundStatus,
       },
       payment: { id: payment.id, status: payment.status },
       order: { id: order.id, order_number: order.order_number, payment_status: order.payment_status },
@@ -166,7 +193,7 @@ async function autoRefundOnCancel(orderId, reason, adminId) {
     order: [['createdAt', 'DESC']],
   });
 
-  if (!payment || !payment.transaction_id?.startsWith('pay_')) {
+  if (!payment || (!payment.transaction_id?.startsWith('pay_') && String(payment.payment_gateway || '').toLowerCase() !== 'customcheckout')) {
     logger.info(`[Refund] No refundable payment for order ${orderId} — skipping auto-refund`);
     return null;
   }
@@ -208,7 +235,7 @@ async function autoRefundOnRtoReceipt(orderId, reason, adminId) {
     order: [['createdAt', 'DESC']],
   });
 
-  if (!payment || !payment.transaction_id?.startsWith('pay_')) {
+  if (!payment || (!payment.transaction_id?.startsWith('pay_') && String(payment.payment_gateway || '').toLowerCase() !== 'customcheckout')) {
     logger.info(`[Refund] No refundable prepaid payment for RTO order ${orderId} — skipping warehouse-receipt refund`);
     return null;
   }

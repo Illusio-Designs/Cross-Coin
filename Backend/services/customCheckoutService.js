@@ -360,7 +360,10 @@ async function ingestCheckoutOrder(brandId, p) {
           transaction_id: pay.txn_id || pay.pg_transaction_id || null,
           amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
           status: String(pay.payment_status || '').toLowerCase() === 'success' ? 'successful' : 'pending',
-          payment_gateway: pay.gateway || 'CustomCheckout',
+          // Gateway marks the refund route: these payments refund via the
+          // checkout provider's refund API, never our own Razorpay keys.
+          payment_gateway: 'CustomCheckout',
+          notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
           brand_id: brandId,
         }, { transaction: t });
       } catch (e) {
