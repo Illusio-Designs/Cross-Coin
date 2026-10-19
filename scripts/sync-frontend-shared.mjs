@@ -55,6 +55,11 @@ const FILES = [
     brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
   },
   {
+    // Customer-facing order / payment / return status labels (all 7).
+    source: 'shared/frontend/orderStatus.js',
+    dest: (base) => `${base}utils/orderStatus.js`,
+  },
+  {
     source: 'shared/frontend/SentryInit.jsx',
     dest: (base) => `${base}components/SentryInit.jsx`,
   },
