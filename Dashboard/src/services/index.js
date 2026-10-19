@@ -802,6 +802,27 @@ export const orderService = {
     }
   },
 
+  // Download the GST invoice PDF for an order
+  downloadInvoice: async (orderId, orderNumber) => {
+    try {
+      const response = await adminApi.get(`/api/orders/${orderId}/invoice`, {
+        responseType: 'blob',
+        timeout: 30000
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Invoice-${orderNumber || orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      return { success: true };
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Download single label
   downloadLabel: async (orderId) => {
     try {

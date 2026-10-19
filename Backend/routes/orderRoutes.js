@@ -106,6 +106,7 @@ router.post('/fship/webhook',           verifyWebhookSignature('fship'),    hand
 router.post('/',                        isAuthenticated, createOrder);
 router.get('/my-orders',                isAuthenticated, getUserOrders);
 router.get('/:id',                      isAuthenticated, getOrder);
+router.get('/:id/invoice',             isAuthenticated, require('../controller/invoiceController.js').getOrderInvoice);
 router.put('/:id/cancel',              isAuthenticated, validateBody(schemas.cancelOrder), cancelOrder);
 router.post('/:id/return',             isAuthenticated, zValidateBody(returnOrderSchema), initiateReturn);
 router.get('/:id/shipping/tracking',   isAuthenticated, getShippingTrackingForOrder);

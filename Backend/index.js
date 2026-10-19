@@ -479,7 +479,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v15';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v16';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1730,6 +1730,29 @@ const startServer = async () => {
             logger.info('✓ Instagram gallery tables removed');
         } catch (err) {
             logger.error('Instagram gallery table removal failed: ' + err.message);
+        }
+
+        // ── Seed per-brand GST invoice settings (v16). INSERT IGNORE keeps any
+        // value an admin has already saved; new brands get the same defaults
+        // from the Dashboard settings page itself.
+        try {
+            const GST_DEFAULTS = [
+                ['GST_PERCENTAGE', '18'],
+                ['GSTIN', ''],
+                ['GST_LEGAL_NAME', ''],
+                ['GST_ADDRESS', ''],
+                ['GST_STATE', ''],
+            ];
+            for (const [key, value] of GST_DEFAULTS) {
+                await sequelize.query(
+                    `INSERT IGNORE INTO brand_settings (brand_id, \`key\`, value, is_encrypted, category, created_at, updated_at)
+                     SELECT id, ?, ?, 0, 'general', NOW(), NOW() FROM brands`,
+                    { replacements: [key, value] }
+                );
+            }
+            logger.info('✓ GST settings seeded for all brands');
+        } catch (err) {
+            logger.error('GST settings seed failed: ' + err.message);
         }
 
             // All idempotent startup migrations have run — flag it so future

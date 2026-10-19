@@ -302,6 +302,14 @@ const Orders = () => {
         } catch (error) { showError('syncFailed', error.message || error.error || 'Failed to refresh order tracking from shipping provider'); }
     };
 
+    const downloadInvoice = async (orderId, orderNumber) => {
+        try {
+            await orderService.downloadInvoice(orderId, orderNumber);
+        } catch (error) {
+            showError('invoiceFailed', error.message || error.error || 'Failed to download invoice');
+        }
+    };
+
     const generateLabelForOrder = async (orderId) => {
         if (!orderId) return;
         if (generatingLabel.has(orderId)) return;
@@ -758,6 +766,7 @@ const Orders = () => {
                     ...(hasWaybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Generate label', onClick: () => generateLabelForOrder(row.id) }] : []),
                     ...(canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
                     ...(canRefund ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: pmtStatus === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
+                    { icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Download invoice', onClick: () => downloadInvoice(row.id, row.order_number) },
                     { icon: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />, label: 'Delete order', tone: 'danger', onClick: () => deleteOrder(row.id, row.order_number) },
                 ];
                 return (

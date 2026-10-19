@@ -360,6 +360,7 @@ const WA_API_BASE = (process.env.API_URL || 'https://api.crosscoin.in').replace(
 const WA_TRACK_BASE = `${WA_API_BASE}/api/track`;        // + /{{orderNumber}}
 const WA_SHOP_BASE  = `${WA_API_BASE}/api/shop`;         // + /{{brandId}}
 const WA_CART_BASE  = `${WA_API_BASE}/api/cart-recover`; // + /{{brandId}} → store ?recover=1&coupon=CART10
+const WA_INVOICE_BASE = `${WA_API_BASE}/api/invoice`; // + /{{orderNumber}}?t=<hmac>
 
 // Inspect the LIVE approved template so a sender only attaches a header-image or
 // button component when the template actually has one. This lets us re-shape
@@ -494,6 +495,26 @@ function buildTemplates(storeName, storeUrl) {
           example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', '699']] },
         },
         { type: 'FOOTER', text: footer },
+      ],
+    },
+    {
+      name: tName('invoice'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Your Tax Invoice' },
+        {
+          type: 'BODY',
+          text: `Hi {{1}}! Your *{{2}}* tax invoice for order *#{{3}}* is ready.\n\nTap below to download the PDF for your records.`,
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001']] },
+        },
+        { type: 'FOOTER', text: footer },
+        {
+          type: 'BUTTONS',
+          buttons: [{
+            type: 'URL', text: 'Download Invoice',
+            url: `${WA_INVOICE_BASE}/{{1}}`,
+            example: [`${WA_INVOICE_BASE}/CC-20240101-0001?t=0123456789abcdef`],
+          }],
+        },
       ],
     },
     {
@@ -985,7 +1006,8 @@ async function sendTemplate(phone, templateName, bodyParams, brandId = 1, opts =
 
   // Dynamic URL button — attach the variable only when the live template has one.
   if (shape.urlButtonIndex >= 0) {
-    const btnParam = opts.trackOrder != null ? opts.trackOrder
+    const btnParam = opts.urlParam != null ? opts.urlParam
+                   : opts.trackOrder != null ? opts.trackOrder
                    : opts.cartRecover != null ? opts.cartRecover
                    : opts.shopBrandId != null ? opts.shopBrandId
                    : null;
@@ -1026,6 +1048,17 @@ async function sendOrderConfirmation(phone, data, brandId = 1) {
     data.orderNumber,
     String(data.total ?? ''),
   ], brandId, { trackOrder: data.orderNumber });
+}
+
+// Tax invoice — the button carries the order number + HMAC token, so the
+// customer (and only link holders) can download the PDF without logging in.
+async function sendInvoice(phone, data, brandId = 1) {
+  const { invoiceToken } = require('./invoiceService.js');
+  return sendTemplate(phone, tName('invoice'), [
+    data.name || 'there',
+    await _brandName(brandId),
+    data.orderNumber,
+  ], brandId, { urlParam: `${encodeURIComponent(data.orderNumber)}?t=${invoiceToken(data.orderNumber)}` });
 }
 
 async function sendOrderPacked(phone, data, brandId = 1) {
@@ -1524,6 +1557,7 @@ module.exports = {
   testConnection,
   // Order notifications
   sendOrderConfirmation,
+  sendInvoice,
   sendOrderPacked,
   sendAddressRequest,
   sendOrderShipped,

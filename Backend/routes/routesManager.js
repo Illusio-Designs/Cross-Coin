@@ -61,6 +61,9 @@ router.use('/', optionalBrand, require('./bundleRoutes.js'));
 router.use('/custom-checkout', optionalBrand, require('./customCheckoutRoutes.js'));
 router.use('/', optionalBrand, require('./abandonedCartRoutes.js'));
 
+// ── GST invoice (public, HMAC-token link used in the WhatsApp document) ───
+router.get('/invoice/:orderNumber', require('../controller/invoiceController.js').getPublicInvoice);
+
 // ── WhatsApp button redirects (/track/:orderNumber, /shop/:brandId) ───────
 // Brand-neutral fixed URLs that 302 to the customer's OWN store (one shared
 // WhatsApp number can't carry per-brand button domains).
