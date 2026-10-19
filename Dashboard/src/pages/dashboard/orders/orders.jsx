@@ -719,7 +719,8 @@ const Orders = () => {
                 // didn't auto-refund, and retrying a refund stuck at refund_pending.
                 const pmtStatus = (row.payment_status || '').toLowerCase();
                 const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
-                const refundableStatus = ['cancelled', 'order cancelled', 'return_initiated', 'returned_rto', 'rto delivered'].includes((row.status || '').toLowerCase());
+                // return_initiated is refunded from the Returns page after the parcel arrives.
+                const refundableStatus = ['cancelled', 'order cancelled', 'returned_rto', 'rto delivered'].includes((row.status || '').toLowerCase());
                 const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmtStatus);
                 // Everything that isn't View + the one contextual button moves into
                 // the ⋯ menu, so the Actions column stays narrow.

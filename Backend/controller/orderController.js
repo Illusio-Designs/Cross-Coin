@@ -2242,6 +2242,18 @@
   // order must be cancelled/returned) live in refundService.processRefund.
   module.exports.adminRefundOrder = async (req, res) => {
     try {
+      // A customer return is refunded from the Returns page, only after the
+      // parcel is received — never straight from the order.
+      const { Return } = require('../model/returnModel.js');
+      const openReturn = await Return.findOne({
+        where: { order_id: req.params.id, status: ['requested', 'under_review', 'approved', 'pickup_scheduled', 'picked_up', 'received'] },
+      });
+      if (openReturn) {
+        return res.status(400).json({
+          success: false,
+          message: `This order has return ${openReturn.return_number} in progress — refund it from the Returns page once the parcel is received.`,
+        });
+      }
       const { Payment } = require('../model/paymentModel.js');
       const payment = await Payment.findOne({
         where: { order_id: req.params.id, status: ['successful', 'completed', 'refund_pending'] },

@@ -517,6 +517,13 @@ module.exports.receiveReturn = async (req, res) => {
     const next = ret.is_cod
       ? 'Pay the customer by UPI, upload the payout screenshot, then press Issue refund.'
       : 'Press Issue refund to refund the original payment method.';
+    const user = await User.findByPk(ret.user_id);
+    notify('sendReturnUpdate', user && user.phone, {
+      name: user && user.username, returnNumber: ret.return_number, status: 'received',
+      detail: ret.is_cod
+        ? 'We have received your item. Your refund will be sent to your UPI shortly.'
+        : 'We have received your item. Your refund to the original payment method will be processed shortly.',
+    }, brandId);
     return res.json({ success: true, message: `Received.${stockNote} ${next}`, return: serialize(ret) });
   } catch (error) {
     logger.error('receiveReturn error:', error);
