@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
+import { orderStatusLabel, orderStatusTone, orderStatusNote, paymentSummary, canCancelOrder, canRequestReturn } from '@/utils/orderStatus';
 
 // Order-item images are ImageKit assets. Absolute URLs pass through; relative
 // paths get the ImageKit endpoint (NOT the API host, which 404s on these paths
@@ -35,10 +36,8 @@ function pickColor(it) {
 }
 
 function statusClass(s) {
-  const v = (s || '').toLowerCase();
-  if (v === 'delivered') return 'ok';
-  if (v === 'cancelled') return 'bad';
-  return 'pending';
+  const tone = orderStatusTone(s);
+  return tone === 'ok' || tone === 'bad' ? tone : 'pending';
 }
 
 function OrderDetail({ id }) {
@@ -91,7 +90,9 @@ function OrderDetail({ id }) {
   }
 
   const items = order.OrderItems || order.items || order.order_items || [];
-  const canCancel = !['delivered', 'cancelled', 'shipped'].includes((order.status || '').toLowerCase());
+  const canCancel = canCancelOrder(order.status);
+  const canReturn = canRequestReturn(order.status);
+  const statusNote = orderStatusNote(order.status, order.payment_type);
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
@@ -105,8 +106,12 @@ function OrderDetail({ id }) {
           <h1>#{order.order_number}</h1>
           <p>{order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
         </div>
-        <span className={`order-status ${statusClass(order.status)}`} style={{ height: 'fit-content' }}>{order.status}</span>
+        <span className={`order-status ${statusClass(order.status)}`} style={{ height: 'fit-content' }}>{orderStatusLabel(order.status)}</span>
       </div>
+
+      {statusNote && (
+        <div style={{ margin: '0 0 18px', padding: '11px 14px', borderRadius: 12, fontSize: '.9rem', background: orderStatusTone(order.status) === 'bad' ? '#fdeaea' : '#fff6e5', color: orderStatusTone(order.status) === 'bad' ? '#c0392b' : '#8a5a00' }}>{statusNote}</div>
+      )}
 
       <div className="order-detail-grid">
         <div className="order-items-card">
@@ -139,7 +144,7 @@ function OrderDetail({ id }) {
           {order.shipping_fee != null && <div className="row"><span className="muted">Shipping</span><b>₹{Number(order.shipping_fee).toFixed(0)}</b></div>}
           {Number(order.discount_amount) > 0 && <div className="row"><span className="muted">Discount</span><b style={{ color: 'var(--teal-600)' }}>−₹{Number(order.discount_amount).toFixed(0)}</b></div>}
           <div className="row total"><span>Total</span><b>₹{Number(order.final_amount || order.total_amount || 0).toFixed(0)}</b></div>
-          {order.payment_type && <div className="row"><span className="muted">Payment</span><b style={{ textTransform: 'uppercase' }}>{order.payment_type}</b></div>}
+          {order.payment_type && <div className="row"><span className="muted">Payment</span><b>{paymentSummary(order.payment_type, order.payment_status)}</b></div>}
 
           {order.shipping_address && (
             <div className="order-address">
@@ -152,6 +157,9 @@ function OrderDetail({ id }) {
           <Link href={`/track-order?order=${order.order_number}`} className="btn btn-ghost" style={{ width: '100%', marginTop: 10 }}>Track order</Link>
           {order.invoice_url && (
             <a href={order.invoice_url} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }}>Download invoice</a>
+          )}
+          {canReturn && (
+            <Link href={`/account/returns?order=${order.id}`} className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }}>Return</Link>
           )}
           {canCancel && (
             <button className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }} onClick={doCancel} disabled={cancelling}>

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
+import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
 
 const INK = '#0a0a0a';
 const REASONS = [
@@ -16,16 +17,23 @@ const REASONS = [
   ['other', 'Other'],
 ];
 const NEEDS_PHOTO = ['damaged', 'defective', 'wrong', 'notdesc'];
-const STATUS_LABEL = {
-  requested: 'Requested', under_review: 'Under review', approved: 'Approved',
-  pickup_scheduled: 'Pickup scheduled', picked_up: 'Picked up', received: 'Received',
-  refunded: 'Refunded', rejected: 'Rejected',
-};
 const money = (n) => '₹' + Number(n || 0).toFixed(0);
 
+// useSearchParams (?order=<id>) needs a Suspense boundary in the app router.
 export default function ReturnsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>}>
+      <ReturnsContent />
+    </Suspense>
+  );
+}
+
+function ReturnsContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderParam = searchParams.get('order');
+  const autoOpened = useRef(false);
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,13 +52,22 @@ export default function ReturnsPage() {
       ]);
       setReturns(rRes?.returns || []);
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
-      setOrders(all.filter((o) => ['delivered', 'return_initiated'].includes((o.status || '').toLowerCase())));
+      setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
   const startForm = (order) => { setMsg(null); setForm({ order_id: order.id, order, reason: '', note: '', upi_id: '', payout_phone: '', photos: [] }); };
+
+  // Arriving from "Return" on an order: open the form for it once, if it is eligible.
+  useEffect(() => {
+    if (loading || autoOpened.current || !orderParam) return;
+    autoOpened.current = true;
+    const order = orders.find((o) => String(o.id) === String(orderParam));
+    const hasOpenReturn = returns.some((r) => String(r.order_id) === String(orderParam) && !['rejected', 'refunded'].includes(r.status));
+    if (order && !hasOpenReturn) startForm(order);
+  }, [loading, orders, returns, orderParam]);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const addPhotos = (e) => { const files = Array.from(e.target.files || []).slice(0, 4 - form.photos.length); set('photos', [...form.photos, ...files]); e.target.value = ''; };
 
@@ -139,11 +156,18 @@ export default function ReturnsPage() {
                     <div key={r.id} style={card}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <div><b>{r.return_number}</b> <span style={{ color: '#888' }}>· {r.Order?.order_number || ''}</span></div>
-                        <span style={badge(r.status)}>{STATUS_LABEL[r.status] || r.status}</span>
+                        <span style={badge(r.status)}>{RETURN_STATUS_LABEL[r.status] || r.status}</span>
                       </div>
                       <div style={{ marginTop: 4, fontSize: '.85rem', color: '#666' }}>
-                        {money(r.refund_amount ?? r.requested_amount)}{r.status === 'refunded' ? ' refunded' : ''}{r.pickup_awb ? ` · Pickup AWB ${r.pickup_awb}` : ''}
+                        {r.status === 'refunded'
+                          ? <>Refunded {money(r.refund_amount)}{Number(r.charges_deducted) > 0 ? ` (${money(r.charges_deducted)} deducted)` : ''}</>
+                          : <>Item value {money(r.requested_amount)} — final refund confirmed after we check the item</>}
+                        {r.pickup_awb ? ` · Pickup AWB ${r.pickup_awb}` : ''}
                       </div>
+                      <div style={{ marginTop: 2, fontSize: '.8rem', color: '#888' }}>Refund to: {returnRefundMethod(r)}</div>
+                      {r.status === 'rejected' && r.admin_note && (
+                        <div style={{ marginTop: 4, fontSize: '.85rem', color: '#c0392b' }}>Reason: {r.admin_note}</div>
+                      )}
                       {r.status === 'refunded' && r.payout_proof && (
                         <div style={{ marginTop: 8 }}><span style={{ color: '#888', fontSize: '.8rem' }}>Payment proof:</span>{' '}
                           <a href={r.payout_proof} target="_blank" rel="noreferrer"><img src={r.payout_proof} alt="proof" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, verticalAlign: 'middle' }} /></a></div>

@@ -11,14 +11,13 @@ import {
   toastAddressAdded, toastAddressUpdated, toastAddressDeleted,
   toastOrderCancelled, showError,
 } from '../utils/toast';
+import { orderStatusLabel, orderStatusTone, isActiveOrder, canCancelOrder, canRequestReturn, paymentSummary, orderStatusNote } from '../utils/orderStatus';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 
 const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu and Kashmir','Ladakh','Puducherry','Chandigarh'];
 
 const EMPTY_ADDR = { full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false };
-
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'booked'];
 
 function toAbsoluteUrl(url) {
   if (!url) return '';
@@ -43,11 +42,10 @@ function formatDate(d) {
   catch { return ''; }
 }
 
+const TONE_BADGE = { ok: 'delivered', bad: 'cancelled', warn: 'warn', info: 'active' };
+
 function badgeClass(status) {
-  const s = (status || '').toLowerCase();
-  if (s === 'delivered') return 'delivered';
-  if (s === 'cancelled' || s === 'order_cancelled') return 'cancelled';
-  return 'active';
+  return TONE_BADGE[orderStatusTone(status)] || 'active';
 }
 
 // ── Nav icons ────────────────────────────────────────────────────────
@@ -194,7 +192,7 @@ export default function AccountPage() {
   }
 
   const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
-  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const activeCount = orders.filter((o) => isActiveOrder(o.status)).length;
   const hasPoints = Number(user.loyalty_points) > 0;
 
   const NAV = [
@@ -288,8 +286,8 @@ export default function AccountPage() {
                   ) : (
                     <div className="acc-orders">
                       {orders.map((o) => {
-                        const status = (o.status || '').toLowerCase();
-                        const canCancel = ['pending', 'confirmed', 'processing'].includes(status);
+                        const canCancel = canCancelOrder(o.status);
+                        const note = orderStatusNote(o.status, o.payment_type);
                         return (
                           <div key={o.id} className="acc-order-card">
                             <div className="acc-order-head">
@@ -297,7 +295,7 @@ export default function AccountPage() {
                                 <div className="acc-order-num">#{o.order_number}</div>
                                 <div className="acc-order-date">{formatDate(o.createdAt)}</div>
                               </div>
-                              <span className={`acc-badge ${badgeClass(o.status)}`}>{(o.status || 'pending').replace(/_/g, ' ')}</span>
+                              <span className={`acc-badge ${badgeClass(o.status)}`}>{orderStatusLabel(o.status || 'pending')}</span>
                             </div>
 
                             {o.OrderItems?.map((item) => (
@@ -313,11 +311,21 @@ export default function AccountPage() {
                               </div>
                             ))}
 
+                            {note && (
+                              <p style={{ margin: '12px 0 0', padding: '10px 12px', background: 'var(--paper-warm)', borderLeft: '2px solid var(--ink)', fontSize: 12, color: 'var(--ink-soft)' }}>{note}</p>
+                            )}
+
                             <div className="acc-order-foot">
-                              <div className="acc-order-total">Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}</div>
+                              <div className="acc-order-total">
+                                Total: ₹{parseFloat(o.final_amount || 0).toLocaleString('en-IN')}
+                                <div className="acc-note" style={{ marginTop: 4 }}>{paymentSummary(o.payment_type, o.payment_status)}</div>
+                              </div>
                               <div className="acc-order-actions">
                                 <Link href={`/track-order?order=${o.order_number}`} className="acc-link">Track Order</Link>
                                 {o.invoice_url && <a href={o.invoice_url} target="_blank" rel="noreferrer" className="acc-link">Invoice</a>}
+                                {canRequestReturn(o.status) && (
+                                  <Link href={`/returns?order=${o.id}`} className="acc-link">Return</Link>
+                                )}
                                 {canCancel && (
                                   <button
                                     onClick={() => handleCancelOrder(o.id)}

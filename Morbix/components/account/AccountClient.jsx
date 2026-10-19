@@ -10,19 +10,13 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses';
 import { toast } from '@/lib/toast';
+import { orderStatusLabel, orderStatusTone, isActiveOrder, canRequestReturn } from '@/utils/orderStatus';
 
 const EMPTY = { full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false };
 
 function statusClass(s) {
-  const v = (s || '').toLowerCase();
-  if (v === 'delivered') return 'ok';
-  if (v === 'cancelled' || v === 'order_cancelled') return 'bad';
-  return 'pending';
-}
-
-function statusLabel(s) {
-  if (!s) return 'Pending';
-  return String(s).split(/[_\s]+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const tone = orderStatusTone(s);
+  return tone === 'ok' || tone === 'bad' ? tone : 'pending';
 }
 
 function getInitials(name) {
@@ -44,8 +38,6 @@ const TABS = [
   { label: 'Addresses', icon: 'MapPin' },
   { label: 'Account details', icon: 'User' },
 ];
-
-const ACTIVE_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'booked', 'out_for_delivery'];
 
 function Dashboard() {
   const router = useRouter();
@@ -127,7 +119,7 @@ function Dashboard() {
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
   const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
-  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const activeCount = orders.filter((o) => isActiveOrder(o.status)).length;
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
@@ -190,13 +182,18 @@ function Dashboard() {
                           <span className="acc-order-num">#{o.order_number}</span>
                           <span className="acc-order-date">{formatDate(o.created_at || o.createdAt)}</span>
                         </div>
-                        <span className={`order-status ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
+                        <span className={`order-status ${statusClass(o.status)}`}>{orderStatusLabel(o.status)}</span>
                       </div>
                       <div className="acc-order-bottom">
                         <span className="acc-order-total">₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</span>
-                        <Link href={`/account/orders/${o.id}`} className="acc-order-link">
-                          View / Track <Icon name="ArrowRight" size={14} />
-                        </Link>
+                        <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {canRequestReturn(o.status) && (
+                            <Link href={`/account/returns?order=${o.id}`} className="acc-order-link">Return</Link>
+                          )}
+                          <Link href={`/account/orders/${o.id}`} className="acc-order-link">
+                            View / Track <Icon name="ArrowRight" size={14} />
+                          </Link>
+                        </span>
                       </div>
                     </div>
                   ))}

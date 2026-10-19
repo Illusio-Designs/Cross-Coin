@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { trackOrder, trackByAwb } from '../../components/test/real';
 import { inr } from '../../components/test/data';
+import { orderStatusLabel, orderStatusNote, paymentSummary, isCancelledStatus } from '../../utils/orderStatus';
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
 
@@ -28,10 +29,17 @@ export default function TestTrack() {
     finally { setLoading(false); }
   };
 
-  const status = order && (order.status || order.order_status || order.current_status || '');
-  const items = order && (order.items || order.order_items || order.OrderItems || []);
-  const awb = order && (order.awb_number || order.awb || order.tracking_number || '');
-  const courier = order && (order.courier_name || order.courier || order.carrier || '');
+  // /api/orders/track/* answers { order: {...}, items: [...], ... } — read the
+  // order fields from `order.order` when present, else from the object itself.
+  const info = order && (order.order || order);
+  const status = info && (info.status || info.order_status || info.current_status || '');
+  const items = order && (order.items || info.items || info.order_items || info.OrderItems || []);
+  const awb = info && (info.awb_number || info.awb || info.tracking_number || info.shipping_waybill || '');
+  const courier = info && (info.courier_name || info.courier || info.carrier || '');
+  const cancelled = !!status && isCancelledStatus(status);
+  const note = status ? orderStatusNote(status, info.payment_type) : '';
+  const payment = info && (info.payment_type || info.payment_status) ? paymentSummary(info.payment_type, info.payment_status) : '';
+  const total = info && (info.final_amount || info.total || info.total_amount || info.grandTotal);
 
   return (
     <TestLayout>
@@ -58,27 +66,30 @@ export default function TestTrack() {
         {order && (
           <div className="trackcard">
             <div className="trackcard__top">
-              <div><span className="mono" style={{ color: 'var(--ink-faint)', fontSize: 11 }}>ORDER</span><div style={{ fontWeight: 700, fontSize: 18 }}>{order.order_number || order.orderNumber || term}</div></div>
-              {status && <span className="statuspill">{String(status).replace(/_/g, ' ')}</span>}
+              <div><span className="mono" style={{ color: 'var(--ink-faint)', fontSize: 11 }}>ORDER</span><div style={{ fontWeight: 700, fontSize: 18 }}>{info.order_number || info.orderNumber || term}</div></div>
+              {status && <span className="statuspill">{orderStatusLabel(status)}</span>}
             </div>
             <div className="trackcard__meta mono">
-              {order.createdAt || order.created_at ? <span>Placed {fmt(order.createdAt || order.created_at)}</span> : null}
-              {courier ? <span>· {courier}</span> : null}
-              {awb ? <span>· AWB {awb}</span> : null}
+              {info.createdAt || info.created_at ? <span>Placed {fmt(info.createdAt || info.created_at)}</span> : null}
+              {courier && !cancelled ? <span>· {courier}</span> : null}
+              {awb && !cancelled ? <span>· AWB {awb}</span> : null}
+              {payment ? <span>· {payment}</span> : null}
             </div>
+            {note && <p className="mono" role="status" style={{ border: '2px solid var(--crimson)', borderRadius: 4, background: 'color-mix(in srgb,var(--crimson) 8%,var(--surface))', color: 'var(--ink)', fontSize: 12.5, lineHeight: 1.55, padding: '10px 12px', margin: '14px 0 0' }}>{note}</p>}
+            {cancelled && <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12.5, margin: '14px 0 0' }}>This order was cancelled and won&rsquo;t be shipped.</p>}
             {Array.isArray(items) && items.length > 0 && (
               <div className="trackitems">
                 {items.map((it, i) => (
                   <div className="trackitem" key={i}>
-                    <span>{it.product_name || it.name || it.productName || `Item ${i + 1}`}{it.quantity ? ` × ${it.quantity}` : ''}</span>
-                    {(it.price || it.total) ? <span className="mono">{inr(it.total || it.price)}</span> : null}
+                    <span>{it.product_name || it.name || it.productName || it.product?.name || `Item ${i + 1}`}{it.quantity ? ` × ${it.quantity}` : ''}</span>
+                    {(it.price || it.total || it.total_price) ? <span className="mono">{inr(it.total || it.total_price || it.price)}</span> : null}
                   </div>
                 ))}
               </div>
             )}
-            {(order.total || order.total_amount || order.grandTotal) ? (
+            {total ? (
               <div className="trackitem" style={{ fontWeight: 700, borderTop: '2px solid var(--line-ink)', marginTop: 4, paddingTop: 10 }}>
-                <span>Total</span><span className="mono">{inr(order.total || order.total_amount || order.grandTotal)}</span>
+                <span>Total</span><span className="mono">{inr(total)}</span>
               </div>
             ) : null}
           </div>

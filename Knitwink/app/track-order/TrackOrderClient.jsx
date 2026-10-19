@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { Search, Package, Truck, CheckCircle, MapPin, Phone, Clock } from 'lucide-react'
 import { trackOrder } from '@/lib/api/orders'
+import { trackingStep, orderStatusLabel, orderStatusTone, isCancelledStatus, orderStatusNote, paymentSummary } from '@/utils/orderStatus'
 // SeoWrapper removed — metadata is now set server-side in page.jsx.
 
+// Step labels; position comes from trackingStep() (0 Confirmed … 3 Delivered).
 const STATUS_STEPS = ['confirmed', 'processing', 'shipped', 'delivered']
 
 // Order-item images are ImageKit assets. Absolute URLs pass through; relative
@@ -88,7 +90,9 @@ export default function TrackOrderClient() {
     }
   }
 
-  const currentStep = order ? STATUS_STEPS.indexOf(order.status?.toLowerCase()) : -1
+  const currentStep = order ? trackingStep(order.status) : -1
+  const statusNote = order ? orderStatusNote(order.status, order.payment_type) : ''
+  const statusTone = order ? orderStatusTone(order.status) : 'info'
   const awb = order?.tracking_number || tracking?.tracking_number
   const trackUrl = tracking?.tracking_url || order?.tracking_url
 
@@ -131,16 +135,21 @@ export default function TrackOrderClient() {
                   <p className="mt-1 text-[11px] text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}{order.final_amount != null ? ` · ₹${Number(order.final_amount).toFixed(0)}` : ''}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${
-                  order.status === 'delivered' ? 'bg-green-50 text-green-600' :
-                  order.status === 'cancelled' ? 'bg-red-50 text-red-500' :
+                  statusTone === 'ok' ? 'bg-green-50 text-green-600' :
+                  statusTone === 'bad' ? 'bg-red-50 text-red-500' :
+                  statusTone === 'warn' ? 'bg-amber-50 text-amber-700' :
                   'bg-gray-100 text-gray-600'
                 }`}>
-                  {order.status}
+                  {orderStatusLabel(order.status)}
                 </span>
               </div>
 
+              {statusNote && (
+                <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">{statusNote}</p>
+              )}
+
               {/* Progress steps */}
-              {order.status !== 'cancelled' && (
+              {!isCancelledStatus(order.status) && (
                 <div className="mt-6 flex items-center justify-between">
                   {STATUS_STEPS.map((step, i) => (
                     <div key={step} className="flex flex-1 flex-col items-center gap-1.5">
@@ -210,7 +219,9 @@ export default function TrackOrderClient() {
                 {order.payment_type && (
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-400">Payment</span>
-                    <span className="text-gray-600">{order.payment_type === 'cod' ? 'Cash on Delivery' : order.payment_type.toUpperCase()}</span>
+                    <span className="text-gray-600">{order.payment_status
+                      ? paymentSummary(order.payment_type, order.payment_status)
+                      : (order.payment_type === 'cod' ? 'Cash on Delivery' : order.payment_type.toUpperCase())}</span>
                   </div>
                 )}
                 {awb && (

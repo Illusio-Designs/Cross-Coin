@@ -5,6 +5,7 @@ import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { trackOrder } from '@/lib/api/orders';
 import { toast } from '@/lib/toast';
+import { orderStatusLabel, orderStatusTone, orderStatusNote, isCancelledStatus, trackingStep, paymentSummary } from '@/utils/orderStatus';
 
 const STEPS = ['confirmed', 'processing', 'shipped', 'delivered'];
 
@@ -112,7 +113,11 @@ export default function TrackOrderClient() {
   const addr = data?.shipping_address || order?.ShippingAddress || order?.shipping_address || null;
   const timeline = data ? getTimeline(data) : [];
   const status = (order?.status || '').toLowerCase();
-  const currentStep = order ? STEPS.indexOf(status) : -1;
+  // trackingStep: -1 before confirmation, 0..3 line up with STEPS.
+  const currentStep = order ? trackingStep(order.status) : -1;
+  const tone = order ? orderStatusTone(order.status) : 'info';
+  const statusCls = tone === 'ok' ? 'delivered' : tone === 'bad' ? 'cancelled' : status.replace(/[\s_]+/g, '-');
+  const statusNote = order ? orderStatusNote(order.status, order.payment_type) : '';
   const trackUrl = tracking?.tracking_url || order?.tracking_url;
   const awb = order?.tracking_number || tracking?.tracking_number;
   const placedAt = fmtDate(order?.created_at || order?.createdAt || order?.placed_at);
@@ -147,10 +152,14 @@ export default function TrackOrderClient() {
                   {order.final_amount != null && <span>₹{Number(order.final_amount).toFixed(0)}</span>}
                 </div>
               </div>
-              <span className={`track-status track-status-${status}`}>{order.status}</span>
+              <span className={`track-status track-status-${statusCls}`}>{orderStatusLabel(order.status)}</span>
             </div>
 
-            {status !== 'cancelled' && (
+            {statusNote && (
+              <div style={{ margin: '14px 0 0', padding: '11px 14px', borderRadius: 12, fontSize: '.9rem', background: tone === 'bad' ? '#fdeaea' : '#fff6e5', color: tone === 'bad' ? '#c0392b' : '#8a5a00' }}>{statusNote}</div>
+            )}
+
+            {!isCancelledStatus(order.status) && (
               <div className="track-steps">
                 {STEPS.map((step, i) => (
                   <div key={step} className={`track-step${i <= currentStep ? ' done' : ''}`}>
@@ -207,7 +216,7 @@ export default function TrackOrderClient() {
                 <div className="row"><span className="muted">Total</span><b>₹{Number(order.final_amount).toFixed(0)}</b></div>
               )}
               {order.payment_type && (
-                <div className="row"><span className="muted">Payment</span><b>{order.payment_type === 'cod' ? 'Cash on Delivery' : (order.payment_type || '').toUpperCase()}</b></div>
+                <div className="row"><span className="muted">Payment</span><b>{order.payment_status ? paymentSummary(order.payment_type, order.payment_status) : order.payment_type === 'cod' ? 'Cash on Delivery' : (order.payment_type || '').toUpperCase()}</b></div>
               )}
               {awb && (
                 <div className="row"><span className="muted">AWB</span><b>{awb}</b></div>

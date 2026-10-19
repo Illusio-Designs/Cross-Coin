@@ -81,8 +81,15 @@ export const initiateReturn = async (orderId, reason = '') => {
 };
 
 // ── Returns & refunds ───────────────────────────────────────────────────────
-// createReturn posts a FormData (order_id, reason, note, resolution, upi_id,
-// items JSON, images[]); axios sets the multipart boundary when body is FormData.
+// createReturn posts a FormData: order_id, reason (damaged | defective | wrong |
+// notdesc | changed | other), note, images (up to 4 files; required for damaged /
+// defective / wrong / notdesc) and, for COD orders only, upi_id + payout_phone
+// (the 10-digit mobile linked to that UPI). The server decides the refund route
+// (prepaid → original payment method, COD → UPI); there is no resolution field.
+// axios sets the multipart boundary when body is FormData.
+// getMyReturns → { success, returns: [{ return_number, status, reason,
+// requested_amount, refund_amount, charges_deducted, resolution, upi_id,
+// payout_phone, is_cod, admin_note, payout_proof, created_at, Order: {...} }] }.
 export const createReturn = async (formData) => {
   try {
     const token = localStorage.getItem("token");

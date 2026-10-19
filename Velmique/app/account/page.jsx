@@ -22,6 +22,10 @@ import {
   toastAddressDefault, toastAddressError,
   toastOrderCancelled, toastOrderError,
 } from '@/lib/toast';
+import {
+  orderStatusLabel, orderStatusTone, isActiveOrder, canCancelOrder,
+  canRequestReturn, paymentSummary, orderStatusNote,
+} from '@/utils/orderStatus';
 
 const TABS = [
   { key: 'orders',    label: 'My Orders',     icon: Package },
@@ -35,8 +39,6 @@ const EMPTY_ADDR = {
 };
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-
-const ACTIVE_STATUSES = ['pending', 'processing', 'shipped', 'confirmed', 'awaiting_confirmation'];
 
 function getInitials(name) {
   if (!name) return 'U';
@@ -67,17 +69,15 @@ function fmtVariantAttrs(attrs) {
   return parts.join(' · ');
 }
 
+const TONE_STYLE = {
+  ok:   { bg: '#dcfce7', fg: '#166534' },
+  info: { bg: '#dbeafe', fg: '#1e40af' },
+  warn: { bg: '#fef3c7', fg: '#92400e' },
+  bad:  { bg: '#fee2e2', fg: '#991b1b' },
+};
+
 function statusBadge(status) {
-  const s = String(status || '').toLowerCase();
-  const map = {
-    pending:        { bg: '#fff7ed', fg: '#9a3412', label: 'Pending' },
-    processing:     { bg: '#fef3c7', fg: '#92400e', label: 'Processing' },
-    shipped:        { bg: '#dbeafe', fg: '#1e40af', label: 'Shipped' },
-    'in transit':   { bg: '#dbeafe', fg: '#1e40af', label: 'In Transit' },
-    delivered:      { bg: '#dcfce7', fg: '#166534', label: 'Delivered' },
-    cancelled:      { bg: '#fee2e2', fg: '#991b1b', label: 'Cancelled' },
-  };
-  return map[s] || { bg: '#f3f4f6', fg: '#374151', label: status || 'Unknown' };
+  return { ...(TONE_STYLE[orderStatusTone(status)] || TONE_STYLE.info), label: orderStatusLabel(status) };
 }
 
 // On-brand replacement for window.confirm / window.prompt. Pass a `dialog`
@@ -197,7 +197,7 @@ export default function AccountPage() {
           <div className="acc-stat"><div className="acc-stat-val">{statOrders.length}</div><div className="acc-stat-label">Orders</div></div>
           <div className="acc-stat"><div className="acc-stat-val">{statAddrs.length}</div><div className="acc-stat-label">Addresses</div></div>
           <div className="acc-stat"><div className="acc-stat-val">{statOrders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length}</div><div className="acc-stat-label">Delivered</div></div>
-          <div className="acc-stat"><div className="acc-stat-val">{statOrders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length}</div><div className="acc-stat-label">Active</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{statOrders.filter((o) => isActiveOrder(o.status)).length}</div><div className="acc-stat-label">Active</div></div>
           {Number(user?.loyalty_points || 0) > 0 && (
             <div className="acc-stat acc-stat-points" title="Earn points on every delivery. Redeem on future orders.">
               <div className="acc-stat-val">{user.loyalty_points}</div><div className="acc-stat-label">Points</div>
@@ -303,7 +303,10 @@ function OrdersTab({ showToast }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {orders.map(order => {
         const statusInfo = statusBadge(order.status);
-        const isCancellable = ['pending', 'processing', 'awaiting_confirmation'].includes(String(order.status || '').toLowerCase());
+        const isCancellable = canCancelOrder(order.status);
+        const isReturnable = canRequestReturn(order.status);
+        const payLine = paymentSummary(order.payment_type, order.payment_status);
+        const statusNote = orderStatusNote(order.status, order.payment_type);
         const total = order.final_amount ?? order.total ?? order.totalAmount ?? 0;
         const items = order.OrderItems || order.items || [];
         const orderRef = order.order_number || order.orderNumber || `#${order.id}`;
@@ -375,6 +378,12 @@ function OrdersTab({ showToast }) {
                     <li className="text-[var(--ink-muted)] text-[11px] font-body italic">+ {items.length - 2} more</li>
                   )}
                 </ul>
+                {payLine && (
+                  <p className="text-[var(--ink-muted)] text-[10px] tracking-[0.2em] uppercase font-body mt-3">{payLine}</p>
+                )}
+                {statusNote && (
+                  <p className="text-[var(--ink)] text-xs font-body leading-relaxed mt-2 border-l-2 border-[var(--gold)] pl-2">{statusNote}</p>
+                )}
               </div>
             </div>
 
@@ -393,6 +402,14 @@ function OrdersTab({ showToast }) {
                   >
                     {cancellingId === order.id ? 'Cancelling…' : 'Cancel'}
                   </button>
+                )}
+                {isReturnable && (
+                  <Link
+                    href={`/account/returns?order=${encodeURIComponent(order.id)}`}
+                    className="inline-flex items-center gap-1.5 text-[10px] tracking-[0.3em] uppercase font-body border border-[var(--ink)]/30 px-4 py-2 hover:border-[var(--gold-deep)] transition-colors"
+                  >
+                    Return
+                  </Link>
                 )}
                 {order.invoice_url && (
                   <a

@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
+import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
 
 const REASONS = [
   ['damaged', 'Damaged or leaking on arrival'],
@@ -16,11 +18,6 @@ const REASONS = [
   ['other', 'Other'],
 ];
 const NEEDS_PHOTO = ['damaged', 'defective', 'wrong', 'notdesc'];
-const STATUS_LABEL = {
-  requested: 'Requested', under_review: 'Under review', approved: 'Approved',
-  pickup_scheduled: 'Pickup scheduled', picked_up: 'Picked up', received: 'Received',
-  refunded: 'Refunded', rejected: 'Rejected',
-};
 function statusClass(s) {
   if (s === 'refunded' || s === 'approved' || s === 'received') return 'ok';
   if (s === 'rejected') return 'bad';
@@ -30,6 +27,9 @@ const money = (n) => '₹' + Number(n || 0).toFixed(0);
 
 function ReturnsInner() {
   const { isAuthenticated } = useAuth();
+  const searchParams = useSearchParams();
+  const wantedOrder = searchParams.get('order');
+  const autoOpened = useRef(false);
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +46,7 @@ function ReturnsInner() {
       ]);
       setReturns(rRes?.returns || []);
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
-      setOrders(all.filter((o) => ['delivered', 'return_initiated'].includes((o.status || '').toLowerCase())));
+      setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
     finally { setLoading(false); }
   }, []);
@@ -57,6 +57,15 @@ function ReturnsInner() {
     setForm({ order_id: order.id, order, reason: '', note: '', upi_id: '', payout_phone: '', photos: [] });
   };
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Deep-link from the order pages: /account/returns?order=<orderId> opens the form once.
+  useEffect(() => {
+    if (loading || autoOpened.current || !wantedOrder) return;
+    autoOpened.current = true;
+    const order = orders.find((o) => String(o.id) === String(wantedOrder));
+    const hasOpenReturn = returns.some((r) => String(r.order_id) === String(wantedOrder) && !['rejected', 'refunded'].includes(r.status));
+    if (order && !hasOpenReturn) startForm(order);
+  }, [loading, wantedOrder, orders, returns]);
 
   const addPhotos = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 4 - form.photos.length);
@@ -161,13 +170,24 @@ function ReturnsInner() {
                   <div className="order-row" key={r.id} style={{ display: 'block' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <div><b>{r.return_number}</b> <span className="muted">· {r.Order?.order_number || ''}</span></div>
-                      <span className={`order-status ${statusClass(r.status)}`}>{STATUS_LABEL[r.status] || r.status}</span>
+                      <span className={`order-status ${statusClass(r.status)}`}>{RETURN_STATUS_LABEL[r.status] || r.status}</span>
                     </div>
                     <div className="muted" style={{ marginTop: 4, fontSize: '.85rem' }}>
-                      {money(r.refund_amount ?? r.requested_amount)}
-                      {r.status === 'refunded' ? ' refunded' : ''}
+                      {r.status === 'refunded'
+                        ? `Refunded ${money(r.refund_amount)}${Number(r.charges_deducted) > 0 ? ` (${money(r.charges_deducted)} deducted)` : ''}`
+                        : r.status === 'rejected'
+                          ? `Item value ${money(r.requested_amount)}`
+                          : `Item value ${money(r.requested_amount)} — final refund confirmed after we check the item`}
                       {r.pickup_awb ? ` · Pickup AWB ${r.pickup_awb}` : ''}
                     </div>
+                    {r.status !== 'rejected' && (
+                      <div className="muted" style={{ marginTop: 2, fontSize: '.8rem' }}>
+                        {r.status === 'refunded' ? 'Refunded to' : 'Refund to'}: {returnRefundMethod(r)}
+                      </div>
+                    )}
+                    {r.status === 'rejected' && r.admin_note && (
+                      <div style={{ marginTop: 4, fontSize: '.85rem' }}>Reason: {r.admin_note}</div>
+                    )}
                     {r.status === 'refunded' && r.payout_proof && (
                       <div style={{ marginTop: 8 }}>
                         <span className="muted" style={{ fontSize: '.8rem' }}>Payment proof:</span>{' '}
@@ -215,5 +235,5 @@ const lbl = { display: 'block', fontWeight: 600, fontSize: '.85rem', margin: '14
 const inp = { width: '100%', border: '1px solid var(--line, #d7dce4)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.92rem', background: 'var(--bg, #fff)' };
 
 export default function ReturnsPage() {
-  return <AccountGate><ReturnsInner /></AccountGate>;
+  return <AccountGate><Suspense fallback={null}><ReturnsInner /></Suspense></AccountGate>;
 }

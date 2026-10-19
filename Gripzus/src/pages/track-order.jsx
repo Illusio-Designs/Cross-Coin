@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import PageHero from '../components/common/PageHero';
 import SeoWrapper from '../components/SeoWrapper';
 import { trackOrder } from '../services/orders';
+import { trackingStep, orderStatusLabel, isCancelledStatus, orderStatusNote, paymentSummary } from '../utils/orderStatus';
 
 const STEPS = [
   { key: 'placed',           label: 'Order Placed',         short: 'Placed' },
@@ -12,21 +13,21 @@ const STEPS = [
   { key: 'delivered',        label: 'Delivered',            short: 'Delivered' },
 ];
 
-/* Backend order status → stepper index. Mapped so the stage reflects the
-   REAL progress (an order that's only being prepared doesn't jump ahead to
-   "Out for Delivery"):
-     0 Placed      pending / placed / created / new
-     1 Confirmed   confirmed / accepted / processing
-     2 Dispatched  packed / dispatched / ready_to_ship / shipped / in_transit
-     3 On the way  out_for_delivery
-     4 Delivered   delivered / completed                                    */
-const STATUS_TO_STEP = {
-  pending: 0, placed: 0, created: 0, new: 0,
-  confirmed: 1, accepted: 1, processing: 1,
-  packed: 2, dispatched: 2, ready_to_ship: 2, shipped: 2, in_transit: 2,
-  out_for_delivery: 3, ofd: 3,
-  delivered: 4, completed: 4,
-};
+/* Backend order status → stepper index, via the shared trackingStep()
+   (-1 before confirmation, 0 Confirmed, 1 Packed, 2 Shipped, 3 Delivered).
+   Problem / return states keep the furthest step reached instead of falling
+   back to "Order Placed":
+     0 Placed      trackingStep -1
+     1 Confirmed   trackingStep 0
+     2 Dispatched  trackingStep 1, or 2 (shipped / in transit / delayed)
+     3 On the way  out for delivery
+     4 Delivered   trackingStep 3                                            */
+function stepForStatus(status) {
+  const t = trackingStep(status);
+  if (t === 3) return 4;
+  if (t === 2) return String(status || '').toLowerCase().replace(/_/g, ' ') === 'out for delivery' ? 3 : 2;
+  return Math.max(t + 1, 0);
+}
 
 // Order-item images are ImageKit assets. Absolute URLs pass through; relative
 // paths get the ImageKit endpoint (NOT the API host, which 404s on these paths).
@@ -115,7 +116,10 @@ function mapOrder(raw, fallbackId) {
     lineItems,
     total: Number(o.final_amount || o.total_amount || o.total || 0),
     paymentType: String(o.payment_type || o.paymentType || '').toUpperCase(),
-    paymentLabel: String(o.payment_type || '').toLowerCase() === 'cod' ? 'Cash on Delivery' : (String(o.payment_type || o.paymentType || '').toUpperCase() || '—'),
+    paymentLabel: o.payment_status
+      ? paymentSummary(o.payment_type || o.paymentType, o.payment_status)
+      : (String(o.payment_type || '').toLowerCase() === 'cod' ? 'Cash on Delivery' : (String(o.payment_type || o.paymentType || '').toUpperCase() || '—')),
+    statusNote: orderStatusNote(status, o.payment_type || o.paymentType),
     awb: o.tracking_number || src.tracking?.tracking_number || '',
     trackUrl: o.tracking_url || src.tracking?.tracking_url || '',
     shipTo,
@@ -160,8 +164,8 @@ export default function TrackOrderPage() {
     }
   }, [router.query.order, runTrack]);
 
-  const cancelled = data?.status === 'cancelled';
-  const activeStep = data && !cancelled ? (STATUS_TO_STEP[data.status] ?? 0) : -1;
+  const cancelled = isCancelledStatus(data?.status);
+  const activeStep = data && !cancelled ? stepForStatus(data.status) : -1;
   const progressPct = activeStep > 0 ? (activeStep / (STEPS.length - 1)) * 100 : 0;
 
   return (
@@ -216,9 +220,12 @@ export default function TrackOrderPage() {
                   <span className={`text-[10px] tracking-[0.3em] uppercase px-3 py-1.5 ${
                     cancelled ? 'bg-clay text-paper' : 'bg-ink text-paper'
                   }`}>
-                    {cancelled ? 'Cancelled' : (STEPS[activeStep]?.label || data.status)}
+                    {orderStatusLabel(data.status)}
                   </span>
                 </div>
+                {data.statusNote && (
+                  <p className="mt-5 border-l-2 border-ink bg-paper px-4 py-3 text-sm text-ink-soft">{data.statusNote}</p>
+                )}
               </section>
 
               {/* Stepper — hidden for cancelled orders */}

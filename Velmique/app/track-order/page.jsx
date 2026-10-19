@@ -10,6 +10,10 @@ import {
 import { trackOrder } from '@/lib/api/orders';
 import PageHeader from '@/components/layout/PageHeader';
 import SeoWrapper from '@/components/SeoWrapper';
+import {
+  orderStatusLabel, orderStatusTone, isCancelledStatus,
+  trackingStep, orderStatusNote, paymentSummary,
+} from '@/utils/orderStatus';
 
 const STEPS = [
   { key: 'placed',           label: 'Order Placed',         shortLabel: 'Placed' },
@@ -21,13 +25,19 @@ const STEPS = [
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 
+// Shared trackingStep(): -1 pre-confirmation, 0 Confirmed, 1 Packed,
+// 2 Shipped, 3 Delivered → this page's 5-step STEPS array. Shipped-stage
+// states that reached the doorstep (out for delivery / failed attempt) sit
+// on "Out for Delivery".
 function getStepIndex(orderData) {
-  const status = String(orderData?.order?.status || '').toLowerCase();
-  if (status === 'delivered') return 4;
-  if (status === 'out_for_delivery' || status === 'out for delivery') return 3;
-  if (['shipped', 'in_transit', 'in transit', 'processing', 'booked', 'pickup_initiated', 'manifested', 'dispatched'].includes(status)) return 2;
-  if (status === 'confirmed') return 1;
-  if (status === 'cancelled' || status === 'order cancelled') return -1;
+  const raw = orderData?.order?.status;
+  if (isCancelledStatus(raw)) return -1;
+  const s = String(raw || '').trim().toLowerCase().replace(/_/g, ' ');
+  const step = trackingStep(raw);
+  if (step === 3) return 4;
+  if (step === 2) return ['out for delivery', 'undelivered'].includes(s) ? 3 : 2;
+  if (step === 1) return 2;
+  if (step === 0) return 1;
   return 0;
 }
 
@@ -42,15 +52,15 @@ function fmtDateTime(v) {
   catch { return ''; }
 }
 
+const TONE_STYLE = {
+  ok:   { bg: '#16a34a', fg: '#fff' },
+  info: { bg: '#8F7548', fg: '#fff' },
+  warn: { bg: '#E6DED0', fg: '#49423A' },
+  bad:  { bg: '#dc2626', fg: '#fff' },
+};
+
 function statusBadge(status) {
-  const s = String(status || '').toLowerCase();
-  if (s === 'delivered')                 return { bg: '#16a34a',  fg: '#fff', label: 'Delivered' };
-  if (s === 'cancelled')                 return { bg: '#dc2626',  fg: '#fff', label: 'Cancelled' };
-  if (s === 'out_for_delivery')          return { bg: '#0ea5e9',  fg: '#fff', label: 'Out for Delivery' };
-  if (s === 'shipped' || s === 'dispatched' || s === 'in_transit') return { bg: '#8F7548', fg: '#fff', label: 'Shipped' };
-  if (s === 'confirmed')                 return { bg: '#B89A63',  fg: '#11100E', label: 'Confirmed' };
-  if (s === 'processing')                return { bg: '#E6DED0',  fg: '#49423A', label: 'Processing' };
-  return { bg: '#EFEAE2', fg: '#777168', label: status || 'Pending' };
+  return { ...(TONE_STYLE[orderStatusTone(status)] || TONE_STYLE.info), label: orderStatusLabel(status) };
 }
 
 function getTimeline(orderData) {
@@ -63,9 +73,9 @@ function getTimeline(orderData) {
     }));
   }
   const sh = orderData?.status_history;
-  const finalStatus = String(orderData?.order?.status || '').toLowerCase();
+  const finalStatus = orderData?.order?.status;
   if (Array.isArray(sh) && sh.length) {
-    const filtered = finalStatus !== 'cancelled'
+    const filtered = !isCancelledStatus(finalStatus)
       ? sh.filter(h => h.status !== 'cancelled')
       : sh;
     return [...filtered].reverse().map(h => ({
@@ -160,6 +170,7 @@ function TrackOrderInner() {
   const activeStep = data ? getStepIndex(data) : -1;
   const timeline   = data ? getTimeline(data) : [];
   const status     = statusBadge(data?.order?.status);
+  const statusNote = data ? orderStatusNote(data.order.status, data.order.payment_type) : '';
   const progressPct = activeStep > 0 ? (activeStep / (STEPS.length - 1)) * 100 : 0;
 
   return (
@@ -224,6 +235,12 @@ function TrackOrderInner() {
                 </span>
               </div>
             </section>
+
+            {statusNote && (
+              <div className="bg-[var(--surface)] border border-[var(--gold)]/40 border-l-2 border-l-[var(--gold)] text-[var(--ink)] text-sm font-body px-5 py-4">
+                {statusNote}
+              </div>
+            )}
 
             {/* Stepper */}
             <section className="bg-white border border-[var(--border)] p-5 md:p-8">
@@ -373,7 +390,9 @@ function TrackOrderInner() {
                 <h3 className="font-display text-[var(--ink)] uppercase tracking-tight text-2xl mb-5">Summary</h3>
 
                 <dl className="divide-y divide-[var(--border)]">
-                  <Row label="Method" value={data.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid'} />
+                  <Row label="Method" value={data.order.payment_status
+                    ? paymentSummary(data.order.payment_type, data.order.payment_status)
+                    : (data.order.payment_type === 'cod' ? 'Cash on Delivery' : 'Prepaid')} />
                   <Row label="AWB" value={data.order.tracking_number || data.tracking?.tracking_number || 'Not assigned'} mono />
                   <Row label="Total Amount" value={fmt(data.order.final_amount)} highlight />
                 </dl>

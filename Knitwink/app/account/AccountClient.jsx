@@ -11,6 +11,7 @@ import SeoWrapper from '@/components/SeoWrapper'
 import DeleteAccountSection from '@/components/account/DeleteAccountSection'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { queryKeys } from '@/lib/queryClient'
+import { orderStatusLabel, orderStatusTone, canCancelOrder, canRequestReturn, paymentSummary, orderStatusNote } from '@/utils/orderStatus'
 import { showError, toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
 
 const TABS = ['My Orders', 'Addresses', 'Account Details']
@@ -43,12 +44,15 @@ function formatDate(d) {
   catch { return '' }
 }
 
+const STATUS_TONE_STYLE = {
+  ok: { background: '#e8f5e9', color: '#2e7d32' },
+  info: { background: '#e8f4ff', color: '#1a5cb5' },
+  warn: { background: '#fff4e5', color: '#b45309' },
+  bad: { background: '#fce4ec', color: '#c62828' },
+}
+
 function getStatusStyle(status) {
-  const s = (status || '').toLowerCase()
-  if (s === 'delivered') return { background: '#e8f5e9', color: '#2e7d32' }
-  if (['shipped', 'processing', 'booked', 'confirmed'].includes(s)) return { background: '#e8f4ff', color: '#1a5cb5' }
-  if (s === 'cancelled') return { background: '#fce4ec', color: '#c62828' }
-  return { background: '#f3f4f6', color: '#555' }
+  return STATUS_TONE_STYLE[orderStatusTone(status)] || STATUS_TONE_STYLE.info
 }
 
 function getBrandStyle(brandName) {
@@ -245,6 +249,7 @@ export default function AccountClient() {
                   </div>
                 ) : orders.map(order => {
                   const sc = getStatusStyle(order.status)
+                  const note = orderStatusNote(order.status, order.payment_type)
                   return (
                     <div className="pf-order-card" key={order.id}>
                       <div className="pf-order-head">
@@ -257,7 +262,7 @@ export default function AccountClient() {
                             </span>
                           )}
                         </div>
-                        <span className="pf-order-status" style={sc}>{order.status?.replace(/_/g, ' ')}</span>
+                        <span className="pf-order-status" style={sc}>{orderStatusLabel(order.status)}</span>
                       </div>
                       {order.OrderItems?.map(item => (
                         <div className="pf-order-item" key={item.id}>
@@ -273,12 +278,21 @@ export default function AccountClient() {
                           <div className="pf-order-item-total">₹{parseFloat(item.subtotal || 0).toFixed(0)}</div>
                         </div>
                       ))}
+                      {note && (
+                        <div style={{ margin: '10px 0 0', padding: '8px 12px', borderRadius: '8px', background: '#fff4e5', color: '#8a4b08', fontSize: '12.5px' }}>{note}</div>
+                      )}
                       <div className="pf-order-foot">
-                        <span className="pf-order-total">Total: ₹{parseFloat(order.final_amount || 0).toFixed(0)}</span>
+                        <span className="pf-order-total">
+                          Total: ₹{parseFloat(order.final_amount || 0).toFixed(0)}
+                          <span style={{ fontWeight: 400, color: '#888', fontSize: '12px', marginLeft: '6px' }}>· {paymentSummary(order.payment_type, order.payment_status)}</span>
+                        </span>
                         <div className="pf-order-actions">
                           <Link href={`/track-order?order=${order.order_number}`} className="pf-btn-ghost">Track Order</Link>
                           {order.invoice_url && <a href={order.invoice_url} target="_blank" rel="noreferrer" className="pf-btn-ghost">Invoice</a>}
-                          {['pending', 'confirmed', 'processing'].includes(order.status) && (
+                          {canRequestReturn(order.status) && (
+                            <Link href={`/account/returns?order=${order.id}`} className="pf-btn-ghost">Return</Link>
+                          )}
+                          {canCancelOrder(order.status) && (
                             <button className="pf-btn-ghost" style={{ color: '#c62828', borderColor: '#c62828' }}
                               disabled={orderActionId === order.id}
                               onClick={() => setConfirmDialog({

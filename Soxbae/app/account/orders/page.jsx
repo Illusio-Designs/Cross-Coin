@@ -2,21 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
+import { orderStatusLabel, orderStatusTone, canRequestReturn } from '@/utils/orderStatus';
 
 function statusClass(s) {
-  const v = (s || '').toLowerCase();
-  if (v === 'delivered') return 'ok';
-  if (v === 'cancelled') return 'bad';
-  return 'pending';
+  const tone = orderStatusTone(s);
+  return tone === 'ok' || tone === 'bad' ? tone : 'pending';
 }
 
 function OrdersList() {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +31,13 @@ function OrdersList() {
   }, []);
 
   useEffect(() => { if (isAuthenticated) load(); }, [isAuthenticated, load]);
+
+  // The row itself is a link, so the Return action navigates without nesting <a> tags.
+  const goReturn = (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/account/returns?order=${id}`);
+  };
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
@@ -56,7 +64,14 @@ function OrdersList() {
                 <b>#{o.order_number}</b>
                 <span className="muted">{o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
               </div>
-              <span className={`order-status ${statusClass(o.status)}`}>{o.status}</span>
+              <span className={`order-status ${statusClass(o.status)}`}>{orderStatusLabel(o.status)}</span>
+              {canRequestReturn(o.status) && (
+                <span role="link" tabIndex={0} className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: 13 }}
+                  onClick={(e) => goReturn(e, o.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') goReturn(e, o.id); }}>
+                  Return
+                </span>
+              )}
               <b>₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
               <Icon name="ArrowRight" size={15} color="#6a7186" />
             </Link>

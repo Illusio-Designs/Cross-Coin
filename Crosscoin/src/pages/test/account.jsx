@@ -6,16 +6,13 @@ import TestLayout from '../../components/test/TestLayout';
 import { I, toast } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { useAuthed, signOut, fetchMe, fetchMyOrders, fetchMyAddresses } from '../../components/test/auth';
+import { orderStatusLabel, orderStatusTone, orderStatusNote, paymentSummary, canRequestReturn } from '../../utils/orderStatus';
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
 const initials = (n) => (n || 'You').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-const statusClass = (s) => {
-  const x = (s || '').toLowerCase();
-  if (x.includes('deliver')) return 'pill--ok';
-  if (x.includes('cancel')) return 'pill--no';
-  return 'pill--info';
-};
-const statusLabel = (s) => (s ? String(s).split(/[_\s]+/).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ') : 'Pending');
+// orderStatusTone → the Mint pill classes (no amber pill, so 'warn' shares the alert style).
+const TONE_PILL = { ok: 'pill--ok', info: 'pill--info', warn: 'pill--no', bad: 'pill--no' };
+const statusClass = (s) => TONE_PILL[orderStatusTone(s)] || 'pill--info';
 const TABS = [['orders', 'My Orders'], ['addr', 'Addresses'], ['acct', 'Account Details']];
 
 export default function TestAccount() {
@@ -105,12 +102,14 @@ export default function TestAccount() {
                   <div className="order" key={o.id || o.number}>
                     <div className="order__top">
                       <div><div className="order__no">{o.number}</div>{o.date && <div className="order__date">Placed {fmt(o.date)}</div>}</div>
-                      <span className={`pill ${statusClass(o.status)}`}>{statusLabel(o.status)}</span>
+                      <span className={`pill ${statusClass(o.status)}`}>{orderStatusLabel(o.status)}</span>
                     </div>
+                    <div className="order__date" style={{ marginTop: 6 }}>{paymentSummary(o.paymentType, o.paymentStatus)}</div>
+                    {orderStatusNote(o.status, o.paymentType) && <p className="mono" style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5, margin: '8px 0 0' }}>{orderStatusNote(o.status, o.paymentType)}</p>}
                     {o.items.length > 0 && <div className="order__items2">{o.items.map((it, i) => <span key={i} className="oitem2"><b>{it.name}</b>{it.variant ? ` · ${it.variant}` : ''} ×{it.qty}</span>)}</div>}
                     <div className="order__bot">
                       <div className="order__total">Total <b>{inr(o.total)}</b></div>
-                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`${R.track}?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button>{o.invoiceUrl && <a className="btn btn--sm" href={o.invoiceUrl} target="_blank" rel="noreferrer">Invoice</a>}<button className="btn btn--sm" onClick={() => router.push(R.returns)}>Return</button></div>
+                      <div className="order__acts"><button className="btn btn--sm" onClick={() => router.push(`${R.track}?order=${encodeURIComponent(o.number.replace('#', ''))}`)}>Track</button>{o.invoiceUrl && <a className="btn btn--sm" href={o.invoiceUrl} target="_blank" rel="noreferrer">Invoice</a>}{canRequestReturn(o.status) && o.id != null && <button className="btn btn--sm" onClick={() => router.push(`${R.returns}?order=${encodeURIComponent(o.id)}`)}>Return</button>}</div>
                     </div>
                   </div>
                 ))

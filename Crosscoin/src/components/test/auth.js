@@ -81,6 +81,8 @@ export async function fetchMyOrders() {
       number: o.order_number || o.orderNumber || o.number || `#${o.id ?? ''}`,
       date: o.createdAt || o.created_at || o.placed_at || '',
       status: o.status || o.order_status || o.current_status || 'pending',
+      paymentType: o.payment_type || o.paymentType || '',
+      paymentStatus: o.payment_status || o.paymentStatus || '',
       total: Number(o.final_amount ?? o.total_amount ?? o.total ?? o.grand_total ?? o.amount ?? 0),
       invoiceUrl: o.invoice_url || '',
       items: (o.OrderItems || o.items || o.order_items || []).map((it) => {

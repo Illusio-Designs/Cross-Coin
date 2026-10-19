@@ -10,14 +10,13 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses';
 import { toast } from '@/lib/toast';
+import { orderStatusLabel, orderStatusTone, isActiveOrder, canRequestReturn } from '@/utils/orderStatus';
 
 const EMPTY = { full_name: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India', is_default: false };
 
 function statusClass(s) {
-  const v = (s || '').toLowerCase();
-  if (v === 'delivered') return 'ok';
-  if (v === 'cancelled') return 'bad';
-  return 'pending';
+  const tone = orderStatusTone(s);
+  return tone === 'ok' || tone === 'bad' ? tone : 'pending';
 }
 
 function getInitials(name) {
@@ -30,8 +29,6 @@ function fmtDate(d) {
   try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
   catch { return ''; }
 }
-
-const ACTIVE_STATUSES = ['pending', 'processing', 'shipped', 'confirmed'];
 
 const TABS = [
   { label: 'My orders', icon: 'ShoppingBag' },
@@ -119,7 +116,7 @@ function Dashboard() {
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
   const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
-  const activeCount = orders.filter((o) => ACTIVE_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const activeCount = orders.filter((o) => isActiveOrder(o.status)).length;
   const points = Number(user?.loyalty_points || 0);
 
   return (
@@ -181,12 +178,15 @@ function Dashboard() {
                       <div className="acc-order-main">
                         <div className="acc-order-top">
                           <b className="acc-order-num">#{o.order_number}</b>
-                          <span className={`acc-badge ${statusClass(o.status)}`}>{o.status}</span>
+                          <span className={`acc-badge ${statusClass(o.status)}`}>{orderStatusLabel(o.status)}</span>
                         </div>
                         <span className="acc-order-date">{fmtDate(o.created_at)}</span>
                       </div>
                       <div className="acc-order-side">
                         <b className="acc-order-total">₹{Number(o.final_amount || o.total_amount || 0).toFixed(0)}</b>
+                        {canRequestReturn(o.status) && (
+                          <Link href={`/account/returns?order=${o.id}`} className="acc-order-link">Return</Link>
+                        )}
                         <Link href={`/account/orders/${o.id}`} className="acc-order-link">
                           View <Icon name="ArrowRight" size={14} />
                         </Link>

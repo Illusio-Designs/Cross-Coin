@@ -477,6 +477,7 @@ img, picture, video, canvas { max-width: 100%; display: block; }
 .acc-badge.delivered { background: var(--ink); color: var(--paper); }
 .acc-badge.cancelled { border: 1px solid var(--line); color: var(--ink-muted); }
 .acc-badge.active { background: var(--ink-soft); color: var(--paper); }
+.acc-badge.warn { border: 1px solid var(--ink); color: var(--ink); }
 .acc-order-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .acc-order-img { width: 56px; height: 56px; overflow: hidden; flex-shrink: 0; background: var(--paper-deep); border: 1px solid var(--line); }
 .acc-order-img img { width: 100%; height: 100%; object-fit: cover; }
