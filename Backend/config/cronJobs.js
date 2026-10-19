@@ -688,7 +688,7 @@ async function staleCleanup() {
 // run the same day would message the same customers twice.
 const JOBS = [
   { key: 'shipping-status-refresh', name: 'Courier status refresh', schedule: '6 am & 6 pm',
-    cron: '0 6,18 * * *', tz: null, mode: 'queue', queue: 'retry', lockMinutes: 60, run: shippingStatusRefresh },
+    cron: '0 6,18 * * *', tz: IST, mode: 'queue', queue: 'retry', lockMinutes: 60, run: shippingStatusRefresh },
   { key: 'pickup-batch', name: 'Courier booking batch', schedule: '11 am, retry 3 pm',
     cron: '0 11,15 * * *', tz: IST, mode: 'inline', run: releaseHeldPickups },
   { key: 'abandoned-cart', name: 'Abandoned cart messages', schedule: 'Every hour at :15', messagesCustomers: true,
@@ -696,7 +696,7 @@ const JOBS = [
   { key: 'abandoned-checkout', name: 'Checkout drop-off messages', schedule: 'Every 5 min', messagesCustomers: true,
     cron: '*/5 * * * *', tz: null, mode: 'queue', queue: 'once', run: abandonedCheckout },
   { key: 'payment-reconciliation', name: 'Payment reconciliation', schedule: 'Daily 3 am',
-    cron: '0 3 * * *', tz: null, mode: 'inline', run: paymentReconciliation },
+    cron: '0 3 * * *', tz: IST, mode: 'inline', run: paymentReconciliation },
   { key: 'stale-cleanup', name: 'Unpaid online order cleanup', schedule: 'Every 30 min (:10 and :40)',
     cron: '10,40 * * * *', tz: null, mode: 'queue', queue: 'once', run: staleCleanup },
   { key: 'product-alerts', name: 'Back in stock / price drop', schedule: 'Every 30 min, 9 am–9 pm', messagesCustomers: true,
@@ -710,13 +710,13 @@ const JOBS = [
   { key: 'upsell', name: 'After-delivery suggestions', schedule: 'Daily 3 pm', messagesCustomers: true,
     cron: '0 15 * * *', tz: IST, mode: 'queue', queue: 'once', run: upsell },
   { key: 'loyalty-expiry', name: 'Loyalty points expiry', schedule: 'Daily 2 am',
-    cron: '0 2 * * *', tz: null, mode: 'queue', queue: 'retry', run: loyaltyExpiry },
+    cron: '0 2 * * *', tz: IST, mode: 'queue', queue: 'retry', run: loyaltyExpiry },
   { key: 'badge-refresh', name: 'Product badges refresh', schedule: 'Daily 2:30 am',
     cron: '30 2 * * *', tz: IST, mode: 'inline', run: badgeRefresh },
   { key: 'reservation-cleanup', name: 'Stuck stock-hold cleanup', schedule: 'Every 5 min',
     cron: '*/5 * * * *', tz: null, mode: 'inline', run: reservationCleanup },
   { key: 'data-retention', name: 'Old data cleanup (privacy)', schedule: 'Daily 4 am',
-    cron: '0 4 * * *', tz: null, mode: 'inline', run: dataRetention },
+    cron: '0 4 * * *', tz: IST, mode: 'inline', run: dataRetention },
 ];
 
 const getJob = (key) => JOBS.find((j) => j.key === key) || null;

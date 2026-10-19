@@ -176,6 +176,12 @@ async function executeLocked(jobKey, fn, lock, { rethrow = false, triggeredBy = 
   const tag = outcome.status === 'failed' ? '❌' : outcome.status === 'partial' ? '⚠️' : '✅';
   (outcome.status === 'failed' ? console.error : console.log)(`${tag} [CRON] ${jobKey}: ${outcome.summary || outcome.status}${outcome.status === 'failed' && outcome.error ? ` — ${String(outcome.error).split('\n')[0]}` : ''}`);
   try { await recordRun(row); } catch (e) { logger.warn(`[jobs] could not record run of ${jobKey}: ${e.message}`); }
+  if (outcome.status === 'failed') {
+    // Same Telegram alert path as other server errors (deduped there).
+    try {
+      require('./errorReporter.js').report('Scheduled job failed', new Error(`${jobKey}: ${outcome.summary || ''}`), { job: jobKey }).catch(() => {});
+    } catch { /* alerts are best-effort */ }
+  }
   pruneOldRuns();
   if (thrown && rethrow) throw thrown;
   return row;

@@ -37,7 +37,7 @@
 .sh-name:focus-visible { outline: 2px solid var(--ds-color-info); outline-offset: 3px; border-radius: 4px; }
 .sh-tag { margin: 4px 0 0 20px; font-size: 11px; color: var(--ds-color-text-muted); }
 
-.sh-result { white-space: normal; min-width: 230px; }
+.sh-result { white-space: normal; min-width: 230px; max-width: 360px; }
 .sh-result-in { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .sh-sum { font-size: 12.5px; color: var(--ds-color-text-muted); overflow-wrap: anywhere; }
 .sh-late { margin-top: 5px; font-size: 11.5px; font-weight: 600; color: var(--ds-color-danger); }
