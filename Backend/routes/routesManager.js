@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware.js');
 const { optionalBrand } = require('../middleware/brandMiddleware.js');
 
 // ── Core resources ────────────────────────────────────────────────────────
@@ -45,7 +46,6 @@ router.use('/whatsapp',           require('./whatsappRoutes.js'));
 router.use('/admin/loyalty',      optionalBrand, require('./adminLoyaltyRoutes.js'));
 router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
 router.use('/admin',              require('./brandRoutes.js'));
-router.use('/admin',              require('./brandAssignmentRoutes.js'));
 router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));
 router.use('/reports',            require('./reportsRoutes.js'));
 router.use('/order-status-history', optionalBrand, require('./orderStatusHistoryRoutes.js'));
@@ -53,7 +53,6 @@ router.use('/order-status-history', optionalBrand, require('./orderStatusHistory
 // ── Integrations ──────────────────────────────────────────────────────────
 router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
 router.use('/facebook-catalog',   require('../integration/facebookCatalog.js'));
-router.use('/analytics',          require('../integration/dashboardAnalytics.js'));
 
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
@@ -70,17 +69,11 @@ router.use('/', require('./trackRedirectRoutes.js'));
 // ── SEO admin (health summary, bulk product SEO editor) ───────────────────
 router.use('/', require('./seoAdminRoutes.js'));
 
-// ── Anonymous, cookieless pageview counter ────────────────────────────────
-// Increments an aggregate (brand, day, channel) count for EVERY visitor — no
-// cookie, no consent, no personal data stored — so the traffic report can show
-// real visit volume next to the consent-gated utm_tracking funnel.
-router.post('/public/pageview', optionalBrand, require('../controller/pageviewController.js').recordPageview);
-
-// ── Neutral-path aliases for the first-party trackers ──────────────────────
-// Ad-blockers / privacy extensions block request paths containing "utm",
-// "track" and "pageview", which silently drops desktop attribution. These
-// opaque paths carry the SAME handlers so blocked visitors are still captured.
-// Old paths (/api/utm/track, /api/public/pageview) stay for backward compat.
+// ── First-party trackers (opaque paths) ────────────────────────────────────
+// Anonymous, cookieless counters. Ad-blockers block request paths containing
+// "utm", "track" and "pageview", so these opaque paths are the ONLY tracking
+// URLs: /i/pv increments the aggregate (brand, day, channel) pageview count,
+// /i/s records the consent-gated UTM touch.
 router.post('/i/s', optionalBrand, require('../controller/utmController.js').trackUTM);
 router.post('/i/pv', optionalBrand, require('../controller/pageviewController.js').recordPageview);
 
@@ -221,7 +214,7 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
 // /order/add.json (auth redacted), iThink's raw reply, the resolved
 // pickup_address_id, and the field issues we detected. Use it right after a
 // failed Sync to see WHY iThink said "Some error occured".
-router.get('/ithink-last-booking', optionalBrand, async (req, res) => {
+router.get('/ithink-last-booking', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
     try {
         const brandId = Number(req.query.brand_id) || req.brandId || 1;
         const factory = require('../services/shippingProviderFactory');
@@ -246,7 +239,7 @@ router.get('/ithink-last-booking', optionalBrand, async (req, res) => {
 // pickup location. If it returns empty/error, that ID is not on the account —
 // which is exactly what makes /order/add.json fail with "Some error occured"
 // even though we send the ID. No secrets exposed.
-router.get('/ithink-warehouse', optionalBrand, async (req, res) => {
+router.get('/ithink-warehouse', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
     try {
         const brandId = Number(req.query.brand_id) || req.brandId || 1;
         const settingsHelper = require('../services/settingsHelper');
@@ -280,7 +273,7 @@ router.get('/ithink-warehouse', optionalBrand, async (req, res) => {
 //   account's rate-check returns, so a courier-code mismatch is obvious. It does
 //   NOT send by default. Add ?send=1 to actually POST and see iThink's response
 //   (only do that on a failing order — a success would create a shipment).
-router.get('/ithink-booking-probe/:orderNumber', optionalBrand, async (req, res) => {
+router.get('/ithink-booking-probe/:orderNumber', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
     try {
         const { Order } = require('../model/orderModel.js');
         const { OrderItem } = require('../model/orderItemModel.js');
@@ -358,7 +351,7 @@ router.get('/ithink-booking-probe/:orderNumber', optionalBrand, async (req, res)
 // couriers (with cod/prepaid support + live rate), which are eligible for this
 // order's payment mode, and the cheapest one it would book. This is the real
 // response to check why an order booked (or was flagged "not serviceable").
-router.get('/ithink-serviceability/:orderNumber', optionalBrand, async (req, res) => {
+router.get('/ithink-serviceability/:orderNumber', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
     try {
         const { Order } = require('../model/orderModel.js');
         const { OrderItem } = require('../model/orderItemModel.js');
@@ -438,7 +431,7 @@ router.get('/ithink-serviceability/:orderNumber', optionalBrand, async (req, res
 // Fires every candidate domestic endpoint with the brand's real credentials and
 // returns each raw reply + how many couriers our extractor finds in it. Use this
 // to confirm the correct endpoint before we switch checkServiceability over.
-router.get('/ithink-serviceability-debug', optionalBrand, async (req, res) => {
+router.get('/ithink-serviceability-debug', isAuthenticated, isAdmin, optionalBrand, async (req, res) => {
     try {
         const settingsHelper = require('../services/settingsHelper');
         let brandId = Number(req.query.brand_id) || req.brandId || 1;

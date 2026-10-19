@@ -32,7 +32,7 @@ function istDay() {
   return new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
 }
 
-// POST /api/public/pageview  — body: { utm_source?, utm_medium?, referrer?, path? }
+// POST /api/i/pv  — body: { utm_source?, utm_medium?, referrer?, path? }
 // Brand comes from the X-Brand-Name header (optionalBrand middleware). Fires for
 // EVERY visitor (consent not required) because nothing identifying is stored.
 exports.recordPageview = async (req, res) => {

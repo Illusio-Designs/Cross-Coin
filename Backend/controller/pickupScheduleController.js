@@ -25,15 +25,6 @@ exports.setPickupSchedule = async (req, res) => {
   }
 };
 
-// GET /api/pickup-schedule/next — the next allowed pickup date.
-exports.getNextPickupDate = async (req, res) => {
-  try {
-    res.json({ success: true, nextDate: await svc.getNextPickupDate() });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
 // GET /api/pickup-schedule/affected?from=YYYY-MM-DD&to=YYYY-MM-DD
 // Orders that are ALREADY booked (have an AWB, still awaiting pickup) whose
 // courier pickup would fall inside the given date range — i.e. the ones a new

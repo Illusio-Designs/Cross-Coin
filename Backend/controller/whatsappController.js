@@ -203,16 +203,6 @@ exports.backfillCustomerNames = async () => {
   return updated;
 };
 
-// POST /api/whatsapp/reattribute-brands — admin trigger for the backfill above.
-exports.reattributeBrandsHandler = async (req, res) => {
-  try {
-    const updated = await exports.reattributeBrands();
-    res.json({ success: true, updated });
-  } catch (err) {
-    res.status(500).json({ success: false, message: errMsg(err) });
-  }
-};
-
 // ─── Webhook: verify (GET) ────────────────────────────────────────────────────
 exports.verifyWebhook = (req, res) => {
   const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'crosscoin_wa_verify';
@@ -697,96 +687,6 @@ exports.updateTemplate = async (req, res) => {
     if (!name) return res.status(400).json({ success: false, message: 'Template name is required' });
     const result = await whatsappService.updateTemplate(name, brandId);
     res.json({ success: true, result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: errMsg(err) });
-  }
-};
-
-// ─── Customer contact (website widget — takes phone, sends WA message) ───────
-exports.customerContact = async (req, res) => {
-  try {
-    const { phone, message, name, brandId = 1 } = req.body;
-    if (!phone?.trim()) return res.status(400).json({ success: false, message: 'Phone number is required' });
-    if (!message?.trim()) return res.status(400).json({ success: false, message: 'Message is required' });
-
-    // This endpoint is PUBLIC (storefront "chat with us" widget), so it must not
-    // become an open relay. Two protections:
-    //  1) Per-IP rate limit (the per-target 10/hour cap in sendTextMessage only
-    //     throttles spam to ONE victim, not a blast across rotating numbers).
-    //  2) We send only a FIXED brand acknowledgement — never the caller-supplied
-    //     text — so the verified business number can't be used to deliver
-    //     attacker-chosen phishing to arbitrary people. The customer's own
-    //     message is still stored as inbound so staff see it in the inbox.
-    try {
-      const redisService = require('../services/redisService.js');
-      const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || req.socket?.remoteAddress || 'unknown';
-      const key = `wa:contact:ip:${ip}`;
-      const n = await redisService.incr(key);
-      if (typeof n === 'number') {
-        if (n === 1) await redisService.expire(key, 3600);
-        if (n > 5) return res.status(429).json({ success: false, message: 'Too many requests. Please try again later.' });
-      }
-    } catch (_) { /* Redis down — fall through, per-target cap still applies */ }
-
-    const customerText = String(message).trim().slice(0, 1000); // cap stored length
-
-    // FIXED acknowledgement — no caller content echoed to the recipient.
-    // Brand is required locally here: it is NOT imported at module scope, so the
-    // previous bare `Brand.findByPk` threw ReferenceError (swallowed by the
-    // catch) and every brand's widget reply fell back to the generic "our team".
-    const Brand = require('../model/brandModel.js');
-    let storeName = 'our team';
-    try { const b = await Brand.findByPk(brandId); storeName = b?.display_name || b?.name || storeName; } catch (_) {}
-    const ackText = `Hi${name && String(name).trim() ? ' ' + String(name).trim().slice(0, 40) : ''}! 👋 Thanks for reaching out to ${storeName}. We've received your message and our team will reply here shortly.`;
-    const result = await whatsappService.sendTextMessage(phone.trim(), ackText, brandId);
-    if (result?.rate_limited) {
-      return res.status(429).json({ success: false, message: 'Please try again in a little while.' });
-    }
-
-    const normalizedPhone = whatsappService.formatE164(phone.trim()).replace('+', '');
-
-    // Fall back to the customer's order/guest name when the widget didn't pass one.
-    const widgetName = name?.trim() || await resolveCustomerNameByPhone(normalizedPhone);
-
-    // Save conversation in DB so it appears in dashboard inbox (one thread per
-    // customer — shared number).
-    const [conv, created] = await WhatsappConversation.findOrCreate({
-      where: { customer_phone: normalizedPhone },
-      defaults: {
-        brand_id:        brandId,
-        customer_name:   widgetName,
-        wa_contact_id:   normalizedPhone,
-        last_message:    customerText,
-        last_message_at: new Date(),
-        unread_count:    1,
-        status:          'open',
-      },
-    });
-
-    if (!created) {
-      await conv.update({
-        last_message:    customerText,
-        last_message_at: new Date(),
-        unread_count:    WhatsappConversation.sequelize.literal('unread_count + 1'),
-        customer_name:   conv.customer_name || widgetName,
-        status:          'open',
-      });
-    }
-
-    // Save the CUSTOMER's own message as inbound so staff see it in the inbox
-    // (the outbound ack above is a fixed brand greeting, not stored here).
-    await WhatsappMessage.create({
-      conversation_id: conv.id,
-      wa_message_id:   result?.messages?.[0]?.id || null,
-      direction:       'inbound',
-      type:            'text',
-      body:            customerText,
-      status:          'received',
-      sent_at:         new Date(),
-    });
-
-    logger.info(`WhatsApp widget contact [${phone}]: ${message.trim()}`);
-    res.json({ success: true, message: 'Message sent to your WhatsApp successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }

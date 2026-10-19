@@ -133,9 +133,10 @@ app.use(cors(corsOptions));
 // Strict routes
 app.use('/api/users/login', strictLimiter);
 app.use('/api/users/register', strictLimiter);
-app.use('/api/orders/checkout', strictLimiter);
-app.use('/api/checkout/send-otp', strictLimiter);
-app.use('/api/checkout/verify-otp', strictLimiter);
+// OTP endpoints burn SMS/WhatsApp credits, so both mounts of checkoutRoutes
+// (/api/auth and /api/checkout) get the strict limiter.
+app.use('/api/auth/otp', strictLimiter);
+app.use('/api/checkout/otp', strictLimiter);
 app.use('/api/checkout/initiate', strictLimiter);
 app.use('/api/checkout/retry', strictLimiter);
 app.use('/api/checkout/guest/initiate', strictLimiter);
@@ -389,20 +390,6 @@ app.post('/api/client-errors', (req, res) => {
         logger.warn(`[client-error:${e.kind || 'unknown'}] ${msg} | ${e.href || ''} | ${ua}`);
     } catch { /* never throw from a logging endpoint */ }
     res.status(204).end();
-});
-
-// CORS debug endpoint
-app.get('/api/v1/cors-test', (req, res) => {
-    res.json({
-        success: true,
-        message: 'CORS is working correctly',
-        origin: req.headers.origin || 'No origin header',
-        timestamp: new Date().toISOString(),
-        headers: {
-            'access-control-allow-origin': res.getHeader('access-control-allow-origin'),
-            'access-control-allow-credentials': res.getHeader('access-control-allow-credentials')
-        }
-    });
 });
 
 // Root endpoint for basic connectivity test

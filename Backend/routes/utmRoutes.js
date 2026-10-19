@@ -9,7 +9,5 @@ const { optionalBrand } = require('../middleware/brandMiddleware.js');
 router.post('/track', optionalBrand, utmController.trackUTM);
 
 // Admin routes - get analytics
-router.get('/analytics', isAuthenticated, isAdmin, utmController.getUTMAnalytics);
-router.get('/all', isAuthenticated, isAdmin, utmController.getAllUTMData);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const express = require('express');
 const {
     register, login, adminLogin, logout,
-    forgotPassword, resetPassword, verifyEmail,
+    forgotPassword, resetPassword,
     getCurrentUser, getProfile, updateProfile, updateUser,
     updatePassword, changePassword, deleteUser, exportMyData,
     getAllUsers, getStaffUsers, getGuestUsers, refreshToken, upload, updateUserRole, createStaffUser,
@@ -61,7 +61,6 @@ router.post('/admin/login', zValidateBody(adminLoginSchema), adminLogin);
 router.post('/logout', logout);
 router.post('/forgot-password', zValidateBody(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', zValidateBody(resetPasswordSchema), resetPassword);
-router.get('/verify-email/:token', verifyEmail);
 
 // Protected
 router.get('/me', isAuthenticated, getCurrentUser);

@@ -34,24 +34,6 @@ exports.recordConsent = async (req, res) => {
   }
 };
 
-// GET /api/consent/me — the current visitor's latest consent record, so the
-// account / banner can reflect what's on file. By user when logged in, else
-// by session cookie.
-exports.getMyConsent = async (req, res) => {
-  try {
-    const where = {};
-    if (req.user?.id) where.user_id = req.user.id;
-    else if (req.cookies?.session_id) where.session_id = req.cookies.session_id;
-    else return res.json({ consent: null });
-
-    const row = await ConsentLog.findOne({ where, order: [['created_at', 'DESC']] });
-    res.json({ consent: row });
-  } catch (err) {
-    logger.error('getMyConsent error:', err);
-    res.json({ consent: null });
-  }
-};
-
 // GET /api/consent/user/:id — admin: a user's full consent history.
 exports.getUserConsentHistory = async (req, res) => {
   try {

@@ -191,16 +191,6 @@ async function sendBrowserPixelEvent(req, body = {}) {
 
 const router = express.Router();
 
-router.post('/send-event', async (req, res) => {
-  try {
-    const { eventName, order, extraData } = req.body;
-    await sendFacebookEvent(eventName, order, extraData);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // Browser → CAPI relay. Always answers 200 so a tracking hiccup never surfaces
 // as an error in the storefront (analytics must never break the shopping flow).
 router.post('/track', async (req, res) => {

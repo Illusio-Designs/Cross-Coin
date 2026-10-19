@@ -919,27 +919,6 @@ module.exports.logout = async (req, res) => {
     }
 };
 
-// Add missing verifyEmail function
-module.exports.verifyEmail = async (req, res) => {
-    try {
-        const { token } = req.params;
-        const user = await User.findOne({ where: { verificationToken: token } });
-
-        if (!user) {
-            return res.status(400).json({ message: 'Invalid verification token' });
-        }
-
-        user.isVerified = true;
-        user.verificationToken = null;
-        await user.save();
-
-        res.json({ message: 'Email verified successfully' });
-    } catch (error) {
-        logger.error('Email verification error:', error);
-        res.status(500).json({ message: 'Failed to verify email', error: error.message });
-    }
-};
-
 // Add missing changePassword function
 module.exports.changePassword = async (req, res) => {
     try {

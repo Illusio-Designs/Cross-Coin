@@ -80,19 +80,6 @@ exports.capture = async (req, res) => {
   }
 };
 
-// Public: POST /api/abandoned-cart/recovered — the shopper completed checkout,
-// so never message them. Best-effort; also called server-side on order success.
-exports.recovered = async (req, res) => {
-  try {
-    const brandId = req.brandId || parseInt(req.body.brandId, 10) || 1;
-    await module.exports.markRecovered(brandId, req.body.phone);
-    return res.json({ success: true });
-  } catch (err) {
-    logger.error('Abandoned-cart recovered error: ' + err.message);
-    return res.status(500).json({ success: false });
-  }
-};
-
 // Admin: GET /api/admin/abandoned-carts — list + summary stats for the
 // dashboard. Optional ?brandId= and ?status= filters, ?limit= (max 500).
 exports.adminList = async (req, res) => {

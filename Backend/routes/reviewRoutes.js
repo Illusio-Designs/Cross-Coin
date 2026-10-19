@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const {
     createReview, getProductReviews, getReview,
-    updateReview, deleteReview, moderateReview, deleteReviewImage,
+    deleteReview, moderateReview, deleteReviewImage,
     getAllReviews, getPublicProductReviews, createPublicReview, getAllPublicReviews,
     bulkUploadReviews
 } = require('../controller/reviewController.js');
@@ -41,9 +41,5 @@ router.put('/admin/:reviewId/moderate', authenticate, isOrderManager, moderateRe
 router.delete('/admin/:reviewId',   authenticate, isOrderManager, deleteReview);
 router.delete('/admin/images/:imageId', authenticate, isOrderManager, deleteReviewImage);
 
-// User
-router.get('/:reviewId',           authenticate, getReview);
-router.put('/:reviewId',           authenticate, updateReview);
-router.delete('/:reviewId',       authenticate, deleteReview);
 
 module.exports = router;

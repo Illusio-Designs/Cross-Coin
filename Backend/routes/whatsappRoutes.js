@@ -20,10 +20,8 @@ router.get('/webhook', ctrl.verifyWebhook);
 router.post('/webhook', verifyWebhookSignature('whatsapp'), ctrl.receiveWebhook);
 
 // ── Customer contact (public — website chat widget) ───────────────────────────
-router.post('/customer/contact', ctrl.customerContact);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
-router.post('/reattribute-brands', isAuthenticated, isAdmin, ctrl.reattributeBrandsHandler);
 router.get('/stats', isAuthenticated, isWhatsappManager, ctrl.getStats);
 router.get('/stats/sla', isAuthenticated, isWhatsappManager, ctrl.getSLAStats);
 
