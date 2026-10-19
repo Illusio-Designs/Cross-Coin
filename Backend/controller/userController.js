@@ -497,9 +497,12 @@ module.exports.forgotPassword = async (req, res) => {
 // **Reset Password**
 module.exports.resetPassword = async (req, res) => {
     try {
-        const { resetToken, password, confirmPassword } = req.body;
+        // The route schema normalises the body to { token, newPassword, confirmPassword? }.
+        const resetToken = req.body.token || req.body.resetToken;
+        const password = req.body.newPassword || req.body.password;
+        const confirmPassword = req.body.confirmPassword || password;
 
-        if (!resetToken || !password || !confirmPassword) {
+        if (!resetToken || !password) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
@@ -811,7 +814,7 @@ module.exports.getGuestUsers = async (req, res) => {
 module.exports.getProfile = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id, {
-            attributes: { exclude: ['password'] }
+            attributes: { exclude: ['password', 'resetToken', 'resetTokenExpiry', 'refreshToken', 'refreshTokenExpiry'] }
         });
 
         if (!user || user.deleted_at) {

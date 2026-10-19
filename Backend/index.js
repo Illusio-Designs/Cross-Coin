@@ -504,7 +504,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v24';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v25';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1349,6 +1349,9 @@ const startServer = async () => {
         // Separate mobile slider artwork + blog card thumbnail (both optional).
         await ensureColumn('sliders', 'mobile_image', 'mobile_image VARCHAR(1000) NULL');
         await ensureColumn('blog_posts', 'thumbnail_image', 'thumbnail_image VARCHAR(1000) NULL');
+        // Forgot-password tokens were never stored (the columns didn't exist).
+        await ensureColumn('users', 'resetToken', 'resetToken VARCHAR(512) NULL');
+        await ensureColumn('users', 'resetTokenExpiry', 'resetTokenExpiry DATETIME NULL');
         await ensureIndex('guest_users', 'idx_gu_phone_hash', 'phone_hash');
         await ensureIndex('shipping_addresses', 'idx_sa_phone_hash', 'phone_hash');
         try {

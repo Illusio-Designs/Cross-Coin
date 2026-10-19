@@ -79,6 +79,17 @@ const User = sequelize.define('User', {
         allowNull: true,
         field: 'source_brand_id',
         comment: 'Brand from which the user first registered'
+    },
+    // Forgot-password link (15-minute JWT), cleared once used.
+    resetToken: {
+        type: DataTypes.STRING(512),
+        allowNull: true,
+        defaultValue: null
+    },
+    resetTokenExpiry: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: true,

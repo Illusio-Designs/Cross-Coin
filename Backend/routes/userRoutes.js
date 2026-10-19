@@ -44,14 +44,23 @@ const forgotPasswordSchema = z.object({
   email: zSchemas.email,
 });
 
-const resetPasswordSchema = z.object({
+// Stores send { token, password }, the Dashboard sends { token, newPassword,
+// confirmPassword }; older clients used resetToken. Normalise to one shape.
+const resetPasswordSchema = z.preprocess((raw) => {
+  const v = raw && typeof raw === 'object' ? raw : {};
+  return {
+    token: v.token ?? v.resetToken,
+    newPassword: v.newPassword ?? v.password,
+    confirmPassword: v.confirmPassword || undefined,
+  };
+}, z.object({
   token: z.string().min(10, 'Reset token is invalid'),
   newPassword: zSchemas.password,
   confirmPassword: zSchemas.password.optional(),
 }).refine((v) => !v.confirmPassword || v.confirmPassword === v.newPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
-});
+}));
 
 // Public
 router.post('/register', validateBody(schemas.register), register);
