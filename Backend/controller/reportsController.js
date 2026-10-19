@@ -156,44 +156,58 @@ exports.getBrandTraffic = async (req, res) => {
       hitsByChannel.set(r.channel, (hitsByChannel.get(r.channel) || 0) + h);
     }
 
-    // Where ALL visitors come from (across brands) + how each source converts.
-    // Orders are matched back to the visit via orders.utm_tracking_id.
-    const sourceRows = await sequelize.query(
-      `SELECT COALESCE(u.utm_source,'direct') AS source,
-              COALESCE(u.utm_medium,'none')   AS medium,
-              COUNT(DISTINCT u.session_id)     AS sessions,
-              COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders
-       FROM utm_tracking u
-       LEFT JOIN orders o ON o.utm_tracking_id = u.id
-       WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFiltU}
-       GROUP BY source, medium
-       ORDER BY sessions DESC`,
-      { replacements: repl, type: QueryTypes.SELECT }
-    );
-
-    // Campaign-level breakdown (source / medium / campaign) — replaces the old
-    // standalone UTM Analytics page. Uses the SAME authoritative rules as the
-    // channel/source tables above (DISTINCT tracked sessions, orders & revenue
-    // from NON-CANCELLED orders matched via orders.utm_tracking_id), so these
-    // numbers reconcile with the headline Orders/Revenue instead of the old
-    // UTM page's inflated counts (which included cancelled orders).
-    const campaignRows = await sequelize.query(
-      `SELECT COALESCE(u.utm_source,'direct')   AS source,
+    // Visits and orders per source/campaign. Visits = tracked sessions that
+    // STARTED in the window; orders = orders PLACED in the window, credited to
+    // the visit that led to them (orders.utm_tracking_id) even when that ad
+    // click happened before the window. They used to come from one join keyed
+    // on the visit date, which (a) counted orders placed after the window
+    // because their visit fell inside it and (b) pushed in-window orders from
+    // earlier clicks into "untracked" — so a date range showed old orders and
+    // the channels didn't reconcile with the headline Orders.
+    const KEY_COLS = `COALESCE(u.utm_source,'direct')   AS source,
               COALESCE(u.utm_medium,'none')     AS medium,
               COALESCE(u.utm_campaign,'none')   AS campaign,
               COALESCE(u.utm_term,'none')       AS adset,
               COALESCE(u.utm_content,'none')    AS ad,
-              COALESCE(u.utm_creative,'none')   AS creative,
-              COUNT(DISTINCT u.session_id)       AS sessions,
-              COUNT(DISTINCT CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.id END) AS orders,
-              COALESCE(SUM(CASE WHEN o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END), 0) AS revenue
+              COALESCE(u.utm_creative,'none')   AS creative`;
+    const visitRows = await sequelize.query(
+      `SELECT ${KEY_COLS}, COUNT(DISTINCT u.session_id) AS sessions
        FROM utm_tracking u
-       LEFT JOIN orders o ON o.utm_tracking_id = u.id
        WHERE u.created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFiltU}
-       GROUP BY source, medium, campaign, adset, ad, creative
-       ORDER BY revenue DESC, orders DESC, sessions DESC`,
+       GROUP BY source, medium, campaign, adset, ad, creative`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
+    const orderRows = await sequelize.query(
+      `SELECT ${KEY_COLS}, COUNT(DISTINCT o.id) AS orders, COALESCE(SUM(o.final_amount), 0) AS revenue
+       FROM orders o
+       JOIN utm_tracking u ON u.id = o.utm_tracking_id
+       WHERE o.created_at BETWEEN :start AND :end
+         AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))${hasBrand ? ' AND o.brand_id = :brandId' : ''}
+       GROUP BY source, medium, campaign, adset, ad, creative`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+    const campKey = (r) => [r.source, r.medium, r.campaign, r.adset, r.ad, r.creative].join('\u0001');
+    const campMap = new Map();
+    for (const r of visitRows) campMap.set(campKey(r), { ...r, sessions: Number(r.sessions) || 0, orders: 0, revenue: 0 });
+    for (const r of orderRows) {
+      const k = campKey(r);
+      const row = campMap.get(k) || { ...r, sessions: 0 };
+      row.orders = Number(r.orders) || 0;
+      row.revenue = Number(r.revenue) || 0;
+      campMap.set(k, row);
+    }
+    const campaignRows = [...campMap.values()]
+      .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders || b.sessions - a.sessions);
+
+    // Same data rolled up to source / medium for the channel tables.
+    const srcMap = new Map();
+    for (const r of campaignRows) {
+      const k = r.source + '\u0001' + r.medium;
+      const row = srcMap.get(k) || { source: r.source, medium: r.medium, sessions: 0, orders: 0 };
+      row.sessions += r.sessions; row.orders += r.orders;
+      srcMap.set(k, row);
+    }
+    const sourceRows = [...srcMap.values()].sort((a, b) => b.sessions - a.sessions || b.orders - a.orders);
 
     const sessMap = new Map(sessions.map((r) => [r.brand_id, Number(r.sessions)]));
     const ordMap = new Map(orders.map((r) => [r.brand_id, r]));
@@ -262,7 +276,7 @@ exports.getBrandTraffic = async (req, res) => {
         orders: ordersN,
         delivered,
         revenue: Math.round(revenue),
-        conversion_rate: s > 0 ? Number(((ordersN / s) * 100).toFixed(2)) : 0, // visit → order
+        conversion_rate: s > 0 ? Number(((ordersN / s) * 100).toFixed(2)) : null, // visit → order
         aov: ordersN > 0 ? Math.round(revenue / ordersN) : 0,
         stages,
         channels: [...(chanByBrand.get(b.id) || new Map())]
@@ -282,7 +296,7 @@ exports.getBrandTraffic = async (req, res) => {
       { sessions: 0, views: 0, carts: 0, checkouts: 0, orders: 0, delivered: 0, revenue: 0 }
     );
     totals.allVisits = totalHits; // anonymous real visits across the shown brands
-    totals.conversion_rate = totals.sessions > 0 ? Number(((totals.orders / totals.sessions) * 100).toFixed(2)) : 0;
+    totals.conversion_rate = totals.sessions > 0 ? Number(((totals.orders / totals.sessions) * 100).toFixed(2)) : null;
     totals.aov = totals.orders > 0 ? Math.round(totals.revenue / totals.orders) : 0;
     totals.stages = [
       { key: 'sessions', label: 'Visits', count: totals.sessions },
@@ -316,7 +330,7 @@ exports.getBrandTraffic = async (req, res) => {
         allVisits: hitsByChannel.get(name) || 0, // anonymous real visits in this channel
         share: Number(((g.sessions / totalSrcSessions) * 100).toFixed(2)),
         orders: g.orders,
-        conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : 0,
+        conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : null,
       };
     })
       // Show only channels that actually have data in the window (Shopify hides
@@ -368,7 +382,7 @@ exports.getBrandTraffic = async (req, res) => {
         source: cleanSource(r.source), medium: r.medium, sessions: sess,
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
-        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
+        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : null,
       };
     }).slice(0, 25);
 
@@ -386,7 +400,7 @@ exports.getBrandTraffic = async (req, res) => {
         share: Number(((sess / totalSrcSessions) * 100).toFixed(2)),
         orders: ord,
         revenue: Math.round(Number(r.revenue) || 0),
-        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : 0,
+        conversion_rate: sess > 0 ? Number(((ord / sess) * 100).toFixed(2)) : null,
       };
     }).slice(0, 200);
 
@@ -429,9 +443,12 @@ exports.getBrandTraffic = async (req, res) => {
     splitAcc.Direct.revenue += campUntrackedRev;
     const trafficSplit = ['Paid', 'Organic', 'Direct'].map((type) => {
       const a = splitAcc[type];
+      // Conversion only from orders tied to a tracked visit — untracked orders
+      // (folded into Direct) have no visit, so they'd push Direct over 100%.
+      const tracked = a.orders - (type === 'Direct' ? campUntracked : 0);
       return {
         type, sessions: a.sessions, orders: a.orders, revenue: Math.round(a.revenue),
-        conversion_rate: a.sessions > 0 ? Number(((a.orders / a.sessions) * 100).toFixed(2)) : null,
+        conversion_rate: a.sessions > 0 ? Number(((tracked / a.sessions) * 100).toFixed(2)) : null,
       };
     });
 
