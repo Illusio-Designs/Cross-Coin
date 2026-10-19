@@ -346,7 +346,11 @@ module.exports.approveReturn = async (req, res) => {
     }
 
     // resolve the live refundable payment for this order
-    const payment = await Payment.findOne({ where: { order_id: order.id, status: 'paid' }, order: [['createdAt', 'DESC']] });
+    // Gateway payments are stored as 'successful' / 'completed' — the enum has
+    // no 'paid' value, so matching on it sent every prepaid return down the
+    // manual UPI-proof path instead of the automatic gateway refund.
+    const { Op } = require('sequelize');
+    const payment = await Payment.findOne({ where: { order_id: order.id, status: { [Op.in]: ['successful', 'completed'] } }, order: [['createdAt', 'DESC']] });
     const isPrepaid = payment && payment.transaction_id && String(payment.transaction_id).startsWith('pay_');
 
     if (isPrepaid) {

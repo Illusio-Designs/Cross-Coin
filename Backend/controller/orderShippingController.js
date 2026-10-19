@@ -791,6 +791,11 @@ module.exports.getShippingTrackingForOrder = async (req, res) => {
         .status(404)
         .json({ message: "Order or waybill not found" });
     }
+    // Shoppers may only track their own orders; staff may track any.
+    const { hasAnyRole, STAFF_ROLES } = require("../middleware/authMiddleware.js");
+    if (!hasAnyRole(req.user, STAFF_ROLES) && order.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     const { service: provider, name: providerName } = await resolveProviderForOrder(order);
     const tracking = await provider.getShipmentStatus(order.shipping_waybill);
     res.json({ tracking, provider: providerName });
@@ -812,6 +817,11 @@ module.exports.getShippingLabelForOrder = async (req, res) => {
       return res
         .status(404)
         .json({ message: "Order or waybill not found" });
+    }
+    // Labels carry the full delivery address — staff only, or the order owner.
+    const { hasAnyRole, STAFF_ROLES } = require("../middleware/authMiddleware.js");
+    if (!hasAnyRole(req.user, STAFF_ROLES) && order.user_id !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
     }
     const { service: provider, name: providerName } = await resolveProviderForOrder(order);
     const labelData = await provider.getShippingLabel(order.shipping_waybill);

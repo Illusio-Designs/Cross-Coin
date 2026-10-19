@@ -151,6 +151,24 @@ exports.syncCollection = async (req, res) => {
 exports.orderWebhook = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
+
+    // The provider sends this webhook unsigned, so never trust the body alone:
+    // anyone who finds the URL could otherwise create "paid" orders and drain
+    // stock. Confirm the order really exists at the provider by fetching it
+    // with our signed credentials before ingesting anything.
+    const claimedId = String(req.body?.platform_order_id || req.body?.order_id || '').trim();
+    if (!claimedId) return res.status(400).json({ ok: false, message: 'platform_order_id is required' });
+    try {
+      const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
+      const d = confirmed?.data || confirmed;
+      if (!d || (Array.isArray(d) && !d.length)) {
+        throw new Error('order not found at provider');
+      }
+    } catch (verifyErr) {
+      logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
+      return res.status(401).json({ ok: false, message: 'Order could not be verified with the checkout provider' });
+    }
+
     const result = await svc.ingestCheckoutOrder(brandId, req.body || {});
     res.json({ ok: true, ...result });
   } catch (err) {

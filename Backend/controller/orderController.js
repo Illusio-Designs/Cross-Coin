@@ -2074,6 +2074,14 @@
         return res.status(404).json({ message: "Order not found" });
       }
 
+      // Shoppers may only read their own orders; staff may read any. Order IDs
+      // are sequential, so without this check any logged-in user could read
+      // another customer's name, phone and address.
+      const { hasAnyRole, STAFF_ROLES } = require("../middleware/authMiddleware.js");
+      if (!hasAnyRole(req.user, STAFF_ROLES) && order.user_id !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       res.json(order);
     } catch (error) {
       logger.error("Error fetching order:", error);
@@ -2140,17 +2148,20 @@
       if (!reason || !reason.trim()) {
         return res.status(400).json({ message: 'Cancellation reason is required' });
       }
+      // Verify ownership BEFORE cancelling — IDs are sequential, so checking
+      // after the fact let any logged-in user cancel someone else's order.
+      const { hasAnyRole, STAFF_ROLES } = require('../middleware/authMiddleware.js');
+      const found = await Order.findByPk(req.params.id);
+      if (!found) return res.status(404).json({ message: 'Order not found' });
+      if (!hasAnyRole(req.user, STAFF_ROLES) && found.user_id !== req.user.id) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
       const orderService = require('../services/orderService.js');
       const order = await orderService.cancelOrder(req.params.id, {
         reason,
         cancelledBy: req.user.id,
         isAdmin: false,
       });
-      // Verify ownership
-      const found = await Order.findByPk(req.params.id);
-      if (found && found.user_id !== req.user.id) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
       res.json({ success: true, message: 'Order cancelled successfully', order });
     } catch (error) {
       const status = error.message.includes('Cannot cancel') ? 400 : 500;

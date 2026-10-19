@@ -54,7 +54,7 @@ const Payment = sequelize.define(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM("pending", "successful", "failed", "refunded", "cancelled", "refund_pending", "completed"),
+      type: DataTypes.ENUM("pending", "successful", "failed", "refunded", "cancelled", "refund_pending", "completed", "partial_refund"),
       defaultValue: "pending",
     },
     payment_gateway: {

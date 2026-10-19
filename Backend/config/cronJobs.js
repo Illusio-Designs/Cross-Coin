@@ -98,6 +98,20 @@ function initializeCronJobs() {
   };
   cron.schedule('0 11,15 * * *', releaseHeldPickups, { timezone: 'Asia/Kolkata' });
 
+  // Leaked stock-reservation cleanup — every 5 minutes. Abandoned checkouts
+  // let their reservation session expire, but the stock:reserved counter has
+  // no TTL, so without this sweep popular items drift into phantom
+  // "out of stock" while the DB still has inventory.
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const { cleanupLeakedReservations } = require('../services/stockReservationService.js');
+      const { corrected } = await cleanupLeakedReservations();
+      if (corrected > 0) console.log(`⏰ [CRON] reservation cleanup corrected ${corrected} leaked counter(s)`);
+    } catch (e) {
+      console.error('❌ [CRON] reservation cleanup error:', e.message);
+    }
+  });
+
   // Loyalty points expiry — daily at 2 AM
   cron.schedule('0 2 * * *', () => {
     console.log('\n⏰ [CRON] enqueue cron:loyalty-expiry at:', new Date().toISOString());

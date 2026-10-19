@@ -65,13 +65,17 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       throw new Error(`Refund not allowed for orders in "${order.status}" status`);
     }
 
-    // Calculate refund amount
-    const refundAmount = amount ? parseFloat(amount) : parseFloat(payment.amount_paid);
-    if (refundAmount <= 0 || refundAmount > parseFloat(payment.amount_paid)) {
-      throw new Error(`Invalid refund amount: ₹${refundAmount}. Max: ₹${payment.amount_paid}`);
+    // Calculate refund amount — in RUPEES from here on. Every refundable
+    // payment row (Razorpay 'pay_…' and CustomCheckout) stores amount_paid in
+    // PAISE; reading it as rupees made every full refund request 100x the
+    // money, so Razorpay rejected it and orders stuck at refund_pending.
+    const paidRupees = Math.abs(parseFloat(payment.amount_paid) || 0) / 100;
+    const refundAmount = amount ? parseFloat(amount) : paidRupees;
+    if (refundAmount <= 0 || refundAmount > paidRupees + 0.01) {
+      throw new Error(`Invalid refund amount: ₹${refundAmount}. Max: ₹${paidRupees.toFixed(2)}`);
     }
 
-    const isPartial = refundAmount < parseFloat(payment.amount_paid);
+    const isPartial = refundAmount < paidRupees - 0.01;
 
     // Call the gateway's refund API (provider for custom checkout, else Razorpay)
     let refundId, refundStatus;
@@ -125,7 +129,8 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       payment_type: 'razorpay',
       transaction_id: refundId,
       razorpay_order_id: payment.razorpay_order_id,
-      amount_paid: -refundAmount,
+      // Store in paise like every other gateway payment row.
+      amount_paid: -Math.round(refundAmount * 100),
       status: 'refunded',
       notes: `Refund for order ${order.order_number}: ${reason}`,
       brand_id: brandId,
