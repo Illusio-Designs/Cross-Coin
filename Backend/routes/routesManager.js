@@ -63,6 +63,8 @@ router.use('/analytics',          require('../integration/dashboardAnalytics.js'
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
 router.use('/', optionalBrand, require('./bundleRoutes.js'));
+// Custom Checkout (Shiprocket-Checkout-compatible catalog + token + orders)
+router.use('/custom-checkout', optionalBrand, require('./customCheckoutRoutes.js'));
 router.use('/', optionalBrand, require('./abandonedCartRoutes.js'));
 
 // ── WhatsApp button redirects (/track/:orderNumber, /shop/:brandId) ───────
