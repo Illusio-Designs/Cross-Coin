@@ -1,36 +1,39 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { getPublicCoupons } from '@/lib/api/orders';
 import { ik } from '@/lib/imagekit';
 
+const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const check = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
 );
 
 export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [] }) {
-  const { addToCart, setCartOpen } = useStore();
-  const router = useRouter();
+  const { addToCart, openCheckout } = useStore();
 
   // Build selectable options from real variations. Each variation has a size +
   // price + image; fall back to a single synthetic option for simple products.
   const options = useMemo(() => {
     const vs = (product.variations || []).filter(Boolean);
     if (!vs.length) {
-      return [{ id: product.defaultVariationId || product.id, label: product.sizes?.[0] || 'One Size', price: product.price, image: product.images?.[0] || '' }];
+      return [{ id: product.defaultVariationId || product.id, label: product.sizes?.[0] || 'One Size', price: product.price, image: product.images?.[0] || '', inStock: product.inStock !== false, stock: null }];
     }
     return vs.map((v) => ({
       id: v.id,
       label: v.size || v.sku || 'Default',
       price: v.price,
       image: v.images?.[0]?.url || product.images?.[0] || '',
+      inStock: v.inStock !== false,
+      stock: Number.isFinite(v.stock) ? v.stock : null,
     }));
   }, [product]);
 
-  const [selVar, setSelVar] = useState(0);
+  // Start on the default (first in-stock) variation, not blindly the first.
+  const [selVar, setSelVar] = useState(() => Math.max(0, options.findIndex((o) => String(o.id) === String(product.defaultVariationId))));
   const [qty, setQty] = useState(1);
   const [packIdx, setPackIdx] = useState(0);
   const opt = options[selVar] || options[0];
@@ -53,9 +56,9 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const scentOpts = useMemo(() => {
     if (!isMix) return [];
     return [
-      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label },
-      ...scents.filter((s) => String(s.id) !== String(product.id)).slice(0, 8).map((s) => ({
-        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '',
+      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label, slug: product.slug },
+      ...scents.filter((s) => String(s.id) !== String(product.id) && s.inStock !== false).slice(0, 8).map((s) => ({
+        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '', slug: s.slug,
       })),
     ];
   }, [isMix, product.id, product.name, opt, scents]);
@@ -91,6 +94,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     price: Math.round(unitPrice * 100) / 100,
     size: opt.label,
     image: opt.image,
+    slug: product.slug,
     quantity: lineQty,
   });
 
@@ -108,12 +112,31 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         price: Math.round(o.price * 100) / 100,
         size: o.size || '',
         image: o.image,
+        slug: o.slug,
         quantity: 1,
         ...(mixCount > 1 ? { packGroup: 'byp' } : {}),
       });
     });
   };
-  const add = () => { if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line()); };
+  // The selected size must be in stock (a mix pack only needs one ticked scent).
+  const soldOut = !opt.inStock;
+  const add = () => {
+    if (soldOut) return false;
+    if (isMix) { if (!mixCount) return false; addMix(); } else addToCart(line());
+    return true;
+  };
+
+  // Prepaid offer ribbon over Buy now — the brand's real prepaid-only coupon,
+  // else the configured instant prepaid discount; nothing when neither exists.
+  const [prepaidOffer, setPrepaidOffer] = useState(PREPAID_INSTANT_DISCOUNT_INR > 0 ? `₹${PREPAID_INSTANT_DISCOUNT_INR} off on prepaid` : '');
+  useEffect(() => {
+    let alive = true;
+    getPublicCoupons().then((list) => {
+      const c = (list || []).find((x) => x?.code && x.paymentModeRestriction === 'prepaid');
+      if (alive && c) setPrepaidOffer(`Prepaid: use ${c.code}`);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // Sticky buy-now bar: appears once the main buy area scrolls out of view.
   const buyRef = useRef(null);
@@ -125,11 +148,8 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  const buy = () => {
-    if (isMix) { if (!mixCount) return; addMix(); } else addToCart(line());
-    setCartOpen(false);
-    router.push('/checkout');
-  };
+  // Buy now: add, then open the bag straight on delivery & payment.
+  const buy = () => { if (add()) openCheckout(); };
 
   return (
     <>
@@ -138,8 +158,8 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           <div className="m-opt__h">Select Size</div>
           <div className="m-sizes">
             {options.map((o, i) => (
-              <button key={o.id} type="button" className={`m-size ${i === selVar ? 'on' : ''}`} onClick={() => setSelVar(i)}>
-                <b>{o.label}</b><span>{inr(o.price)}</span>
+              <button key={o.id} type="button" aria-pressed={i === selVar} className={`m-size ${i === selVar ? 'on' : ''} ${o.inStock ? '' : 'is-out'}`} onClick={() => setSelVar(i)}>
+                <b>{o.label}</b><span>{o.inStock ? inr(o.price) : 'Sold out'}</span>
               </button>
             ))}
           </div>
@@ -176,7 +196,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
       {isMix && scentOpts.length > 1 && (
         <div className="m-opt">
-          <div className="m-opt__h m-byph">Build Your Pack <small>— tick any scents</small><Link href="/test/pack" className="m-byph__all">View all →</Link></div>
+          <div className="m-opt__h m-byph">Build Your Pack <small>— tick any scents</small><Link href="/pack" className="m-byph__all">View all →</Link></div>
           <div className="m-bypgrid">
             {scentOpts.map((o, i) => {
               const on = picked.has(i);
@@ -228,21 +248,22 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
             <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => q + 1)}>+</button>
           </div>
         )}
-        <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add} disabled={isMix && !mixCount}>
-          {isMix
+        <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add} disabled={soldOut || (isMix && !mixCount)}>
+          {soldOut ? 'Sold out' : isMix
             ? (mixCount ? `Add ${mixCount} to cart · ${inr(mixTotal)}` : 'Tick a scent to start')
             : `Add to cart · ${inr(lineTotal)}`}
         </button>
       </div>
-      <div className="m-prepaidchip">PREPAID10</div>
-      <button type="button" className="m-btn m-buynow" onClick={buy}>Buy now</button>
+      {opt.inStock && opt.stock != null && opt.stock > 0 && opt.stock <= 5 ? <p className="m-lowstock">Only {opt.stock} left in {opt.label}</p> : null}
+      {prepaidOffer ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
+      <button type="button" className="m-btn m-buynow" onClick={buy} disabled={soldOut || (isMix && !mixCount)}>Buy now</button>
 
       {barOn && (
         <div className="m-buynowbar">
           <div className="m-wrap m-buynowbar__in">
             <span className="m-buynowbar__n"><b>{product.name}</b><small>{opt.label}</small></span>
             <span className="m-buynowbar__p">{inr(isMix ? (mixCount ? mixTotal : Number(opt.price) || 0) : lineTotal)}</span>
-            <button type="button" className="m-btn m-btn--fill m-buynowbar__cta" onClick={add} disabled={isMix && !mixCount}>Add to cart</button>
+            <button type="button" className="m-btn m-btn--fill m-buynowbar__cta" onClick={add} disabled={soldOut || (isMix && !mixCount)}>{soldOut ? 'Sold out' : 'Add to cart'}</button>
           </div>
         </div>
       )}

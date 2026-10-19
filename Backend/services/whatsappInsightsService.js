@@ -6,13 +6,15 @@
 // Schema: this service owns a few additive columns and creates them lazily,
 // once per process, in ensureSchema() (guarded CREATE TABLE IF NOT EXISTS /
 // information_schema checks + ALTER ADD — never destructive):
-//   whatsapp_settings               key/value JSON store shared with the automations page
-//   whatsapp_messages.sent_by       staff user id that sent a reply (analytics "by team member")
-//   whatsapp_messages.auto_kind     'away' | 'order_status' | 'opt_out' for our own automatic replies
-//   whatsapp_messages.error_code    Meta error code of a failed send
-//   whatsapp_messages.error_text    Meta error title of a failed send
+//   whatsapp_settings                key/value JSON store (same definition as index.js v27)
+//   whatsapp_messages.automation_key which automatic message produced a row; ours are
+//                                    'away_message' | 'order_status_reply' | 'opt_out_confirm'
+//   whatsapp_messages.sent_by        staff user id that sent a reply (analytics "by team member")
+//   whatsapp_messages.error_reason   readable reason for a failed send
 //   whatsapp_messages index on createdAt (every report here windows on it)
-//   abandoned_carts.link_opened_at  first time the recovery link was opened
+//   abandoned_carts.link_opened_at   first time the recovery link was opened
+// The whatsapp_messages columns are also created by index.js (v27); the guards
+// here only matter if this code runs before that migration has.
 //
 // Times are stored in UTC (Sequelize default); every day/hour bucket here is
 // computed in IST (UTC+05:30).
@@ -57,14 +59,13 @@ async function _ensureSchema() {
   const cols = await q(
     `SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
-        AND ((TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME IN ('sent_by','auto_kind','error_code','error_text'))
+        AND ((TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME IN ('sent_by','automation_key','error_reason'))
           OR (TABLE_NAME = 'abandoned_carts' AND COLUMN_NAME = 'link_opened_at'))`);
   const have = new Set(cols.map((r) => `${r.t}.${r.c}`));
   const msgAdds = [];
   if (!have.has('whatsapp_messages.sent_by')) msgAdds.push('ADD COLUMN sent_by INT NULL');
-  if (!have.has('whatsapp_messages.auto_kind')) msgAdds.push('ADD COLUMN auto_kind VARCHAR(20) NULL');
-  if (!have.has('whatsapp_messages.error_code')) msgAdds.push('ADD COLUMN error_code INT NULL');
-  if (!have.has('whatsapp_messages.error_text')) msgAdds.push('ADD COLUMN error_text VARCHAR(255) NULL');
+  if (!have.has('whatsapp_messages.automation_key')) msgAdds.push('ADD COLUMN automation_key VARCHAR(64) NULL');
+  if (!have.has('whatsapp_messages.error_reason')) msgAdds.push('ADD COLUMN error_reason VARCHAR(255) NULL');
   if (msgAdds.length) await exec(`ALTER TABLE whatsapp_messages ${msgAdds.join(', ')}`);
   if (!have.has('abandoned_carts.link_opened_at')) {
     try {
@@ -174,8 +175,8 @@ async function brandMap() {
 // Rows of whatsapp_messages that count as a person on our team answering the
 // customer: not our own automatic replies, not an automated template (unless a
 // staff member sent it from the inbox — then sent_by is set), not failed.
-const HUMAN_OUT_SQL = `direction = 'outbound' AND auto_kind IS NULL AND status <> 'failed' AND (sent_by IS NOT NULL OR type <> 'template')`;
-const isHumanOut = (m) => m.direction === 'outbound' && !m.auto_kind && m.status !== 'failed' && (m.sent_by != null || m.type !== 'template');
+const HUMAN_OUT_SQL = `direction = 'outbound' AND automation_key IS NULL AND status <> 'failed' AND (sent_by IS NOT NULL OR type <> 'template')`;
+const isHumanOut = (m) => m.direction === 'outbound' && !m.automation_key && m.status !== 'failed' && (m.sent_by != null || m.type !== 'template');
 const isCustomerIn = (m) => m.direction === 'inbound' && m.type !== 'reaction';
 
 // ─── Sales from WhatsApp ──────────────────────────────────────────────────────
@@ -237,7 +238,7 @@ async function getAnalytics({ days: rawDays, brandId: rawBrand } = {}) {
   const brandSql = brandId ? 'AND c.brand_id = :brandId' : '';
 
   const [msgs, prevRows, waitingRows, brands, sales] = await Promise.all([
-    q(`SELECT m.id, m.conversation_id AS cid, m.direction, m.type, m.status, m.createdAt AS at, m.sent_by, m.auto_kind, c.brand_id
+    q(`SELECT m.id, m.conversation_id AS cid, m.direction, m.type, m.status, m.createdAt AS at, m.sent_by, m.automation_key, c.brand_id
          FROM whatsapp_messages m JOIN whatsapp_conversations c ON c.id = m.conversation_id
         WHERE m.createdAt >= :from AND m.createdAt < :to ${brandSql}
         ORDER BY m.conversation_id, m.id`, { from, to, brandId }),
@@ -846,14 +847,23 @@ async function recordSendFailure(messageId, errors) {
     await ensureSchema();
     const e = Array.isArray(errors) && errors.length ? errors[0] : (errors && typeof errors === 'object' ? errors : null);
     const code = e && Number(e.code) ? Number(e.code) : null;
-    const text = e ? String(e.title || e.message || e.error_data?.details || '').slice(0, 255) || null : null;
-    await exec('UPDATE whatsapp_messages SET error_code = :code, error_text = :text WHERE id = :id', { id: messageId, code, text });
+    const title = e ? String(e.title || e.message || e.error_data?.details || '') : '';
+    const reason = describeFailure(code, title) || (code ? `WhatsApp error ${code}` : null);
+    if (!reason) return;
+    await exec('UPDATE whatsapp_messages SET error_reason = :reason WHERE id = :id', { id: messageId, reason: reason.slice(0, 255) });
   } catch (err) {
     logger.warn('[wa-insights] recordSendFailure failed: ' + err.message);
   }
 }
 
-const AUTO_LABEL = { away: 'Away message', order_status: 'Order status reply', opt_out: 'Opt-out confirmation' };
+const AUTO_KEYS = { away: 'away_message', order_status: 'order_status_reply', opt_out: 'opt_out_confirm' };
+const AUTO_LABEL = { away_message: 'Away message', order_status_reply: 'Order status reply', opt_out_confirm: 'Opt-out confirmation' };
+// 'order_shipped' → 'Order shipped', 'broadcast:12' → 'Broadcast'.
+function automationLabel(key) {
+  if (!key) return null;
+  const base = String(key).split(':')[0].replace(/_v\d+$/, '').replace(/_/g, ' ').trim();
+  return base ? base[0].toUpperCase() + base.slice(1) : null;
+}
 
 async function getFailed({ hours: rawHours, brandId: rawBrand } = {}) {
   await ensureSchema();
@@ -861,7 +871,7 @@ async function getFailed({ hours: rawHours, brandId: rawBrand } = {}) {
   const brandId = parseBrandId(rawBrand);
   const since = new Date(Date.now() - hours * HOUR);
   const rows = await q(
-    `SELECT m.id, m.conversation_id, m.type, m.body, m.createdAt AS at, m.error_code, m.error_text, m.auto_kind,
+    `SELECT m.id, m.conversation_id, m.type, m.body, m.createdAt AS at, m.error_reason, m.automation_key, m.template_name,
             c.customer_name, c.customer_phone, c.brand_id, c.opted_out
        FROM whatsapp_messages m JOIN whatsapp_conversations c ON c.id = m.conversation_id
       WHERE m.createdAt >= :since AND m.direction = 'outbound' AND m.status = 'failed'
@@ -875,10 +885,11 @@ async function getFailed({ hours: rawHours, brandId: rawBrand } = {}) {
       try { const j = JSON.parse(snippet); snippet = j.caption || j.text || j.filename || ''; } catch (_) { /* keep */ }
     }
     snippet = snippet.replace(/\s+/g, ' ').trim();
-    const kind = r.auto_kind ? AUTO_LABEL[r.auto_kind] || 'Automatic reply'
-      : r.type === 'template' ? 'Template' : r.type === 'text' ? 'Reply' : `${r.type[0].toUpperCase()}${r.type.slice(1)}`;
+    const kind = AUTO_LABEL[r.automation_key] || automationLabel(r.automation_key)
+      || (r.type === 'template' ? (r.template_name ? `Template ${r.template_name}` : 'Template')
+        : r.type === 'text' ? 'Reply' : `${r.type[0].toUpperCase()}${r.type.slice(1)}`);
     const who = r.customer_name || maskPhone(r.customer_phone) || 'Customer';
-    const reason = describeFailure(r.error_code, r.error_text)
+    const reason = (r.error_reason && (describeFailure(null, r.error_reason) || r.error_reason))
       || (Number(r.opted_out) ? 'Customer opted out' : 'WhatsApp didn’t say why');
     return {
       id: r.id,
@@ -888,7 +899,7 @@ async function getFailed({ hours: rawHours, brandId: rawBrand } = {}) {
       customer_name: r.customer_name || null,
       phone_masked: maskPhone(r.customer_phone),
       brand: brands.get(Number(r.brand_id)) || null,
-      error_code: r.error_code || null,
+      automation_key: r.automation_key || null,
       reason,
       at: toDate(r.at),
     };
@@ -1044,37 +1055,59 @@ const _autoLocks = new Set();
 
 async function recentAuto(convId, kind, sinceMs) {
   const rows = await q(
-    'SELECT id FROM whatsapp_messages WHERE conversation_id = :cid AND auto_kind = :kind AND createdAt >= :since LIMIT 1',
-    { cid: convId, kind, since: new Date(Date.now() - sinceMs) });
+    'SELECT id FROM whatsapp_messages WHERE conversation_id = :cid AND automation_key = :key AND createdAt >= :since LIMIT 1',
+    { cid: convId, key: AUTO_KEYS[kind], since: new Date(Date.now() - sinceMs) });
   return rows.length > 0;
 }
 
-// Saves our automatic reply in the chat FIRST (so a concurrent inbound sees it
-// and doesn't send a second one), then sends it and writes the outcome back.
+// Sends one of our automatic replies and makes sure it shows in the chat,
+// tagged with its automation_key (that tag is also what the once-per-12h /
+// once-per-hour limits look for). whatsappService.sendTextMessage already saves
+// automatic texts to the chat, so tag that row; only when it didn't (older
+// sender, or a stub in tests) insert our own row.
 async function sendAutoText(conv, text, kind, sendText) {
-  const now = new Date();
-  const [insertId] = await exec(
-    `INSERT INTO whatsapp_messages (conversation_id, wa_message_id, direction, type, body, status, sent_at, auto_kind, createdAt, updatedAt)
-     VALUES (:cid, NULL, 'outbound', 'text', :body, 'sent', :now, :kind, :now, :now)`,
-    { cid: conv.id, body: text, now, kind });
-  const rowId = typeof insertId === 'number' ? insertId : insertId?.insertId;
+  const key = AUTO_KEYS[kind];
+  const started = new Date(Date.now() - 2000);
+  let result = null;
+  let error = null;
   try {
-    const result = await sendText(conv.customer_phone, text, Number(conv.brand_id) || 1);
-    if (result && result.rate_limited) {
-      await exec(`UPDATE whatsapp_messages SET status = 'failed', error_text = :t WHERE id = :id`,
-        { id: rowId, t: 'Hourly limit of 10 messages to this customer reached' });
-      return { sent: false, messageId: rowId, error: 'rate_limited' };
+    result = await sendText(conv.customer_phone, text, Number(conv.brand_id) || 1);
+  } catch (e) { error = e; }
+  const waId = result?.messages?.[0]?.id || null;
+  let failed = null;
+  if (result && result.rate_limited) failed = 'Hourly limit of 10 messages to this customer reached';
+  else if (error) {
+    const ws = require('./whatsappService.js');
+    failed = String((typeof ws.metaError === 'function' ? ws.metaError(error) : error.message) || 'Send failed').slice(0, 255);
+  }
+  try {
+    const found = await q(
+      `SELECT id, status FROM whatsapp_messages
+        WHERE conversation_id = :cid AND direction = 'outbound' AND createdAt >= :started
+          AND ${waId ? 'wa_message_id = :waId' : 'body = :text'}
+        ORDER BY id DESC LIMIT 1`, { cid: conv.id, started, waId, text });
+    let rowId;
+    if (found[0]) {
+      rowId = found[0].id;
+      await exec(`UPDATE whatsapp_messages SET automation_key = :key${failed ? ", status = 'failed', error_reason = COALESCE(error_reason, :failed)" : ''} WHERE id = :id`,
+        { id: rowId, key, failed });
+    } else {
+      const now = new Date();
+      const [ins] = await exec(
+        `INSERT INTO whatsapp_messages (conversation_id, wa_message_id, direction, type, body, status, sent_at, automation_key, error_reason, createdAt, updatedAt)
+         VALUES (:cid, :waId, 'outbound', 'text', :text, :status, :now, :key, :failed, :now, :now)`,
+        { cid: conv.id, waId, text, status: failed ? 'failed' : 'sent', now, key, failed });
+      rowId = typeof ins === 'number' ? ins : ins?.insertId;
     }
-    const waId = result?.messages?.[0]?.id || null;
-    if (waId) await exec('UPDATE whatsapp_messages SET wa_message_id = :waId WHERE id = :id', { id: rowId, waId }).catch(() => {});
-    await exec('UPDATE whatsapp_conversations SET last_message = :text, last_message_at = :now WHERE id = :cid',
-      { text: text.slice(0, 1000), now: new Date(), cid: conv.id }).catch(() => {});
-    return { sent: true, messageId: rowId, waMessageId: waId };
+    if (!failed) {
+      await exec('UPDATE whatsapp_conversations SET last_message = :text, last_message_at = :now WHERE id = :cid',
+        { text: text.slice(0, 1000), now: new Date(), cid: conv.id });
+    }
+    if (failed) logger.warn(`[wa-insights] ${key} to conversation ${conv.id} failed: ${failed}`);
+    return { sent: !failed, messageId: rowId, waMessageId: waId, error: failed };
   } catch (e) {
-    await exec(`UPDATE whatsapp_messages SET status = 'failed', error_text = :t WHERE id = :id`,
-      { id: rowId, t: String(e.message || 'send failed').slice(0, 255) }).catch(() => {});
-    logger.warn(`[wa-insights] ${kind} reply to conversation ${conv.id} failed: ${e.message}`);
-    return { sent: false, messageId: rowId, error: e.message };
+    logger.warn(`[wa-insights] could not save ${key} in conversation ${conv.id}: ${e.message}`);
+    return { sent: !failed, messageId: null, waMessageId: waId, error: failed };
   }
 }
 

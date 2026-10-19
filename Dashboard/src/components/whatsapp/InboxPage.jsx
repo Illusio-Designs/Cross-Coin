@@ -1190,7 +1190,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                         {uploadingMedia ? <span className="wib-spin" aria-hidden="true" /> : <HugeiconsIcon icon={Attachment01Icon} size={18} strokeWidth={2} aria-hidden="true" />}
                       </button>
                       <button type="submit" className="wib-send" disabled={!reply.trim()}>
-                        <HugeiconsIcon icon={SentIcon} size={16} strokeWidth={2} aria-hidden="true" /> Send
+                        <HugeiconsIcon icon={SentIcon} size={16} strokeWidth={2} aria-hidden="true" /> <span>Send</span>
                       </button>
                     </div>
                   </form>

@@ -10,6 +10,50 @@ function errMsg(err) {
   return err?.response?.data?.error?.message || err?.message || 'Unknown error';
 }
 
+// `brandId` query/body param: absent, '', 'all' or 0 → null (= all brands).
+// One WhatsApp number serves every brand, so "no brand" must never silently
+// mean brand 1.
+function brandParam(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  if (!s || s === 'all' || s === '0') return null;
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// WhatsApp's 24-hour customer-service window: free-form messages are only
+// delivered within 24 h of the customer's last message.
+async function replyWindow(conv) {
+  const { sequelize } = require('../config/db.js');
+  const [row] = await sequelize.query(
+    `SELECT MAX(createdAt) AS at FROM whatsapp_messages WHERE conversation_id = :id AND direction = 'inbound'`,
+    { replacements: { id: conv.id }, type: require('sequelize').QueryTypes.SELECT });
+  const fromMsgs = row?.at ? new Date(row.at) : null;
+  const fromConv = conv.last_inbound_at ? new Date(conv.last_inbound_at) : null;
+  const last = fromMsgs && fromConv ? (fromMsgs > fromConv ? fromMsgs : fromConv) : (fromMsgs || fromConv);
+  const closesAt = last ? new Date(last.getTime() + WINDOW_MS) : null;
+  return { open: !!closesAt && closesAt > new Date(), closesAt, lastInboundAt: last };
+}
+
+function windowClosedResponse(res, win) {
+  return res.status(409).json({
+    success: false,
+    code: 'WINDOW_CLOSED',
+    message: 'It has been more than 24 hours since this customer last wrote, so WhatsApp only allows an approved template. Send a template instead.',
+    window_closes_at: win.closesAt,
+    last_inbound_at: win.lastInboundAt,
+  });
+}
+
+// Stamp a staff reply on the conversation (inbox "waiting" + SLA first response).
+function staffReplyUpdate(conv, preview) {
+  const now = new Date();
+  const upd = { last_message: preview, last_message_at: now, last_reply_at: now };
+  if (!conv.first_response_at) upd.first_response_at = now;
+  return upd;
+}
+
 // Shared-number mode: one verified WhatsApp number serves every brand, so we
 // can't tell the brand from the number. Attribute an inbound message to the
 // brand of the customer's MOST RECENT order (matched by shipping/guest phone).
@@ -218,19 +262,19 @@ exports.verifyWebhook = (req, res) => {
 // ─── Stats ────────────────────────────────────────────────────────────────────
 exports.getStats = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId) || 1;
+    // No brandId = every brand (one shared number).
+    const brandId = brandParam(req.query.brandId);
     const { Op, fn, col } = require('sequelize');
     const { sequelize } = require('../config/db.js');
 
     // whatsapp_messages has no brand_id — it belongs to a conversation, which
-    // does. Scope every message metric to THIS brand's conversations, otherwise
-    // totals / delivery+read rates / the 7-day chart show GLOBAL numbers across
-    // all brands instead of the selected one.
-    const brandMsgWhere = {
+    // does. Scope every message metric to the selected brand's conversations.
+    const brandMsgWhere = brandId ? {
       conversation_id: {
         [Op.in]: sequelize.literal(`(SELECT id FROM whatsapp_conversations WHERE brand_id = ${Number(brandId)})`),
       },
-    };
+    } : {};
+    const convWhere = brandId ? { brand_id: brandId } : {};
 
     const [
       totalConversations,
@@ -240,9 +284,9 @@ exports.getStats = async (req, res) => {
       outboundByStatus,
       last7Days,
     ] = await Promise.all([
-      WhatsappConversation.count({ where: { brand_id: brandId } }),
-      WhatsappConversation.count({ where: { brand_id: brandId, status: 'open' } }),
-      WhatsappConversation.count({ where: { brand_id: brandId, status: 'resolved' } }),
+      WhatsappConversation.count({ where: convWhere }),
+      WhatsappConversation.count({ where: { ...convWhere, status: 'open' } }),
+      WhatsappConversation.count({ where: { ...convWhere, status: 'resolved' } }),
       WhatsappMessage.count({ where: brandMsgWhere }),
       // One grouped scan (uses idx_wa_msg_dir_status) for the whole outbound
       // status breakdown instead of three separate full-table counts.
@@ -284,7 +328,7 @@ exports.getStats = async (req, res) => {
     // message makes the rate look worse than it is.
     const deliveryRate = sentMessages > 0 ? (((deliveredMessages + readMessages) / sentMessages) * 100).toFixed(1) : '0.0';
     const readRate     = sentMessages > 0 ? ((readMessages     / sentMessages) * 100).toFixed(1) : '0.0';
-    const unreadCount  = await WhatsappConversation.sum('unread_count', { where: { brand_id: brandId } }) || 0;
+    const unreadCount  = await WhatsappConversation.sum('unread_count', { where: convWhere }) || 0;
 
     res.json({
       success: true,
@@ -308,29 +352,139 @@ exports.getStats = async (req, res) => {
 };
 
 // ─── Conversations ────────────────────────────────────────────────────────────
+// Server-side inbox list: search (name / phone digits / last message / order
+// number), status + quick filters, per-filter counts and per-row reply-window,
+// waiting and latest-order info. Two indexed SQL statements + one model read +
+// one grouped order lookup per page (no per-row queries).
+const CONV_FILTERS = new Set(['all', 'unread', 'waiting', 'window_closed', 'has_order']);
+
+async function buildConversationList(query, { defaultLimit = 30 } = {}) {
+  const { sequelize } = require('../config/db.js');
+  const { QueryTypes } = require('sequelize');
+  const brandId = brandParam(query.brandId);
+  const status  = ['open', 'resolved', 'all'].includes(query.status) ? query.status : 'open';
+  const filter  = CONV_FILTERS.has(query.filter) ? query.filter : 'all';
+  const page    = Math.max(1, parseInt(query.page, 10) || 1);
+  const limit   = Math.min(100, Math.max(1, parseInt(query.limit, 10) || defaultLimit));
+  const q       = String(query.q || '').trim().slice(0, 100);
+  const cut24   = new Date(Date.now() - WINDOW_MS);
+
+  const base = [];
+  const repl = { cut24, limit, offset: (page - 1) * limit };
+  if (brandId) { base.push('c.brand_id = :brandId'); repl.brandId = brandId; }
+  if (status !== 'all') { base.push('c.status = :status'); repl.status = status; }
+  if (q) {
+    const ors = ['c.customer_name LIKE :ql', 'c.last_message LIKE :ql'];
+    repl.ql = `%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`;
+    const digits = q.replace(/\D/g, '');
+    if (digits.length >= 3) { ors.push('c.customer_phone LIKE :qd'); repl.qd = `%${digits}%`; }
+    const orderPhones = await whatsappService.phonesForOrderSearch(q).catch(() => []);
+    if (orderPhones.length) {
+      repl.orderPhones = orderPhones.flatMap((p) => [p, `91${p}`, `+91${p}`]);
+      ors.push('c.customer_phone IN (:orderPhones)');
+    }
+    base.push(`(${ors.join(' OR ')})`);
+  }
+  const baseSql = base.length ? base.join(' AND ') : '1=1';
+
+  const WAITING = '(c.last_inbound_at IS NOT NULL AND (c.last_reply_at IS NULL OR c.last_reply_at < c.last_inbound_at))';
+  const CLOSED  = '(c.last_inbound_at IS NULL OR c.last_inbound_at < :cut24)';
+  const hasKey = !!require('../utils/encryption.js').phoneHash('9999999999');
+  const HAS_ORDER = `(EXISTS (SELECT 1 FROM users u JOIN orders o ON o.user_id = u.id
+                        WHERE u.phone IN (RIGHT(c.customer_phone, 10), CONCAT('91', RIGHT(c.customer_phone, 10)), CONCAT('+91', RIGHT(c.customer_phone, 10))))
+     OR ${hasKey
+    ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = c.phone_hash)
+          OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = c.phone_hash)))`
+    : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = RIGHT(c.customer_phone, 10))`})`;
+  const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER }[filter];
+
+  const [countRow] = await sequelize.query(
+    `SELECT COUNT(*) AS all_n,
+            SUM(c.unread_count > 0) AS unread_n,
+            SUM(${WAITING}) AS waiting_n,
+            SUM(${CLOSED}) AS closed_n,
+            SUM(${filterSql}) AS filtered_n
+       FROM whatsapp_conversations c WHERE ${baseSql}`,
+    { replacements: repl, type: QueryTypes.SELECT });
+  const idRows = await sequelize.query(
+    `SELECT c.id FROM whatsapp_conversations c
+      WHERE ${baseSql} AND ${filterSql}
+      ORDER BY c.last_message_at IS NULL, c.last_message_at DESC, c.id DESC
+      LIMIT :limit OFFSET :offset`,
+    { replacements: repl, type: QueryTypes.SELECT });
+
+  const ids = idRows.map((r) => r.id);
+  const rows = ids.length ? await WhatsappConversation.findAll({ where: { id: ids } }) : [];
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
+
+  // Latest order per customer — one grouped lookup for the whole page.
+  const p10 = (ph) => String(ph || '').replace(/\D/g, '').slice(-10);
+  let latest = new Map();
+  try { latest = await whatsappService.latestOrderByPhone(ordered.map((c) => p10(c.customer_phone))); } catch (e) {
+    logger.warn('[WhatsApp] inbox latest-order lookup failed: ' + e.message);
+  }
+  let stageOf = null;
+  try { stageOf = require('../services/chatContextService.js').stageOf; } catch (_) {}
+
+  const now = Date.now();
+  const conversations = ordered.map((c) => {
+    const j = c.toJSON();
+    const li = c.last_inbound_at ? new Date(c.last_inbound_at) : null;
+    const lr = c.last_reply_at ? new Date(c.last_reply_at) : null;
+    const closes = li ? new Date(li.getTime() + WINDOW_MS) : null;
+    const o = latest.get(p10(c.customer_phone));
+    const st = o && stageOf ? stageOf(o.status, o.payment_type) : null;
+    return {
+      ...j,
+      window_open: !!closes && closes.getTime() > now,
+      window_closes_at: closes,
+      last_inbound_at: li,
+      waiting_since: li && (!lr || lr < li) ? li : null,
+      latest_order: o ? {
+        order_number: o.order_number,
+        stage: st ? st.key : null,
+        stage_label: st ? st.label : null,
+        status: o.status,
+        created_at: o.created_at,
+      } : null,
+    };
+  });
+
+  // Fill phone_hash for rows that predate the column (cheap, page-sized).
+  const missingHash = ordered.filter((c) => !c.phone_hash);
+  if (missingHash.length) {
+    const { phoneHash } = require('../utils/encryption.js');
+    setImmediate(() => {
+      for (const c of missingHash) {
+        const h = phoneHash(c.customer_phone);
+        if (h) WhatsappConversation.update({ phone_hash: h }, { where: { id: c.id } }).catch(() => {});
+      }
+    });
+  }
+
+  const total = Number(countRow?.filtered_n) || 0;
+  return {
+    conversations,
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+    limit,
+    counts: {
+      all: Number(countRow?.all_n) || 0,
+      unread: Number(countRow?.unread_n) || 0,
+      waiting: Number(countRow?.waiting_n) || 0,
+      window_closed: Number(countRow?.closed_n) || 0,
+    },
+  };
+}
+
 exports.getConversations = async (req, res) => {
   try {
-    // Shared number → allow an "All brands" view (brandId 'all' or 0) so staff
-    // see every conversation regardless of which brand it's tagged to.
-    const brandParam = String(req.query.brandId || '').toLowerCase();
-    const allBrands  = brandParam === 'all' || brandParam === '0';
-    const brandId = parseInt(req.query.brandId) || 1;
-    const status  = req.query.status || 'open';
-    const page    = parseInt(req.query.page) || 1;
-    const limit   = 20;
-
-    const where = allBrands ? {} : { brand_id: brandId };
-    if (status !== 'all') where.status = status;
-
-    const { count, rows } = await WhatsappConversation.findAndCountAll({
-      where,
-      order: [['last_message_at', 'DESC']],
-      limit,
-      offset: (page - 1) * limit,
-    });
-
-    res.json({ success: true, conversations: rows, total: count, page, pages: Math.ceil(count / limit) });
+    const data = await buildConversationList(req.query);
+    res.json({ success: true, ...data });
   } catch (err) {
+    logger.error('[WhatsApp] getConversations failed: ' + err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -426,21 +580,14 @@ exports.getMessages = async (req, res) => {
 exports.streamUpdates = async (req, res) => {
   try {
     const notificationService = require('../services/notificationService.js');
-    const brandParam = String(req.query.brandId || '').toLowerCase();
-    const allBrands  = brandParam === 'all' || brandParam === '0';
-    const brandId    = parseInt(req.query.brandId) || 1;
-    const status     = req.query.status || 'open';
     const wait       = req.query.wait !== '0';
     const sinceTs    = req.query.since ? new Date(req.query.since) : null;
+    // Same filters/search/brand rules as GET /conversations (brandId absent =
+    // all brands); first page only.
+    const fetchList = () => buildConversationList({ ...req.query, page: 1 }, { defaultLimit: 40 });
 
-    const fetchList = async () => {
-      const where = allBrands ? {} : { brand_id: brandId };
-      if (status !== 'all') where.status = status;
-      return WhatsappConversation.findAll({ where, order: [['last_message_at', 'DESC']], limit: 40 });
-    };
-
-    let list = await fetchList();
-    const newest = list[0]?.last_message_at ? new Date(list[0].last_message_at) : null;
+    let data = await fetchList();
+    const newest = data.conversations[0]?.last_message_at ? new Date(data.conversations[0].last_message_at) : null;
     const hasNew = !sinceTs || (newest && newest > sinceTs);
 
     if (wait && !hasNew) {
@@ -449,10 +596,10 @@ exports.streamUpdates = async (req, res) => {
       await notificationService.waitForWhatsApp(25000);
       if (closed) return;
       await new Promise((r) => setTimeout(r, 150));
-      list = await fetchList();
+      data = await fetchList();
     }
 
-    res.json({ success: true, conversations: list, serverTime: new Date() });
+    res.json({ success: true, ...data, serverTime: new Date() });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -468,6 +615,11 @@ exports.sendReply = async (req, res) => {
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    // Free text is only delivered inside the 24-hour window — refuse up front
+    // instead of saving a bubble Meta will reject.
+    const win = await replyWindow(conv);
+    if (!win.open) return windowClosedResponse(res, win);
 
     const text = message.trim();
 
@@ -493,15 +645,16 @@ exports.sendReply = async (req, res) => {
       quoted_message_id: quotedMsgDbId,
       status:            'sent',
       sent_at:           new Date(),
+      sent_by:           req.user?.id || null,
     });
 
     res.json({ success: true, message: saved });
 
     setImmediate(async () => {
       try {
-        const result = await whatsappService.sendTextMessage(conv.customer_phone, text, brandId, quotedWaMessageId || null);
+        const result = await whatsappService.sendTextMessage(conv.customer_phone, text, conv.brand_id || brandId, quotedWaMessageId || null, { staff: true });
         if (result?.rate_limited) {
-          await saved.update({ status: 'failed' }).catch(() => {});
+          await saved.update({ status: 'failed', error_reason: 'Hourly message limit for this number reached' }).catch(() => {});
           logger.warn(`[WhatsApp] reply to ${conv.customer_phone} hit the hourly rate limit (10/hour) — marked failed`);
           return;
         }
@@ -510,11 +663,9 @@ exports.sendReply = async (req, res) => {
         if (waId) await saved.update({ wa_message_id: waId }).catch(() => {});
 
         // Conversation metadata + SLA first-response stamp (genuine agent reply).
-        const convUpdate = { last_message: text, last_message_at: new Date() };
-        if (!conv.first_response_at) convUpdate.first_response_at = new Date();
-        await conv.update(convUpdate).catch(() => {});
+        await conv.update(staffReplyUpdate(conv, text)).catch(() => {});
       } catch (err) {
-        await saved.update({ status: 'failed' }).catch(() => {});
+        await saved.update({ status: 'failed', error_reason: String(errMsg(err)).slice(0, 255) }).catch(() => {});
         logger.error(`[WhatsApp] background reply send failed for ${conv.customer_phone}: ${errMsg(err)}`);
       }
     });
@@ -536,6 +687,9 @@ exports.sendMediaReply = async (req, res) => {
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+
+    const win = await replyWindow(conv);
+    if (!win.open) return windowClosedResponse(res, win);
 
     const brandId = conv.brand_id || parseInt(req.body.brandId) || 1;
     const kind = whatsappService.mediaKindFromMime(file.mimetype);
@@ -567,8 +721,9 @@ exports.sendMediaReply = async (req, res) => {
       body,
       status:          'sent',
       sent_at:         new Date(),
+      sent_by:         req.user?.id || null,
     });
-    await conv.update({ last_message: caption || preview, last_message_at: new Date() });
+    await conv.update(staffReplyUpdate(conv, caption || preview));
 
     res.json({ success: true, message: saved });
   } catch (err) {
@@ -594,13 +749,126 @@ exports.resolveConversation = async (req, res) => {
   }
 };
 
+// ─── Send an approved template in a chat (works after the 24 h window) ────────
+async function latestOrderForConv(conv) {
+  try {
+    const ctx = await require('../services/chatContextService.js').getChatContext(conv.id);
+    return ctx?.orders?.[0] || null;
+  } catch (_) { return null; }
+}
+
+exports.getTemplateOptions = async (req, res) => {
+  try {
+    const conv = await WhatsappConversation.findByPk(req.params.id);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    const latest = await latestOrderForConv(conv);
+    const { templates, error } = await whatsappService.templateOptionsForConversation(conv, latest);
+    const win = await replyWindow(conv);
+    res.json({ success: true, templates, window_open: win.open, window_closes_at: win.closesAt, ...(error ? { error } : {}) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+exports.sendTemplateMessage = async (req, res) => {
+  try {
+    const conv = await WhatsappConversation.findByPk(req.params.id);
+    if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    const templateName = String(req.body.templateName || req.body.template_name || '').trim();
+    if (!templateName) return res.status(400).json({ success: false, message: 'templateName is required' });
+    const latest = await latestOrderForConv(conv);
+    let prep;
+    try {
+      prep = await whatsappService.prepareTemplateSend(conv, templateName, Array.isArray(req.body.params) ? req.body.params : undefined, latest);
+    } catch (e) {
+      return res.status(e.status || 500).json({ success: false, message: e.message });
+    }
+    let result;
+    try {
+      result = await whatsappService.sendTemplate(conv.customer_phone, prep.metaName, prep.params, prep.brandId, { ...prep.opts, staff: true });
+    } catch (e) {
+      const reason = whatsappService.metaError(e);
+      await WhatsappMessage.create({
+        conversation_id: conv.id, direction: 'outbound', type: 'template', body: prep.renderedBody,
+        status: 'failed', sent_at: new Date(), template_name: prep.metaName, sent_by: req.user?.id || null,
+        error_reason: String(reason).slice(0, 255),
+      }).catch(() => {});
+      return res.status(502).json({ success: false, message: `WhatsApp did not accept the message: ${reason}` });
+    }
+    if (result?.rate_limited) {
+      return res.status(429).json({ success: false, message: 'Hourly message limit for this customer reached. Try again later.' });
+    }
+    const saved = await WhatsappMessage.create({
+      conversation_id: conv.id,
+      wa_message_id: result?.messages?.[0]?.id || null,
+      direction: 'outbound',
+      type: 'template',
+      body: prep.renderedBody,
+      status: 'sent',
+      sent_at: new Date(),
+      template_name: prep.metaName,
+      sent_by: req.user?.id || null,
+    });
+    await conv.update(staffReplyUpdate(conv, prep.renderedBody.slice(0, 1000)));
+    res.json({ success: true, message: saved });
+  } catch (err) {
+    logger.error('[WhatsApp] sendTemplateMessage failed: ' + errMsg(err));
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
 // ─── Templates ────────────────────────────────────────────────────────────────
+// Meta's list + our ready-made defaults not created yet (status 'missing'),
+// each with { title, used_by, read_rate } and status approved|pending|rejected|missing
+// (raw Meta status kept as meta_status). ?force=1 re-reads statuses from Meta.
 exports.listTemplates = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId) || 1;
+    const brandId = brandParam(req.query.brandId);
     const force = ['1', 'true', 'yes'].includes(String(req.query.force).toLowerCase());
-    const data = await whatsappService.listTemplates(brandId, { force });
-    res.json({ success: true, templates: data.data || [], paging: data.paging || null });
+    const data = await whatsappService.listTemplatesEnriched(brandId, { force });
+    if (data.error && !data.templates.some((t) => t.status !== 'missing')) {
+      return res.status(502).json({ success: false, message: `Could not read templates from WhatsApp: ${data.error}`, ...data });
+    }
+    res.json({ success: true, ...data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+exports.submitMissingTemplates = async (req, res) => {
+  try {
+    const brandId = brandParam(req.body?.brandId);
+    const r = await whatsappService.submitMissingTemplates(brandId);
+    const created = r.results.filter((x) => x && x.status === 'created').length;
+    const failed = r.results.filter((x) => x && x.status === 'error').length;
+    res.json({ success: true, summary: { submitted: r.submitted.length, created, failed }, ...r });
+  } catch (err) {
+    res.status(err.status || 500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+// ─── Automations ──────────────────────────────────────────────────────────────
+exports.getAutomations = async (req, res) => {
+  try {
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 7));
+    const report = await whatsappService.getAutomationReport({ days, brandId: brandParam(req.query.brandId) });
+    res.json({ success: true, ...report });
+  } catch (err) {
+    logger.error('[WhatsApp] automations report failed: ' + err.message);
+    res.status(500).json({ success: false, message: errMsg(err) });
+  }
+};
+
+exports.setAutomation = async (req, res) => {
+  try {
+    const { key } = req.params;
+    if (!whatsappService.AUTOMATIONS.some((a) => a.key === key)) {
+      return res.status(404).json({ success: false, message: 'Unknown automatic message' });
+    }
+    if (typeof req.body?.enabled !== 'boolean') return res.status(400).json({ success: false, message: 'enabled (true/false) is required' });
+    await whatsappService.setAutomationEnabled(key, req.body.enabled);
+    logger.info(`[WhatsApp] automation ${key} → ${req.body.enabled ? 'on' : 'off'} by user ${req.user?.id}`);
+    res.json({ success: true, key, enabled: req.body.enabled });
   } catch (err) {
     res.status(500).json({ success: false, message: errMsg(err) });
   }
@@ -1307,11 +1575,19 @@ exports.setConversationNote = async (req, res) => {
 };
 
 // ─── Canned Responses ─────────────────────────────────────────────────────────
+// Quick replies are shared by every brand ({brand} fills in per customer), so
+// no brandId = all of them. Each has a category tab and a `uses` counter.
+const CANNED_CATEGORIES = ['orders', 'returns', 'products', 'other'];
+const cleanCategory = (c) => (CANNED_CATEGORIES.includes(String(c || '').toLowerCase()) ? String(c).toLowerCase() : 'other');
+const cleanShortcut = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+
 exports.getCannedResponses = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId) || 1;
-    const rows = await WhatsappCannedResponse.findAll({ where: { brand_id: brandId }, order: [['shortcut', 'ASC']] });
-    res.json({ success: true, cannedResponses: rows });
+    const brandId = brandParam(req.query.brandId);
+    const where = brandId ? { brand_id: brandId } : {};
+    if (req.query.category && CANNED_CATEGORIES.includes(req.query.category)) where.category = req.query.category;
+    const rows = await WhatsappCannedResponse.findAll({ where, order: [['uses', 'DESC'], ['shortcut', 'ASC']] });
+    res.json({ success: true, cannedResponses: rows, categories: CANNED_CATEGORIES });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1319,9 +1595,12 @@ exports.getCannedResponses = async (req, res) => {
 
 exports.createCannedResponse = async (req, res) => {
   try {
-    const { brandId = 1, shortcut, title, body } = req.body;
+    const { shortcut, title, body, category } = req.body;
+    const brandId = brandParam(req.body.brandId) || 1;
     if (!shortcut || !title || !body) return res.status(400).json({ success: false, message: 'shortcut, title and body are required' });
-    const row = await WhatsappCannedResponse.create({ brand_id: brandId, shortcut: shortcut.toLowerCase(), title, body, created_by: req.user?.id || null });
+    const row = await WhatsappCannedResponse.create({
+      brand_id: brandId, shortcut: cleanShortcut(shortcut), title, body, category: cleanCategory(category), created_by: req.user?.id || null,
+    });
     res.json({ success: true, cannedResponse: row });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -1331,10 +1610,29 @@ exports.createCannedResponse = async (req, res) => {
 exports.updateCannedResponse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { shortcut, title, body } = req.body;
-    const [updated] = await WhatsappCannedResponse.update({ shortcut, title, body }, { where: { id } });
-    if (!updated) return res.status(404).json({ success: false, message: 'Not found' });
-    res.json({ success: true });
+    const { shortcut, title, body, category } = req.body;
+    const upd = {};
+    if (shortcut != null) upd.shortcut = cleanShortcut(shortcut);
+    if (title != null) upd.title = title;
+    if (body != null) upd.body = body;
+    if (category != null) upd.category = cleanCategory(category);
+    const row = await WhatsappCannedResponse.findByPk(id);
+    if (!row) return res.status(404).json({ success: false, message: 'Not found' });
+    await row.update(upd);
+    res.json({ success: true, cannedResponse: row });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.markCannedResponseUsed = async (req, res) => {
+  try {
+    const [n] = await WhatsappCannedResponse.update(
+      { uses: WhatsappCannedResponse.sequelize.literal('uses + 1') },
+      { where: { id: req.params.id }, silent: true });
+    if (!n) return res.status(404).json({ success: false, message: 'Not found' });
+    const row = await WhatsappCannedResponse.findByPk(req.params.id, { attributes: ['id', 'uses'] });
+    res.json({ success: true, id: row.id, uses: row.uses });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1408,77 +1706,151 @@ exports.seedCannedResponses = async (req, res) => {
 };
 
 // ─── Broadcast Campaigns ──────────────────────────────────────────────────────
+async function brandNameMap() {
+  try {
+    const Brand = require('../model/brandModel.js');
+    const rows = await Brand.findAll({ attributes: ['id', 'name', 'display_name'] });
+    return Object.fromEntries(rows.map((b) => [b.id, b.display_name || b.name]));
+  } catch (_) { return {}; }
+}
+
 exports.getBroadcasts = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId) || 1;
-    const rows = await WhatsappBroadcast.findAll({ where: { brand_id: brandId }, order: [['createdAt', 'DESC']], limit: 50 });
-    res.json({ success: true, broadcasts: rows });
+    const brandId = brandParam(req.query.brandId);
+    const rows = await WhatsappBroadcast.findAll({ order: [['createdAt', 'DESC']], limit: 200 });
+    const brands = await brandNameMap();
+    const items = rows.map((r) => ({ row: r, aud: whatsappService.audienceLabel(r.audience_filter, brands) }))
+      // A brand view shows that brand's broadcasts; all-brand broadcasts only in the all view.
+      .filter(({ row, aud }) => !brandId || aud.brandId === brandId || (!aud.type && row.brand_id === brandId))
+      .slice(0, 100);
+    const results = await whatsappService.broadcastResults(items.map((x) => x.row.id));
+    const since30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const summary = { sent_30d: 0, broadcasts_30d: 0, delivered_30d: 0, read_30d: 0, orders: 0, sales: 0, stop_replies: 0 };
+    const broadcasts = items.map(({ row, aud }) => {
+      const r = results.get(row.id) || {};
+      const j = row.toJSON();
+      if (new Date(row.createdAt).getTime() >= since30 && row.status !== 'cancelled') {
+        summary.broadcasts_30d++; summary.sent_30d += row.sent_count || 0;
+        summary.delivered_30d += r.delivered || 0; summary.read_30d += r.read || 0;
+        summary.orders += r.orders || 0; summary.sales += r.sales || 0; summary.stop_replies += r.stop_replies || 0;
+      }
+      return {
+        ...j,
+        audience_type: aud.type,
+        audience_label: aud.label,
+        audience_brand_id: aud.brandId,
+        brand_label: aud.brand_label,
+        delivered: r.delivered || 0,
+        read: r.read || 0,
+        orders: r.orders || 0,
+        sales: r.sales || 0,
+        stop_replies: r.stop_replies || 0,
+        can_cancel: ['scheduled', 'draft', 'paused', 'running'].includes(row.status),
+      };
+    });
+    summary.read_pct = summary.delivered_30d ? Math.round((summary.read_30d / summary.delivered_30d) * 100) : null;
+    summary.stop_pct = summary.sent_30d ? Math.round((summary.stop_replies / summary.sent_30d) * 1000) / 10 : null;
+    res.json({ success: true, broadcasts, summary });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
+exports.getBroadcastAudience = async (req, res) => {
+  try {
+    const type = String(req.query.type || 'all');
+    if (!whatsappService.AUDIENCES[type]) return res.status(400).json({ success: false, message: 'Unknown audience type' });
+    const data = await whatsappService.audienceCount(type, brandParam(req.query.brandId));
+    res.json({ success: true, type, label: whatsappService.AUDIENCES[type].label, ...data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /broadcasts { name, template_name, audience:{type, brandId}, scheduled_at|null, params? }
+// (legacy camelCase templateName / audienceFilter / scheduledAt / brandId still
+// accepted). scheduled_at null = send now — it starts by itself (no /run call
+// needed); outside 10:00–20:00 IST it waits for the next sending window.
 exports.createBroadcast = async (req, res) => {
   try {
-    const { brandId = 1, name, templateName, audienceFilter, scheduledAt } = req.body;
-    if (!name || !templateName) return res.status(400).json({ success: false, message: 'name and templateName are required' });
-    // Validate the template against Meta's approved list and store the EXACT name
-    // Meta knows (e.g. "popup_coupon" → "popup_coupon_v2"). sendBroadcast does NOT
-    // apply the version suffix, so storing a base/unapproved name here would make
-    // Meta reject every message in the broadcast.
-    const resolvedTemplate = await whatsappService.resolveApprovedTemplateName(templateName, brandId);
+    const b = req.body || {};
+    const name = String(b.name || '').trim();
+    const templateName = String(b.template_name || b.templateName || '').trim();
+    if (!name || !templateName) return res.status(400).json({ success: false, message: 'name and template_name are required' });
+    const audIn = (b.audience && typeof b.audience === 'object') ? b.audience
+      : (b.audienceFilter && typeof b.audienceFilter === 'object') ? b.audienceFilter : {};
+    const type = String(audIn.type || 'all');
+    if (!whatsappService.AUDIENCES[type]) return res.status(400).json({ success: false, message: 'Unknown audience type' });
+    const audBrand = brandParam(audIn.brandId != null ? audIn.brandId : b.brandId);
+    const params = Array.isArray(b.params) ? b.params.map((p) => String(p == null ? '' : p)) : null;
+
+    // Store the EXACT approved name Meta knows ("popup_coupon" → "popup_coupon_v2").
+    const resolvedTemplate = await whatsappService.resolveApprovedTemplateName(templateName, audBrand || whatsappService.SHARED_WA_BRAND_ID);
     if (!resolvedTemplate) {
-      return res.status(400).json({ success: false, message: `"${templateName}" is not an approved WhatsApp template for this brand. Pick one from the Templates list.` });
+      return res.status(400).json({ success: false, message: `"${templateName}" is not an approved WhatsApp template. Pick one from the Templates list.` });
     }
+    const check = await whatsappService.checkBroadcastParams(resolvedTemplate, params);
+    if (!check.ok) return res.status(400).json({ success: false, message: `This template also needs: ${check.missing.join(', ')}`, needs: check.missing });
+
+    const rawWhen = b.scheduled_at !== undefined ? b.scheduled_at : b.scheduledAt;
+    let when = rawWhen ? new Date(rawWhen) : new Date();
+    if (rawWhen && Number.isNaN(when.getTime())) return res.status(400).json({ success: false, message: 'scheduled_at is not a valid date' });
+    const sendNow = !rawWhen || when.getTime() <= Date.now();
+    if (sendNow) when = new Date();
+
     const row = await WhatsappBroadcast.create({
-      brand_id: brandId, name, template_name: resolvedTemplate,
-      audience_filter: audienceFilter ? JSON.stringify(audienceFilter) : null,
-      scheduled_at: scheduledAt || null,
+      brand_id: audBrand || whatsappService.SHARED_WA_BRAND_ID,
+      name: name.slice(0, 150),
+      template_name: resolvedTemplate,
+      audience_filter: JSON.stringify({ type, brandId: audBrand, ...(params ? { params } : {}) }),
+      status: 'scheduled',
+      scheduled_at: when,
       created_by: req.user?.id || null,
     });
-    res.json({ success: true, broadcast: row });
+    const startsAt = whatsappService.nextSendingTime(when);
+    if (sendNow && whatsappService.isSendingHours()) {
+      setImmediate(() => whatsappService.runBroadcastJob(row.id).catch((e) => logger.error(`[Broadcast ${row.id}] start failed: ${e.message}`)));
+    }
+    res.json({ success: true, broadcast: row, starts_at: startsAt, waits_for_sending_hours: startsAt.getTime() > when.getTime() });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
+exports.cancelBroadcast = async (req, res) => {
+  try {
+    const [n] = await WhatsappBroadcast.update(
+      { status: 'cancelled' },
+      { where: { id: req.params.id, status: ['scheduled', 'draft', 'paused', 'running'] } });
+    if (!n) {
+      const row = await WhatsappBroadcast.findByPk(req.params.id);
+      if (!row) return res.status(404).json({ success: false, message: 'Broadcast not found' });
+      return res.status(409).json({ success: false, message: `This broadcast is already ${row.status}.` });
+    }
+    res.json({ success: true, status: 'cancelled' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Legacy "run" for drafts (admin). Atomic: only a draft/scheduled/paused
+// broadcast can start; a running or finished one gets 409.
 exports.runBroadcast = async (req, res) => {
   try {
     const { id } = req.params;
-    const broadcast = await WhatsappBroadcast.findByPk(id);
-    if (!broadcast) return res.status(404).json({ success: false, message: 'Broadcast not found' });
-    if (broadcast.status === 'running') return res.status(400).json({ success: false, message: 'Already running' });
-
-    await broadcast.update({ status: 'running', started_at: new Date() });
+    const [n] = await WhatsappBroadcast.update(
+      { status: 'scheduled', scheduled_at: new Date() },
+      { where: { id, status: ['draft', 'scheduled', 'paused'] } });
+    if (!n) {
+      const row = await WhatsappBroadcast.findByPk(id);
+      if (!row) return res.status(404).json({ success: false, message: 'Broadcast not found' });
+      return res.status(409).json({ success: false, message: `This broadcast is already ${row.status}.` });
+    }
+    if (!whatsappService.isSendingHours()) {
+      return res.json({ success: true, message: 'Broadcasts only go out between 10 am and 8 pm — it will start then.', starts_at: whatsappService.nextSendingTime() });
+    }
+    setImmediate(() => whatsappService.runBroadcastJob(id).catch((e) => logger.error(`[Broadcast ${id}] start failed: ${e.message}`)));
     res.json({ success: true, message: 'Broadcast started' });
-
-    // Run in background
-    setImmediate(async () => {
-      try {
-        const { User } = require('../model/userModel.js');
-        const { Order } = require('../model/orderModel.js');
-        const filter = broadcast.audience_filter ? JSON.parse(broadcast.audience_filter) : {};
-
-        // Build audience: opted-in conversations for this brand
-        const convWhere = { brand_id: broadcast.brand_id, opted_out: false };
-
-        const convs = await WhatsappConversation.findAll({ where: convWhere, attributes: ['customer_phone', 'customer_name'] });
-        const phones = convs.map(c => c.customer_phone);
-        const paramsArray = convs.map(c => [c.customer_name || 'there']);
-
-        await broadcast.update({ total_recipients: phones.length });
-
-        // Checkpoint sent/failed as it runs so the dashboard shows live progress
-        // and a mid-run crash leaves a partial count instead of zero.
-        const onProgress = (s, f) => broadcast.update({ sent_count: s, failed_count: f }).catch(() => {});
-        const { sent, failed } = await whatsappService.sendBroadcast(phones, broadcast.template_name, paramsArray, broadcast.brand_id, 200, onProgress);
-        await broadcast.update({ status: 'done', sent_count: sent, failed_count: failed, completed_at: new Date() });
-        logger.info(`Broadcast ${broadcast.id} done: ${sent} sent, ${failed} failed`);
-      } catch (err) {
-        await broadcast.update({ status: 'failed' }).catch(() => {});
-        logger.error('Broadcast run error: ' + err.message);
-      }
-    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1487,12 +1859,12 @@ exports.runBroadcast = async (req, res) => {
 // ─── SLA / Analytics ─────────────────────────────────────────────────────────
 exports.getSLAStats = async (req, res) => {
   try {
-    const brandId = parseInt(req.query.brandId) || 1;
+    const brandId = brandParam(req.query.brandId); // null = all brands
     const { sequelize: sq } = require('../config/db.js');
 
     // Average first response time in minutes
     const avgResponseTime = await WhatsappConversation.findOne({
-      where: { brand_id: brandId, first_response_at: { [Op.ne]: null } },
+      where: { ...(brandId ? { brand_id: brandId } : {}), first_response_at: { [Op.ne]: null } },
       attributes: [[sq.fn('AVG', sq.fn('TIMESTAMPDIFF', sq.literal('SECOND'), sq.col('createdAt'), sq.col('first_response_at'))), 'avg_seconds']],
       raw: true,
     });
@@ -1522,6 +1894,8 @@ exports.sendProductLink = async (req, res) => {
 
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    const win = await replyWindow(conv);
+    if (!win.open) return windowClosedResponse(res, win);
     const brand = conv.brand_id || parseInt(req.body.brandId) || 1;
 
     const { Product } = require('../model/productModel.js');
@@ -1575,12 +1949,13 @@ exports.sendProductLink = async (req, res) => {
         body:            img ? JSON.stringify({ url: img, mime: 'image/jpeg', caption, text: caption }) : caption,
         status:          'sent',
         sent_at:         new Date(),
+        sent_by:         req.user?.id || null,
       });
       sent++;
     }
     if (!sent) return res.status(400).json({ success: false, message: 'None of the selected products could be found' });
 
-    await conv.update({ last_message: sent > 1 ? `🛍️ ${sent} products shared` : '🛍️ Product shared', last_message_at: new Date() });
+    await conv.update(staffReplyUpdate(conv, sent > 1 ? `🛍️ ${sent} products shared` : '🛍️ Product shared'));
     res.json({ success: true, sent, message: lastSaved });
   } catch (err) {
     logger.error('[WhatsApp] sendProductLink failed:', errMsg(err));

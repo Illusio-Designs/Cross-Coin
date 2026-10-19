@@ -328,6 +328,9 @@
 .m-sizes{display:flex;flex-wrap:wrap;gap:12px}
 .m-size{position:relative;border:1.5px solid var(--m-line);border-radius:var(--m-radius);padding:14px 18px;text-align:center;cursor:pointer;transition:.2s;background:var(--m-surface);min-width:92px}
 .m-size:hover{border-color:var(--m-accent-soft)}
+.m-size.is-out{opacity:.55}.m-size.is-out span{color:var(--m-rose)}
+.m-lowstock{margin:12px 0 0;font-size:12.5px;font-weight:600;color:var(--m-rose)}
+.m-root .m-btn:disabled{opacity:.5;cursor:not-allowed}
 .m-size.on{border-color:var(--m-accent);background:color-mix(in srgb,var(--m-accent) 8%,var(--m-surface))}
 .m-size b{display:block;font-size:13px;letter-spacing:.06em;font-weight:700}
 .m-size span{font-family:var(--m-d);font-size:16px;font-weight:600;color:var(--m-ink-soft)}

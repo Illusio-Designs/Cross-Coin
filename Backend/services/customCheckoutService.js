@@ -335,7 +335,7 @@ async function ingestCheckoutOrder(brandId, p) {
       coupon_id: null,
       shipping_fee: shippingFee,
       final_amount: finalAmount,
-      payment_type: isCod ? 'cod' : 'prepaid',
+      payment_type: isCod ? 'cod' : 'razorpay', // orders ENUM has no 'prepaid'
       payment_status: paid ? 'paid' : (isCod ? 'pending' : 'pending'),
       status: 'confirmed',
       notes: `Custom checkout order ${platformId}${p.fastrr_order_id ? ` / fastrr ${p.fastrr_order_id}` : ''}${(p.coupon_codes || []).length ? ` / coupon ${(p.coupon_codes || []).join(',')}` : ''}`,

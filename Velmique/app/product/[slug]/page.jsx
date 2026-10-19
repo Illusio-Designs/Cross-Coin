@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { richHtml } from '@/lib/sanitizeHtml';
+import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
+import { ik } from '@/lib/imagekit';
 import { getProductBySlug, getBestsellers } from '@/lib/api/products';
 import { getProductReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
@@ -8,6 +11,8 @@ import PdpBuy from '../../_components/PdpBuy';
 import PdpGallery from '../../_components/PdpGallery';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
+import WriteReview from '../../_components/WriteReview';
+import TrackEvent from '../../_components/TrackEvent';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -25,29 +30,35 @@ function tokens(val) {
 
 export async function generateMetadata({ params }) {
   const product = await getProductBySlug(params.slug);
-  if (!product) return { title: 'Not found — Velmique' };
-  const seo = product.raw?.seo || {};
-  return {
-    title: seo.metaTitle || `${product.name} — Velmique Maison de Parfum`,
-    description: seo.metaDescription || product.description?.slice(0, 160),
-    openGraph: {
-      title: seo.ogTitle || seo.metaTitle || product.name,
-      description: seo.ogDescription || seo.metaDescription || '',
-      images: seo.ogImage ? [seo.ogImage] : (product.images?.[0] ? [product.images[0]] : []),
-    },
-  };
+  if (!product) return { title: 'Fragrance not found — Velmique', robots: { index: false, follow: true } };
+  // Per-product SEO from the dashboard wins; the product copy is the fallback.
+  const seo = product.raw?.seo || product.raw?.ProductSEO || {};
+  const title = seo.metaTitle || `${product.name} — Velmique Maison de Parfum`;
+  const description = seo.metaDescription || (product.description || '').slice(0, 160) || `${product.name} — eau de parfum by Velmique.`;
+  const meta = pageMeta({
+    title,
+    description,
+    path: seo.canonicalUrl || `/product/${product.slug}`,
+    image: seo.ogImage || product.images?.[0],
+  });
+  meta.openGraph.title = seo.ogTitle || title;
+  meta.openGraph.description = seo.ogDescription || description;
+  return meta;
 }
 
 export default async function MaisonProduct({ params }) {
   const product = await getProductBySlug(params.slug);
 
+  // Soft not-found (noindex via generateMetadata) rather than notFound(): the
+  // detail fetch is uncached, so a transient API failure must not get a 404
+  // cached against a real product URL.
   if (!product) {
     return (
       <section className="m-section"><div className="m-wrap" style={{ textAlign: 'center' }}>
         <span className="m-eyebrow">Not found</span>
         <h1 style={{ fontSize: 'clamp(30px,5vw,46px)', margin: '14px 0 18px' }}>This scent has drifted away.</h1>
         <p style={{ color: 'var(--m-ink-soft)', marginBottom: 24 }}>We couldn&rsquo;t find that fragrance. Explore the full maison instead.</p>
-        <Link className="m-btn m-btn--fill" href="/test" style={{ justifyContent: 'center' }}>Back to the collection</Link>
+        <Link className="m-btn m-btn--fill" href="/shop" style={{ justifyContent: 'center' }}>Back to the collection</Link>
       </div></section>
     );
   }
@@ -146,24 +157,72 @@ export default async function MaisonProduct({ params }) {
   const reviewRows = [rList.slice(0, rPer), rList.slice(rPer, rPer * 2), rList.slice(rPer * 2)].filter((r) => r.length);
   const reviewDirs = ['left', 'right', 'left'];
   const renderReview = (v, i) => {
-    const name = v.reviewerName || v.name || 'Verified Buyer';
+    const name = v.reviewerName || v.guestName || v.name || 'Customer';
     return (
       <div className="m-rev" key={v.id || i}>
         <div className="m-stars">{stars(v.rating)}</div>
         <q>{v.review || v.comment}</q>
         <div className="m-rev__by">
           <span className="m-rev__av" style={{ background: AV[(typeof i === 'number' ? i : 0) % AV.length] }}>{name[0]}</span>
-          <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg>Verified Buyer</small></span>
+          <span><b>{name}</b>{v.verified_purchase ? <small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>Verified Buyer</small> : null}</span>
         </div>
       </div>
     );
   };
 
 
+  const url = absUrl(`/product/${product.slug}`);
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: (product.description || '').slice(0, 500),
+      image: (product.images || []).slice(0, 6),
+      sku: defVar?.sku || String(product.id),
+      brand: { '@type': 'Brand', name: 'Velmique' },
+      ...(product.category ? { category: product.category } : {}),
+      ...(rating > 0 && reviewCount > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(rating).toFixed(1), reviewCount } } : {}),
+      offers: (product.variations?.length ? product.variations : [{ id: product.id, price: product.price, inStock }]).map((v) => ({
+        '@type': 'Offer',
+        url,
+        sku: v.sku || String(v.id),
+        priceCurrency: 'INR',
+        price: Number(v.price || product.price || 0),
+        availability: v.inStock === false ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+        itemCondition: 'https://schema.org/NewCondition',
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+        { '@type': 'ListItem', position: 2, name: 'Shop', item: absUrl('/shop') },
+        { '@type': 'ListItem', position: 3, name: product.name, item: url },
+      ],
+    },
+  ];
+
   return (
     <>
+      {jsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
+      ))}
+      <TrackEvent
+        event="ViewContent"
+        eventKey={product.id}
+        params={{
+          content_ids: [String(product.id)],
+          content_type: 'product',
+          content_name: product.name,
+          value: Number(product.price || 0),
+          currency: 'INR',
+          contents: [{ id: String(product.id), quantity: 1 }],
+        }}
+      />
       <div className="m-pdpwrap"><div className="m-wrap">
-        <nav className="m-crumb"><Link href="/test">Home</Link> / <Link href="/test/shop">Shop</Link> / <span>{product.name}</span></nav>
+        <nav className="m-crumb" aria-label="Breadcrumb"><Link href="/">Home</Link> / <Link href="/shop">Shop</Link> / <span aria-current="page">{product.name}</span></nav>
         <div className="m-pdp">
           {/* Stacked scroll gallery: each image pins at the top of the column,
               and the next one slides up OVER it as the right content scrolls.
@@ -192,7 +251,7 @@ export default async function MaisonProduct({ params }) {
               <span className="m-eyebrow">Details</span>
               <h2 className="m-rsec__h">About this fragrance</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-                ? <div className="m-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+                ? <div className="m-desc-rich" {...richHtml(product.descriptionHtml)} />
                 : product.description ? <p className="m-rsec__p">{product.description}</p> : <p className="m-rsec__p">No description available for this fragrance yet.</p>}
             </div>
 
@@ -221,7 +280,7 @@ export default async function MaisonProduct({ params }) {
                           className="ring"
                           style={a.image ? { overflow: 'hidden' } : { background: `radial-gradient(circle at 35% 30%,#ffffffcc,${PROF_TINTS[i % PROF_TINTS.length]})` }}
                         >
-                          {a.image ? <img src={a.image} alt={a.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                          {a.image ? <img src={ik(a.image, 200)} alt={a.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
                         </div>
                         <b>{a.name}</b>
                         <div className="dots">{'●'.repeat(v)}{'○'.repeat(5 - v)}</div>
@@ -239,14 +298,14 @@ export default async function MaisonProduct({ params }) {
                 <h2 className="m-rsec__h">{sec.key}</h2>
                 {sec.prose ? (
                   <div className="m-edit m-edit--prose">
-                    {sec.image ? <img src={sec.image} alt={sec.key} loading="lazy" /> : null}
+                    {sec.image ? <img src={ik(sec.image, 800)} alt={sec.key} loading="lazy" /> : null}
                     <p>{sec.prose}</p>
                   </div>
                 ) : (
                   <div className="m-edit m-edit--words">
                     {sec.items.map((it, i) => (
                       <span className="m-eword" key={it.name + i}>
-                        {it.image ? <img src={it.image} alt="" loading="lazy" /> : null}
+                        {it.image ? <img src={ik(it.image, 80)} alt="" loading="lazy" /> : null}
                         {it.name}
                       </span>
                     ))}
@@ -267,9 +326,9 @@ export default async function MaisonProduct({ params }) {
                       <div className="m-ntier">{t.label}</div>
                       <div className="m-pnotegrid">
                         {t.items.map((n, i) => (
-                          <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
+                          <Link className="m-pn m-pn--link" key={n.name + i} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                             <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                              {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                              {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                             </div>
                             <b>{n.name}</b>
                             <span className="m-pn__go">Shop this note →</span>
@@ -280,9 +339,9 @@ export default async function MaisonProduct({ params }) {
                   )) : (
                     <div className="m-pnotegrid" style={{ marginTop: 18 }}>
                       {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
-                        <Link className="m-pn m-pn--link" key={n.name + i} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
+                        <Link className="m-pn m-pn--link" key={n.name + i} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                           <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                            {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                            {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                           </div>
                           <b>{n.name}</b>
                           <span className="m-pn__go">Shop this note →</span>
@@ -297,12 +356,14 @@ export default async function MaisonProduct({ params }) {
         </div>
       </div></div>
 
-      {/* Reviews */}
+      {/* Reviews — the wall when there are any, and always a way to write one
+          (also opened by the WhatsApp review-request link, ?review=open). */}
       {reviews.length ? (
-        <section className="m-section"><div className="m-wrap">
+        <section className="m-section" id="reviews"><div className="m-wrap">
           <div className="m-revhead">
             <div><span className="m-eyebrow">Customer reviews</span><h2 style={{ fontSize: 'clamp(28px,4vw,42px)', marginTop: 8 }}>Loved &amp; Verified.</h2></div>
-            <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars">{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
+            <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars" aria-label={`${Number(rating).toFixed(1)} out of 5`}>{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
+            <WriteReview productId={product.id} productName={product.name} />
           </div>
           <div className="m-rvwall">
             {reviewRows.map((row, idx) => (
@@ -317,7 +378,15 @@ export default async function MaisonProduct({ params }) {
             ))}
           </div>
         </div></section>
-      ) : null}
+      ) : (
+        <section className="m-section" id="reviews" style={{ paddingBottom: 0 }}><div className="m-wrap">
+          <div className="m-empty">
+            <h3>No reviews yet</h3>
+            <p style={{ marginBottom: 20 }}>Tried {product.name}? Be the first to tell others how it wears.</p>
+            <WriteReview productId={product.id} productName={product.name} label="Write the first review" />
+          </div>
+        </div></section>
+      )}
 
       {/* FAQ — admin-managed, from the backend */}
       {faqs.length ? (
@@ -327,7 +396,7 @@ export default async function MaisonProduct({ params }) {
             {faqs.map((f) => (
               <details key={f.id}>
                 <summary>{f.question}</summary>
-                <div className="m-faq__a" dangerouslySetInnerHTML={{ __html: f.answer || '' }} />
+                <div className="m-faq__a" {...richHtml(f.answer)} />
               </details>
             ))}
           </div>

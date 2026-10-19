@@ -53,10 +53,10 @@ function ago(v) {
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins} min ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24 && dayKey(d) === dayKey(new Date())) return `${hrs} h ago`;
-  const y = new Date(Date.now() - 86400000);
-  if (dayKey(d) === dayKey(y)) return 'Yesterday';
-  const days = Math.max(1, Math.round(mins / 1440));
+  if (hrs < 12 || dayKey(d) === dayKey(new Date())) return `${hrs} h ago`;
+  // Whole calendar days between the two IST dates.
+  const days = Math.round((Date.parse(dayKey(new Date())) - Date.parse(dayKey(d))) / 86400000);
+  if (days <= 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST });
 }

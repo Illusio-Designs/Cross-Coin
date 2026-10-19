@@ -105,7 +105,8 @@ function healthTiles(h) {
     tone: hookHrs === null ? 'danger' : hookHrs > 24 ? 'warn' : 'success',
   });
   const exp = h.token_expires_at ? new Date(h.token_expires_at) : null;
-  const expDays = exp && !Number.isNaN(exp.getTime()) ? Math.floor((exp.getTime() - Date.now()) / 86400000) : null;
+  const expMs = exp && !Number.isNaN(exp.getTime()) ? exp.getTime() - Date.now() : null;
+  const expDays = expMs === null ? null : expMs < 0 ? -1 : Math.floor(expMs / 86400000);
   let tok;
   if (expDays === null) tok = h.error ? { value: 'Unknown', tone: 'muted', note: 'Couldn’t check right now' } : { value: 'Never expires', tone: 'success', note: 'Permanent access key' };
   else if (expDays < 0) tok = { value: 'Expired', tone: 'danger', note: 'Messages can’t send — renew in Meta Business settings' };
@@ -518,7 +519,7 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
                 <ul className="wpb-list wpb-list--scroll">
                   {opted.rows.map((r, i) => {
                     const name = r.customer_name || r.name || 'Customer';
-                    const phone = r.phone_masked || r.customer_phone_masked || r.customer_phone || r.phone || '';
+                    const phone = r.phone_masked || r.customer_phone_masked || (r.customer_phone || r.phone ? formatPhone(r.customer_phone || r.phone) : '');
                     const at = r.opted_out_at || r.updatedAt || r.updated_at || r.at;
                     const convId = r.conversation_id ?? (r.customer_phone ? r.id : null);
                     return (

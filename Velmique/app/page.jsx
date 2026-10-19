@@ -2,29 +2,53 @@ import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
+import { getSeoOrg } from '@/lib/api/seo-org';
+import { richHtml } from '@/lib/sanitizeHtml';
+import { SITE_URL, absUrl, seoMeta } from '@/lib/site';
+import { ik } from '@/lib/imagekit';
 import ProductCard from './_components/ProductCard';
 import ReviewRow from './_components/ReviewRow';
 
-export const metadata = {
-  title: 'Velmique — Maison de Parfum',
-  description: 'Refined, handcrafted Indian fragrances for moments that stay with you.',
-};
+// Dashboard-controlled SEO ('home') over the page's own copy; the seo-org
+// description / OG image fill in when the home row is empty.
+export async function generateMetadata() {
+  const org = await getSeoOrg();
+  return seoMeta('home', {
+    title: 'Velmique — Maison de Parfum',
+    description: org?.description || 'Refined, handcrafted Indian fragrances for moments that stay with you.',
+    path: '/',
+    image: org?.ogImage || undefined,
+  });
+}
+
+// Regenerate at most every minute (ISR): fast, but bestsellers/reviews/FAQs stay fresh.
+export const revalidate = 60;
 
 const stars = (r) => { const n = Math.round(Number(r) || 5); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
 
-const FALLBACK_REVIEWS = [
-  { reviewerName: 'Riya Sharma', rating: 5, review: 'Absolutely in love — elegant, long-lasting and so premium. Finally an Indian maison that gets it.' },
-  { reviewerName: 'Arjun Mehta', rating: 5, review: 'Rich, sophisticated and long-lasting. This has become my signature scent — incredible value.' },
-  { reviewerName: 'Sneha Kapoor', rating: 4, review: 'Beautiful packaging, amazing fragrance and fast delivery. VELMIQUE truly feels luxurious.' },
-];
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
 
 export default async function MaisonHome() {
-  const [featured, reviewsRes, faqs] = await Promise.all([
-    getBestsellers(8),
-    getAllReviews({ limit: 30 }),
-    getFaqs('global'),
+  const [featured, reviewsRes, faqs, seoOrg] = await Promise.all([
+    getBestsellers(8).catch(() => []),
+    getAllReviews({ limit: 30 }).catch(() => null),
+    getFaqs('global').catch(() => []),
+    getSeoOrg().catch(() => null),
   ]);
+
+  // Organization (dashboard-controlled, hardcoded fallback) + WebSite with the
+  // sitelinks search box pointing at /search.
+  const jsonLd = [
+    seoOrg?.organization || { '@context': 'https://schema.org', '@type': 'Organization', name: 'Velmique', url: SITE_URL, logo: absUrl('/logo.webp') },
+    {
+      '@context': 'https://schema.org', '@type': 'WebSite', name: 'Velmique', url: SITE_URL,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ];
 
   // Hero spotlights the #1 bestseller as a live product card.
   const best = featured?.[0] || null;
@@ -44,7 +68,8 @@ export default async function MaisonHome() {
     }
   }
   const homeNotes = [...noteMap.values()].slice(0, 12);
-  const reviews = (reviewsRes?.reviews?.length ? reviewsRes.reviews : FALLBACK_REVIEWS).slice(0, 30);
+  // Only real, published reviews — the section is hidden until there are some.
+  const reviews = (reviewsRes?.reviews || []).slice(0, 30);
 
   // Reviews wall (same 3-row auto-scroll as the PDP).
   const rList = reviews;
@@ -52,14 +77,14 @@ export default async function MaisonHome() {
   const reviewRows = [rList.slice(0, rPer), rList.slice(rPer, rPer * 2), rList.slice(rPer * 2)].filter((r) => r.length);
   const reviewDirs = ['left', 'right', 'left'];
   const renderReview = (v, i) => {
-    const name = v.reviewerName || v.name || 'Verified Buyer';
+    const name = v.reviewerName || v.guestName || v.name || 'Customer';
     return (
       <div className="m-rev" key={v.id || i}>
         <div className="m-stars">{stars(v.rating)}</div>
         <q>{v.review || v.comment || ''}</q>
         <div className="m-rev__by">
           <span className="m-rev__av" style={{ background: AV[(typeof i === 'number' ? i : 0) % AV.length] }}>{name[0]}</span>
-          <span><b>{name}</b><small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6 9 17l-5-5" /></svg>Verified Buyer</small></span>
+          <span><b>{name}</b>{v.verified_purchase ? <small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>Verified Buyer</small> : null}</span>
         </div>
       </div>
     );
@@ -67,6 +92,9 @@ export default async function MaisonHome() {
 
   return (
     <>
+      {jsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
+      ))}
       {/* Hero */}
       <section className="m-hero">
         <div className="m-wrap m-hero__grid">
@@ -115,9 +143,9 @@ export default async function MaisonHome() {
           </div>
           <div className="m-pnotegrid">
             {homeNotes.map((n, i) => (
-              <Link className="m-pn m-pn--link" key={n.name} href={`/test/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
+              <Link className="m-pn m-pn--link" key={n.name} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                 <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                  {n.image ? <img src={n.image} alt={n.name} loading="lazy" /> : null}
+                  {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                 </div>
                 <b>{n.name}</b>
                 <span className="m-pn__go">Shop this note →</span>
@@ -133,7 +161,7 @@ export default async function MaisonHome() {
           <span className="m-eyebrow">Our philosophy</span>
           <h2>A Deeper<br />Kind of Luxury.</h2>
           <p className="lede">At VELMIQUE, we believe a fragrance is more than a scent — it&rsquo;s a memory in the making. Each perfume is crafted in India with rare ingredients, timeless techniques and a modern sensibility, for those who live with intention.</p>
-          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--ghost" href="/test/about">Our story <span className="m-arrow">→</span></Link></div>
+          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--ghost" href="/about">Our story <span className="m-arrow">→</span></Link></div>
         </div>
         <div className="m-pillars">
           <div className="m-pillar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 3v4M12 21a6 6 0 0 0 6-6c0-4-6-9-6-9s-6 5-6 9a6 6 0 0 0 6 6Z"/></svg><div><b>Rare Ingredients</b><small>Sourced from around the world.</small></div></div>
@@ -149,7 +177,7 @@ export default async function MaisonHome() {
           <span className="m-eyebrow">The olfactive world</span>
           <h2>Layers of a Lasting Impression.</h2>
           <p className="lede">Every VELMIQUE fragrance is a balanced composition of top, heart and base notes — designed to evolve with you through the day.</p>
-          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--on-band" href="/test/shop">Explore the collection <span className="m-arrow">→</span></Link></div>
+          <div style={{ marginTop: 26 }}><Link className="m-btn m-btn--on-band" href="/shop">Explore the collection <span className="m-arrow">→</span></Link></div>
         </div>
         <div className="m-notes">
           <div className="m-note"><span className="m-note__t" style={{ background: 'radial-gradient(circle at 35% 30%,#f2d08a,#c98f3d)' }} /><div><div className="m-note__k">Top Notes</div><div className="m-note__d">Citrus, fruits, fresh spices</div></div><div className="m-note__time">0 – 15 min</div></div>
@@ -159,6 +187,7 @@ export default async function MaisonHome() {
       </div></section>
 
       {/* Reviews */}
+      {reviewRows.length ? (
       <section className="m-section"><div className="m-wrap">
         <div className="m-shead"><span className="m-eyebrow">Loved by thousands</span><h2>Real People. Lasting Impressions.</h2></div>
         <div className="m-rvwall">
@@ -167,6 +196,7 @@ export default async function MaisonHome() {
           ))}
         </div>
       </div></section>
+      ) : null}
 
       {/* FAQ — admin-managed, from the backend */}
       {faqs.length ? (
@@ -176,7 +206,7 @@ export default async function MaisonHome() {
             {faqs.map((f) => (
               <details key={f.id}>
                 <summary>{f.question}</summary>
-                <div className="m-faq__a" dangerouslySetInnerHTML={{ __html: f.answer || '' }} />
+                <div className="m-faq__a" {...richHtml(f.answer)} />
               </details>
             ))}
           </div>
