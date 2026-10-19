@@ -335,3 +335,12 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   body:has([data-sticky-atc]) .gzwa-greet { bottom: 164px; }
   body:has([data-sticky-atc]) [data-scrolltop] { bottom: 164px; right: 16px; }
 }
+
+/* Floating chat / back-to-top sit above page content but must not cover the
+   bag drawer's checkout button or an open dialog. */
+body:has(aside[aria-label="Shopping bag"].translate-x-0) .gzwa-fab,
+body:has(aside[aria-label="Shopping bag"].translate-x-0) .gzwa-greet,
+body:has(aside[aria-label="Shopping bag"].translate-x-0) [data-scrolltop],
+body:has(.m-modal) .gzwa-fab,
+body:has(.m-modal) .gzwa-greet,
+body:has(.m-modal) [data-scrolltop] { display: none !important; }

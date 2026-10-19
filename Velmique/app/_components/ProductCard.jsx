@@ -72,7 +72,7 @@ export default function ProductCard({ product }) {
           <span className="m-card__price"><b>{inr(product.price)}</b>{orig ? <s>{inr(orig)}</s> : null}</span>
         </div>
         {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
-        {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} reviews</div> : null}
+        {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
         <button className="m-card__addbody" aria-label={`Add ${product.name} to bag`} onClick={add}><Bag />Add to bag</button>
       </div>
     </article>

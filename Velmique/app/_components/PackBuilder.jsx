@@ -160,7 +160,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
                       <span className="m-card__price"><b>{inr(p.price)}</b>{p.originalPrice && p.originalPrice > p.price ? <s>{inr(p.originalPrice)}</s> : null}</span>
                     </div>
                     {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
-                    {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} reviews</div> : null}
+                    {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
                     {on ? (
                       <span className="m-pkqty">
                         <button type="button" onClick={() => bump(p.id, -1)} aria-label={`Remove one ${p.name}`}>−</button>
