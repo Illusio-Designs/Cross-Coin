@@ -53,6 +53,7 @@ const FILES = [
   'reviews.css',
   'systemHealth.css',
   'customers.css',
+  'editor.css',
 ];
 
 const parts = [];

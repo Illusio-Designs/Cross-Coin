@@ -2,9 +2,9 @@ const express = require('express');
 const {
     createRazorpayOrder, updateOrderPayment,
     razorpayWebhook, handlePaymentFailure,
-    getAllPayments
+    adminListPayments, adminPaymentsSummary, adminPaymentMismatches, adminFixPaymentMismatch,
 } = require('../controller/paymentController.js');
-const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
+const { isAuthenticated, isOrderManager, isAdmin } = require('../middleware/authMiddleware.js');
 
 const router = express.Router();
 
@@ -19,7 +19,10 @@ router.post('/guest/razorpay/order', createRazorpayOrder);
 // ── User ──────────────────────────────────────────────────────────────────
 router.post('/failed',            handlePaymentFailure);
 
-// ── Admin ─────────────────────────────────────────────────────────────────
-router.get('/',                   isAuthenticated, isOrderManager, getAllPayments);
+// ── Admin (Dashboard → Payments) ──────────────────────────────────────────
+router.get('/admin/list',         isAuthenticated, isOrderManager, adminListPayments);
+router.get('/admin/summary',      isAuthenticated, isOrderManager, adminPaymentsSummary);
+router.get('/admin/mismatches',   isAuthenticated, isOrderManager, adminPaymentMismatches);
+router.post('/admin/mismatches/:orderId/fix', isAuthenticated, isAdmin, adminFixPaymentMismatch);
 
 module.exports = router;

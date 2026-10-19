@@ -1,304 +1,275 @@
-import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import ObzusLogo from '../common/ObzusLogo';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  DashboardSquare01Icon, SlidersHorizontalIcon, Package01Icon, ShoppingBag02Icon,
-  CreditCardIcon, Discount01Icon, DeliveryTruck01Icon, StarIcon, Search01Icon,
-  File01Icon, Building01Icon, Settings01Icon, Analytics01Icon, UserMultiple02Icon,
-  UserCheck01Icon, Logout01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon,
-  Cancel01Icon, WhatsappIcon, News01Icon, ChartLineData01Icon,
-  CustomerSupportIcon,
+  ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon, Cancel01Icon, CustomerSupportIcon,
 } from '@hugeicons/core-free-icons';
+import { useAuth } from '../../context/AuthContext';
+import ObzusLogo from '../common/ObzusLogo';
+import useFocusTrap from '../ui/useFocusTrap';
+import { menuForRoles, findInMenu, itemMatches } from './menu';
+import useNavCounts from './useNavCounts';
 
-const nav = (icon) => <HugeiconsIcon icon={icon} size={18} strokeWidth={1.8} />;
-const IC = {
-  dashboard: nav(DashboardSquare01Icon),
-  slider:    nav(SlidersHorizontalIcon),
-  products:  nav(Package01Icon),
-  orders:    nav(ShoppingBag02Icon),
-  payments:  nav(CreditCardIcon),
-  coupons:   nav(Discount01Icon),
-  shipping:  nav(DeliveryTruck01Icon),
-  reviews:   nav(StarIcon),
-  seo:       nav(Search01Icon),
-  policies:  nav(File01Icon),
-  brands:    nav(Building01Icon),
-  settings:  nav(Settings01Icon),
-  analytics: nav(Analytics01Icon),
-  consumers: nav(UserMultiple02Icon),
-  staffUsers: nav(UserCheck01Icon),
-  logout:    nav(Logout01Icon),
-  chevDown:  <HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={2} />,
-  chevLeft:  <HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} />,
-  chevRight: <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2} />,
-  close:     <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />,
-  wa:        nav(WhatsappIcon),
-  support:   nav(CustomerSupportIcon),
-  blog:      nav(News01Icon),
-  reports:   nav(ChartLineData01Icon),
-};
+const Icon = ({ icon, size = 18 }) => <HugeiconsIcon icon={icon} size={size} strokeWidth={1.8} aria-hidden="true" />;
+const cx = (...a) => a.filter(Boolean).join(' ');
+const HELP_URL = 'https://wa.me/917600046416?text=' + encodeURIComponent('Hi, I need help with CrossCoin Admin Panel.');
 
-// roles: array of roles that can see this item. null/undefined = all staff
-const ALL_MENU = [
-  { label: 'Dashboard',    icon: IC.dashboard, view: 'main' },
-  {
-    label: 'Orders', icon: IC.orders, roles: ['admin','order_manager'],
-    submenu: [
-      { label: 'All Orders',        view: 'orders', also: ['returns', 'ndr'] },
-      { label: 'Payments',          view: 'payments' },
-    ],
-  },
-  {
-    label: 'Reports', icon: IC.reports, roles: ['admin','order_manager'],
-    submenu: [
-      { label: 'Overview',      view: 'reports' },
-      { label: 'Revenue & Profit', view: 'revenue-profit', roles: ['admin'] },
-      { label: 'Traffic & Conversion', view: 'traffic-report', roles: ['admin'] },
-    ],
-  },
-  {
-    label: 'Products', icon: IC.products, roles: ['admin','product_manager'],
-    submenu: [
-      { label: 'Products',      view: 'products' },
-      { label: 'Categories',    view: 'categories' },
-      { label: 'Attributes',    view: 'attributes' },
-      { label: 'Pack pricing',  view: 'pack-pricing', roles: ['admin'] },
-      { label: 'Media Gallery', view: 'media-gallery' },
-    ],
-  },
-  {
-    label: 'Marketing', icon: IC.coupons, roles: ['admin','order_manager'],
-    submenu: [
-      { label: 'Coupons',       view: 'coupons' },
-      { label: 'Reviews',       view: 'reviews' },
-      { label: 'Leads',         view: 'leads', roles: ['admin'] },
-      { label: 'Loyalty',       view: 'loyalty' },
-    ],
-  },
-  {
-    label: 'Content', icon: IC.blog, roles: ['admin','product_manager'],
-    submenu: [
-      { label: 'Slider',    view: 'slider' },
-      { label: 'Blogs',     view: 'blogs' },
-      { label: 'SEO',           view: 'seo' },
-      { label: 'Policies',  view: 'policies', roles: ['admin'] },
-    ],
-  },
-  {
-    label: 'Settings', icon: IC.settings, roles: ['admin'],
-    submenu: [
-      { label: 'Brands & Settings', view: 'brands' },
-      { label: 'Shipping Fees',  view: 'shippingFees' },
-      { label: 'Courier Webhooks', view: 'webhook-events' },
-      { label: 'Staff Users',    view: 'staff-users' },
-      { label: 'System health',  view: 'system-health' },
-    ],
-  },
-  { label: 'Consumers',    icon: IC.consumers,  view: 'consumers',   roles: ['admin','order_manager'], also: ['customer'] },
-  { label: 'WhatsApp',     icon: IC.wa,         view: 'whatsapp',    roles: ['admin','whatsapp_manager'] },
-  // Logout moved to the header profile menu (see DashboardHeader → ProfileMenu).
-];
-
-// userRoles is the user's effective role set — an item shows if the user holds
-// ANY role the item allows (null = visible to all staff).
-function filterMenu(menu, userRoles) {
-  const canSee = (allowed) => !allowed || allowed.some(r => userRoles.includes(r));
-  return menu
-    .filter(item => canSee(item.roles))
-    .map(item => {
-      if (!item.submenu) return item;
-      const filteredSub = item.submenu.filter(s => canSee(s.roles));
-      return filteredSub.length ? { ...item, submenu: filteredSub } : null;
-    })
-    .filter(Boolean);
+// Badge for an item from the nav counts: null when there's nothing waiting.
+function badgeFor(item, counts) {
+  if (!item.count) return null;
+  const n = Number(counts[item.count]) || 0;
+  if (n <= 0) return null;
+  if (item.alert) {
+    return { text: '!', alert: true, spoken: `${n} ${n === 1 ? 'job' : 'jobs'} failed in the last 24 hours` };
+  }
+  return { text: n > 99 ? '99+' : String(n), alert: false, spoken: `${n} ${item.countText}` };
 }
 
-export default function Sidebar({ isCollapsed, onToggleCollapse, onViewChange, currentView, isMobileMenuOpen, onMobileMenuToggle }) {
-  const { user, roles } = useAuth();
-  const [openMenu, setOpenMenu] = React.useState(null);
-  const [tooltip, setTooltip] = React.useState(null);
-  const [isMobile, setIsMobile] = React.useState(false);
-  const hideTimeoutRef = React.useRef(null);
-
+/**
+ * Dashboard menu. Desktop: full menu (248px) or an icon rail (72px) — the
+ * choice is remembered by the page (index.jsx). Phones: a drawer opened from
+ * ☰ in the header. Groups, roles and badges come from ./menu.js.
+ */
+export default function Sidebar({
+  collapsed, isMobile, isMobileMenuOpen, onMobileMenuToggle, onToggleCollapse, onViewChange, currentView,
+}) {
+  const { roles } = useAuth();
   const roleKey = (roles || []).join(',');
-  const MENU = React.useMemo(() => filterMenu(ALL_MENU, roles || []), [roleKey]);
+  const menu = useMemo(() => menuForRoles(roles || []), [roleKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counts = useNavCounts({ enabled: !!roleKey, refreshKey: currentView });
+  const rail = !!collapsed && !isMobile;
+  const drawerOpen = isMobile && isMobileMenuOpen;
 
-  React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 900);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  // Orders and Problems open the same view, so remember which one was
+  // clicked; any navigation that isn't to that item's view forgets it.
+  const [picked, setPicked] = useState(null);
+  const pickedItem = picked ? menu.flatMap((g) => g.items).find((i) => i.key === picked) : null;
+  const pickedLive = pickedItem && itemMatches(pickedItem, currentView);
+  useEffect(() => { if (picked && !pickedLive) setPicked(null); }, [currentView]); // eslint-disable-line react-hooks/exhaustive-deps
+  const place = findInMenu(currentView, menu);
+  const activeKey = pickedLive ? picked : place?.item.key;
+  const activeChildKey = activeKey === place?.item.key ? place?.child?.key : null;
 
-  const handleMouseEnter = (e, idx) => {
-    if (isMobile || !isCollapsed) return;
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltip({ idx, top: rect.top + rect.height / 2 });
+  // Sub-lists (Reports, Shipping) open in the full menu; the one holding the
+  // current page opens by itself.
+  const [openKeys, setOpenKeys] = useState(() => new Set());
+  useEffect(() => {
+    const k = place?.child ? place.item.key : null;
+    if (k) setOpenKeys((s) => (s.has(k) ? s : new Set(s).add(k)));
+  }, [place?.item.key, place?.child?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleOpen = (k) => setOpenKeys((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+
+  // Icon rail: a name tooltip on hover/focus, and a small pop-out list for
+  // items with sub-items.
+  const [tip, setTip] = useState(null);       // { text, top }
+  const [flyout, setFlyout] = useState(null); // { key, top }
+  const flyRef = useRef(null);
+  const btnRefs = useRef({});
+  useEffect(() => { setTip(null); setFlyout(null); }, [rail, currentView]);
+  const tipProps = (text) => (rail ? {
+    onMouseEnter: (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ text, top: r.top + r.height / 2 }); },
+    onMouseLeave: () => setTip(null),
+    onFocus: (e) => { const r = e.currentTarget.getBoundingClientRect(); setTip({ text, top: r.top + r.height / 2 }); },
+    onBlur: () => setTip(null),
+  } : {});
+
+  useEffect(() => {
+    if (!flyout) return undefined;
+    flyRef.current?.querySelector('button')?.focus();
+    const onDown = (e) => {
+      if (flyRef.current?.contains(e.target) || btnRefs.current[flyout.key]?.contains(e.target)) return;
+      setFlyout(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [flyout?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const closeFlyout = () => { const k = flyout?.key; setFlyout(null); if (k) btnRefs.current[k]?.focus(); };
+  const onFlyKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeFlyout(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const els = [...flyRef.current.querySelectorAll('button')];
+    const i = els.indexOf(document.activeElement);
+    els[(i + (e.key === 'ArrowDown' ? 1 : -1) + els.length) % els.length]?.focus();
   };
 
-  const handleMouseLeave = () => {
-    if (isMobile || !isCollapsed) return;
-    hideTimeoutRef.current = setTimeout(() => setTooltip(null), 120);
+  // Phone drawer: focus stays inside while open, Esc closes it.
+  const asideRef = useRef(null);
+  const closeRef = useRef(null);
+  useFocusTrap(asideRef, drawerOpen, { onEscape: onMobileMenuToggle, initialFocus: closeRef });
+
+  const go = (target, itemKey = null) => {
+    if (target.hint) { try { sessionStorage.setItem('obz-orders-status', target.hint); } catch { /* storage blocked */ } }
+    setPicked(itemKey);
+    setTip(null);
+    setFlyout(null);
+    onViewChange(target.view);
   };
 
-  const handleTooltipEnter = () => { if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current); };
-  const handleTooltipLeave = () => { hideTimeoutRef.current = setTimeout(() => setTooltip(null), 80); };
+  const renderItem = (item) => {
+    const active = activeKey === item.key;
+    const badge = badgeFor(item, counts);
+    const name = badge ? `${item.label}, ${badge.spoken}` : item.label;
 
-  // Keep the group that holds the current page expanded (e.g. opening
-  // Returns shows the Orders group open).
-  React.useEffect(() => {
-    const idx = MENU.findIndex((item) => item.submenu && item.submenu.some((s) => onView(s)));
-    if (idx >= 0) setOpenMenu(idx);
-  }, [currentView, MENU]);
-
-  // A sub-item is current for its own view and any old views folded into it.
-  const onView = (s) => s.view === currentView || (s.also || []).includes(currentView);
-
-  const isActive = (item) => {
-    if (item.view && onView(item)) return true;
-    if (item.submenu) return item.submenu.some(onView);
-    return false;
-  };
-
-  const handleItemClick = (item, idx) => {
-    if (item.submenu) {
-      if (!isCollapsed || isMobile) setOpenMenu(openMenu === idx ? null : idx);
-    } else {
-      onViewChange(item.view);
-      if (isMobile && onMobileMenuToggle) onMobileMenuToggle();
+    if (item.children) {
+      const open = rail ? flyout?.key === item.key : openKeys.has(item.key);
+      const subId = `sb-sub-${item.key}`;
+      return (
+        <li key={item.key} className="sb-li">
+          <button
+            type="button"
+            ref={(el) => { btnRefs.current[item.key] = el; }}
+            className={cx('sb-link', active && 'is-active')}
+            aria-expanded={open}
+            aria-controls={open ? subId : undefined}
+            aria-label={rail ? item.label : undefined}
+            onClick={(e) => {
+              if (!rail) { toggleOpen(item.key); return; }
+              const r = e.currentTarget.getBoundingClientRect();
+              setTip(null);
+              setFlyout(open ? null : { key: item.key, top: r.top });
+            }}
+            {...tipProps(item.label)}
+          >
+            <span className="sb-ico"><Icon icon={item.icon} /></span>
+            {!rail && <span className="sb-label">{item.label}</span>}
+            {!rail && <span className={cx('sb-chev', open && 'is-open')}><Icon icon={ArrowDown01Icon} size={15} /></span>}
+          </button>
+          {!rail && open && (
+            <ul className="sb-sub" id={subId}>
+              {item.children.map((c) => (
+                <li key={c.key}>
+                  <button
+                    type="button"
+                    className={cx('sb-sublink', activeChildKey === c.key && 'is-active')}
+                    aria-current={activeChildKey === c.key ? 'page' : undefined}
+                    onClick={() => go(c)}
+                  >
+                    {c.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {rail && open && (
+            <div
+              ref={flyRef}
+              id={subId}
+              className="sb-fly"
+              style={{ top: flyout.top }}
+              role="group"
+              aria-label={item.label}
+              onKeyDown={onFlyKey}
+            >
+              <div className="sb-fly-title" aria-hidden="true">{item.label}</div>
+              {item.children.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={cx('sb-fly-link', activeChildKey === c.key && 'is-active')}
+                  aria-current={activeChildKey === c.key ? 'page' : undefined}
+                  onClick={() => go(c)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </li>
+      );
     }
+
+    return (
+      <li key={item.key} className="sb-li">
+        <button
+          type="button"
+          className={cx('sb-link', active && 'is-active')}
+          aria-current={active ? 'page' : undefined}
+          aria-label={rail || badge ? name : undefined}
+          onClick={() => go(item, item.key)}
+          {...tipProps(badge && !badge.alert ? `${item.label} · ${badge.text}` : item.label)}
+        >
+          <span className="sb-ico">
+            <Icon icon={item.icon} />
+            {rail && badge && <span className={cx('sb-dot', badge.alert && 'is-alert')} aria-hidden="true" />}
+          </span>
+          {!rail && <span className="sb-label">{item.label}</span>}
+          {!rail && badge && <span className={cx('sb-count', badge.alert && 'is-alert')} aria-hidden="true">{badge.text}</span>}
+        </button>
+      </li>
+    );
   };
-
-  const handleSubClick = (view) => {
-    onViewChange(view);
-    if (isMobile && onMobileMenuToggle) onMobileMenuToggle();
-  };
-
-  const expanded = !isCollapsed || (isMobile && isMobileMenuOpen);
-
-  // Badge reflects the widest role the user holds (admin ⇒ admin, else first).
-  const primaryRole = (roles || []).includes('admin') ? 'admin' : (roles || [])[0];
-
-  // Role badge color
-  const roleBadgeColor = {
-    admin:            '#ef4444',
-    product_manager:  '#8b5cf6',
-    order_manager:    '#f59e0b',
-    whatsapp_manager: '#10b981',
-  }[primaryRole] || '#6b7280';
-
-  const roleLabel = {
-    admin:            'Admin',
-    product_manager:  'Product Manager',
-    order_manager:    'Order Manager',
-    whatsapp_manager: 'WhatsApp Manager',
-  }[primaryRole] || primaryRole;
 
   return (
     <>
-      {isMobile && isMobileMenuOpen && (
-        <div className="sb-overlay" onClick={onMobileMenuToggle} />
-      )}
+      {drawerOpen && <div className="sb-overlay" onClick={onMobileMenuToggle} aria-hidden="true" />}
 
-      <aside className={`sb${isCollapsed ? ' sb--collapsed' : ''}${isMobile && isMobileMenuOpen ? ' sb--open' : ''}`}>
-
-        {/* Header */}
-        <div className="sb-header">
-          <div className="sb-logo">
-            {!expanded && <span className="sb-logo-mark" aria-hidden="true">O</span>}
-            {expanded && (
-              <div className="sb-logo-text">
-                <ObzusLogo className="sb-logo-wordmark" height={20} />
-                <span className="sb-logo-sub">ADMIN PANEL</span>
-              </div>
-            )}
-          </div>
-          {isMobile && isMobileMenuOpen ? (
-            <button className="sb-toggle sb-toggle--close" onClick={onMobileMenuToggle} aria-label="Close">{IC.close}</button>
-          ) : !isMobile ? (
-            <button className="sb-toggle" onClick={onToggleCollapse} aria-label="Toggle sidebar">
-              {isCollapsed ? IC.chevRight : IC.chevLeft}
+      <aside
+        ref={asideRef}
+        id="dashboard-menu"
+        className={cx('sb', rail && 'sb--rail', drawerOpen && 'sb--open')}
+        aria-label="Dashboard menu"
+        inert={isMobile && !isMobileMenuOpen ? true : undefined}
+      >
+        <div className="sb-head">
+          {rail ? (
+            <span className="sb-mark" role="img" aria-label="Obzus admin">O</span>
+          ) : (
+            <span className="sb-brand">
+              <ObzusLogo className="sb-wordmark" height={20} />
+              <span className="sb-brand-sub">ADMIN</span>
+            </span>
+          )}
+          {isMobile ? (
+            <button ref={closeRef} type="button" className="sb-toggle" onClick={onMobileMenuToggle} aria-label="Close the menu">
+              <Icon icon={Cancel01Icon} size={16} />
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="sb-toggle"
+              onClick={onToggleCollapse}
+              aria-label={rail ? 'Show the menu' : 'Shrink the menu to icons'}
+              aria-expanded={!rail}
+              aria-controls="sb-nav"
+              title={rail ? 'Show the menu' : 'Shrink the menu to icons'}
+            >
+              <Icon icon={rail ? ArrowRight01Icon : ArrowLeft01Icon} size={16} />
+            </button>
+          )}
         </div>
 
-        {/* Role badge — now shown in dashboard header */}
-
-        <nav className="sb-nav">
-          {MENU.map((item, idx) => {
-            const active = isActive(item);
-            const isOpen = openMenu === idx;
-            const showTooltip = !isMobile && isCollapsed && tooltip?.idx === idx;
-
-            return (
-              <div
-                key={item.label}
-                className="sb-item"
-                onMouseEnter={(e) => handleMouseEnter(e, idx)}
-                onMouseLeave={handleMouseLeave}
+        <nav className="sb-nav" id="sb-nav" aria-label="Pages">
+          {menu.map((g, gi) => (
+            <div key={g.key} className="sb-group">
+              {rail
+                ? gi > 0 && <hr className="sb-sep" aria-hidden="true" />
+                : <div className="sb-group-title" id={`sb-g-${g.key}`}>{g.label}</div>}
+              <ul
+                className="sb-list"
+                aria-labelledby={rail ? undefined : `sb-g-${g.key}`}
+                aria-label={rail ? g.label : undefined}
               >
-                <button
-                  className={`sb-link${active ? ' sb-link--active' : ''}`}
-                  aria-current={active && !item.submenu ? 'page' : undefined}
-                  onClick={() => handleItemClick(item, idx)}
-                >
-                  <span className="sb-icon">{item.icon}</span>
-                  {expanded && <span className="sb-label">{item.label}</span>}
-                  {expanded && item.submenu && (
-                    <span className={`sb-chev${isOpen ? ' sb-chev--open' : ''}`}>{IC.chevDown}</span>
-                  )}
-                </button>
-
-                {item.submenu && isOpen && expanded && (
-                  <div className="sb-sub">
-                    {item.submenu.map(s => (
-                      <button
-                        key={s.label}
-                        className={`sb-sub-link${onView(s) ? ' sb-sub-link--active' : ''}`}
-                        aria-current={onView(s) ? 'page' : undefined}
-                        onClick={() => handleSubClick(s.view)}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {showTooltip && !item.submenu && (
-                  <div className="sb-tooltip" style={{ top: tooltip.top }}>{item.label}</div>
-                )}
-                {showTooltip && item.submenu && (
-                  <div className="sb-tooltip-menu" style={{ top: tooltip.top }}
-                    onMouseEnter={handleTooltipEnter}
-                    onMouseLeave={handleTooltipLeave}>
-                    <div className="sb-tooltip-title">{item.label}</div>
-                    {item.submenu.map(s => (
-                      <button
-                        key={s.label}
-                        className={`sb-tooltip-link${onView(s) ? ' sb-tooltip-link--active' : ''}`}
-                        onClick={() => handleSubClick(s.view)}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                {g.items.map(renderItem)}
+              </ul>
+            </div>
+          ))}
         </nav>
 
-        <div className="sb-footer">
-          <button
+        <div className="sb-foot">
+          <a
             className="sb-help"
-            onClick={() => window.open('https://wa.me/917600046416?text=' + encodeURIComponent('Hi, I need help with CrossCoin Admin Panel.'), '_blank')}
+            href={HELP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={rail ? 'Need help? Chat with us on WhatsApp' : undefined}
+            {...tipProps('Need help?')}
           >
-            {IC.support}
-            {expanded && <span>Need help?</span>}
-          </button>
+            <Icon icon={CustomerSupportIcon} />
+            {!rail && <span>Need help?</span>}
+          </a>
         </div>
+
+        {rail && tip && <div className="sb-tip" style={{ top: tip.top }} aria-hidden="true">{tip.text}</div>}
       </aside>
     </>
   );

@@ -10,6 +10,58 @@ const shippingProviderFactory = require('../services/shippingProviderFactory.js'
 // product / order managers.
 router.use(['/brand-settings', '/shipping'], authenticate, isAdmin);
 
+// ── Brands page: plain labelled forms over brand_settings ─────────────────
+// Registered before '/brand-settings/:key' so these names aren't read as keys.
+const brandSettingsAdmin = require('../services/brandSettingsAdminService');
+const settingsAudit = require('../services/settingsAuditService');
+const sendErr = (res, err) => res.status(err.status || 500).json({ success: false, message: err.message || 'Something went wrong' });
+
+// Every brand with its warnings (health dot) — no network checks.
+router.get('/brand-settings/overview', async (req, res) => {
+  try { res.json({ success: true, brands: await brandSettingsAdmin.overview() }); }
+  catch (err) { sendErr(res, err); }
+});
+
+// One brand's sections, fields (secrets masked), other settings, warnings, recent changes.
+router.get('/brand-settings/form', async (req, res) => {
+  try {
+    const data = await brandSettingsAdmin.form(parseInt(req.query.brandId, 10), { checkSite: req.query.checkSite !== '0' });
+    if (!data) return res.status(404).json({ success: false, message: 'Brand not found' });
+    res.json({ success: true, ...data });
+  } catch (err) { sendErr(res, err); }
+});
+
+// Save: { brandId, values: { KEY: value }, remove: [KEY], brand: { display_name, … } }
+router.put('/brand-settings/form', async (req, res) => {
+  try {
+    const brandId = parseInt(req.body?.brandId, 10);
+    if (!brandId) return res.status(400).json({ success: false, message: 'Brand ID is required' });
+    const result = await brandSettingsAdmin.save(brandId, req.body, req.user?.id || null);
+    if (result.errors) return res.status(400).json({ success: false, message: 'Some fields need fixing', errors: result.errors });
+    const data = await brandSettingsAdmin.form(brandId, { checkSite: false });
+    res.json({ success: true, saved: result.saved, ...data });
+  } catch (err) { sendErr(res, err); }
+});
+
+// Check the saved Razorpay keys against Razorpay (secret never leaves the server).
+router.post('/brand-settings/test/razorpay', async (req, res) => {
+  try {
+    const brandId = parseInt(req.body?.brandId, 10);
+    if (!brandId) return res.status(400).json({ success: false, message: 'Brand ID is required' });
+    res.json({ success: true, ...(await brandSettingsAdmin.testRazorpay(brandId)) });
+  } catch (err) { sendErr(res, err); }
+});
+
+// Who changed what (newest first).
+router.get('/brand-settings/audit', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const rows = await settingsAudit.list({ brandId: parseInt(req.query.brandId, 10) || null, area: req.query.area || null, limit, offset: (page - 1) * limit });
+    res.json({ success: true, page, rows });
+  } catch (err) { sendErr(res, err); }
+});
+
 // Get all settings (with optional category filter via query param)
 router.get('/brand-settings', brandSettingsController.getAllSettings);
 

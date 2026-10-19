@@ -20,13 +20,25 @@ exports.createPolicy = async (req, res) => {
 
 exports.getPolicies = async (req, res) => {
   try {
-    const where = {};
-    if (req.brand && req.brand.id) where.brand_id = req.brand.id;
+    const brandId = req.brand && req.brand.id ? req.brand.id : null;
+    // A store's list = its own policies plus the shared ones (brand_id NULL,
+    // which createPolicy supports with scope 'global'). Without a brand, every
+    // policy is listed as before.
+    const where = brandId ? { [Op.or]: [{ brand_id: brandId }, { brand_id: null }] } : {};
     // List context (footer links / sitemap): only id + title are consumed, and
     // the slug is derived from the title client-side. Skip the heavy content TEXT
     // column — detail endpoints (getPublicPolicyByName / getPolicyById) serve it.
     // (No dedicated slug column exists on Policy; title is the slug source.)
-    const policies = await Policy.findAll({ where, attributes: ['id', 'title'] });
+    const rows = await Policy.findAll({ where, attributes: ['id', 'title', 'brand_id'], order: [['id', 'ASC']] });
+    // One entry per policy type (same slug): the store's own row wins over the
+    // shared one, so a sitemap never lists the same page twice.
+    const bySlug = new Map();
+    for (const r of rows) {
+      const key = slugifyTitle(r.title);
+      const prev = bySlug.get(key);
+      if (!prev || (prev.brand_id == null && r.brand_id != null)) bySlug.set(key, r);
+    }
+    const policies = rows.filter((r) => bySlug.get(slugifyTitle(r.title)) === r).map((r) => ({ id: r.id, title: r.title }));
     res.json(policies);
   } catch (err) {
     logger.error('Get policies error:', err);

@@ -73,6 +73,7 @@ const { GuestUser } = require('../model/guestUserModel.js');
 const razorpayService = require('../services/razorpayService.js');
 const stockReservation = require('../services/stockReservationService.js');
 const settingsHelper = require('../services/settingsHelper.js');
+const { verifyOrderCoupon } = require('../services/couponRulesService.js');
 const { toSmallestUnit } = require('../utils/amountConverter.js');
 const { setImmediate } = require('timers');
 
@@ -80,37 +81,9 @@ const PHONE_REGEX = /^[6-9]\d{9}$/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-async function computeCouponDiscount(couponId, subTotal, paymentType = null) {
-  const { Coupon } = require('../model/couponModel.js');
-  if (!couponId) return 0;
-  const coupon = await Coupon.findByPk(couponId);
-  if (!coupon || coupon.status !== 'active') return 0;
-  // Payment-mode restriction: a prepaid-only coupon yields no discount on a COD
-  // order (and vice-versa). paymentType null (legacy callers) skips the guard.
-  if (paymentType && coupon.paymentModeRestriction && coupon.paymentModeRestriction !== 'all') {
-    const mode = paymentType === 'cod' ? 'cod' : 'prepaid';
-    if (coupon.paymentModeRestriction !== mode) return 0;
-  }
-  if (coupon.minPurchase && subTotal < parseFloat(coupon.minPurchase)) return 0;
-  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return 0;
-
-  let discount = 0;
-  if (coupon.type === 'percentage') {
-    discount = subTotal * (parseFloat(coupon.value) / 100);
-    if (coupon.maxDiscount) discount = Math.min(discount, parseFloat(coupon.maxDiscount));
-  } else {
-    discount = parseFloat(coupon.value);
-  }
-  // Round to a whole rupee so subTotal − discount stays an integer (matches
-  // validateCoupon), keeping the order total decimal-free for courier booking.
-  return Math.min(subTotal, Math.round(discount));
-}
-
-async function calcShippingFee(paymentType, brandId = 1) {
-  const { ShippingFee } = require('../model/shippingFeeModel.js');
-  const orderType = paymentType === 'cod' ? 'cod' : 'prepaid';
-  const fee = await ShippingFee.findOne({ where: { orderType, brand_id: brandId } });
-  return fee ? parseFloat(fee.fee) : 0;
+// Same rule as the COD flow and the storefront drawers (shippingService).
+async function calcShippingFee(paymentType, brandId = 1, subtotal = 0) {
+  return require('../services/shippingService.js').computeShippingFee({ orderType: paymentType, subtotal, brandId });
 }
 
 async function batchFetchProducts(productIds) {
@@ -288,7 +261,7 @@ exports.initiateCheckout = async (req, res) => {
 
     const subTotal = Number(totalAmount);
     const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
-    const shippingFee = Number(await calcShippingFee(payment_type, brandId));
+    const shippingFee = Number(await calcShippingFee(payment_type, brandId, subTotal));
     const finalAmount = Math.round(subTotal - appliedDiscount + shippingFee);
 
     // Server-side discount verification
@@ -296,26 +269,16 @@ exports.initiateCheckout = async (req, res) => {
     if (appliedDiscount > 0 && !coupon_id && appliedDiscount > PREPAID_DISCOUNT + 1) {
       return res.status(400).json({ success: false, message: 'Invalid discount amount.' });
     }
-    if (coupon_id) {
-      // Reject a payment-mode-restricted coupon used with the wrong mode with a
-      // clear, actionable message before the generic total-mismatch guard.
-      const { Coupon } = require('../model/couponModel.js');
-      const restrictCoupon = await Coupon.findByPk(coupon_id);
-      if (restrictCoupon && restrictCoupon.paymentModeRestriction && restrictCoupon.paymentModeRestriction !== 'all') {
-        const mode = payment_type === 'cod' ? 'cod' : 'prepaid';
-        if (restrictCoupon.paymentModeRestriction !== mode) {
-          const modeText = restrictCoupon.paymentModeRestriction === 'cod' ? 'Cash on Delivery' : 'Prepaid';
-          return res.status(400).json({ success: false, message: `This coupon is only valid for ${modeText} orders. Please remove it or change your payment method.` });
-        }
-      }
-      const serverDiscount = await computeCouponDiscount(coupon_id, subTotal, payment_type);
-      // Coupon and the ₹50 prepaid instant discount DON'T stack: when a coupon is
-      // applied, the coupon is the only discount (the storefront suppresses the
-      // instant discount), so validate against the coupon's value alone.
-      if (Math.abs(appliedDiscount - serverDiscount) > 1) {
-        return res.status(400).json({ success: false, message: 'Order total mismatch. Please refresh and try again.' });
-      }
-    }
+    // One rule set (services/couponRulesService.js) — dates, store, payment mode,
+    // total + per-customer limits, first order, works-on lines, minimum, amount on
+    // the eligible lines (tiered / quantity coupons included). Coupon and the
+    // prepaid instant discount DON'T stack, so the client's discount must equal
+    // the coupon's. A coupon with no discount claimed isn't attached.
+    const couponCheck = await verifyOrderCoupon({
+      couponId: coupon_id, appliedDiscount, items: validatedItems, subtotal: subTotal,
+      userId, paymentType: payment_type || 'razorpay', brandId,
+    });
+    if (!couponCheck.ok) return res.status(couponCheck.status).json({ success: false, message: couponCheck.message });
     if (finalAmount <= 0) return res.status(400).json({ success: false, message: 'Order total must be greater than zero.' });
 
     // UTM tracking
@@ -331,7 +294,7 @@ exports.initiateCheckout = async (req, res) => {
 
     // Reserve stock
     const { reservationId, expiresIn } = await stockReservation.reserveStock(userId, validatedItems, {
-      shipping_address_id, payment_type: payment_type || 'razorpay', coupon_id: coupon_id || null,
+      shipping_address_id, payment_type: payment_type || 'razorpay', coupon_id: couponCheck.couponId,
       notes: notes || null, brand_id: brandId, utm_tracking_id: utmTrackingId,
       idempotency_key: idempotency_key || null,
       totals: { subtotal: subTotal, discount: appliedDiscount, shipping: shippingFee, final: finalAmount },

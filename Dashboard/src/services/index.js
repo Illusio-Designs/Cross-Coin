@@ -2077,6 +2077,12 @@ export const dashboardService = {
     if (!data?.success) throw new Error(data?.message || "Failed to load today's dashboard");
     return data;
   },
+  // Menu badges — { orders, problems, whatsapp, products, reviews, health },
+  // only the ones this user's roles can open.
+  getNavCounts: async (brandId) => {
+    const { data } = await adminApi.get("/api/admin/nav-counts", { params: brandId ? { brandId } : {} });
+    return data?.counts || {};
+  },
 };
 
 // Brand Services

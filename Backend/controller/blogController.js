@@ -369,23 +369,43 @@ const createPost = async (req, res) => {
   }
 };
 
+// Admin list. Query (all optional): brand_id, status (draft|published|archived),
+// category_id, search (title / author), seo=missing (posts with no meta
+// description), summary=1 (light card payload: no featured-product lookups,
+// plus `seo_missing`, and per-status `counts` for the filter chips), page, limit.
+const HAS_META_DESC = `(SELECT bs.blog_post_id FROM blog_seo bs WHERE bs.meta_description IS NOT NULL AND TRIM(bs.meta_description) <> '')`;
 const getAllPostsAdmin = async (req, res) => {
   try {
     const { brand_id, status, category_id, page = 1, limit = 20 } = req.query;
     const clampedLimit = Math.min(parseInt(limit) || 20, 100);
-    const offset = (parseInt(page) - 1) * clampedLimit;
+    const offset = (Math.max(parseInt(page) || 1, 1) - 1) * clampedLimit;
+    const summary = req.query.summary === '1' || req.query.summary === 'true';
 
-    const where = {};
-    if (status) where.status = status;
-    if (category_id) where.blog_category_id = category_id;
-
-    const include = fullPostInclude();
+    const base = {};
+    if (category_id) base.blog_category_id = category_id;
     if (brand_id) {
-      // Filter by brand via the Brands include
-      const brandsInclude = include.find(i => i.as === 'Brands');
-      brandsInclude.where = { id: brand_id };
-      brandsInclude.required = true;
+      base.id = { [Op.in]: sequelize.literal(`(SELECT bb.blog_post_id FROM blog_brands bb WHERE bb.brand_id = ${parseInt(brand_id, 10) || 0})`) };
     }
+    const search = String(req.query.search || '').trim();
+    if (search) {
+      base[Op.or] = [
+        { title: { [Op.like]: `%${search}%` } },
+        { author_name: { [Op.like]: `%${search}%` } },
+      ];
+    }
+    const missingSeo = { [Op.and]: [sequelize.literal(`\`BlogPost\`.\`id\` NOT IN ${HAS_META_DESC}`)] };
+
+    const where = { ...base };
+    if (status && VALID_BLOG_STATUSES.includes(status)) where.status = status;
+    if (req.query.seo === 'missing') Object.assign(where, missingSeo);
+
+    const include = summary
+      ? [
+          { model: BlogCategory, as: 'BlogCategory', attributes: ['id', 'name', 'slug'] },
+          { model: Brand, as: 'Brands', through: { attributes: [] }, attributes: ['id', 'name', 'display_name', 'slug', 'domain'] },
+          { model: BlogSEO, as: 'BlogSEO', attributes: ['meta_title', 'meta_description'] },
+        ]
+      : fullPostInclude();
 
     const { count, rows } = await BlogPost.findAndCountAll({
       where,
@@ -396,16 +416,37 @@ const getAllPostsAdmin = async (req, res) => {
       order: [['id', 'DESC']]
     });
 
-    return res.status(200).json({
+    const body = {
       success: true,
-      data: await Promise.all(rows.map(formatPostImage)),
       pagination: {
         total: count,
-        page: parseInt(page),
+        page: parseInt(page) || 1,
         limit: clampedLimit,
         totalPages: Math.ceil(count / clampedLimit)
       }
-    });
+    };
+    if (summary) {
+      body.data = rows.map((r) => {
+        const d = r.toJSON();
+        delete d.sections;
+        d.hero_image = d.hero_image ? imagekitService.getOptimizedUrl(d.hero_image, 'large') : null;
+        d.thumbnail_image = d.thumbnail_image ? imagekitService.getOptimizedUrl(d.thumbnail_image, 'large') : null;
+        d.seo_missing = !(d.BlogSEO && d.BlogSEO.meta_description && String(d.BlogSEO.meta_description).trim());
+        return d;
+      });
+      const BP = BlogPost;
+      const [all, published, draft, archived, needsSeo] = await Promise.all([
+        BP.count({ where: base }),
+        BP.count({ where: { ...base, status: 'published' } }),
+        BP.count({ where: { ...base, status: 'draft' } }),
+        BP.count({ where: { ...base, status: 'archived' } }),
+        BP.count({ where: { ...base, ...missingSeo } }),
+      ]);
+      body.counts = { all, published, draft, archived, seo_missing: needsSeo };
+    } else {
+      body.data = await Promise.all(rows.map((r) => formatPostImage(r)));
+    }
+    return res.status(200).json(body);
   } catch (error) {
     logger.error('getAllPostsAdmin error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });

@@ -1,5 +1,11 @@
 const brandSettingsService = require('../services/brandSettingsService');
+const { maskRow, isSecret } = require('../services/brandSettingsAdminService');
+const settingsAudit = require('../services/settingsAuditService');
 const { logger } = require('../config/logging.js');
+
+// Secrets (tokens, key secrets, encrypted rows) never leave the server in
+// full — responses carry "••••1234" and masked: true instead.
+const masked = (rows) => (Array.isArray(rows) ? rows.map(maskRow) : rows && maskRow(rows));
 
 /**
  * Get all settings for a brand
@@ -25,7 +31,7 @@ async function getAllSettings(req, res) {
         
         res.json({
             success: true,
-            data: settings
+            data: masked(settings)
         });
     } catch (error) {
         logger.error('Error fetching brand settings:', error);
@@ -57,7 +63,7 @@ async function getSettingsByCategory(req, res) {
         
         res.json({
             success: true,
-            data: settings
+            data: masked(settings)
         });
     } catch (error) {
         logger.error('Error fetching settings by category:', error);
@@ -96,7 +102,7 @@ async function getSingleSetting(req, res) {
         
         res.json({
             success: true,
-            data: setting
+            data: masked(setting)
         });
     } catch (error) {
         logger.error('Error fetching setting:', error);
@@ -132,11 +138,12 @@ async function createSetting(req, res) {
             description: description || null,
             updated_by: req.user?.id || null
         });
+        await settingsAudit.record({ brandId: Number(brand_id), key, action: 'create', newValue: value, userId: req.user?.id || null, secret: isSecret(key, setting) });
         
         res.status(201).json({
             success: true,
             message: 'Setting created successfully',
-            data: setting
+            data: masked(setting)
         });
     } catch (error) {
         logger.error('Error creating setting:', error);
@@ -190,6 +197,12 @@ async function updateSetting(req, res) {
             });
         }
         
+        const before = await brandSettingsService.getSetting(brandId, key);
+        // A masked value ("••••1234") echoed back means "unchanged" — never
+        // overwrite the real secret with its mask.
+        if (before && isSecret(key, before) && /^•+/.test(String(value))) {
+            return res.json({ success: true, message: 'Setting unchanged', data: masked(before) });
+        }
         const updated = await brandSettingsService.updateSetting(brandId, key, {
             value,
             is_encrypted,
@@ -203,10 +216,12 @@ async function updateSetting(req, res) {
             });
         }
         
+        await settingsAudit.record({ brandId: Number(brandId), key, action: 'update', oldValue: before ? before.value : null, newValue: value, userId: req.user?.id || null, secret: isSecret(key, updated) });
+
         res.json({
             success: true,
             message: 'Setting updated successfully',
-            data: updated
+            data: masked(updated)
         });
     } catch (error) {
         logger.error('Error updating setting:', error);
@@ -234,7 +249,9 @@ async function deleteSetting(req, res) {
             });
         }
         
+        const before = await brandSettingsService.getSetting(brandId, key);
         const deleted = await brandSettingsService.deleteSetting(brandId, key);
+        if (deleted) await settingsAudit.record({ brandId: Number(brandId), key, action: 'delete', oldValue: before ? before.value : null, userId: req.user?.id || null, secret: isSecret(key, before) });
         
         if (!deleted) {
             return res.status(404).json({

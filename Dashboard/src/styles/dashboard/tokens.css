@@ -38,6 +38,12 @@
   --ds-color-accent2:      #6d28d9;
   --ds-color-accent2-bg:   #f5f3ff;
   --ds-color-accent2-bd:   #ddd6fe;
+  /* Status text on its own -bg (pills, badges): darker in light mode so
+     small bold text passes AA; same as the status colour in dark mode. */
+  --ds-color-success-text: #15803d;
+  --ds-color-warn-text:    #b45309;
+  --ds-color-danger-text:  #b91c1c;
+  --ds-color-info-text:    #1d4ed8;
 
   /* ── Color: neutral ──────────────────────────────────────────────── */
   --ds-color-bg:           #f6f6f7;       /* dashboard canvas */
@@ -97,7 +103,7 @@
   --ds-trans:      200ms ease;
 
   /* ── Sidebar widths (used by responsive grid layouts) ───────────── */
-  --ds-sidebar-w-expanded:  260px;
+  --ds-sidebar-w-expanded:  248px;
   --ds-sidebar-w-collapsed: 72px;
 }
 
@@ -143,27 +149,16 @@
   --ds-color-accent2:      #c4b5fd;
   --ds-color-accent2-bg:   #241a3d;
   --ds-color-accent2-bd:   #43347a;
+  --ds-color-success-text: #4ade80;
+  --ds-color-warn-text:    #fbbf24;
+  --ds-color-danger-text:  #f87171;
+  --ds-color-info-text:    #60a5fa;
 
   --ds-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.4);
   --ds-shadow-md:  0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.5);
   --ds-shadow-lg:  0 4px 12px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
   --ds-shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
-
-/* Chrome pieces that keep a literal near-black in light mode need to invert
-   in dark mode to stay legible on the dark canvas. */
-:root[data-theme="dark"] .sb-link--active,
-:root[data-theme="dark"] .sb-link--active:hover {
-  background: #fafafa;
-  color: #0a0a0a;
-}
-:root[data-theme="dark"] .sb-link--active .sb-icon { color: #0a0a0a; }
-:root[data-theme="dark"] .sb-logo-mark { background: #fafafa; color: #0a0a0a; }
-:root[data-theme="dark"] .sb-toggle:hover,
-:root[data-theme="dark"] .sb-help:hover,
-:root[data-theme="dark"] .sb-toggle--close { background: #fafafa; color: #0a0a0a; }
-/* Modal header + primary buttons keep the dark bar — that reads fine on dark,
-   but the aside body/footer follow the tokens automatically. */
 
 /* ── Breakpoint reference (use in component CSS via @media) ─────────
    --bp-sm:  640px;   small phones in landscape
