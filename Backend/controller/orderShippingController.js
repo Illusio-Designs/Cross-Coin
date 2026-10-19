@@ -9,7 +9,7 @@ const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
 const Brand = require("../model/brandModel.js");
 const { OrderShipment } = require("../model/orderShipmentModel.js");
-const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
+const ShippingLabelDownload = require("../model/shippingLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const { sequelize } = require("../config/db.js");
 const axios = require('axios');
@@ -106,7 +106,7 @@ module.exports.isPermanentShippingFailure = isPermanentShippingFailure;
 /**
  * Pick the right shipping service for an order.
  *  - If the order already has a shipment row, reuse that provider (you can't
- *    update tracking on iThink for an order that was created in FShip, etc).
+ *    update tracking on iThink for an order that was created in Shipping, etc).
  *  - Otherwise fall back to the brand's currently-active SHIPPING_PROVIDER.
  * Returns { service, name }.
  */
@@ -159,7 +159,7 @@ const truthyFlag = (v) => v === true || v === 1 || ['yes', '1', 'true', 'y'].inc
 async function autoSelectCourierWithFallback(order, provider, transaction = null) {
   // Ensure the associations this function relies on are present. The manual
   // Sync button and the queue worker load the order WITH includes, but the
-  // post-payment auto-sync path (orderService.syncOrderToFShip → bare
+  // post-payment auto-sync path (orderService.syncOrderToShipping → bare
   // Order.findByPk) does not — so ShippingAddress / OrderItems were undefined,
   // the destination pincode came through EMPTY, iThink returned zero couriers,
   // and every prepaid order failed with "No serviceable courier could book"
@@ -334,21 +334,21 @@ async function upsertShipment(orderId, data, transaction = null) {
     const payload = {
       order_id: orderId,
       provider: data.provider || existing?.provider || 'ithink',
-      provider_order_id: data.provider_order_id || data.fship_order_id || null,
-      waybill: data.waybill || data.fship_waybill || null,
+      provider_order_id: data.provider_order_id || data.shipping_order_id || null,
+      waybill: data.waybill || data.shipping_waybill || null,
       tracking_number: data.tracking_number || null,
       tracking_url: data.tracking_url || null,
-      route_code: data.route_code || data.fship_route_code || null,
-      courier_id: data.courier_id || data.fship_courier_id || null,
+      route_code: data.route_code || data.shipping_route_code || null,
+      courier_id: data.courier_id || data.shipping_courier_id || null,
       courier_name: data.courier_name || null,
-      label_url: data.label_url || data.fship_label_url || null,
-      label_downloaded: data.label_downloaded ?? data.fship_label_downloaded ?? false,
-      label_downloaded_at: data.label_downloaded_at || data.fship_label_downloaded_at || null,
-      label_downloaded_by: data.label_downloaded_by || data.fship_label_downloaded_by || null,
-      sync_status: data.sync_status || data.fship_sync_status || 'pending',
-      sync_attempts: data.sync_attempts ?? data.fship_sync_attempts ?? 0,
-      sync_error: data.sync_error || data.fship_sync_error || null,
-      last_synced_at: data.last_synced_at || data.fship_last_synced_at || null,
+      label_url: data.label_url || data.shipping_label_url || null,
+      label_downloaded: data.label_downloaded ?? data.shipping_label_downloaded ?? false,
+      label_downloaded_at: data.label_downloaded_at || data.shipping_label_downloaded_at || null,
+      label_downloaded_by: data.label_downloaded_by || data.shipping_label_downloaded_by || null,
+      sync_status: data.sync_status || data.shipping_sync_status || 'pending',
+      sync_attempts: data.sync_attempts ?? data.shipping_sync_attempts ?? 0,
+      sync_error: data.sync_error || data.shipping_sync_error || null,
+      last_synced_at: data.last_synced_at || data.shipping_last_synced_at || null,
     };
     // Remove undefined values
     Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
@@ -362,8 +362,8 @@ async function upsertShipment(orderId, data, transaction = null) {
   }
 }
 
-// Handle FShip webhook for order updates
-module.exports.handleFShipWebhook = async (req, res) => {
+// Handle Shipping webhook for order updates
+module.exports.handleShippingWebhook = async (req, res) => {
   const transaction = await sequelize.transaction();
   let webhookEventId = null;   // hoisted so the catch can flag a failed event
 
@@ -373,7 +373,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
     // first time a real webhook lands (helps confirm/adjust the field mapping).
     logger.info('🔔 Shipping webhook received: ' + JSON.stringify(raw).slice(0, 800));
 
-    // Both iThink and FShip POST here, and iThink may nest a single shipment
+    // Both iThink and Shipping POST here, and iThink may nest a single shipment
     // under `data` (object or array). Normalise across every field name we've
     // seen so the handler works regardless of provider/version.
     const d = Array.isArray(raw.data) ? (raw.data[0] || {})
@@ -404,7 +404,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
     // transition is never suppressed but an exact duplicate is. Stored on a
     // separate connection (no txn) so the audit row survives a later rollback.
     const mappedIncoming = status
-      ? shippingProviderFactory.getProviderByName('ithink', 1).mapFShipStatusToCrossCoin(status)
+      ? shippingProviderFactory.getProviderByName('ithink', 1).mapShippingStatusToCrossCoin(status)
       : null;
     const eventKey = (waybill || order_id)
       ? `ithink:${waybill || order_id}:${String(status || '').toLowerCase().trim()}:${delivery_date || ''}`
@@ -436,12 +436,12 @@ module.exports.handleFShipWebhook = async (req, res) => {
       logger.warn('shipment_webhook_events store failed: ' + err.message);
     }
 
-    // Find order by FShip waybill or order ID
+    // Find order by Shipping waybill or order ID
     const order = await Order.findOne({
       where: {
         [Op.or]: [
-          { fship_waybill: waybill },
-          { fship_order_id: order_id },
+          { shipping_waybill: waybill },
+          { shipping_order_id: order_id },
           { order_number: order_id }
         ]
       },
@@ -469,22 +469,22 @@ module.exports.handleFShipWebhook = async (req, res) => {
     });
 
     if (!order) {
-      logger.debug("❌ Order not found for FShip waybill/order ID:", waybill || order_id);
+      logger.debug("❌ Order not found for Shipping waybill/order ID:", waybill || order_id);
       await transaction.rollback();
       return res.status(404).json({ message: "Order not found" });
     }
 
     logger.debug(`📦 Processing webhook for Order: ${order.order_number}, Current Status: ${order.status}`);
 
-    // Update order with FShip tracking information
+    // Update order with Shipping tracking information
     const updateData = {};
     if (waybill) updateData.tracking_number = waybill;
     if (courier_name) updateData.courier_name = courier_name;
 
-    // Map FShip status to our order status — but only ever move FORWARD.
+    // Map Shipping status to our order status — but only ever move FORWARD.
     let orderStatus = order.status;
     let statusAdvanced = false;
-    let webhookNotes = `FShip webhook: ${status}`;
+    let webhookNotes = `Shipping webhook: ${status}`;
 
     if (status) {
       const mappedStatus = mappedIncoming;
@@ -502,7 +502,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
         // The raw event is still stored above for the audit trail; we just
         // don't let it drag the order status backward.
         logger.info(`↩︎ Non-forward status "${mappedStatus}" ignored for ${order.order_number} (current: ${order.status})`);
-        webhookNotes = `FShip webhook (kept ${order.status}, ignored non-forward ${mappedStatus})`;
+        webhookNotes = `Shipping webhook (kept ${order.status}, ignored non-forward ${mappedStatus})`;
       }
     }
 
@@ -582,8 +582,8 @@ module.exports.handleFShipWebhook = async (req, res) => {
             item.quantity,
             stockBefore,
             stockAfter,
-            'fship_webhook',
-            `Auto-restored via FShip webhook. Reason: ${rto_reason || 'RTO'}`
+            'shipping_webhook',
+            `Auto-restored via Shipping webhook. Reason: ${rto_reason || 'RTO'}`
           ],
           transaction
         });
@@ -600,7 +600,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
 
       // Dual-write to order_shipments
       await upsertShipment(order.id, {
-        waybill: waybill || order.fship_waybill,
+        waybill: waybill || order.shipping_waybill,
         tracking_number: waybill || order.tracking_number,
         courier_name: courier_name || order.courier_name,
         sync_status: 'synced',
@@ -633,7 +633,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
           order_id: order.id,
           status: orderStatus,
           notes: webhookNotes,
-          created_by: "fship_webhook",
+          created_by: "shipping_webhook",
         }, { transaction });
       }
 
@@ -676,7 +676,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
           await whatsappService.sendOrderShipped(phone, {
             name,
             orderNumber: order.order_number,
-            awbNumber: waybill || order.fship_waybill,
+            awbNumber: waybill || order.shipping_waybill,
             // trackingUrl omitted: sendOrderShipped builds the brand's own link.
           }, order.brand_id || 1);
         } else if (orderStatus === 'out for delivery') {
@@ -720,7 +720,7 @@ module.exports.handleFShipWebhook = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    logger.error("❌ Error processing FShip webhook:", error);
+    logger.error("❌ Error processing Shipping webhook:", error);
     // Flag the stored raw event so it can be retried/inspected (best-effort).
     if (webhookEventId) {
       sequelize.query(
@@ -782,17 +782,17 @@ module.exports.getShippingWebhookEvents = async (req, res) => {
 };
 
 // Get tracking info for an order — uses the provider that issued the AWB.
-module.exports.getFShipTrackingForOrder = async (req, res) => {
+module.exports.getShippingTrackingForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
     const order = await Order.findByPk(id);
-    if (!order || !order.fship_waybill) {
+    if (!order || !order.shipping_waybill) {
       return res
         .status(404)
         .json({ message: "Order or waybill not found" });
     }
     const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-    const tracking = await provider.getShipmentStatus(order.fship_waybill);
+    const tracking = await provider.getShipmentStatus(order.shipping_waybill);
     res.json({ tracking, provider: providerName });
   } catch (error) {
     logger.error("Error fetching tracking:", error);
@@ -804,17 +804,17 @@ module.exports.getFShipTrackingForOrder = async (req, res) => {
 };
 
 // Get shipping label for an order — uses the provider that issued the AWB.
-module.exports.getFShipLabelForOrder = async (req, res) => {
+module.exports.getShippingLabelForOrder = async (req, res) => {
   try {
     const { id } = req.params; // order id
     const order = await Order.findByPk(id);
-    if (!order || !order.fship_waybill) {
+    if (!order || !order.shipping_waybill) {
       return res
         .status(404)
         .json({ message: "Order or waybill not found" });
     }
     const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-    const labelData = await provider.getShippingLabel(order.fship_waybill);
+    const labelData = await provider.getShippingLabel(order.shipping_waybill);
     res.json({ label_data: labelData, provider: providerName });
   } catch (error) {
     logger.error("Error fetching label:", error);
@@ -828,13 +828,13 @@ module.exports.getFShipLabelForOrder = async (req, res) => {
 // Courier list — retained as a stable endpoint for the dashboard. Couriers are
 // now auto-selected per order from iThink's live rate/serviceability check
 // (see autoSelectCourierWithFallback), so there is no static list to return.
-module.exports.getFShipCouriers = async (req, res) => {
+module.exports.getShippingCouriers = async (req, res) => {
   res.json({ couriers: [] });
 };
 
 // Cancel orders at the shipping provider (bulk). Routes each order to the
 // provider that actually issued its AWB.
-module.exports.cancelOrdersInFShip = async (req, res) => {
+module.exports.cancelOrdersInShipping = async (req, res) => {
   try {
     const { orderIds } = req.body;
 
@@ -852,14 +852,14 @@ module.exports.cancelOrdersInFShip = async (req, res) => {
     for (const orderId of orderIds) {
       try {
         const order = await Order.findByPk(orderId);
-        if (!order || !order.fship_waybill) {
+        if (!order || !order.shipping_waybill) {
           results.failed++;
           results.errors.push(`Order ${orderId}: No waybill found`);
           continue;
         }
 
         const { service: provider, name: providerName } = await resolveProviderForOrder(order);
-        await provider.cancelOrder(order.fship_waybill, "Bulk cancellation");
+        await provider.cancelOrder(order.shipping_waybill, "Bulk cancellation");
 
         results.successful++;
         logger.debug(`Order ${orderId} cancelled via ${providerName}`);
@@ -912,8 +912,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
     logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}${selectedLogistics ? ` with courier: ${selectedLogistics}` : ''}`);
 
     // STEP 1: Check if order is already synced or currently syncing
-    const isSynced = order.fship_order_id && order.fship_waybill;
-    const isSyncing = order.fship_sync_status === 'syncing';
+    const isSynced = order.shipping_order_id && order.shipping_waybill;
+    const isSyncing = order.shipping_sync_status === 'syncing';
 
     if (isSyncing) {
       logger.debug(`⏳ Order ${order.order_number} is currently syncing. Skipping to avoid duplicate...`);
@@ -942,7 +942,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
           let nextAllowed = null;
           try { nextAllowed = await pickupSvc.getNextPickupDate(); } catch (_) {}
           await order.update({
-            fship_sync_status: 'pending',
+            shipping_sync_status: 'pending',
             pickup_hold_until: holdUntil,
             ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
           }, { transaction: localTransaction });
@@ -966,7 +966,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       // auto-select the best available (delhivery → amazon → xpressbees) so the
       // Sync button and bulk sync book directly with no manual pick — restoring
       // the previous auto-courier behaviour. The recursive calls pass an explicit
-      // courier, so there is no loop; FShip picks internally so it's unaffected.
+      // courier, so there is no loop; Shipping picks internally so it's unaffected.
       if (providerName === 'ithink' && !selectedLogistics) {
         logger.debug(`🔄 Order ${order.order_number}: no courier given — auto-selecting for iThink.`);
         const auto = await module.exports.autoSelectCourierWithFallback(order, provider, localTransaction);
@@ -981,7 +981,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
 
       logger.debug(`📝 Order ${order.order_number} not synced. Creating in ${providerName}...`);
 
-      const createResult = await module.exports.createOrderInFShip(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
+      const createResult = await module.exports.createOrderInShipping(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
 
       if (createResult.success) {
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
@@ -1005,7 +1005,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
           action: 'synced',
           status: order.status,
           provider: providerName,
-          fship_order_id: createResult.fship_order_id,
+          shipping_order_id: createResult.shipping_order_id,
           waybill: createResult.waybill,
           message: `Order created and synced with ${providerName}`
         };
@@ -1016,7 +1016,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       // STEP 3: Order already synced — update status from provider
       logger.debug(`🔄 Order ${order.order_number} already synced (${providerName}). Checking for updates...`);
 
-      const updateResult = await module.exports.updateOrderStatusFromFShip(order, localTransaction, provider, providerName);
+      const updateResult = await module.exports.updateOrderStatusFromShipping(order, localTransaction, provider, providerName);
 
       if (updateResult.success) {
         logger.debug(`✅ Order ${order.order_number} status updated via ${providerName}`);
@@ -1028,8 +1028,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
           action: updateResult.statusChanged ? 'updated' : 'skipped',
           status: updateResult.newStatus || order.status,
           provider: providerName,
-          fship_order_id: order.fship_order_id,
-          waybill: order.fship_waybill,
+          shipping_order_id: order.shipping_order_id,
+          waybill: order.shipping_waybill,
           message: updateResult.message
         };
       } else {
@@ -1048,8 +1048,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
   }
 };
 
-// Validate order data before FShip sync — returns array of issues
-module.exports.validateOrderForFShip = (order) => {
+// Validate order data before Shipping sync — returns array of issues
+module.exports.validateOrderForShipping = (order) => {
   const issues = [];
   const addr = order.ShippingAddress;
 
@@ -1086,9 +1086,9 @@ module.exports.validateOrderForFShip = (order) => {
 };
 
 // Create order at the active shipping provider for the order's brand.
-// Method name kept for backward compatibility; despite "FShip" in the name it
-// dispatches to whichever provider is currently configured (FShip or iThink).
-module.exports.createOrderInFShip = async (order, transaction, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
+// Method name kept for backward compatibility; despite "Shipping" in the name it
+// dispatches to whichever provider is currently configured (Shipping or iThink).
+module.exports.createOrderInShipping = async (order, transaction, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
   try {
     if (!provider) {
       const resolved = await resolveProviderForOrder(order);
@@ -1102,25 +1102,25 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
     await order.reload({ transaction });
 
     // Double-check if order was already synced by another process
-    if (order.fship_order_id && order.fship_waybill) {
-      logger.debug(`⚠️ Order ${order.order_number} already has FShip data. Skipping creation.`);
+    if (order.shipping_order_id && order.shipping_waybill) {
+      logger.debug(`⚠️ Order ${order.order_number} already has Shipping data. Skipping creation.`);
       return {
         success: true,
-        fship_order_id: order.fship_order_id,
-        waybill: order.fship_waybill,
-        route_code: order.fship_route_code,
+        shipping_order_id: order.shipping_order_id,
+        waybill: order.shipping_waybill,
+        route_code: order.shipping_route_code,
         already_synced: true
       };
     }
 
-    // Validate order data before sending to FShip
-    const validationIssues = module.exports.validateOrderForFShip(order);
+    // Validate order data before sending to Shipping
+    const validationIssues = module.exports.validateOrderForShipping(order);
     if (validationIssues.length > 0) {
       const errorMsg = validationIssues.join('; ');
-      logger.error(`❌ Order ${order.order_number} failed FShip validation: ${errorMsg}`);
+      logger.error(`❌ Order ${order.order_number} failed Shipping validation: ${errorMsg}`);
       await order.update({
-        fship_sync_status: 'failed',
-        fship_sync_error: errorMsg,
+        shipping_sync_status: 'failed',
+        shipping_sync_error: errorMsg,
       }, { transaction });
       return {
         success: false,
@@ -1129,8 +1129,8 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
     }
 
     // Clear any previous sync error on retry
-    if (order.fship_sync_error) {
-      await order.update({ fship_sync_error: null }, { transaction });
+    if (order.shipping_sync_error) {
+      await order.update({ shipping_sync_error: null }, { transaction });
     }
 
     // Next allowed pickup date from the shared schedule (weekly offs + blocked
@@ -1145,7 +1145,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 
     // Prepare order payload (same shape works for both providers — each service
     // formats it internally for its own API)
-    const fshipOrderData = await module.exports.prepareFShipOrderData(order, providerName, selectedLogistics, serviceType);
+    const fshipOrderData = await module.exports.prepareShippingOrderData(order, providerName, selectedLogistics, serviceType);
     // Pass the computed pickup date through to the provider. iThink's domestic
     // API may ignore it (pickup_date is documented only on their international
     // endpoint), but the booking is already HELD so the pickup can't land on a
@@ -1182,9 +1182,9 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
               labelUrl = labelData.file_name;
             }
           } else {
-            // FShip: use getShippingLabel
+            // Shipping: use getShippingLabel
             labelData = await provider.getShippingLabel(result.waybill);
-            logger.debug('📦 FShip Label Response:', JSON.stringify(labelData, null, 2));
+            logger.debug('📦 Shipping Label Response:', JSON.stringify(labelData, null, 2));
 
             if (labelData) {
               if (Array.isArray(labelData.data) && labelData.data.length > 0) {
@@ -1207,19 +1207,19 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
         }
       }
 
-      // Update order with provider details (fship_* columns used for both FShip and iThink).
+      // Update order with provider details (shipping_* columns used for both Shipping and iThink).
       // scheduledPickupDate was computed before the booking (and sent to the
       // provider); stamp it here, and clear any pickup hold now that it's booked.
       await order.update({
-        fship_order_id: result.orderId || null,
-        fship_waybill: result.waybill || null,
-        fship_route_code: result.routeCode || null,
-        fship_label_url: labelUrl || null,
-        fship_courier_id: result.courierId || null,
+        shipping_order_id: result.orderId || null,
+        shipping_waybill: result.waybill || null,
+        shipping_route_code: result.routeCode || null,
+        shipping_label_url: labelUrl || null,
+        shipping_courier_id: result.courierId || null,
         courier_name: result.courierName || null,
         tracking_number: result.waybill || null,
         status: 'processing', // Update status to processing when synced
-        fship_last_synced_at: new Date(), // Track last sync time
+        shipping_last_synced_at: new Date(), // Track last sync time
         pickup_hold_until: null, // booked — no longer held
         ...(scheduledPickupDate ? { scheduled_pickup_date: scheduledPickupDate } : {}),
       }, { transaction });
@@ -1299,7 +1299,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 
       return {
         success: true,
-        fship_order_id: result.orderId,
+        shipping_order_id: result.orderId,
         waybill: result.waybill,
         route_code: result.routeCode,
         labelId: labelId,
@@ -1344,7 +1344,7 @@ module.exports.createOrderInFShip = async (order, transaction, provider = null, 
 // Update order status from the provider that originally shipped it.
 // Method name kept for backward compatibility — it dispatches to whatever
 // provider the order's shipment row was created under.
-module.exports.updateOrderStatusFromFShip = async (order, transaction, provider = null, providerName = null) => {
+module.exports.updateOrderStatusFromShipping = async (order, transaction, provider = null, providerName = null) => {
   try {
     if (!provider) {
       const resolved = await resolveProviderForOrder(order);
@@ -1353,9 +1353,9 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
     }
 
     logger.debug(`🔄 Updating status for order ${order.order_number} from ${providerName}...`);
-    logger.debug(`📋 Current order details - Label URL: ${order.fship_label_url || 'MISSING'}, Waybill: ${order.fship_waybill || 'MISSING'}`);
+    logger.debug(`📋 Current order details - Label URL: ${order.shipping_label_url || 'MISSING'}, Waybill: ${order.shipping_waybill || 'MISSING'}`);
 
-    const waybill = order.fship_waybill || order.tracking_number;
+    const waybill = order.shipping_waybill || order.tracking_number;
 
     if (!waybill) {
       return {
@@ -1365,19 +1365,19 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
     }
 
     // Fetch label URL if not already present (check for both NULL and empty string)
-    if ((!order.fship_label_url || order.fship_label_url.trim() === '') && waybill) {
+    if ((!order.shipping_label_url || order.shipping_label_url.trim() === '') && waybill) {
       logger.debug(`📄 Label URL missing. Attempting to fetch for waybill: ${waybill}`);
 
-      const orderId = order.fship_order_id;
+      const orderId = order.shipping_order_id;
 
       if (orderId) {
         let labelUrl = null;
 
         // Construct label URL based on provider
         if (providerName === 'fship') {
-          // FShip label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{ORDER_ID}_TH.pdf
+          // Shipping label URL format: https://manifest.fship.in/files/label_html/label_{WAYBILL}_{ORDER_ID}_TH.pdf
           labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${orderId}_TH.pdf`;
-          logger.debug(`✅ FShip label URL constructed: ${labelUrl}`);
+          logger.debug(`✅ Shipping label URL constructed: ${labelUrl}`);
         } else if (providerName === 'ithink') {
           // iThink typically provides the label URL via API, so we'll try to fetch it
           logger.debug(`📄 Fetching iThink label URL via API for waybill: ${waybill}`);
@@ -1401,7 +1401,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         if (labelUrl) {
           try {
             await order.update({
-              fship_label_url: labelUrl,
+              shipping_label_url: labelUrl,
               notes: order.notes ? `${order.notes}\niThink Manifest: Label URL obtained` : `iThink Manifest: Label URL obtained`
             }, { transaction });
             await upsertShipment(order.id, { label_url: labelUrl }, transaction);
@@ -1417,7 +1417,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         logger.debug(`⚠️ Order ID not found, cannot fetch label`);
       }
     } else {
-      logger.debug(`✓ Manifest URL already exists: ${order.fship_label_url}`);
+      logger.debug(`✓ Manifest URL already exists: ${order.shipping_label_url}`);
     }
 
     // Get tracking history from provider
@@ -1452,7 +1452,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         if (statusData) providerStatus = statusData.current_status;
       }
     } else {
-      // FShip format: { summary: { status, courier_name, ... } }
+      // Shipping format: { summary: { status, courier_name, ... } }
       if (trackingResult && trackingResult.summary) {
         statusData = trackingResult.summary;
         providerStatus = statusData.status;
@@ -1460,7 +1460,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
     }
 
     if (statusData && providerStatus) {
-      const newStatus = provider.mapFShipStatusToCrossCoin(providerStatus);
+      const newStatus = provider.mapShippingStatusToCrossCoin(providerStatus);
 
       // Extract courier name from tracking data (try every possible field)
       const courierFromTracking = statusData.courier_name
@@ -1497,7 +1497,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
         // Prepare update data
         const updateData = {
           status: newStatus,
-          fship_last_synced_at: new Date() // Track last sync time
+          shipping_last_synced_at: new Date() // Track last sync time
         };
 
         // SPECIAL HANDLING: Update payment status based on order status
@@ -1664,7 +1664,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
               await whatsappSvc.sendOrderShipped(phone, {
                 name,
                 orderNumber: _notifyOrder.order_number,
-                awbNumber: _notifyOrder.fship_waybill || _notifyOrder.tracking_number,
+                awbNumber: _notifyOrder.shipping_waybill || _notifyOrder.tracking_number,
                 // trackingUrl omitted: sendOrderShipped builds the brand's own link.
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'out for delivery') {
@@ -1706,7 +1706,7 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
               }
             }
           } catch (waErr) {
-            logger.warn(`[FShip] WhatsApp status notification failed for ${_notifyOrder.order_number}: ${waErr.message}`);
+            logger.warn(`[Shipping] WhatsApp status notification failed for ${_notifyOrder.order_number}: ${waErr.message}`);
           }
         });
 
@@ -1721,11 +1721,11 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
 
         // Update last synced timestamp even if status unchanged
         await order.update({
-          fship_last_synced_at: new Date()
+          shipping_last_synced_at: new Date()
         }, { transaction });
 
         // Even if status unchanged, ensure we have label URL
-        if (!order.fship_label_url && waybill) {
+        if (!order.shipping_label_url && waybill) {
           logger.debug(`📄 Status unchanged but label URL missing. Already fetched above.`);
         }
 
@@ -1798,8 +1798,8 @@ module.exports.updateOrderStatusFromFShip = async (order, transaction, provider 
   }
 };
 
-// Prepare order data for FShip API
-module.exports.prepareFShipOrderData = async (order, providerName = 'fship', selectedLogistics = null, serviceType = null) => {
+// Prepare order data for Shipping API
+module.exports.prepareShippingOrderData = async (order, providerName = 'fship', selectedLogistics = null, serviceType = null) => {
   try {
     // Get customer details
     const customer = order.User || order.GuestUser;
@@ -1851,10 +1851,10 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
         throw new Error(`ITHINK_PICKUP_ADDRESS_ID is not configured for brand ${brandId}. Set it in Dashboard → Settings → Shipping.`);
       }
     } else {
-      // FShip warehouse ID
+      // Shipping warehouse ID
       pickAddressId = parseInt(await settingsHelper.getSetting(brandId, 'FSHIP_DEFAULT_WAREHOUSE_ID', '227729'), 10);
       returnAddressId = pickAddressId;
-      logger.debug(`🏢 FShip Warehouse: ${pickAddressId}`);
+      logger.debug(`🏢 Shipping Warehouse: ${pickAddressId}`);
     }
 
     // Prepare order payload — the same shape works for both providers; each
@@ -1901,7 +1901,7 @@ module.exports.prepareFShipOrderData = async (order, providerName = 'fship', sel
 };
 
 // Enhanced single order sync endpoint
-module.exports.syncSingleOrderWithFShip = async (req, res) => {
+module.exports.syncSingleOrderWithShipping = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1910,21 +1910,21 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
     // call can't tie up a Passenger worker (which surfaced as "Network Error" on
     // other requests).
     const order = await Order.findByPk(id, {
-      attributes: ['id', 'order_number', 'status', 'fship_sync_status', 'fship_waybill'],
+      attributes: ['id', 'order_number', 'status', 'shipping_sync_status', 'shipping_waybill'],
     });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     if (order.status === 'cancelled') {
       return res.json({ success: true, skipped: true, message: `Order ${order.order_number} is cancelled. No sync needed.` });
     }
-    if (order.fship_waybill || order.fship_sync_status === 'synced') {
+    if (order.shipping_waybill || order.shipping_sync_status === 'synced') {
       return res.json({ success: true, queued: false, message: `Order ${order.order_number} is already booked.` });
     }
 
     // Mark "booking in progress" so the row shows Pending Sync, then hand the
     // actual courier booking to the shipping:sync-order worker (auto-selects the
     // best courier, retries on transient failure, records the AWB / error).
-    await order.update({ fship_sync_status: 'pending', fship_sync_error: null });
+    await order.update({ shipping_sync_status: 'pending', shipping_sync_error: null });
 
     const { enqueue } = require('../services/integrationQueue.js');
     await enqueue('shipping:sync-order', { orderId: order.id, auto: false },
@@ -1943,11 +1943,11 @@ module.exports.syncSingleOrderWithFShip = async (req, res) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Bulk Status Refresh — fetch latest FShip status for old/synced orders
+// Bulk Status Refresh — fetch latest Shipping status for old/synced orders
 // POST /api/orders/fship/refresh-status
 // Query params: ?limit=50&status=processing,booked,shipped&older_than_days=0
 // ══════════════════════════════════════════════════════════════════════════════
-module.exports.bulkRefreshFShipStatus = async (req, res) => {
+module.exports.bulkRefreshShippingStatus = async (req, res) => {
   try {
     // Resolve provider for the requested brand (default 1) just to fail fast if
     // credentials are wrong. Inside the loop, each order resolves its own
@@ -1983,7 +1983,7 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
     // STEP 3: Fetch orders that have a waybill and are in active statuses
     const orders = await Order.findAll({
       where: {
-        fship_waybill: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
+        shipping_waybill: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
         status: { [Op.in]: statusFilter },
         order_number: { [Op.notLike]: '%TEST%' },
         createdAt: dateFilter,
@@ -2025,14 +2025,14 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
 
       const batchPromises = batch.map(async (order) => {
         // ── Pre-refresh validation ──────────────────────────────────────
-        const issues = module.exports.validateOrderForFShip(order);
+        const issues = module.exports.validateOrderForShipping(order);
         if (issues.length > 0) {
           results.validation_failed++;
           results.validation_issues.push({
             order_number: order.order_number,
             order_id: order.id,
             status: order.status,
-            waybill: order.fship_waybill,
+            waybill: order.shipping_waybill,
             issues,
           });
           // Still attempt refresh — validation issues don't block status reads
@@ -2041,7 +2041,7 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
 
         const orderTx = await sequelize.transaction();
         try {
-          const refreshResult = await module.exports.updateOrderStatusFromFShip(order, orderTx);
+          const refreshResult = await module.exports.updateOrderStatusFromShipping(order, orderTx);
 
           if (refreshResult.success) {
             await orderTx.commit();
@@ -2053,7 +2053,7 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
                 order_id: order.id,
                 previous_status: order.status,
                 new_status: refreshResult.newStatus,
-                waybill: order.fship_waybill,
+                waybill: order.shipping_waybill,
                 payment_status_changed: refreshResult.newStatus === 'delivered' || refreshResult.newStatus === 'rto',
                 message: refreshResult.message,
               });
@@ -2065,7 +2065,7 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
             results.errors++;
             results.errors_list.push({
               order_number: order.order_number,
-              awb: refreshResult.awb || order.fship_waybill || order.tracking_number || null,
+              awb: refreshResult.awb || order.shipping_waybill || order.tracking_number || null,
               error: refreshResult.error,
               ...(refreshResult.response_keys ? { ithink_response_keys: refreshResult.response_keys } : {}),
             });
@@ -2075,7 +2075,7 @@ module.exports.bulkRefreshFShipStatus = async (req, res) => {
           results.errors++;
           results.errors_list.push({
             order_number: order.order_number,
-            awb: order.fship_waybill || order.tracking_number || null,
+            awb: order.shipping_waybill || order.tracking_number || null,
             error: err.message,
           });
         }
@@ -2176,7 +2176,7 @@ module.exports.getAvailableCouriers = async (req, res) => {
       '395006'
     );
 
-    // For iThink — use getAvailableCouriers; for FShip — use calculateRates
+    // For iThink — use getAvailableCouriers; for Shipping — use calculateRates
     let couriers = [];
     if (providerName === 'ithink' && typeof provider.getAvailableCouriers === 'function') {
       couriers = await provider.getAvailableCouriers({
@@ -2190,7 +2190,7 @@ module.exports.getAvailableCouriers = async (req, res) => {
         productMrp: parseFloat(order.final_amount),
       });
     } else {
-      // FShip rate calculator
+      // Shipping rate calculator
       const rates = await provider.calculateRates({
         source_Pincode: warehousePincode,
         destination_Pincode: order.ShippingAddress.pincode,
@@ -2304,7 +2304,7 @@ module.exports.syncWithCourier = async (req, res) => {
       auto: !!auto || !logistics,
     });
 
-    // NOTE: we deliberately do NOT pre-set fship_sync_status to 'syncing' here.
+    // NOTE: we deliberately do NOT pre-set shipping_sync_status to 'syncing' here.
     // enhancedSyncSingleOrder treats 'syncing' as "already in flight" and would
     // skip the job we just queued. The worker owns the sync state machine.
 
@@ -2363,7 +2363,7 @@ module.exports.generateLabel = async (req, res) => {
     }
 
     // Filter only synced orders (have waybill)
-    const syncedOrders = orders.filter(o => o.Shipment?.waybill || o.fship_waybill);
+    const syncedOrders = orders.filter(o => o.Shipment?.waybill || o.shipping_waybill);
 
     if (syncedOrders.length === 0) {
       return res.status(400).json({
@@ -2376,7 +2376,7 @@ module.exports.generateLabel = async (req, res) => {
     const { service: provider, name: providerName } = await resolveProviderForOrder(orders[0]);
 
     // Get waybills
-    const waybills = syncedOrders.map(o => o.Shipment?.waybill || o.fship_waybill).filter(Boolean);
+    const waybills = syncedOrders.map(o => o.Shipment?.waybill || o.shipping_waybill).filter(Boolean);
 
     logger.debug(`Generating label for ${waybills.length} orders via ${providerName}`);
 
@@ -2451,7 +2451,7 @@ module.exports.generateLabelForOrder = async (req, res) => {
     }
 
     // Check if order has a waybill (is synced)
-    const waybill = order.Shipment?.waybill || order.fship_waybill;
+    const waybill = order.Shipment?.waybill || order.shipping_waybill;
     if (!waybill) {
       return res.status(400).json({
         success: false,
@@ -2479,7 +2479,7 @@ module.exports.generateLabelForOrder = async (req, res) => {
         logger.warn(`⚠️ iThink label generation failed: ${labelProviderError}`);
       }
     } else if (providerName === 'fship') {
-      // Try FShip label endpoint
+      // Try Shipping label endpoint
       if (typeof provider.getShippingLabel === 'function') {
         const fshipLabelData = await provider.getShippingLabel(waybill);
         if (fshipLabelData) {
@@ -2490,20 +2490,20 @@ module.exports.generateLabelForOrder = async (req, res) => {
           } else {
             labelUrl = fshipLabelData.labelurl || fshipLabelData.label_url || fshipLabelData.LabelUrl;
           }
-          logger.debug(`✅ FShip label found. URL: ${labelUrl}`);
+          logger.debug(`✅ Shipping label found. URL: ${labelUrl}`);
         }
       }
 
-      // If no label from getShippingLabel, construct FShip label URL
-      if (!labelUrl && order.fship_order_id) {
-        labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${order.fship_order_id}_TH.pdf`;
-        logger.debug(`✅ FShip label URL constructed: ${labelUrl}`);
+      // If no label from getShippingLabel, construct Shipping label URL
+      if (!labelUrl && order.shipping_order_id) {
+        labelUrl = `https://manifest.fship.in/files/label_html/label_${waybill}_${order.shipping_order_id}_TH.pdf`;
+        logger.debug(`✅ Shipping label URL constructed: ${labelUrl}`);
       }
     }
 
     // If we got a label URL but it's not saved, save it
-    if (labelUrl && (!order.fship_label_url || order.fship_label_url !== labelUrl)) {
-      await order.update({ fship_label_url: labelUrl });
+    if (labelUrl && (!order.shipping_label_url || order.shipping_label_url !== labelUrl)) {
+      await order.update({ shipping_label_url: labelUrl });
       if (order.Shipment) {
         await order.Shipment.update({ label_url: labelUrl });
       }
@@ -2591,24 +2591,24 @@ module.exports.downloadOrderLabel = async (req, res) => {
 };
 
 // ─── Provider-agnostic aliases ─────────────────────────────────────────────
-// Despite the FShip-prefixed names, every function below already routes
+// Despite the Shipping-prefixed names, every function below already routes
 // through services/shippingProviderFactory.js and dispatches to iThink
-// (live) or FShip per the per-brand SHIPPING_PROVIDER setting. These
+// (live) or Shipping per the per-brand SHIPPING_PROVIDER setting. These
 // aliases give callers a clean, provider-agnostic name to import. When
-// you next touch one of the FShip-named functions, rename it AND update
+// you next touch one of the Shipping-named functions, rename it AND update
 // the alias to point at the new name — keep the legacy export for
 // backwards compatibility.
-module.exports.refreshShipmentStatuses    = module.exports.bulkRefreshFShipStatus;
-module.exports.cancelShipments            = module.exports.cancelOrdersInFShip;
-module.exports.handleShippingWebhook      = module.exports.handleFShipWebhook;
-module.exports.syncSingleShipment         = module.exports.syncSingleOrderWithFShip;
-module.exports.getShippingCouriers        = module.exports.getFShipCouriers;
-module.exports.getShipmentTracking        = module.exports.getFShipTrackingForOrder;
-module.exports.getShipmentLabel           = module.exports.getFShipLabelForOrder;
-module.exports.validateOrderForShippingProvider = module.exports.validateOrderForFShip;
-module.exports.createShipmentForOrder     = module.exports.createOrderInFShip;
-module.exports.updateOrderStatusFromShippingProvider = module.exports.updateOrderStatusFromFShip;
-module.exports.prepareShipmentPayload     = module.exports.prepareFShipOrderData;
+module.exports.refreshShipmentStatuses    = module.exports.bulkRefreshShippingStatus;
+module.exports.cancelShipments            = module.exports.cancelOrdersInShipping;
+module.exports.handleShippingWebhook      = module.exports.handleShippingWebhook;
+module.exports.syncSingleShipment         = module.exports.syncSingleOrderWithShipping;
+module.exports.getShippingCouriers        = module.exports.getShippingCouriers;
+module.exports.getShipmentTracking        = module.exports.getShippingTrackingForOrder;
+module.exports.getShipmentLabel           = module.exports.getShippingLabelForOrder;
+module.exports.validateOrderForShippingProvider = module.exports.validateOrderForShipping;
+module.exports.createShipmentForOrder     = module.exports.createOrderInShipping;
+module.exports.updateOrderStatusFromShippingProvider = module.exports.updateOrderStatusFromShipping;
+module.exports.prepareShipmentPayload     = module.exports.prepareShippingOrderData;
 
 /**
  * Bulk re-queue stuck / failed shipping syncs.
@@ -2625,10 +2625,10 @@ module.exports.requeueFailedShipments = async (req, res) => {
     const orders = await Order.findAll({
       where: {
         status: { [Op.notIn]: ['cancelled', 'delivered', 'returned'] },
-        fship_waybill: { [Op.is]: null },
+        shipping_waybill: { [Op.is]: null },
         [Op.or]: [
-          { fship_sync_status: 'failed' },
-          { fship_sync_attempts: { [Op.gte]: 5 } },
+          { shipping_sync_status: 'failed' },
+          { shipping_sync_attempts: { [Op.gte]: 5 } },
         ],
       },
       attributes: ['id', 'order_number'],

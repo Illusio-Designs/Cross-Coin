@@ -1,6 +1,6 @@
 /**
  * Smoke tests for the serviceability parser used by the cart's PIN-code check.
- * Covers the iThink vs FShip response shapes and the safety rule: never falsely
+ * Covers the iThink vs Shipping response shapes and the safety rule: never falsely
  * block a real customer on an unfamiliar shape. The Imphal (795001) style case —
  * couriers present but no delivery — must resolve to NOT serviceable.
  */
@@ -20,7 +20,7 @@ describe('parseServiceability', () => {
     expect(parseServiceability(raw).serviceable).toBe(true);
   });
 
-  test('FShip array shape → serviceable', () => {
+  test('Shipping array shape → serviceable', () => {
     const raw = [{ delivery: 'yes', cod: 'yes', edd: 4 }];
     const d = parseServiceability(raw);
     expect(d.serviceable).toBe(true);

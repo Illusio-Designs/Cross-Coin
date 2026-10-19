@@ -46,7 +46,7 @@ function registerWorkers() {
       ],
     });
     if (!fullOrder) throw new Error(`order ${orderId} not found`);
-    if (fullOrder.fship_sync_status === 'synced') {
+    if (fullOrder.shipping_sync_status === 'synced') {
       logger.info(`[queue] shipping:sync-order skipped — ${fullOrder.order_number} already synced`);
       return { skipped: true };
     }
@@ -59,8 +59,8 @@ function registerWorkers() {
     const attempts = job.opts?.attempts || 1;
     const isLastAttempt = (job.attemptsMade || 0) >= (attempts - 1);
     const markFailed = (reason) => fullOrder.update({
-      fship_sync_status: 'failed',
-      fship_sync_error: String(reason || 'sync failed').slice(0, 1000),
+      shipping_sync_status: 'failed',
+      shipping_sync_error: String(reason || 'sync failed').slice(0, 1000),
     }).catch(() => {});
 
     try {
@@ -77,7 +77,7 @@ function registerWorkers() {
           let nextAllowed = null;
           try { nextAllowed = await pickupSvc.getNextPickupDate(); } catch (_) {}
           await fullOrder.update({
-            fship_sync_status: 'pending',
+            shipping_sync_status: 'pending',
             pickup_hold_until: holdUntil,
             ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
           }).catch(() => {});
@@ -112,9 +112,9 @@ function registerWorkers() {
         // will never succeed on retry. Park the order and return WITHOUT throwing.
         if (result.permanent || orderShippingController.isPermanentShippingFailure(err)) {
           await fullOrder.update({
-            fship_sync_status: 'failed',
-            fship_sync_error: err,
-            fship_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
+            shipping_sync_status: 'failed',
+            shipping_sync_error: err,
+            shipping_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
           }).catch(() => {});
           logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
           try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err, 'Needs manual attention (pick a courier / fix the address).'], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
@@ -134,7 +134,7 @@ function registerWorkers() {
     } catch (err) {
       // A thrown exception from the provider call (not a success:false result).
       // Surface it on the final attempt so the order never stays stuck.
-      if (isLastAttempt && fullOrder.fship_sync_status !== 'failed') {
+      if (isLastAttempt && fullOrder.shipping_sync_status !== 'failed') {
         await markFailed(err.message || err);
         logger.warn(`[queue] shipping:sync-order FAILED after ${attempts} attempts — ${fullOrder.order_number}: ${err.message || err}`);
         try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err.message || String(err), `Gave up after ${attempts} attempts.`], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
@@ -183,7 +183,7 @@ function registerWorkers() {
       json: (data) => { result = data; },
       status: () => ({ json: () => {} }),
     };
-    await orderShippingController.bulkRefreshFShipStatus(mockReq, mockRes);
+    await orderShippingController.bulkRefreshShippingStatus(mockReq, mockRes);
     logger.info(`[queue] cron:shipping-status-refresh done: ${JSON.stringify(result?.data || {}).slice(0, 200)}`);
     return result || { ok: true };
   };

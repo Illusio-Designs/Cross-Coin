@@ -23,7 +23,7 @@ dotenv.config();
 
 // ── Startup env validation ────────────────────────────────────────────────────
 // Fail fast only for secrets that MUST come from env (not DB-backed per-brand settings).
-// Razorpay / WhatsApp / MSG91 / FShip creds are loaded per-brand from brand_settings
+// Razorpay / WhatsApp / MSG91 / Shipping creds are loaded per-brand from brand_settings
 // via settingsHelper — they are NOT env vars and should not be validated here.
 const REQUIRED_ENV = ['JWT_SECRET'];
 const missingRequired = REQUIRED_ENV.filter(k => !process.env[k]);
@@ -1267,9 +1267,9 @@ const startServer = async () => {
         }
 
         // ── One-time cleanup: drop confirmed-unused legacy tables ─────────────
-        // orders_cancelled_backup (manual backup, no code refs), fship_warehouses
+        // orders_cancelled_backup (manual backup, no code refs), shipping_warehouses
         // (orphaned, no refs), coupon_usage (legacy duplicate of coupon_usages).
-        for (const t of ['orders_cancelled_backup', 'fship_warehouses', 'coupon_usage']) {
+        for (const t of ['orders_cancelled_backup', 'shipping_warehouses', 'coupon_usage']) {
             try { await sequelize.query(`DROP TABLE IF EXISTS \`${t}\``); }
             catch (err) { logger.warn(`drop ${t} failed: ${err.message}`); }
         }

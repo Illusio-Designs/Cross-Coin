@@ -305,7 +305,7 @@ async function handlePaymentSuccess({
   source = 'verify',
   req = null,
 }) {
-  const { syncOrderToFShip } = require('./orderService.js');
+  const { syncOrderToShipping } = require('./orderService.js');
   const { sendFacebookEvent } = require('../integration/facebookPixel.js');
   const { sendGAEvent } = require('../integration/googleAnalytics.js');
   const { Product } = require('../model/productModel.js');
@@ -343,7 +343,7 @@ async function handlePaymentSuccess({
     });
   }
 
-  // 4. Emit events + FShip sync (non-blocking)
+  // 4. Emit events + Shipping sync (non-blocking)
   if (created) {
     // Carry the real item count so the WhatsApp confirmation doesn't hard-code
     // "1 item" for multi-item prepaid/magic orders.
@@ -354,7 +354,7 @@ async function handlePaymentSuccess({
       // for prepaid orders exactly like COD — not just order.confirmed.
       try { orderEmitter.emit('order.created', order); } catch (e) { logger.warn('[OrderCreation] order.created emit failed:', e.message); }
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[OrderCreation] order.confirmed emit failed:', e.message); }
-      syncOrderToFShip(order).catch(e => logger.warn('[OrderCreation] FShip sync failed:', e.message));
+      syncOrderToShipping(order).catch(e => logger.warn('[OrderCreation] Shipping sync failed:', e.message));
     });
 
     // 5. Badge recalculation

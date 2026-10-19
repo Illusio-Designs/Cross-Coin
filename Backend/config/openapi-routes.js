@@ -27,7 +27,7 @@
  *   - name: Products
  *     description: Catalog + search
  *   - name: Shipping
- *     description: Provider-agnostic shipping ops (iThink / FShip)
+ *     description: Provider-agnostic shipping ops (iThink / Shipping)
  *
  * /api/health:
  *   get:

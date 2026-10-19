@@ -51,7 +51,7 @@ orderEmitter.on('order.created', (order) => {
   });
 });
 
-// order.confirmed — WhatsApp confirmation + trigger FShip sync
+// order.confirmed — WhatsApp confirmation + trigger Shipping sync
 orderEmitter.on('order.confirmed', async (order) => {
   try {
     logger.info(`[Event] order.confirmed: ${order.order_number}`);
@@ -97,8 +97,8 @@ orderEmitter.on('order.confirmed', async (order) => {
       const { Order } = require('../model/orderModel.js');
       const batchDate = require('./pickupScheduleService.js').nextBatchDate();
       await Order.update(
-        { pickup_hold_until: batchDate, fship_sync_status: 'pending' },
-        { where: { id: order.id, fship_waybill: null } }
+        { pickup_hold_until: batchDate, shipping_sync_status: 'pending' },
+        { where: { id: order.id, shipping_waybill: null } }
       );
       logger.info(`[Event] ${order.order_number} queued for the ${batchDate} 11:00 IST booking batch`);
     } catch (syncErr) {

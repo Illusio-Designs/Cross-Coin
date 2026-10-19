@@ -10,10 +10,10 @@ const {
 // checkAddressQuality has been migrated to the domain-grouped file.
 const { checkAddressQuality } = require('../controller/orders/createController.js');
 const {
-    cancelOrdersInFShip,
-    getFShipTrackingForOrder, getFShipLabelForOrder, getFShipCouriers,
-    handleFShipWebhook, syncSingleOrderWithFShip, getShippingWebhookEvents,
-    bulkRefreshFShipStatus,
+    cancelOrdersInShipping,
+    getShippingTrackingForOrder, getShippingLabelForOrder, getShippingCouriers,
+    handleShippingWebhook, syncSingleOrderWithShipping, getShippingWebhookEvents,
+    bulkRefreshShippingStatus,
     getAvailableCouriers, syncWithCourier,
     generateLabelForOrder,
 } = require('../controller/orderShippingController.js');
@@ -61,9 +61,9 @@ router.get('/',                          isAuthenticated, isOrderManager, getAll
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);
 // ── Shipping (provider-agnostic, dispatches via SHIPPING_PROVIDER setting) ───
-router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshFShipStatus);
-router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInFShip);
-router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getFShipCouriers);
+router.post('/shipping/refresh-status', isAuthenticated, isOrderManager, bulkRefreshShippingStatus);
+router.post('/shipping/cancel',         isAuthenticated, isOrderManager, cancelOrdersInShipping);
+router.get('/shipping/couriers',        isAuthenticated, isOrderManager, getShippingCouriers);
 router.get('/shipping/webhook-events',  isAuthenticated, isOrderManager, getShippingWebhookEvents);
 router.get('/:id/labels/generate',      isAuthenticated, isOrderManager, generateLabelForOrder);
 router.post('/:id/labels/generate',     isAuthenticated, isOrderManager, generateLabelForOrder);
@@ -72,7 +72,7 @@ router.get('/labels/stats',             isAuthenticated, isOrderManager, getLabe
 router.post('/labels/bulk-download',    isAuthenticated, isOrderManager, bulkDownloadLabels);
 router.post('/labels/:orderId/downloaded', isAuthenticated, isOrderManager, markLabelDownloaded);
 router.get('/labels/:orderId/download', isAuthenticated, isOrderManager, downloadLabel);
-router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSingleOrderWithFShip);
+router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSingleOrderWithShipping);
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
@@ -96,11 +96,11 @@ router.get('/track/:order_number',      trackOrderByOrderNumber);
 // the user out at submit time).
 router.post('/check-address-quality',   zValidateBody(checkAddressQualitySchema), checkAddressQuality);
 // Shipping webhook (provider-agnostic). Uses the 'shipping' source which
-// tries iThink + FShip secrets in order and accepts whichever matches —
+// tries iThink + Shipping secrets in order and accepts whichever matches —
 // so the brand can toggle SHIPPING_PROVIDER without re-routing webhooks.
 // Both /shipping/webhook and /fship/webhook (legacy) hit the same handler.
-router.post('/shipping/webhook',        verifyWebhookSignature('shipping'), handleFShipWebhook);
-router.post('/fship/webhook',           verifyWebhookSignature('fship'),    handleFShipWebhook);  // legacy alias
+router.post('/shipping/webhook',        verifyWebhookSignature('shipping'), handleShippingWebhook);
+router.post('/fship/webhook',           verifyWebhookSignature('fship'),    handleShippingWebhook);  // legacy alias
 
 // ── Authenticated user ────────────────────────────────────────────────────
 router.post('/',                        isAuthenticated, createOrder);
@@ -108,7 +108,7 @@ router.get('/my-orders',                isAuthenticated, getUserOrders);
 router.get('/:id',                      isAuthenticated, getOrder);
 router.put('/:id/cancel',              isAuthenticated, validateBody(schemas.cancelOrder), cancelOrder);
 router.post('/:id/return',             isAuthenticated, zValidateBody(returnOrderSchema), initiateReturn);
-router.get('/:id/shipping/tracking',   isAuthenticated, getFShipTrackingForOrder);
-router.get('/:id/shipping/label',      isAuthenticated, getFShipLabelForOrder);
+router.get('/:id/shipping/tracking',   isAuthenticated, getShippingTrackingForOrder);
+router.get('/:id/shipping/label',      isAuthenticated, getShippingLabelForOrder);
 
 module.exports = router;

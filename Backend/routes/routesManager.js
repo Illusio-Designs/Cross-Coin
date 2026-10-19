@@ -176,9 +176,9 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         const settingsHelper = require('../services/settingsHelper');
         const brandId = req.brandId || 1;
 
-        // Use the brand's ACTUAL shipping provider (iThink or FShip) so the cart
+        // Use the brand's ACTUAL shipping provider (iThink or Shipping) so the cart
         // check matches what will really happen at booking time. Previously this
-        // was hardcoded to FShip even for iThink brands, so the check never
+        // was hardcoded to Shipping even for iThink brands, so the check never
         // reflected reality.
         const factory = require('../services/shippingProviderFactory');
         const providerName = await factory.getProviderName(brandId); // always iThink
@@ -193,7 +193,7 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
         const raw = await provider.checkServiceability(src, pincode);
 
         // Normalise + decide via the shared, unit-tested helper (handles the
-        // iThink vs FShip response shapes; never falsely blocks a real customer).
+        // iThink vs Shipping response shapes; never falsely blocks a real customer).
         const { parseServiceability } = require('../utils/serviceability.js');
         const decision = parseServiceability(raw);
 
@@ -328,7 +328,7 @@ router.get('/ithink-booking-probe/:orderNumber', optionalBrand, async (req, res)
         const picked = req.query.logistics || (first && first.code) || 'delhivery';
         const stype  = req.query.s_type || (first && first.s_type) || 'surface';
 
-        const orderData = await osc.prepareFShipOrderData(order, 'ithink', picked, stype);
+        const orderData = await osc.prepareShippingOrderData(order, 'ithink', picked, stype);
         const payload = provider.formatOrderDataForIThink(orderData);
         const { access_token, secret_key, ...safeData } = payload.data || {};
 

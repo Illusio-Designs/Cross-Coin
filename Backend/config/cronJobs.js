@@ -79,7 +79,7 @@ function initializeCronJobs() {
       const due = await Order.findAll({
         where: {
           pickup_hold_until: { [Op.ne]: null, [Op.lte]: todayIst },
-          fship_waybill: null,
+          shipping_waybill: null,
           status: { [Op.notIn]: ['cancelled', 'delivered', 'returned', 'rto', 'refunded'] },
         },
         attributes: ['id', 'order_number'],
@@ -533,7 +533,7 @@ function initializeCronJobs() {
 
   console.log('✅ Cron jobs initialized successfully');
   console.log('📋 Active jobs:');
-  console.log('   - FShip Order Sync: Every 2 hours at :05');
+  console.log('   - Shipping Order Sync: Every 2 hours at :05');
   console.log('   - iThink Status Refresh: Twice daily (6 AM & 6 PM) — auto-excludes cancelled/delivered');
   console.log('   - Loyalty Expiry: Daily at 2 AM');
   console.log('   - Instagram Feed Refresh: Every 6 hours');

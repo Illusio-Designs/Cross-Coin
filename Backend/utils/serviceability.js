@@ -4,7 +4,7 @@
  * Providers differ:
  *   - iThink  → { data: { delhivery: {cod,prepaid,…}, … } }
  *               (its service may wrap that as [ {status,data} ])
- *   - FShip   → an array of courier rows [{ delivery:'yes', cod:'yes', … }]
+ *   - Shipping   → an array of courier rows [{ delivery:'yes', cod:'yes', … }]
  *
  * SAFE BY DESIGN: if courier data exists but exposes NO recognisable delivery
  * flag, we return serviceable=true — we never falsely block a real customer on

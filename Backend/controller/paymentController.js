@@ -740,12 +740,12 @@ module.exports.updateOrderPayment = async (req, res) => {
 
     const order = await Order.findByPk(resolvedOrderId);
 
-    // Emit confirmed event — triggers WhatsApp + FShip sync (outside transaction)
+    // Emit confirmed event — triggers WhatsApp + Shipping sync (outside transaction)
     const orderEmitter = require('../services/orderEvents.js');
     const orderService = require('../services/orderService.js');
     setImmediate(() => {
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[updateOrderPayment] order.confirmed emit failed:', e.message); }
-      orderService.syncOrderToFShip(order).catch(e => logger.warn('[updateOrderPayment] FShip sync failed:', e.message));
+      orderService.syncOrderToShipping(order).catch(e => logger.warn('[updateOrderPayment] Shipping sync failed:', e.message));
     });
 
     res.json({
@@ -852,7 +852,7 @@ module.exports.razorpayCallback = async (req, res) => {
     const orderService = require('../services/orderService.js');
     setImmediate(() => {
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[razorpayCallback] order.confirmed emit failed:', e.message); }
-      orderService.syncOrderToFShip(order).catch(e => logger.warn('[razorpayCallback] FShip sync failed:', e.message));
+      orderService.syncOrderToShipping(order).catch(e => logger.warn('[razorpayCallback] Shipping sync failed:', e.message));
     });
 
     // Upsert payment record with full details
@@ -1143,7 +1143,7 @@ module.exports.razorpayWebhook = async (req, res) => {
                 const orderEmitter = require('../services/orderEvents.js');
                 const orderService = require('../services/orderService.js');
                 try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[razorpayWebhook] order.confirmed emit failed:', e.message); }
-                orderService.syncOrderToFShip(order).catch(e => logger.warn('[razorpayWebhook] FShip sync failed:', e.message));
+                orderService.syncOrderToShipping(order).catch(e => logger.warn('[razorpayWebhook] Shipping sync failed:', e.message));
               });
               await paymentRecord.update({ status: 'successful', transaction_id: rzpPaymentId });
               logger.info(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);

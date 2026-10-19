@@ -524,10 +524,10 @@ export const orderService = {
     }
   },
 
-  // FShip Integration Services
+  // Shipping Integration Services
 
-  // Update single order from FShip
-  updateSingleOrderFromFShip: async (orderId) => {
+  // Update single order from Shipping
+  updateSingleOrderFromShipping: async (orderId) => {
     try {
       const response = await adminApi.put(
         `/api/orders/${orderId}/shipping/sync`,
@@ -540,7 +540,7 @@ export const orderService = {
     }
   },
 
-  // Refresh order status from active shipping provider (works for both FShip and iThink)
+  // Refresh order status from active shipping provider (works for both Shipping and iThink)
   refreshOrderStatus: async (orderId) => {
     try {
       const response = await adminApi.put(
@@ -554,7 +554,7 @@ export const orderService = {
     }
   },
 
-  // Inbound shipping-webhook health: tells whether iThink/FShip is actually
+  // Inbound shipping-webhook health: tells whether iThink/Shipping is actually
   // pushing status updates (so Shipped/Delivered/RTO WhatsApp fire in real time
   // instead of waiting for the twice-daily poll), plus the recent events.
   getShippingWebhookEvents: async (limit = 20) => {
@@ -566,8 +566,8 @@ export const orderService = {
     }
   },
 
-  // Bulk refresh order statuses from FShip
-  bulkRefreshFShipStatus: async () => {
+  // Bulk refresh order statuses from Shipping
+  bulkRefreshShippingStatus: async () => {
     try {
       const response = await adminApi.post(
         "/api/orders/shipping/refresh-status",
@@ -580,8 +580,8 @@ export const orderService = {
     }
   },
 
-  // Sync single order with FShip
-  syncSingleOrderWithFShip: async (orderId) => {
+  // Sync single order with Shipping
+  syncSingleOrderWithShipping: async (orderId) => {
     try {
       const response = await adminApi.put(
         `/api/orders/${orderId}/shipping/sync`,
@@ -605,8 +605,8 @@ export const orderService = {
     }
   },
 
-  // Get FShip tracking for order
-  getFShipTracking: async (orderId) => {
+  // Get Shipping tracking for order
+  getShippingTracking: async (orderId) => {
     try {
       const response = await adminApi.get(`/api/orders/${orderId}/shipping/tracking`);
       return response.data;
@@ -615,8 +615,8 @@ export const orderService = {
     }
   },
 
-  // Get FShip shipping label for order
-  getFShipLabel: async (orderId) => {
+  // Get Shipping shipping label for order
+  getShippingLabel: async (orderId) => {
     try {
       const response = await adminApi.get(`/api/orders/${orderId}/shipping/label`);
       return response.data;
@@ -625,8 +625,8 @@ export const orderService = {
     }
   },
 
-  // Get FShip couriers list
-  getFShipCouriers: async () => {
+  // Get Shipping couriers list
+  getShippingCouriers: async () => {
     try {
       const response = await adminApi.get("/api/orders/shipping/couriers");
       return response.data;
@@ -635,8 +635,8 @@ export const orderService = {
     }
   },
 
-  // Cancel orders in FShip
-  cancelOrdersInFShip: async (orderIds) => {
+  // Cancel orders in Shipping
+  cancelOrdersInShipping: async (orderIds) => {
     try {
       const response = await adminApi.post("/api/orders/shipping/cancel", { orderIds });
       return response.data;

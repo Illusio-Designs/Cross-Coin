@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 
-const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
+const ShippingLabelDownload = sequelize.define('ShippingLabelDownload', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -34,8 +34,8 @@ const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
     allowNull: true
   }
 }, {
-  // Renamed from fship_label_downloads (migration 014): the audit covers label
-  // downloads for every courier, not just FShip.
+  // Renamed from shipping_label_downloads (migration 014): the audit covers label
+  // downloads for every courier, not just Shipping.
   tableName: 'shipping_label_downloads',
   timestamps: true,
   createdAt: 'downloaded_at',
@@ -50,4 +50,4 @@ const FShipLabelDownload = sequelize.define('FShipLabelDownload', {
 });
 
 // Export as default for setupDatabase.js compatibility
-module.exports = FShipLabelDownload;
+module.exports = ShippingLabelDownload;

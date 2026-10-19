@@ -2,7 +2,7 @@
  * Shipping Validation Service
  *
  * Validates order + address + product data BEFORE sending to any shipping
- * provider (FShip / iThink). Returns a structured list of issues so the
+ * provider (Shipping / iThink). Returns a structured list of issues so the
  * admin dashboard can display exactly what's wrong and the order doesn't
  * get rejected by the courier API.
  *

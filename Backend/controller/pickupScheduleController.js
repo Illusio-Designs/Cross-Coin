@@ -55,17 +55,17 @@ exports.getAffectedBookedOrders = async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 864e5);
     const candidates = await Order.findAll({
       where: {
-        fship_waybill: { [Op.ne]: null },
+        shipping_waybill: { [Op.ne]: null },
         status: 'processing', // booked, not yet picked up / manifested
-        fship_last_synced_at: { [Op.gte]: sevenDaysAgo },
+        shipping_last_synced_at: { [Op.gte]: sevenDaysAgo },
       },
-      attributes: ['order_number', 'fship_last_synced_at'],
-      order: [['fship_last_synced_at', 'DESC']],
+      attributes: ['order_number', 'shipping_last_synced_at'],
+      order: [['shipping_last_synced_at', 'DESC']],
       limit: 500,
     });
     const affected = [];
     for (const o of candidates) {
-      const pick = svc.prospectivePickupDate(o.fship_last_synced_at || new Date());
+      const pick = svc.prospectivePickupDate(o.shipping_last_synced_at || new Date());
       if (pick >= from && pick <= to) affected.push({ orderNumber: o.order_number, pickupDate: pick });
     }
     res.json({ success: true, count: affected.length, orders: affected.slice(0, 50) });

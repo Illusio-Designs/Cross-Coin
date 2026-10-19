@@ -7,7 +7,7 @@ const { ProductVariation } = require("../model/productVariationModel.js");
 const { ShippingAddress } = require("../model/shippingAddressModel.js");
 const { User } = require("../model/userModel.js");
 const { GuestUser } = require("../model/guestUserModel.js");
-const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
+const ShippingLabelDownload = require("../model/shippingLabelDownloadModel.js");
 const { Op } = require("sequelize");
 const XLSX = require("xlsx");
 const axios = require('axios');
@@ -17,7 +17,7 @@ const { logger } = require("../config/logging.js");
  * Update label data in both Order and OrderShipment tables
  * Prevents data sync issues between tables
  * @param {number} orderId - Order ID
- * @param {object} labelData - { fship_label_url, fship_label_downloaded, ... }
+ * @param {object} labelData - { shipping_label_url, shipping_label_downloaded, ... }
  * @param {object} transaction - Sequelize transaction (optional)
  */
 async function updateLabelInBothTables(orderId, labelData, transaction = null) {
@@ -29,10 +29,10 @@ async function updateLabelInBothTables(orderId, labelData, transaction = null) {
 
     // Map Order columns to OrderShipment columns
     const shipmentData = {};
-    if (labelData.fship_label_url) shipmentData.label_url = labelData.fship_label_url;
-    if (labelData.fship_label_downloaded !== undefined) shipmentData.label_downloaded = labelData.fship_label_downloaded;
-    if (labelData.fship_label_downloaded_at) shipmentData.label_downloaded_at = labelData.fship_label_downloaded_at;
-    if (labelData.fship_label_downloaded_by) shipmentData.label_downloaded_by = labelData.fship_label_downloaded_by;
+    if (labelData.shipping_label_url) shipmentData.label_url = labelData.shipping_label_url;
+    if (labelData.shipping_label_downloaded !== undefined) shipmentData.label_downloaded = labelData.shipping_label_downloaded;
+    if (labelData.shipping_label_downloaded_at) shipmentData.label_downloaded_at = labelData.shipping_label_downloaded_at;
+    if (labelData.shipping_label_downloaded_by) shipmentData.label_downloaded_by = labelData.shipping_label_downloaded_by;
 
     // Update order_shipments table
     if (Object.keys(shipmentData).length > 0) {
@@ -199,7 +199,7 @@ module.exports.exportDeliveredOrders = async (req, res) => {
       const paymentStatus = order.payment_status === 'paid' ? 'Paid' : 'Pending';
 
       // Shipping details
-      const awbNumber = order.fship_waybill || 'N/A';
+      const awbNumber = order.shipping_waybill || 'N/A';
       const courierName = order.courier_name || 'N/A';
       const trackingNumber = order.tracking_number || 'N/A';
 
@@ -491,7 +491,7 @@ module.exports.exportDeliveredGSTReport = async (req, res) => {
 };
 
 // ============================================
-// FShip Label Management Functions
+// Shipping Label Management Functions
 // ============================================
 
 // Mark label as downloaded
@@ -510,7 +510,7 @@ module.exports.markLabelDownloaded = async (req, res) => {
       });
     }
 
-    if (!order.fship_label_url) {
+    if (!order.shipping_label_url) {
       return res.status(400).json({
         success: false,
         message: 'No shipping label available for this order'
@@ -519,13 +519,13 @@ module.exports.markLabelDownloaded = async (req, res) => {
 
     // Update order using dual-write helper (updates both Order and OrderShipment)
     await updateLabelInBothTables(orderId, {
-      fship_label_downloaded: true,
-      fship_label_downloaded_at: new Date(),
-      fship_label_downloaded_by: userId
+      shipping_label_downloaded: true,
+      shipping_label_downloaded_at: new Date(),
+      shipping_label_downloaded_by: userId
     });
 
     // Create download history record
-    await FShipLabelDownload.create({
+    await ShippingLabelDownload.create({
       order_id: orderId,
       user_id: userId,
       download_type: 'single',
@@ -556,15 +556,15 @@ module.exports.downloadLabel = async (req, res) => {
 
     const order = await Order.findByPk(orderId);
 
-    if (!order || !order.fship_label_url) {
+    if (!order || !order.shipping_label_url) {
       return res.status(404).json({
         success: false,
         message: 'Label not found'
       });
     }
 
-    // Download the label from FShip URL
-    const response = await axios.get(order.fship_label_url, {
+    // Download the label from Shipping URL
+    const response = await axios.get(order.shipping_label_url, {
       responseType: 'arraybuffer',
       timeout: 30000 // 30 second timeout
     });
@@ -572,9 +572,9 @@ module.exports.downloadLabel = async (req, res) => {
     // Mark as downloaded using dual-write helper (updates both Order and OrderShipment)
     try {
       await updateLabelInBothTables(orderId, {
-        fship_label_downloaded: true,
-        fship_label_downloaded_at: new Date(),
-        fship_label_downloaded_by: userId
+        shipping_label_downloaded: true,
+        shipping_label_downloaded_at: new Date(),
+        shipping_label_downloaded_by: userId
       });
     } catch (syncError) {
       logger.warn(`⚠️ Could not sync label data: ${syncError.message}`);
@@ -582,7 +582,7 @@ module.exports.downloadLabel = async (req, res) => {
     }
 
     // Create download history
-    await FShipLabelDownload.create({
+    await ShippingLabelDownload.create({
       order_id: orderId,
       user_id: userId,
       download_type: 'single',
@@ -621,7 +621,7 @@ module.exports.bulkDownloadLabels = async (req, res) => {
     const orders = await Order.findAll({
       where: {
         id: orderIds,
-        fship_label_url: { [Op.ne]: null }
+        shipping_label_url: { [Op.ne]: null }
       }
     });
 
@@ -644,7 +644,7 @@ module.exports.bulkDownloadLabels = async (req, res) => {
     // Download and merge each label
     for (const order of orders) {
       try {
-        const response = await axios.get(order.fship_label_url, {
+        const response = await axios.get(order.shipping_label_url, {
           responseType: 'arraybuffer',
           timeout: 30000
         });
@@ -660,13 +660,13 @@ module.exports.bulkDownloadLabels = async (req, res) => {
 
         // Mark as downloaded
         await order.update({
-          fship_label_downloaded: true,
-          fship_label_downloaded_at: new Date(),
-          fship_label_downloaded_by: userId
+          shipping_label_downloaded: true,
+          shipping_label_downloaded_at: new Date(),
+          shipping_label_downloaded_by: userId
         });
 
         // Create download history
-        await FShipLabelDownload.create({
+        await ShippingLabelDownload.create({
           order_id: order.id,
           user_id: userId,
           download_type: 'bulk',
@@ -706,8 +706,8 @@ module.exports.getPendingLabels = async (req, res) => {
 
     const { count, rows } = await Order.findAndCountAll({
       where: {
-        fship_label_url: { [Op.ne]: null },
-        fship_label_downloaded: false
+        shipping_label_url: { [Op.ne]: null },
+        shipping_label_downloaded: false
       },
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -754,19 +754,19 @@ module.exports.getPendingLabels = async (req, res) => {
 module.exports.getLabelDownloadStats = async (req, res) => {
   try {
     const totalLabels = await Order.count({
-      where: { fship_label_url: { [Op.ne]: null } }
+      where: { shipping_label_url: { [Op.ne]: null } }
     });
 
     const downloadedLabels = await Order.count({
       where: {
-        fship_label_url: { [Op.ne]: null },
-        fship_label_downloaded: true
+        shipping_label_url: { [Op.ne]: null },
+        shipping_label_downloaded: true
       }
     });
 
     const pendingLabels = totalLabels - downloadedLabels;
 
-    const recentDownloads = await FShipLabelDownload.findAll({
+    const recentDownloads = await ShippingLabelDownload.findAll({
       limit: 10,
       order: [['downloaded_at', 'DESC']],
       include: [

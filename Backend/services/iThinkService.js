@@ -12,7 +12,7 @@ const ITHINK_TRACKING_PRODUCTION_URL = 'https://api.ithinklogistics.com';
 /**
  * iThink Logistics Service
  * Handles all iThink API interactions for CrossCoin platform.
- * Mirrors the FShipService interface so both can be used interchangeably.
+ * Mirrors the ShippingService interface so both can be used interchangeably.
  */
 class IThinkService {
   constructor(brandId = 1) {
@@ -432,7 +432,7 @@ class IThinkService {
   }
 
   /**
-   * Create or update — mirrors FShipService interface.
+   * Create or update — mirrors ShippingService interface.
    * iThink doesn't have a native "update" so we cancel + recreate if needed.
    */
   async createOrUpdateForwardOrder(orderData) {
@@ -468,7 +468,7 @@ class IThinkService {
 
   /**
    * Transform CrossCoin normalised payload → iThink API format.
-   * The incoming shape matches what orderService already builds for FShip.
+   * The incoming shape matches what orderService already builds for Shipping.
    *
    * Manual courier selection fields:
    *   orderData.logistics - 'delhivery', 'bluedart', 'xpressbees', 'ecom', 'ekart', 'fedex'
@@ -909,7 +909,7 @@ class IThinkService {
   /**
    * Generate label for one or more orders.
    * For iThink, label = PDF containing waybill and shipping info.
-   * Returns same structure as FShip for consistency.
+   * Returns same structure as Shipping for consistency.
    */
   async getLabel({ waybills }) {
     await this.initialize();
@@ -1064,7 +1064,7 @@ class IThinkService {
 
   /**
    * Map iThink status string → CrossCoin order status.
-   * Interface-compatible with fshipService.mapFShipStatusToCrossCoin().
+   * Interface-compatible with fshipService.mapShippingStatusToCrossCoin().
    */
   mapStatusToCrossCoin(iThinkStatus) {
     if (!iThinkStatus) return 'processing';
@@ -1102,8 +1102,8 @@ class IThinkService {
     return 'processing';
   }
 
-  // Alias so the provider factory can call the same method name as FShip
-  mapFShipStatusToCrossCoin(status) {
+  // Alias so the provider factory can call the same method name as Shipping
+  mapShippingStatusToCrossCoin(status) {
     return this.mapStatusToCrossCoin(status);
   }
 
@@ -1159,7 +1159,7 @@ class IThinkService {
 
   async registerPickup(_waybills) {
     // iThink handles pickup scheduling automatically on order creation.
-    // This is a no-op stub to keep interface parity with FShipService.
+    // This is a no-op stub to keep interface parity with ShippingService.
     logger.debug('iThink: Pickup is auto-scheduled on order creation — no separate call needed.');
     return { success: true, message: 'Pickup auto-scheduled by iThink' };
   }

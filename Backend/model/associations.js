@@ -23,7 +23,7 @@ const { ReviewImage } = require("./reviewImageModel.js");
 const { SeoMetadata } = require("./seoMetadataModel.js");
 const { CouponUsage } = require("./couponUsageModel.js");
 const { GuestUser } = require("./guestUserModel.js");
-const FShipLabelDownload = require("./fshipLabelDownloadModel.js");
+const ShippingLabelDownload = require("./shippingLabelDownloadModel.js");
 const UTMTracking = require("./utmModel.js");
 const { BrandSetting } = require("./brandSettingModel.js");
 const Brand = require("./brandModel.js");
@@ -75,7 +75,7 @@ module.exports = {
   SeoMetadata,
   CouponUsage,
   GuestUser,
-  FShipLabelDownload,
+  ShippingLabelDownload,
   UTMTracking,
   BrandSetting,
   Brand,
@@ -352,24 +352,24 @@ OrderShipment.belongsTo(Order, {
   onDelete: "CASCADE",
 });
 
-// FShip Label Download Associations
-FShipLabelDownload.belongsTo(Order, {
+// Shipping Label Download Associations
+ShippingLabelDownload.belongsTo(Order, {
   foreignKey: "order_id",
   as: "Order",
   onDelete: "CASCADE",
 });
-Order.hasMany(FShipLabelDownload, {
+Order.hasMany(ShippingLabelDownload, {
   foreignKey: "order_id",
   as: "LabelDownloads",
   onDelete: "CASCADE",
 });
 
-FShipLabelDownload.belongsTo(User, {
+ShippingLabelDownload.belongsTo(User, {
   foreignKey: "user_id",
   as: "DownloadedBy",
   onDelete: "CASCADE",
 });
-User.hasMany(FShipLabelDownload, {
+User.hasMany(ShippingLabelDownload, {
   foreignKey: "user_id",
   as: "LabelDownloads",
   onDelete: "CASCADE",
@@ -377,12 +377,12 @@ User.hasMany(FShipLabelDownload, {
 
 // Order -> User (for label downloaded by)
 Order.belongsTo(User, {
-  foreignKey: "fship_label_downloaded_by",
+  foreignKey: "shipping_label_downloaded_by",
   as: "LabelDownloadedBy",
   onDelete: "SET NULL",
 });
 User.hasMany(Order, {
-  foreignKey: "fship_label_downloaded_by",
+  foreignKey: "shipping_label_downloaded_by",
   as: "DownloadedLabels",
   onDelete: "SET NULL",
 });

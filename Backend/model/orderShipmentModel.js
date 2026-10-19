@@ -25,7 +25,7 @@ const OrderShipment = sequelize.define('OrderShipment', {
   provider_order_id: {
     type: DataTypes.STRING,
     allowNull: true,
-    comment: 'Order ID on the shipping provider (e.g. FShip apiorderid)',
+    comment: 'Order ID on the shipping provider (e.g. Shipping apiorderid)',
   },
   // ── AWB / Tracking ─────────────────────────────────────────────────────
   waybill: {

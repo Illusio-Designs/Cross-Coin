@@ -2,7 +2,7 @@
 
 /**
  * Order Service — production-grade business logic.
- * Handles: state machine, row locking, idempotency, FShip sync,
+ * Handles: state machine, row locking, idempotency, Shipping sync,
  * audit logs, COD fraud prevention, cancellation with stock rollback.
  */
 
@@ -136,9 +136,9 @@ async function confirmOrder(orderId, adminId) {
           const shipment = await OrderShipment.findOne({ where: { order_id: order.id } });
           const providerName = await shippingProviderFactory.getProviderName(order.brand_id || 1);
 
-          // Only auto-sync for FShip (not iThink — requires manual courier selection)
+          // Only auto-sync for Shipping (not iThink — requires manual courier selection)
           if (!shipment && providerName === 'fship') {
-            syncOrderToFShip(order).catch(e => logger.warn('[orderService] FShip sync failed:', e.message));
+            syncOrderToShipping(order).catch(e => logger.warn('[orderService] Shipping sync failed:', e.message));
           } else if (shipment) {
             logger.info(`[orderService] Order ${order.order_number} already synced with ${shipment.provider}`);
           } else if (providerName === 'ithink') {
@@ -240,9 +240,9 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
   });
 }
 
-// ── FShip sync (with race condition protection) ───────────────────────────────
+// ── Shipping sync (with race condition protection) ───────────────────────────────
 
-async function syncOrderToFShip(order) {
+async function syncOrderToShipping(order) {
   const { Order } = require('../model/orderModel.js');
   const { OrderItem } = require('../model/orderItemModel.js');
   const { Product } = require('../model/productModel.js');
@@ -256,13 +256,13 @@ async function syncOrderToFShip(order) {
   const { sequelize } = require('../config/db.js');
 
   try {
-    // iThink mandates an explicit courier (no default). The FShip-style booking
+    // iThink mandates an explicit courier (no default). The Shipping-style booking
     // below sends no courier, so iThink throws "Courier selection is REQUIRED"
     // and the order is marked failed — this fired on every prepaid order the
     // moment payment was confirmed. Route iThink through enhancedSyncSingleOrder,
     // which auto-selects the best serviceable courier (with fallback) exactly
     // like the manual Sync button and the queue worker — so prepaid AND COD book
-    // automatically. FShip keeps its existing courier-less flow untouched.
+    // automatically. Shipping keeps its existing courier-less flow untouched.
     const providerNameEarly = await shippingProviderFactory.getProviderName(order.brand_id || 1);
     if (providerNameEarly === 'ithink') {
       // BATCH BOOKING: iThink orders are NOT booked on payment. Every order is
@@ -273,8 +273,8 @@ async function syncOrderToFShip(order) {
       // Sync button still books immediately via enhancedSyncSingleOrder.)
       const batchDate = require('./pickupScheduleService.js').nextBatchDate();
       await Order.update(
-        { pickup_hold_until: batchDate, fship_sync_status: 'pending' },
-        { where: { id: order.id, fship_waybill: null } }
+        { pickup_hold_until: batchDate, shipping_sync_status: 'pending' },
+        { where: { id: order.id, shipping_waybill: null } }
       ).catch((e) => logger.warn(`[Shipping] queue-for-batch failed for ${order.order_number}: ${e.message}`));
       logger.info(`[Shipping] iThink ${order.order_number} queued for the ${batchDate} 11:00 IST booking batch`);
       return;
@@ -282,8 +282,8 @@ async function syncOrderToFShip(order) {
 
     // Atomic status check + update to prevent double sync
     const [affectedRows] = await sequelize.query(
-      `UPDATE orders SET fship_sync_status = 'syncing', fship_sync_attempts = fship_sync_attempts + 1
-       WHERE id = ? AND fship_sync_status IN ('pending', 'failed')`,
+      `UPDATE orders SET shipping_sync_status = 'syncing', shipping_sync_attempts = shipping_sync_attempts + 1
+       WHERE id = ? AND shipping_sync_status IN ('pending', 'failed')`,
       { replacements: [order.id] }
     );
     if (!affectedRows || affectedRows.affectedRows === 0) {
@@ -317,7 +317,7 @@ async function syncOrderToFShip(order) {
         logger.warn(`[Shipping] Warnings for ${order.order_number}: ${validation.warnings.join('; ')}`);
       }
       await Order.update(
-        { fship_sync_status: 'failed', fship_sync_error: errorMsg },
+        { shipping_sync_status: 'failed', shipping_sync_error: errorMsg },
         { where: { id: order.id } }
       );
       return;
@@ -328,11 +328,11 @@ async function syncOrderToFShip(order) {
     }
 
     // Clear previous sync error on successful validation
-    if (order.fship_sync_error) {
-      await Order.update({ fship_sync_error: null }, { where: { id: order.id } });
+    if (order.shipping_sync_error) {
+      await Order.update({ shipping_sync_error: null }, { where: { id: order.id } });
     }
 
-    // Resolve the correct shipping provider for this brand (FShip or iThink)
+    // Resolve the correct shipping provider for this brand (Shipping or iThink)
     const brandId = order.brand_id || 1;
     const providerName = await shippingProviderFactory.getProviderName(brandId);
     const provider = await shippingProviderFactory.getShippingProvider(brandId);
@@ -400,14 +400,14 @@ async function syncOrderToFShip(order) {
 
     if (response.success) {
       await order.update({
-        fship_order_id: response.orderId,
-        fship_waybill: response.waybill,
-        fship_route_code: response.routeCode,
-        fship_label_url: response.labelUrl,
+        shipping_order_id: response.orderId,
+        shipping_waybill: response.waybill,
+        shipping_route_code: response.routeCode,
+        shipping_label_url: response.labelUrl,
         tracking_number: response.waybill,
         status: 'processing',
-        fship_sync_status: 'synced',
-        fship_last_synced_at: new Date(),
+        shipping_sync_status: 'synced',
+        shipping_last_synced_at: new Date(),
       });
 
       // Also update the order_shipments table
@@ -441,7 +441,7 @@ async function syncOrderToFShip(order) {
   } catch (e) {
     logger.error(`[Shipping] Sync failed for ${order.order_number}:`, e.message);
     await Order.update(
-      { fship_sync_status: 'failed', fship_sync_error: e.message },
+      { shipping_sync_status: 'failed', shipping_sync_error: e.message },
       { where: { id: order.id } }
     ).catch(() => {});
   }
@@ -486,7 +486,7 @@ async function checkCodEligibility(phone, brandId = 1) {
 
 /**
  * Cancel a booked order at the shipping provider that issued the AWB (iThink /
- * FShip). Best-effort + non-blocking. The AWB may live on the order row OR only
+ * Shipping). Best-effort + non-blocking. The AWB may live on the order row OR only
  * in order_shipments — check both, else the courier-side cancel silently gets
  * skipped and the order stays active in iThink even though it's cancelled here.
  * Called from cancelOrder AND from a status-change to "cancelled".
@@ -494,7 +494,7 @@ async function checkCodEligibility(phone, brandId = 1) {
 function cancelAtCourier(order, reason) {
   setImmediate(async () => {
     const { OrderShipment } = require('../model/orderShipmentModel.js');
-    let waybill = order.fship_waybill || null;
+    let waybill = order.shipping_waybill || null;
     try {
       if (!waybill) {
         const shp = await OrderShipment.findOne({ where: { order_id: order.id }, attributes: ['waybill', 'tracking_number'] });
@@ -517,7 +517,7 @@ module.exports = {
   confirmOrder,
   cancelOrder,
   cancelAtCourier,
-  syncOrderToFShip,
+  syncOrderToShipping,
   assertTransition,
   getRtoRiskLevel,
   checkCodEligibility,

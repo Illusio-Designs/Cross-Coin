@@ -186,7 +186,7 @@ module.exports = function mountSwagger(app) {
           tags: ['Orders'],
           summary: 'Create order (authenticated)',
           security: [{ BearerAuth: [] }],
-          description: 'Creates order with status awaiting_confirmation. FShip sync only after admin confirms.',
+          description: 'Creates order with status awaiting_confirmation. Shipping sync only after admin confirms.',
           requestBody: { content: { 'application/json': { schema: { type: 'object', required: ['shipping_address_id','items','payment_type'], properties: { shipping_address_id: { type: 'integer' }, items: { type: 'array', items: { type: 'object', properties: { product_id: { type: 'integer' }, variation_id: { type: 'integer' }, quantity: { type: 'integer' } } } }, payment_type: { type: 'string', enum: ['cod','razorpay'] }, idempotency_key: { type: 'string' } } } } } },
           responses: { 201: { description: 'Order created' }, 400: { description: 'Validation error' } },
         },
@@ -215,7 +215,7 @@ module.exports = function mountSwagger(app) {
         put: {
           tags: ['Admin'],
           summary: 'Confirm order (admin)',
-          description: 'Transitions awaiting_confirmation → confirmed. Triggers FShip sync. Uses row lock to prevent race conditions.',
+          description: 'Transitions awaiting_confirmation → confirmed. Triggers Shipping sync. Uses row lock to prevent race conditions.',
           security: [{ BearerAuth: [] }],
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
           responses: { 200: { description: 'Order confirmed' }, 400: { description: 'Invalid state transition' } },
@@ -225,7 +225,7 @@ module.exports = function mountSwagger(app) {
         put: {
           tags: ['Orders'],
           summary: 'Cancel order (user)',
-          description: 'Allowed up to processing status. Reason required. Restores stock, refunds loyalty, cancels FShip.',
+          description: 'Allowed up to processing status. Reason required. Restores stock, refunds loyalty, cancels Shipping.',
           security: [{ BearerAuth: [] }],
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
           requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CancelRequest' } } } },

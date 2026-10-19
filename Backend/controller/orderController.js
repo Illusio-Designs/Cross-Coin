@@ -30,7 +30,7 @@
   const { GuestUser } = require("../model/guestUserModel.js");
   const { ProductImage } = require("../model/productImageModel.js");
   const Brand = require("../model/brandModel.js");
-  const FShipLabelDownload = require("../model/fshipLabelDownloadModel.js");
+  const ShippingLabelDownload = require("../model/shippingLabelDownloadModel.js");
   const UTMTracking = require("../model/utmModel.js");
   const { Op, Transaction } = require("sequelize");
   const XLSX = require("xlsx");
@@ -55,21 +55,21 @@
       const payload = {
         order_id: orderId,
         provider: data.provider || 'fship',
-        provider_order_id: data.provider_order_id || data.fship_order_id || null,
-        waybill: data.waybill || data.fship_waybill || null,
+        provider_order_id: data.provider_order_id || data.shipping_order_id || null,
+        waybill: data.waybill || data.shipping_waybill || null,
         tracking_number: data.tracking_number || null,
         tracking_url: data.tracking_url || null,
-        route_code: data.route_code || data.fship_route_code || null,
-        courier_id: data.courier_id || data.fship_courier_id || null,
+        route_code: data.route_code || data.shipping_route_code || null,
+        courier_id: data.courier_id || data.shipping_courier_id || null,
         courier_name: data.courier_name || null,
-        label_url: data.label_url || data.fship_label_url || null,
-        label_downloaded: data.label_downloaded ?? data.fship_label_downloaded ?? false,
-        label_downloaded_at: data.label_downloaded_at || data.fship_label_downloaded_at || null,
-        label_downloaded_by: data.label_downloaded_by || data.fship_label_downloaded_by || null,
-        sync_status: data.sync_status || data.fship_sync_status || 'pending',
-        sync_attempts: data.sync_attempts ?? data.fship_sync_attempts ?? 0,
-        sync_error: data.sync_error || data.fship_sync_error || null,
-        last_synced_at: data.last_synced_at || data.fship_last_synced_at || null,
+        label_url: data.label_url || data.shipping_label_url || null,
+        label_downloaded: data.label_downloaded ?? data.shipping_label_downloaded ?? false,
+        label_downloaded_at: data.label_downloaded_at || data.shipping_label_downloaded_at || null,
+        label_downloaded_by: data.label_downloaded_by || data.shipping_label_downloaded_by || null,
+        sync_status: data.sync_status || data.shipping_sync_status || 'pending',
+        sync_attempts: data.sync_attempts ?? data.shipping_sync_attempts ?? 0,
+        sync_error: data.sync_error || data.shipping_sync_error || null,
+        last_synced_at: data.last_synced_at || data.shipping_last_synced_at || null,
       };
       // Remove undefined values
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
@@ -314,7 +314,7 @@
           }
         } catch (svcErr) {
           logger.warn('Pincode serviceability check failed (allowing order):', svcErr.message);
-          // Allow order to proceed if serviceability API is down — FShip sync will catch it later
+          // Allow order to proceed if serviceability API is down — Shipping sync will catch it later
         }
       }
 
@@ -1110,7 +1110,7 @@
 
   // ══════════════════════════════════════════════════════════════════════════
   // Admin Manual Order Creation
-  // Creates an order from the admin dashboard with full tracking (FB, GA, WA, FShip)
+  // Creates an order from the admin dashboard with full tracking (FB, GA, WA, Shipping)
   // ══════════════════════════════════════════════════════════════════════════
   module.exports.adminCreateManualOrder = async (req, res) => {
     let transaction = null;
@@ -1455,8 +1455,8 @@
         where: {
           [Op.or]: [
             { tracking_number: awb_number },
-            { fship_waybill: awb_number },
-            { fship_tracking_number: awb_number },
+            { shipping_waybill: awb_number },
+            { shipping_tracking_number: awb_number },
           ],
         },
         include: [
@@ -1717,7 +1717,7 @@
           { order_number: { [Op.like]: `%${searchTerm}%` } },
           { tracking_number: { [Op.like]: `%${searchTerm}%` } },
           { courier_name: { [Op.like]: `%${searchTerm}%` } },
-          { fship_waybill: { [Op.like]: `%${searchTerm}%` } }
+          { shipping_waybill: { [Op.like]: `%${searchTerm}%` } }
         );
 
         // Search in final amount
@@ -2355,8 +2355,8 @@
       await delChild(Payment, { order_id: id });
       await delChild(OrderShipment, { order_id: id });
       try {
-        const { FShipLabelDownload } = require('../model/fshipLabelDownloadModel.js');
-        if (FShipLabelDownload) await delChild(FShipLabelDownload, { order_id: id });
+        const { ShippingLabelDownload } = require('../model/shippingLabelDownloadModel.js');
+        if (ShippingLabelDownload) await delChild(ShippingLabelDownload, { order_id: id });
       } catch (_) { /* model optional */ }
 
       await order.destroy({ transaction: t });
@@ -2421,7 +2421,7 @@
     }
   };
 
-  // Confirm order (admin) — triggers FShip sync
+  // Confirm order (admin) — triggers Shipping sync
   module.exports.confirmOrder = async (req, res) => {
     try {
       const orderService = require('../services/orderService.js');
@@ -2455,7 +2455,7 @@
       }
 
       // Update AWB and courier information
-      order.fship_waybill = awbNumber.trim();
+      order.shipping_waybill = awbNumber.trim();
       if (courierName && courierName.trim()) {
         order.courier_name = courierName.trim();
       }
@@ -2490,7 +2490,7 @@
           order: {
             id: order.id,
             order_number: order.order_number,
-            fship_waybill: order.fship_waybill,
+            shipping_waybill: order.shipping_waybill,
             courier_name: order.courier_name,
             tracking_number: order.tracking_number
           }
@@ -2622,7 +2622,7 @@
             tracking_number: order.tracking_number,
             courier_name: order.courier_name,
             tracking_url: order.tracking_url,
-            fship_waybill: order.fship_waybill,
+            shipping_waybill: order.shipping_waybill,
             created_at: orderCreatedAt,
             createdAt: orderCreatedAt,
             updated_at: orderUpdatedAt,

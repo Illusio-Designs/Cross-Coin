@@ -70,7 +70,7 @@ describe('verifyWebhookSignature', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
-  test('FShip variant uses bare hex (no sha256= prefix)', () => {
+  test('Shipping variant uses bare hex (no sha256= prefix)', () => {
     const secret = 'fship-secret';
     const body = Buffer.from('{"order":"1"}', 'utf8');
     const sig = crypto.createHmac('sha256', secret).update(body).digest('hex');

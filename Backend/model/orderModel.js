@@ -95,36 +95,36 @@ const Order = sequelize.define('Order', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    // FShip integration fields
-    fship_order_id: {
+    // Shipping integration fields
+    shipping_order_id: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    fship_waybill: {
+    shipping_waybill: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    fship_route_code: {
+    shipping_route_code: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    fship_courier_id: {
+    shipping_courier_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    fship_label_url: {
+    shipping_label_url: {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    fship_label_downloaded: {
+    shipping_label_downloaded: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     },
-    fship_label_downloaded_at: {
+    shipping_label_downloaded_at: {
         type: DataTypes.DATE,
         allowNull: true
     },
-    fship_label_downloaded_by: {
+    shipping_label_downloaded_by: {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
@@ -133,7 +133,7 @@ const Order = sequelize.define('Order', {
         },
         onDelete: 'SET NULL'
     },
-    fship_tracking_number: {
+    shipping_tracking_number: {
         type: DataTypes.STRING(100),
         allowNull: true
     },
@@ -194,22 +194,22 @@ const Order = sequelize.define('Order', {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
     },
-    fship_last_synced_at: {
+    shipping_last_synced_at: {
         type: DataTypes.DATE,
         allowNull: true,
-        comment: 'Last time this order was synced with FShip'
+        comment: 'Last time this order was synced with Shipping'
     },
-    fship_sync_status: {
+    shipping_sync_status: {
         type: DataTypes.ENUM('pending', 'syncing', 'synced', 'failed'),
         defaultValue: 'pending',
-        comment: 'FShip sync state machine status'
+        comment: 'Shipping sync state machine status'
     },
-    fship_sync_attempts: {
+    shipping_sync_attempts: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
-        comment: 'Number of FShip sync attempts made'
+        comment: 'Number of Shipping sync attempts made'
     },
-    fship_sync_error: {
+    shipping_sync_error: {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Validation or sync error details shown on order page'
@@ -247,9 +247,9 @@ const Order = sequelize.define('Order', {
         { name: 'idx_user_id',            fields: ['user_id'] },
         { name: 'idx_status',             fields: ['status'] },
         { name: 'idx_payment_status',     fields: ['payment_status'] },
-        { name: 'idx_fship_sync_status',  fields: ['fship_sync_status'] },
+        { name: 'idx_shipping_sync_status',  fields: ['shipping_sync_status'] },
         { name: 'idx_orders_brand_id',    fields: ['brand_id'] },
-        { name: 'idx_orders_fship_waybill', fields: ['fship_waybill'] },
+        { name: 'idx_orders_shipping_waybill', fields: ['shipping_waybill'] },
         { name: 'idx_orders_created_at',  fields: ['created_at'] },
         // Composites for the hot dashboard/list path: filter by brand_id/status
         // AND sort/range by created_at (see setupDatabase migration 012).

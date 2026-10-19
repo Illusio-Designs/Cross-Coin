@@ -4,7 +4,7 @@ const settingsHelper = require('./settingsHelper');
  * Shipping Provider Factory
  *
  * Returns the correct shipping service instance based on brand settings.
- * Both FShipService and IThinkService expose the same interface:
+ * Both ShippingService and IThinkService expose the same interface:
  *   - createForwardOrder(orderData)
  *   - createOrUpdateForwardOrder(orderData)
  *   - getTrackingHistory(waybill)
@@ -14,7 +14,7 @@ const settingsHelper = require('./settingsHelper');
  *   - checkServiceability(sourcePincode, destinationPincode)
  *   - getShippingLabel(waybills)
  *   - registerPickup(waybills)
- *   - mapFShipStatusToCrossCoin(status)  (name kept for backward compat)
+ *   - mapShippingStatusToCrossCoin(status)  (name kept for backward compat)
  *   - calculateShipmentDimensions(items)
  *   - testConnection()
  */
@@ -27,10 +27,10 @@ const instanceCache = new Map();
  * Reads SHIPPING_PROVIDER from brand_settings (default: 'fship').
  *
  * @param {number} brandId
- * @returns {Promise<FShipService|IThinkService>}
+ * @returns {Promise<ShippingService|IThinkService>}
  */
 async function getShippingProvider(brandId = 1) {
-  // FShip is retired — iThink is the only active provider. We ignore any stale
+  // Shipping is retired — iThink is the only active provider. We ignore any stale
   // SHIPPING_PROVIDER='fship' brand setting and always return iThink.
   return getProviderByName('ithink', brandId);
 }
@@ -38,7 +38,7 @@ async function getShippingProvider(brandId = 1) {
 /**
  * Get a specific provider by name (skips the DB lookup).
  *
- * FShip has been decommissioned. Every request — including legacy shipments
+ * Shipping has been decommissioned. Every request — including legacy shipments
  * recorded as 'fship' — resolves to iThink so status refresh on historical
  * orders never crashes on a missing provider.
  *

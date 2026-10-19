@@ -87,7 +87,7 @@ async function bookReversePickup(ret, order, brandId) {
       return;
     }
 
-    // Reload the order with the associations prepareFShipOrderData needs.
+    // Reload the order with the associations prepareShippingOrderData needs.
     const fullOrder = await Order.findByPk(order.id, {
       include: [
         { association: 'User' },
@@ -103,8 +103,8 @@ async function bookReversePickup(ret, order, brandId) {
 
     // Reuse the exact forward-order assembler; createReverseOrder flips it to a
     // reverse (Prepaid) pickup from the customer back to the warehouse.
-    const { prepareFShipOrderData } = require('./orderShippingController.js');
-    const orderData = await prepareFShipOrderData(fullOrder, 'ithink', reverseLogistics, 'surface');
+    const { prepareShippingOrderData } = require('./orderShippingController.js');
+    const orderData = await prepareShippingOrderData(fullOrder, 'ithink', reverseLogistics, 'surface');
 
     const shippingService = require('../services/shippingService.js');
     const result = await shippingService.createReversePickup(brandId, orderData);

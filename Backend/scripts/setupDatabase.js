@@ -95,9 +95,9 @@ const setupDatabase = async () => {
       console.error("❌ Error applying associations:", assocError.message);
     }
 
-    // Pre-sync fix: ensure FShip sync columns exist before Sequelize tries to
-    // add idx_fship_sync_status during model sync on existing orders table.
-    console.log("Ensuring orders FShip sync columns before sync...");
+    // Pre-sync fix: ensure Shipping sync columns exist before Sequelize tries to
+    // add idx_shipping_sync_status during model sync on existing orders table.
+    console.log("Ensuring orders Shipping sync columns before sync...");
     try {
       const [ordersTable] = await sequelize.query(`
         SELECT TABLE_NAME
@@ -112,13 +112,13 @@ const setupDatabase = async () => {
           FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = 'orders'
-            AND COLUMN_NAME = 'fship_sync_status'
+            AND COLUMN_NAME = 'shipping_sync_status'
         `);
 
         if (!fshipStatusColumn.length) {
           await sequelize.query(`
             ALTER TABLE orders
-            ADD COLUMN fship_sync_status ENUM('pending','syncing','synced','failed')
+            ADD COLUMN shipping_sync_status ENUM('pending','syncing','synced','failed')
             DEFAULT 'pending'
           `);
         }
@@ -128,13 +128,13 @@ const setupDatabase = async () => {
           FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = 'orders'
-            AND COLUMN_NAME = 'fship_sync_attempts'
+            AND COLUMN_NAME = 'shipping_sync_attempts'
         `);
 
         if (!fshipAttemptsColumn.length) {
           await sequelize.query(`
             ALTER TABLE orders
-            ADD COLUMN fship_sync_attempts INT DEFAULT 0
+            ADD COLUMN shipping_sync_attempts INT DEFAULT 0
           `);
         }
 
@@ -143,21 +143,21 @@ const setupDatabase = async () => {
           FROM INFORMATION_SCHEMA.STATISTICS
           WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = 'orders'
-            AND INDEX_NAME = 'idx_fship_sync_status'
+            AND INDEX_NAME = 'idx_shipping_sync_status'
         `);
 
         if (!fshipIndex.length) {
           await sequelize.query(`
             ALTER TABLE orders
-            ADD INDEX idx_fship_sync_status (fship_sync_status)
+            ADD INDEX idx_shipping_sync_status (shipping_sync_status)
           `);
         }
       }
 
-      console.log("✓ Orders FShip sync columns ensured pre-sync");
+      console.log("✓ Orders Shipping sync columns ensured pre-sync");
     } catch (fshipPreSyncError) {
       console.log(
-        "⚠️ Pre-sync FShip orders column fix skipped:",
+        "⚠️ Pre-sync Shipping orders column fix skipped:",
         fshipPreSyncError.message
       );
     }
@@ -430,7 +430,7 @@ const setupDatabase = async () => {
     await sequelize.sync({ force: false, alter: false, hooks: false });
     console.log("✓ All tables synced");
 
-    // Ensure order_shipments table exists and migrate existing FShip data
+    // Ensure order_shipments table exists and migrate existing Shipping data
     console.log("Ensuring order_shipments table...");
     try {
       await sequelize.query(`
@@ -464,12 +464,12 @@ const setupDatabase = async () => {
       `);
       console.log("✓ order_shipments table ready");
 
-      // Migrate existing FShip data from orders table
+      // Migrate existing Shipping data from orders table
       const [countResult] = await sequelize.query(`
         SELECT COUNT(*) as cnt FROM orders o
         LEFT JOIN order_shipments os ON os.order_id = o.id
         WHERE os.id IS NULL
-          AND (o.fship_order_id IS NOT NULL OR o.fship_waybill IS NOT NULL OR o.tracking_number IS NOT NULL)
+          AND (o.shipping_order_id IS NOT NULL OR o.shipping_waybill IS NOT NULL OR o.tracking_number IS NOT NULL)
       `);
       const pendingMigration = countResult[0].cnt;
       if (pendingMigration > 0) {
@@ -483,18 +483,18 @@ const setupDatabase = async () => {
             created_at, updated_at
           )
           SELECT
-            o.id, 'fship', o.fship_order_id, o.fship_waybill,
-            COALESCE(o.fship_tracking_number, o.tracking_number),
-            o.tracking_url, o.fship_route_code, o.fship_courier_id, o.courier_name,
-            o.fship_label_url, o.fship_label_downloaded, o.fship_label_downloaded_at,
-            o.fship_label_downloaded_by,
-            o.fship_sync_status, o.fship_sync_attempts, o.fship_sync_error,
-            o.fship_last_synced_at,
+            o.id, 'fship', o.shipping_order_id, o.shipping_waybill,
+            COALESCE(o.shipping_tracking_number, o.tracking_number),
+            o.tracking_url, o.shipping_route_code, o.shipping_courier_id, o.courier_name,
+            o.shipping_label_url, o.shipping_label_downloaded, o.shipping_label_downloaded_at,
+            o.shipping_label_downloaded_by,
+            o.shipping_sync_status, o.shipping_sync_attempts, o.shipping_sync_error,
+            o.shipping_last_synced_at,
             o.created_at, o.updated_at
           FROM orders o
           LEFT JOIN order_shipments os ON os.order_id = o.id
           WHERE os.id IS NULL
-            AND (o.fship_order_id IS NOT NULL OR o.fship_waybill IS NOT NULL OR o.tracking_number IS NOT NULL)
+            AND (o.shipping_order_id IS NOT NULL OR o.shipping_waybill IS NOT NULL OR o.tracking_number IS NOT NULL)
         `);
         console.log(`  ✓ Migrated ${pendingMigration} shipment records`);
       } else {
@@ -1409,7 +1409,7 @@ const setupDatabase = async () => {
           CREATE TABLE IF NOT EXISTS order_audit_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL,
-            action VARCHAR(50) NOT NULL COMMENT 'confirm, cancel, status_change, fship_sync, payment_update',
+            action VARCHAR(50) NOT NULL COMMENT 'confirm, cancel, status_change, shipping_sync, payment_update',
             performed_by INT NULL COMMENT 'User ID who performed the action',
             role VARCHAR(50) NULL COMMENT 'admin, user, system, webhook',
             metadata JSON NULL COMMENT 'Additional context (reason, old_status, new_status, etc.)',
@@ -1487,7 +1487,7 @@ const setupDatabase = async () => {
       try {
         const indexChecks = [
           { name: 'idx_orders_brand_id',     sql: 'ALTER TABLE orders ADD INDEX idx_orders_brand_id (brand_id)' },
-          { name: 'idx_orders_fship_waybill', sql: 'ALTER TABLE orders ADD INDEX idx_orders_fship_waybill (fship_waybill)' },
+          { name: 'idx_orders_shipping_waybill', sql: 'ALTER TABLE orders ADD INDEX idx_orders_shipping_waybill (shipping_waybill)' },
           { name: 'idx_orders_created_at',    sql: 'ALTER TABLE orders ADD INDEX idx_orders_created_at (created_at)' },
         ];
         for (const { name, sql } of indexChecks) {
@@ -1566,9 +1566,9 @@ const setupDatabase = async () => {
 
       // Migration 014: de-brand the label-download audit table. It logs every
       // admin label download (who, which order, when, single/bulk, IP) for ANY
-      // courier, so the fship_ prefix was misleading. Renames in place when the
-      // old table exists and the new one doesn't; fresh installs just create
-      // shipping_label_downloads via the model and both branches no-op.
+      // courier, so the legacy fship_ prefix was misleading. Renames in place
+      // when the old table exists and the new one doesn't; fresh installs just
+      // create shipping_label_downloads via the model and both branches no-op.
       console.log("Running migration 014: rename fship_label_downloads → shipping_label_downloads...");
       try {
         const [tables] = await sequelize.query(`
@@ -1586,6 +1586,53 @@ const setupDatabase = async () => {
         console.log("✓ Migration 014 completed");
       } catch (e) {
         console.log("⚠️ Migration 014 skipped:", e.message);
+      }
+
+      // Migration 015: de-brand the orders table — the shipping columns were
+      // created in the FShip era but now hold iThink (any-courier) data. Each
+      // rename fires only when the old column exists and the new one doesn't,
+      // so re-runs and fresh installs no-op. The old idx_fship_sync_status
+      // index is dropped; the idempotent index block above re-adds it under
+      // the new name.
+      console.log("Running migration 015: rename orders fship_* columns → shipping_*...");
+      try {
+        const RENAMES = [
+          ['fship_order_id', 'shipping_order_id', 'VARCHAR(255) NULL'],
+          ['fship_waybill', 'shipping_waybill', 'VARCHAR(255) NULL'],
+          ['fship_route_code', 'shipping_route_code', 'VARCHAR(255) NULL'],
+          ['fship_courier_id', 'shipping_courier_id', 'INT NULL'],
+          ['fship_label_url', 'shipping_label_url', 'TEXT NULL'],
+          ['fship_label_downloaded', 'shipping_label_downloaded', 'TINYINT(1) NULL DEFAULT 0'],
+          ['fship_label_downloaded_at', 'shipping_label_downloaded_at', 'DATETIME NULL'],
+          ['fship_label_downloaded_by', 'shipping_label_downloaded_by', 'INT NULL'],
+          ['fship_tracking_number', 'shipping_tracking_number', 'VARCHAR(100) NULL'],
+          ['fship_last_synced_at', 'shipping_last_synced_at', 'DATETIME NULL'],
+          ['fship_sync_status', 'shipping_sync_status', "ENUM('pending','syncing','synced','failed') NULL DEFAULT 'pending'"],
+          ['fship_sync_attempts', 'shipping_sync_attempts', 'INT NULL DEFAULT 0'],
+          ['fship_sync_error', 'shipping_sync_error', 'TEXT NULL'],
+        ];
+        const [cols] = await sequelize.query(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
+        `);
+        const have = new Set(cols.map((c) => c.COLUMN_NAME));
+        for (const [oldCol, newCol, def] of RENAMES) {
+          if (have.has(oldCol) && !have.has(newCol)) {
+            await sequelize.query(`ALTER TABLE orders CHANGE \`${oldCol}\` \`${newCol}\` ${def}`);
+            console.log(`  ✓ ${oldCol} → ${newCol}`);
+          }
+        }
+        const [idx] = await sequelize.query(`
+          SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND INDEX_NAME = 'idx_fship_sync_status'
+        `);
+        if (idx.length) {
+          await sequelize.query('ALTER TABLE orders DROP INDEX idx_fship_sync_status');
+          console.log('  ✓ Dropped legacy idx_fship_sync_status');
+        }
+        console.log("✓ Migration 015 completed");
+      } catch (e) {
+        console.log("⚠️ Migration 015 skipped:", e.message);
       }
 
       console.log("✓ All migrations completed successfully");
@@ -1683,12 +1730,12 @@ const setupDatabase = async () => {
     console.log("\nUpdating coupon table with new fields...");
     await updateCouponTable();
     
-    // Add fship_last_synced_at column to orders table
-    console.log("\nAdding fship_last_synced_at column to orders table...");
+    // Add shipping_last_synced_at column to orders table
+    console.log("\nAdding shipping_last_synced_at column to orders table...");
     await addFshipLastSyncedAtColumn();
     
-    // Add fship_sync_error column to orders table
-    console.log("\nAdding fship_sync_error column to orders table...");
+    // Add shipping_sync_error column to orders table
+    console.log("\nAdding shipping_sync_error column to orders table...");
     await addFshipSyncErrorColumn();
     
     // Create performance optimization indexes
@@ -2228,10 +2275,10 @@ const createSliderBrandsTable = async () => {
   }
 };
 
-// Function to add fship_last_synced_at column to orders table
+// Function to add shipping_last_synced_at column to orders table
 const addFshipLastSyncedAtColumn = async () => {
   try {
-    console.log('Checking if fship_last_synced_at column exists in orders table...');
+    console.log('Checking if shipping_last_synced_at column exists in orders table...');
 
     // Check if column exists
     const [columnExists] = await sequelize.query(`
@@ -2239,57 +2286,57 @@ const addFshipLastSyncedAtColumn = async () => {
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_SCHEMA = DATABASE() 
       AND TABLE_NAME = 'orders' 
-      AND COLUMN_NAME = 'fship_last_synced_at'
+      AND COLUMN_NAME = 'shipping_last_synced_at'
     `);
 
     if (columnExists[0].count === 0) {
-      console.log('Adding fship_last_synced_at column to orders table...');
+      console.log('Adding shipping_last_synced_at column to orders table...');
       
       await sequelize.query(`
         ALTER TABLE orders 
-        ADD COLUMN fship_last_synced_at DATETIME NULL 
-        COMMENT 'Last time this order was synced with FShip' 
+        ADD COLUMN shipping_last_synced_at DATETIME NULL 
+        COMMENT 'Last time this order was synced with Shipping' 
         AFTER brand_id
       `);
       
-      console.log('✓ fship_last_synced_at column added successfully');
+      console.log('✓ shipping_last_synced_at column added successfully');
     } else {
-      console.log('✓ fship_last_synced_at column already exists');
+      console.log('✓ shipping_last_synced_at column already exists');
     }
   } catch (error) {
-    console.log('⚠️ Error adding fship_last_synced_at column:', error.message);
+    console.log('⚠️ Error adding shipping_last_synced_at column:', error.message);
   }
 };
 
-// Add fship_sync_error column to orders table
+// Add shipping_sync_error column to orders table
 const addFshipSyncErrorColumn = async () => {
   try {
-    console.log('Checking if fship_sync_error column exists in orders table...');
+    console.log('Checking if shipping_sync_error column exists in orders table...');
 
     const [columnExists] = await sequelize.query(`
       SELECT COUNT(*) as count
       FROM INFORMATION_SCHEMA.COLUMNS 
       WHERE TABLE_SCHEMA = DATABASE() 
       AND TABLE_NAME = 'orders' 
-      AND COLUMN_NAME = 'fship_sync_error'
+      AND COLUMN_NAME = 'shipping_sync_error'
     `);
 
     if (columnExists[0].count === 0) {
-      console.log('Adding fship_sync_error column to orders table...');
+      console.log('Adding shipping_sync_error column to orders table...');
       
       await sequelize.query(`
         ALTER TABLE orders 
-        ADD COLUMN fship_sync_error TEXT NULL 
+        ADD COLUMN shipping_sync_error TEXT NULL 
         COMMENT 'Validation or sync error details shown on order page' 
-        AFTER fship_sync_attempts
+        AFTER shipping_sync_attempts
       `);
       
-      console.log('✓ fship_sync_error column added successfully');
+      console.log('✓ shipping_sync_error column added successfully');
     } else {
-      console.log('✓ fship_sync_error column already exists');
+      console.log('✓ shipping_sync_error column already exists');
     }
   } catch (error) {
-    console.log('⚠️ Error adding fship_sync_error column:', error.message);
+    console.log('⚠️ Error adding shipping_sync_error column:', error.message);
   }
 };
 

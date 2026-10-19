@@ -270,7 +270,7 @@ const Orders = () => {
         if (refreshingStatus) return;
         setRefreshingStatus(true);
         try {
-            const result = await orderService.bulkRefreshFShipStatus();
+            const result = await orderService.bulkRefreshShippingStatus();
             const data = result.data || {};
             let message = 'Status refresh completed! ';
             if (data.updated > 0) message += `${data.updated} orders updated. `;
@@ -335,7 +335,7 @@ const Orders = () => {
         if (syncingOrders.has(orderId)) { showError('syncInProgress'); return; }
         try {
             setSyncingOrders(prev => new Set(prev).add(orderId));
-            const result = await orderService.syncSingleOrderWithFShip(orderId);
+            const result = await orderService.syncSingleOrderWithShipping(orderId);
             if (result.success) {
                 // Booking runs in the background queue now — the response is
                 // instant. The row shows "Pending sync" and flips to booked (AWB)
@@ -514,7 +514,7 @@ const Orders = () => {
     };
 
     const selectAllOrdersWithLabels = () => {
-        const ordersWithLabels = orders.filter(order => order.fship_label_url);
+        const ordersWithLabels = orders.filter(order => order.shipping_label_url);
         if (selectedOrders.size === ordersWithLabels.length) setSelectedOrders(new Set());
         else setSelectedOrders(new Set(ordersWithLabels.map(order => order.id)));
     };
@@ -613,7 +613,7 @@ const Orders = () => {
         {
             header: (
                 <input type="checkbox" className="bulk-select-checkbox"
-                    checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.fship_label_url).length}
+                    checked={selectedOrders.size > 0 && selectedOrders.size === orders.filter(o => o.shipping_label_url).length}
                     onChange={selectAllOrdersWithLabels} title="Select all orders with labels" />
             ),
             // Always render a checkbox so the column is consistent on every row.
@@ -622,7 +622,7 @@ const Orders = () => {
             // instead of the checkbox appearing on some rows and vanishing on
             // others, which read as a bug.
             cell: (row) => {
-                const hasLabel = !!row.fship_label_url;
+                const hasLabel = !!row.shipping_label_url;
                 return (
                     <input type="checkbox" className="order-select-checkbox"
                         checked={hasLabel && selectedOrders.has(row.id)}
@@ -694,15 +694,15 @@ const Orders = () => {
             header: "Shipment",
             cell: (row) => {
                 const s = row.Shipment || {};
-                const waybill = s.waybill || row.fship_waybill;
+                const waybill = s.waybill || row.shipping_waybill;
                 const courier = s.courier_name || row.courier_name;
                 const orderStatus = (row.status || '').toLowerCase();
                 // Cancelled orders never ship — don't show a "Pending Sync" chip.
                 if ((orderStatus === 'cancelled' || orderStatus === 'order cancelled') && !waybill) {
                     return <span style={{ color: 'var(--ds-color-text-faint)', fontSize: '12px' }}>—</span>;
                 }
-                const status = s.sync_status || row.fship_sync_status || (row.fship_order_id || waybill ? 'synced' : 'pending');
-                const syncError = s.sync_error || row.fship_sync_error;
+                const status = s.sync_status || row.shipping_sync_status || (row.shipping_order_id || waybill ? 'synced' : 'pending');
+                const syncError = s.sync_error || row.shipping_sync_error;
                 // Stacked: status on top, then AWB, then courier — keeps the row
                 // narrow instead of one long horizontal line.
                 return (
@@ -726,7 +726,7 @@ const Orders = () => {
                 const isSyncing = syncingOrders.has(row.id);
                 // Once an order has a waybill it's already booked with a courier —
                 // hide the Sync button (the Refresh-tracking button takes over).
-                const isSynced = !!(row.Shipment?.waybill || row.fship_waybill);
+                const isSynced = !!(row.Shipment?.waybill || row.shipping_waybill);
                 const canConfirm = ['awaiting_confirmation', 'pending'].includes(row.status);
                 // Confirming an order now books the courier automatically, so the
                 // Sync button is no longer shown on unconfirmed rows. It only stays
@@ -741,7 +741,7 @@ const Orders = () => {
                 // the server's admin-cancellable statuses; dispatched/final
                 // orders (shipped, delivered, cancelled…) never show it.
                 const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes((row.status || '').toLowerCase());
-                const hasWaybill = !!(row.Shipment?.waybill || row.fship_waybill);
+                const hasWaybill = !!(row.Shipment?.waybill || row.shipping_waybill);
                 // Refund: a PREPAID order whose money is still owed to the customer
                 // (paid / refund_pending) and the order is in a refundable state
                 // (cancelled or returned). Covers refunding after a cancel that
@@ -754,7 +754,7 @@ const Orders = () => {
                 // the ⋯ menu, so the Actions column stays narrow.
                 const menu = [
                     { icon: <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />, label: 'Edit address', onClick: () => openAddressEditor(row) },
-                    ...(pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, row.Shipment?.waybill || row.fship_waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
+                    ...(pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, row.Shipment?.waybill || row.shipping_waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
                     ...(hasWaybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Generate label', onClick: () => generateLabelForOrder(row.id) }] : []),
                     ...(canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
                     ...(canRefund ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: pmtStatus === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
@@ -1219,15 +1219,15 @@ const Orders = () => {
                             {/* Shipping tracking block — provider-aware */}
                             {(() => {
                                 const s = selectedOrder.Shipment || {};
-                                const providerKey = s.provider || (selectedOrder.fship_order_id || selectedOrder.fship_waybill ? 'ithink' : null);
+                                const providerKey = s.provider || (selectedOrder.shipping_order_id || selectedOrder.shipping_waybill ? 'ithink' : null);
                                 const providerLabel = providerKey ? 'iThink Logistics' : null;
-                                const providerOrderId = s.provider_order_id || selectedOrder.fship_order_id;
-                                const waybill = s.waybill || selectedOrder.fship_waybill;
-                                const routeCode = s.route_code || selectedOrder.fship_route_code;
+                                const providerOrderId = s.provider_order_id || selectedOrder.shipping_order_id;
+                                const waybill = s.waybill || selectedOrder.shipping_waybill;
+                                const routeCode = s.route_code || selectedOrder.shipping_route_code;
                                 const trackingNo = s.tracking_number || selectedOrder.tracking_number;
                                 const courier = s.courier_name || selectedOrder.courier_name;
-                                const labelUrl = s.label_url || selectedOrder.fship_label_url;
-                                const syncErr = s.sync_error || selectedOrder.fship_sync_error;
+                                const labelUrl = s.label_url || selectedOrder.shipping_label_url;
+                                const syncErr = s.sync_error || selectedOrder.shipping_sync_error;
                                 const showBlock = providerOrderId || waybill || trackingNo;
                                 return (
                                     <>
@@ -1352,7 +1352,7 @@ const Orders = () => {
                         </div>
 
                         {/* Manifest Section */}
-                        {(selectedOrder.Shipment?.waybill || selectedOrder.fship_waybill) && (
+                        {(selectedOrder.Shipment?.waybill || selectedOrder.shipping_waybill) && (
                             <div className="odm-card">
                                 <div className="odm-card-title">
                                     <HugeiconsIcon icon={File01Icon} size={14} strokeWidth={2} />
@@ -1373,9 +1373,9 @@ const Orders = () => {
                                             <HugeiconsIcon icon={Download04Icon} size={15} strokeWidth={2} />
                                             {generatingLabel.has(selectedOrder.id) ? 'Preparing…' : 'Download Label'}
                                         </button>
-                                        {selectedOrder.fship_label_url && (
+                                        {selectedOrder.shipping_label_url && (
                                             <a
-                                                href={selectedOrder.fship_label_url}
+                                                href={selectedOrder.shipping_label_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-outline btn-md"
