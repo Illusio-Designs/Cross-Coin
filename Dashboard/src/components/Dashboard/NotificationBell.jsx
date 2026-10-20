@@ -24,6 +24,14 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  // Start sound on PRESS, not on click: pressing anywhere already switches the
+  // engine on, which hides "Turn on sound" before its click would fire — so the
+  // confirmation chime never played. onClick stays for the keyboard (Enter /
+  // Space), skipping a click that directly follows a press.
+  const pressedAt = useRef(0);
+  const soundPress = () => { pressedAt.current = Date.now(); enableSound(); };
+  const soundClick = () => { if (Date.now() - pressedAt.current > 1000) enableSound(); };
+
   // Web Push: "on" once granted + subscribed. Re-subscribes silently on load so
   // an already-opted-in browser stays registered after a redeploy.
   const [pushOn, setPushOn] = useState(false);
@@ -84,7 +92,7 @@ export default function NotificationBell() {
       {/* Browsers keep a page silent until it has been clicked. Until sound
           really works, say so — one click here (or anywhere) turns it on. */}
       {!soundOn && (
-        <button type="button" className="dh-sound-off" onClick={enableSound} title="New-order sound is off until you click the page">
+        <button type="button" className="dh-sound-off" onPointerDown={soundPress} onClick={soundClick} title="New-order sound is off until you click the page">
           <HugeiconsIcon icon={VolumeOffIcon} size={15} strokeWidth={2} aria-hidden="true" />
           <span>Turn on sound</span>
         </button>
@@ -129,7 +137,7 @@ export default function NotificationBell() {
           <div className={`notif-sound${soundOn ? ' is-on' : ''}`}>
             <HugeiconsIcon icon={soundOn ? VolumeHighIcon : VolumeOffIcon} size={14} strokeWidth={2} aria-hidden="true" />
             <span>{soundOn ? 'Sound on: new orders play a chime.' : 'Sound is off: your browser blocks it until you click the page.'}</span>
-            <button type="button" onClick={enableSound}>{soundOn ? 'Test' : 'Turn on'}</button>
+            <button type="button" onPointerDown={soundPress} onClick={soundClick}>{soundOn ? 'Test' : 'Turn on'}</button>
           </div>
 
           {iosNeedsInstall && (
