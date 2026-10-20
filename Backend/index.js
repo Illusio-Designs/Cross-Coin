@@ -125,13 +125,26 @@ const isProviderWebhook = (req) => {
   return WEBHOOK_PATHS.some((p) => path === p || path.endsWith(p));
 };
 
+// The storefront edge visit counter (POST /api/i/v) sends one ping per page
+// load from Vercel's small pool of egress IPs, so per-IP limiting would drop
+// most visits under load. Exempt it only when VISIT_INGEST_KEY is configured
+// and the request carries it; without a key the endpoint is public, so it
+// stays rate-limited like any other route.
+const { visitKeyOk } = require('./utils/visitKey');
+const isEdgeVisitPing = (req) => {
+  if (!process.env.VISIT_INGEST_KEY) return false;
+  if ((req.method || '').toUpperCase() !== 'POST') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  return path.replace(/^\/api(\/v1)?/, '') === '/i/v' && visitKeyOk(req);
+};
+
 // General: all other API routes (120 req / min), skipping public cached reads.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req),
+  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req) || isEdgeVisitPing(req),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
@@ -519,7 +532,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v28';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v29';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -547,6 +560,17 @@ const startServer = async () => {
                 await fn();
                 await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [flag] });
             };
+
+        // ── Idempotent migration: visit_hits (server-counted storefront visits) ─
+        // Aggregate per (brand, IST day, channel/campaign/geo/device) counts fed
+        // by the storefront edge middleware via POST /api/i/v. The controller
+        // also creates it lazily on first ping; same DDL, single source.
+        try {
+            await sequelize.query(require('./controller/visitController.js').VISIT_HITS_DDL);
+            logger.info('✓ visit_hits table ensured');
+        } catch (err) {
+            logger.error('visit_hits ensure failed: ' + err.message);
+        }
 
         // ── Idempotent migration: bundle_tiers table (pack / bundle pricing) ─
         // Per-brand buy-more-save-more tiers. Production doesn't run sequelize

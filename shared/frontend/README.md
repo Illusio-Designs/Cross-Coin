@@ -19,6 +19,7 @@ to before — **zero deploy risk** — while there is only one place to edit.
 | `SentryInit.jsx` | `<brand>/[src/]components/SentryInit.jsx` | all 7 |
 | `orderStatus.js` | `<brand>/[src/]utils/orderStatus.js` | all 7 |
 | `cartRecovery.js` | `<brand>/[src/]utils/cartRecovery.js` | all 7 |
+| `visitCounter.js` | `<brand>/[src/]middleware.js` (Knitwink, Next 16: `proxy.js`) | all 7 |
 
 `__BRAND__` in a canonical file is replaced with the brand slug at sync time.
 Crosscoin uses its own tracking layer, so it is excluded from `pixel.js`.
