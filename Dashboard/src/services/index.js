@@ -1873,6 +1873,21 @@ export const policyService = {
 };
 
 // SEO admin services — health summary, bulk product SEO editor.
+// Dashboard → Attributes (choices shoppers pick, and the store menu filters).
+const attrCall = async (fn) => {
+  try { return (await fn()).data; } catch (error) { throw error.response?.data || error.message; }
+};
+export const attributeAdminService = {
+  overview: (brandId) => attrCall(() => adminApi.get("/api/admin/attributes", { params: { brandId } })),
+  create: (data) => attrCall(() => adminApi.post("/api/admin/attributes", data)),
+  update: (id, data) => attrCall(() => adminApi.put(`/api/admin/attributes/${id}`, data)),
+  remove: (id) => attrCall(() => adminApi.delete(`/api/admin/attributes/${id}`)),
+  addValues: (id, values) => attrCall(() => adminApi.post(`/api/admin/attributes/${id}/values`, { values })),
+  updateValue: (id, valueId, data) => attrCall(() => adminApi.put(`/api/admin/attributes/${id}/values/${valueId}`, data)),
+  removeValue: (id, valueId) => attrCall(() => adminApi.delete(`/api/admin/attributes/${id}/values/${valueId}`)),
+  reorder: (data) => attrCall(() => adminApi.put("/api/admin/attributes/order", data)),
+};
+
 export const seoAdminService = {
   // SEO page: score, tiles and the "To fix" list for one store.
   overview: async (brandId) => {

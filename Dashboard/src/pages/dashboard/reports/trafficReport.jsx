@@ -143,11 +143,19 @@ export default function TrafficReport() {
       g.sessions += Number(r.sessions) || 0; g.orders += Number(r.orders) || 0; g.revenue += Number(r.revenue) || 0;
       if (!g.untracked) {
         const name = r.campaign || 'none';
-        const c = g.camps.get(name) || { name, sessions: 0, orders: 0, revenue: 0, sets: new Map() };
+        const c = g.camps.get(name) || { name, sessions: 0, orders: 0, revenue: 0, sets: new Map(), utm: new Set() };
         c.sessions += Number(r.sessions) || 0; c.orders += Number(r.orders) || 0; c.revenue += Number(r.revenue) || 0;
+        // The exact UTM tags behind this campaign (one per source/medium spelling).
+        c.utm.add(`utm_source=${r.source || 'direct'} · utm_medium=${r.medium || 'none'}`);
         const an = r.adset || 'none';
-        const a = c.sets.get(an) || { name: an, sessions: 0, orders: 0, revenue: 0 };
+        const a = c.sets.get(an) || { name: an, sessions: 0, orders: 0, revenue: 0, ads: new Map() };
         a.sessions += Number(r.sessions) || 0; a.orders += Number(r.orders) || 0; a.revenue += Number(r.revenue) || 0;
+        // Ad (utm_content) + creative code (utm_creative) under each ad set.
+        const adName = r.ad || 'none';
+        const ad = a.ads.get(adName) || { name: adName, creatives: new Set(), sessions: 0, orders: 0, revenue: 0 };
+        ad.sessions += Number(r.sessions) || 0; ad.orders += Number(r.orders) || 0; ad.revenue += Number(r.revenue) || 0;
+        if (r.creative && r.creative !== 'none') ad.creatives.add(r.creative);
+        a.ads.set(adName, ad);
         c.sets.set(an, a);
         g.camps.set(name, c);
       }
@@ -157,14 +165,18 @@ export default function TrafficReport() {
     const byRev = (a, b) => b.revenue - a.revenue || b.orders - a.orders || b.sessions - a.sessions;
     const list = [...groups.values()].map((g) => fin({
       ...g,
-      campaigns: [...g.camps.values()].map((c) => fin({ ...c, adsets: [...c.sets.values()].map(fin).sort(byRev) })).sort(byRev),
+      campaigns: [...g.camps.values()].map((c) => fin({
+        ...c,
+        utm: [...c.utm],
+        adsets: [...c.sets.values()].map((a) => fin({ ...a, ads: [...a.ads.values()].map((d) => fin({ ...d, creatives: [...d.creatives] })).sort(byRev) })).sort(byRev),
+      })).sort(byRev),
       // Only real (utm_campaign-tagged) campaigns count; untagged visits show
       // as a sub-row only when the platform also has tagged campaigns.
       tagged: [...g.camps.keys()].filter((n) => n !== 'none').length,
     })).sort((a, b) => (a.untracked - b.untracked) || byRev(a, b));
     return {
       platforms: list,
-      hasAdsets: list.some((g) => g.campaigns.some((c) => c.adsets.length > 1)),
+      hasAdsets: list.some((g) => g.campaigns.some((c) => c.adsets.length > 1 || c.adsets.some((a) => a.ads.length > 1 || a.ads.some((d) => d.name !== 'none')))),
       revenueByChannel: new Map(list.map((g) => [g.channel, g.revenue])),
     };
   }, [campaigns]);
@@ -413,7 +425,7 @@ export default function TrafficReport() {
               <h3>Ad campaigns by platform</h3>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button type="button" className={`order-sync-main-btn${showAdsets ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setShowAdsets((v) => !v)} disabled={!hasAdsets}>
-                  {showAdsets ? 'Hide ad sets' : 'Show ad sets'}
+                  {showAdsets ? 'Hide ad sets & ads' : 'Show ad sets & ads'}
                 </button>
                 <button type="button" className="order-sync-main-btn" onClick={exportCampaigns} disabled={!campaigns.length}><DlIcon /> CSV</button>
               </span>
@@ -447,6 +459,11 @@ export default function TrafficReport() {
                               <td style={{ paddingLeft: 40 }}>
                                 {c.name === 'none' ? <span style={{ color: 'var(--ds-color-text-faint)' }}>Without a campaign tag (posts, bio links, shares)</span> : c.name}
                                 {isSites && c.campaigns.length > 0 && <span style={{ color: 'var(--ds-color-text-faint)', fontSize: 12 }}> · {c.campaigns.join(', ')}</span>}
+                                {!isSites && c.utm?.length > 0 && (
+                                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--ds-font-mono)', fontSize: 11, color: 'var(--ds-color-text-faint)', overflowWrap: 'anywhere' }}>
+                                    {c.name !== 'none' && `utm_campaign=${c.name} · `}{c.utm.join(' | ')}
+                                  </span>
+                                )}
                               </td>
                               <td className="r num">{num(c.sessions)}</td>
                               <td className="r num">{pct(c.share)}</td>
@@ -454,15 +471,30 @@ export default function TrafficReport() {
                               <td className="r num">{pct(c.conversion)}</td>
                               <td className="r num">{inr(c.revenue)}</td>
                             </tr>
-                            {showAdsets && !isSites && c.adsets.length > 1 && c.adsets.map((a) => (
-                              <tr key={a.name}>
-                                <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ {a.name === 'none' ? 'no ad set tag' : a.name}</td>
-                                <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
-                                <td className="r num" style={{ fontSize: 12 }}>{pct(a.share)}</td>
-                                <td className="r num" style={{ fontSize: 12 }}>{num(a.orders)}</td>
-                                <td className="r num" style={{ fontSize: 12 }}>{pct(a.conversion)}</td>
-                                <td className="r num" style={{ fontSize: 12 }}>{inr(a.revenue)}</td>
-                              </tr>
+                            {showAdsets && !isSites && (c.adsets.length > 1 || c.adsets.some((a) => a.ads.some((d) => d.name !== 'none'))) && c.adsets.map((a) => (
+                              <React.Fragment key={a.name}>
+                                <tr>
+                                  <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ Ad set: {a.name === 'none' ? 'no ad set tag (utm_term)' : a.name}</td>
+                                  <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
+                                  <td className="r num" style={{ fontSize: 12 }}>{pct(a.share)}</td>
+                                  <td className="r num" style={{ fontSize: 12 }}>{num(a.orders)}</td>
+                                  <td className="r num" style={{ fontSize: 12 }}>{pct(a.conversion)}</td>
+                                  <td className="r num" style={{ fontSize: 12 }}>{inr(a.revenue)}</td>
+                                </tr>
+                                {a.ads.filter((d) => d.name !== 'none' || a.ads.length > 1).map((d) => (
+                                  <tr key={d.name}>
+                                    <td style={{ paddingLeft: 88, fontSize: 12, color: 'var(--ds-color-text-faint)' }}>
+                                      ↳ Ad: {d.name === 'none' ? 'no ad tag (utm_content)' : d.name}
+                                      {d.creatives.length > 0 && <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 11 }}> · creative {d.creatives.join(', ')}</span>}
+                                    </td>
+                                    <td className="r num" style={{ fontSize: 12 }}>{num(d.sessions)}</td>
+                                    <td className="r num" style={{ fontSize: 12 }}>{pct(d.share)}</td>
+                                    <td className="r num" style={{ fontSize: 12 }}>{num(d.orders)}</td>
+                                    <td className="r num" style={{ fontSize: 12 }}>{pct(d.conversion)}</td>
+                                    <td className="r num" style={{ fontSize: 12 }}>{inr(d.revenue)}</td>
+                                  </tr>
+                                ))}
+                              </React.Fragment>
                             ))}
                           </React.Fragment>
                         ))}
