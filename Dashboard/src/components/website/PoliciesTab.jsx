@@ -7,6 +7,7 @@ import { policyService, websiteService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
+import { Skeleton } from '../ui/Skeleton';
 import { WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
 import { useLoad, errText, fmtDay, siteUrl, siteBase, policyPath, brandLabel } from './webUtil';
 
@@ -53,9 +54,10 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
   const [gstin, setGstin] = useState('');
   const [gstinSaved, setGstinSaved] = useState('');
   const [gstinBusy, setGstinBusy] = useState(false);
+  const [gstinReady, setGstinReady] = useState(false);
 
   useEffect(() => {
-    policyService.getCompanyInfo().then((r) => { setGstin(r?.gstin || ''); setGstinSaved(r?.gstin || ''); }).catch(() => {});
+    policyService.getCompanyInfo().then((r) => { setGstin(r?.gstin || ''); setGstinSaved(r?.gstin || ''); }).catch(() => {}).finally(() => setGstinReady(true));
   }, []);
   const saveGstin = async () => {
     setGstinBusy(true);
@@ -174,8 +176,10 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
       <div className="web-gstin">
         <label htmlFor="po-gstin" className="web-label">Company GSTIN <span className="web-muted">— one value for every store, fills {'{{GSTIN}}'} in policies</span></label>
         <div className="web-inline">
-          <input id="po-gstin" className="web-input web-mono" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="24ABCDE1234F1Z5" maxLength={32} />
-          <button type="button" className="web-btn" onClick={saveGstin} disabled={gstinBusy || gstin.trim() === gstinSaved}>{gstinBusy ? 'Saving…' : 'Save GSTIN'}</button>
+          {gstinReady
+            ? <input id="po-gstin" className="web-input web-mono" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="24ABCDE1234F1Z5" maxLength={32} />
+            : <Skeleton className="web-gstin-sk" h={38} r={10} />}
+          <button type="button" className="web-btn" onClick={saveGstin} disabled={!gstinReady || gstinBusy || gstin.trim() === gstinSaved}>{gstinBusy ? 'Saving…' : 'Save GSTIN'}</button>
         </div>
       </div>
       <WebBody panel={panel}>

@@ -113,6 +113,7 @@
 .web .web-card--skel, .web .web-card--skel .web-card-main { cursor: default; }
 .web .web-card--skel:hover { border-color: var(--ds-color-border); }
 .web .is-stale { opacity: .6; transition: opacity 150ms; }
+.web .web-gstin-sk { flex: 1; min-width: 0; }
 .web .web-skel-lines { display: flex; flex-direction: column; gap: 10px; }
 .web .web-skel-lines span { display: block; height: 14px; border-radius: 6px; background: var(--ds-color-surface-soft); animation: web-pulse 1.4s ease-in-out infinite; }
 .web .web-skel-lines span:nth-child(2) { width: 70%; }
