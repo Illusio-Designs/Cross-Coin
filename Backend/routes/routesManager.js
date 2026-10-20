@@ -84,9 +84,11 @@ router.use('/', require('./seoAdminRoutes.js'));
 // Anonymous, cookieless counters. Ad-blockers block request paths containing
 // "utm", "track" and "pageview", so these opaque paths are the ONLY tracking
 // URLs: /i/pv increments the aggregate (brand, day, channel) pageview count,
-// /i/s records the consent-gated UTM touch.
+// /i/s records the consent-gated UTM touch, /i/e records a funnel event
+// (same handler as the legacy /events/track, kept for cached clients).
 router.post('/i/s', optionalBrand, require('../controller/utmController.js').trackUTM);
 router.post('/i/pv', optionalBrand, require('../controller/pageviewController.js').recordPageview);
+router.post('/i/e', optionalBrand, require('../controller/eventsController.js').trackEvent);
 
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the

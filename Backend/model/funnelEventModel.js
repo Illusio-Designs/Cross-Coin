@@ -11,6 +11,8 @@ const FunnelEvent = sequelize.define('FunnelEvent', {
   session_id: { type: DataTypes.STRING(255), allowNull: true },
   event: { type: DataTypes.STRING(32), allowNull: false }, // view_item | add_to_cart | begin_checkout
   value: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+  // Product viewed / added (view_item, add_to_cart); NULL for other events.
+  product_id: { type: DataTypes.INTEGER, allowNull: true },
 }, {
   tableName: 'funnel_events',
   timestamps: true,
@@ -19,6 +21,7 @@ const FunnelEvent = sequelize.define('FunnelEvent', {
   indexes: [
     { name: 'idx_fe_brand_event_created', fields: ['brand_id', 'event', 'created_at'] },
     { name: 'idx_fe_session', fields: ['session_id'] },
+    { name: 'idx_fe_product_event_created', fields: ['product_id', 'event', 'created_at'] },
   ],
 });
 

@@ -42,21 +42,40 @@ function ga4Items(params) {
 }
 
 // First-party funnel relay — records view/cart/checkout into our own DB
-// (/api/events/track) so the admin Traffic & Conversion report can build a
-// full funnel independent of Meta/Google (and of ad blockers that drop pixels).
-// Keyed to the session_id cookie (credentials: 'include'); brand via header.
+// (/api/i/e — a neutral path ad blockers don't match) so the admin Traffic &
+// Conversion report can build a full funnel independent of Meta/Google (and of
+// ad blockers that drop pixels). Keyed to the session_id cookie when the browser
+// sends it, else to the first-party copy of the visit id (utm_session_id, saved
+// by VisitTracker) — the api cookie is third-party on brand domains, so Safari
+// and other cookie-blocking browsers never send it. Brand via header.
 const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search' };
-function fpTrack(event, params) {
+function fpSessionId() {
+  try { return localStorage.getItem('utm_session_id') || undefined; } catch (_) { return undefined; }
+}
+// The visit ping may still be in flight when the first event fires (landing
+// straight on a product page), so wait briefly for it; after ~3s send anyway.
+function fpVisitReady() {
+  try { return !!sessionStorage.getItem('visit_tracked'); } catch (_) { return true; }
+}
+// Product id for view/cart events (content_ids carry the catalogue product id).
+function fpProductId(name, params) {
+  if (name !== 'view_item' && name !== 'add_to_cart') return undefined;
+  const ids = Array.isArray(params.content_ids) ? params.content_ids : [];
+  const first = ids.length ? ids[0] : (Array.isArray(params.contents) && params.contents[0] ? params.contents[0].id : undefined);
+  return /^[1-9]\d{0,9}$/.test(String(first)) ? Number(first) : undefined;
+}
+function fpTrack(event, params, tries = 0) {
   if (typeof window === 'undefined') return;
   const name = FP_EVENT[event];
   if (!name) return;
   try {
-    fetch(`${API_URL}/api/events/track`, {
+    if (tries < 6 && !fpVisitReady()) { setTimeout(() => fpTrack(event, params, tries + 1), 500); return; }
+    fetch(`${API_URL}/api/i/e`, {
       method: 'POST',
       keepalive: true,
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-      body: JSON.stringify({ event: name, value: Number(params.value || 0) }),
+      body: JSON.stringify({ event: name, value: Number(params.value || 0), session_id: fpSessionId(), product_id: fpProductId(name, params) }),
     }).catch(() => {});
   } catch (_) { /* never throw */ }
 }
