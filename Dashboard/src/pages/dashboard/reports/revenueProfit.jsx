@@ -21,7 +21,10 @@ import Dropdown from '../../../components/ui/Dropdown';
  * (all but cancelled), whatever happened to it later — and "Orders by source"
  * splits them by the channel the order came from (same channels as Traffic).
  *
- * Every cost knob and each brand's ad spend is remembered in this browser.
+ * Ad spend: when Meta spend is synced for a brand (Reports → Ads), the
+ * backend sends it as `adSpend` for the period and it is used as is ("from
+ * Meta"). Brands with no synced spend keep the manual ad spend per unit.
+ * Every cost knob and each manual ad spend is remembered in this browser.
  */
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
@@ -49,6 +52,9 @@ const MISSING_COLUMNS = [
   { header: 'SKU', accessor: 'sku', align: 'left', cell: ({ sku }) => sku || '—' },
   { header: 'Price', accessor: 'price', align: 'right', cell: ({ value }) => inr(value) },
 ];
+
+// Small label under the ad spend figures: "from Meta" / "manual".
+const adTagStyle = { fontSize: 10.5, fontWeight: 600, color: 'var(--ds-color-text-faint)', whiteSpace: 'nowrap' };
 
 // Profit cell — green when positive, red when negative; bold on the totals row.
 const ProfitCell = (v, bold) => (
@@ -126,12 +132,14 @@ export default function RevenueProfitReport() {
     const svcTotal = k('service') * orders;
     const feeTotal = (k('gatewayPct') / 100) * (Number(r.prepaidRevenue) || 0) + (k('codPct') / 100) * (Number(r.codRevenue) || 0);
     const beforeAds = revenueExGst - cogs - shipTotal - svcTotal - feeTotal;
-    const adPerUnit = cppPerUnit(brandId);
-    const adSpend = adPerUnit * units;
+    // Real Meta spend when synced; otherwise the manual figure per unit.
+    const adFromMeta = r.adSpend !== null && r.adSpend !== undefined;
+    const adSpend = adFromMeta ? Number(r.adSpend) || 0 : cppPerUnit(brandId) * units;
+    const adPerUnit = adFromMeta ? (units > 0 ? adSpend / units : 0) : cppPerUnit(brandId);
     const afterAds = beforeAds - adSpend;
     const marginAfter = revenueExGst > 0 ? (afterAds / revenueExGst) * 100 : 0;
     return { ...r, brandId, orders, units, revenue, revenueExGst, refunds: Number(r.refunds) || 0, rtoOrders: Number(r.rtoOrders) || 0,
-      cogs, shipTotal, svcTotal, feeTotal, beforeAds, adPerUnit, adSpend, afterAds, marginAfter };
+      cogs, shipTotal, svcTotal, feeTotal, beforeAds, adPerUnit, adSpend, adFromMeta, afterAds, marginAfter };
   };
 
   const brands = useMemo(() => (data?.brands || []).map(withProfit), [data, knobs, cppByBrand]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -199,16 +207,24 @@ export default function RevenueProfitReport() {
     { header: 'Service', accessor: 'svcTotal', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'Fees', accessor: 'feeTotal', align: 'right', cell: ({ value }) => inr(value) },
     { header: 'Profit (before ads)', accessor: 'beforeAds', align: 'right', cell: ({ value }) => ProfitCell(value) },
-    { header: 'Ad spend / unit', accessor: 'adPerUnit', align: 'right', cell: ({ brandId, _isTotal, value }) => (_isTotal ? inr(value) : (
-      <input
-        type="number" min="0" inputMode="decimal" placeholder="0"
-        value={cppByBrand[brandId] ?? ''}
-        onChange={(e) => setCppByBrand((m) => ({ ...m, [brandId]: e.target.value }))}
-        style={adInputStyle}
-        aria-label="Ad spend per unit"
-      />
+    { header: 'Ad spend / unit', accessor: 'adPerUnit', align: 'right', cell: ({ brandId, _isTotal, adFromMeta, value }) => (_isTotal || adFromMeta ? inr(value) : (
+      <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+        <input
+          type="number" min="0" inputMode="decimal" placeholder="0"
+          value={cppByBrand[brandId] ?? ''}
+          onChange={(e) => setCppByBrand((m) => ({ ...m, [brandId]: e.target.value }))}
+          style={adInputStyle}
+          aria-label="Ad spend per unit (manual)"
+        />
+        <span style={adTagStyle}>manual · no Meta data</span>
+      </span>
     )) },
-    { header: 'Total spend', accessor: 'adSpend', align: 'right', cell: ({ value }) => inr(value) },
+    { header: 'Total spend', accessor: 'adSpend', align: 'right', cell: ({ value, adFromMeta, _isTotal }) => (
+      <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+        {inr(value)}
+        {!_isTotal && adFromMeta ? <span style={{ ...adTagStyle, color: 'var(--ds-color-success-text, #067647)' }}>from Meta</span> : null}
+      </span>
+    ) },
     { header: 'Profit (after ads)', accessor: 'afterAds', align: 'right', cell: ({ value }) => ProfitCell(value) },
     { header: 'Margin', accessor: 'marginAfter', align: 'right', cell: ({ value }) => `${(Number(value) || 0).toFixed(1)}%` },
   ], [cppByBrand]);
@@ -231,6 +247,7 @@ export default function RevenueProfitReport() {
     { label: 'Gross profit (before ads)', value: (r) => Math.round(r.beforeAds) },
     { label: 'Ad spend / unit', value: (r) => Math.round(r.adPerUnit) },
     { label: 'Total ad spend', value: (r) => Math.round(r.adSpend) },
+    { label: 'Ad spend source', value: (r) => (r.adFromMeta ? 'Meta (synced)' : 'manual per unit') },
     { label: 'Gross profit (after ads)', value: (r) => Math.round(r.afterAds) },
     { label: 'Margin % (after ads, of ex-GST revenue)', value: (r) => r.marginAfter.toFixed(1) },
   ], brands);
@@ -239,7 +256,7 @@ export default function RevenueProfitReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
+        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser."
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -284,7 +301,10 @@ export default function RevenueProfitReport() {
           <StatTile label="COGS (cost price)" value={inr(totals.cogs)} />
           <StatTile label="Shipping + fees" value={inr(totals.shipTotal + totals.feeTotal + totals.svcTotal)} />
           <StatTile label="Gross profit · before ads" value={inr(totals.beforeAds)} tone={totals.beforeAds >= 0 ? 'good' : 'danger'} />
-          <StatTile label="Total ad spend" value={inr(totals.adSpend)} />
+          <StatTile label="Total ad spend" value={inr(totals.adSpend)} sub={(() => {
+            const meta = brands.filter((b) => b.adFromMeta).length;
+            return meta ? `from Meta for ${meta} of ${brands.length} brand${brands.length === 1 ? '' : 's'}${meta < brands.length ? ', manual for the rest' : ''}` : 'manual — link ad accounts on Reports → Ads';
+          })()} />
           <StatTile label="Gross profit · after ads" value={inr(totals.afterAds)} tone={totals.afterAds >= 0 ? 'good' : 'danger'} />
           <StatTile label="Margin · after ads" value={`${totals.marginAfter.toFixed(1)}%`} />
           <StatTile label="Delivered orders" value={num(totals.orders)} />
@@ -293,7 +313,7 @@ export default function RevenueProfitReport() {
       ) : null}
 
       {/* ── Per-brand table ── */}
-      <Panel title="By brand" subtitle="Type each brand's ad spend per unit — its total spend (per-unit × units) and after-ads profit recalculate instantly.">
+      <Panel title="By brand" subtitle="Brands marked “from Meta” use the real spend synced from their ad account for this period. For the rest, type the ad spend per unit — total spend (per-unit × units kept) and after-ads profit recalculate instantly.">
         <Table
           columns={columns}
           data={tableData}

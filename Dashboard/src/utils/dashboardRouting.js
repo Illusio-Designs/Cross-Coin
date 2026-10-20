@@ -36,6 +36,7 @@ export const getPageTitle = (view) => {
     'reports': 'Reports',
     'revenue-profit': 'Revenue & Profit',
     'traffic-report': 'Traffic',
+    'report-ads': 'Ads',
     'report-location': 'Orders by location',
     'report-products': 'Product report',
     'report-customers': 'Customer report',

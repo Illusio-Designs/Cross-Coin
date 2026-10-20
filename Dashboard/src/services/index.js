@@ -354,6 +354,32 @@ export const reportPagesService = {
   },
 };
 
+// Meta ad spend connection (admin only) — Reports → Ads. The token is never
+// sent back, only where it comes from and its last 4 characters.
+const metaAdsError = (error) => new Error(error.response?.data?.message || error.message || 'Meta request failed');
+export const metaAdsService = {
+  getConnection: async (refresh = false) => {
+    try {
+      const { data } = await adminApi.get('/api/admin/meta-ads/connection', { params: refresh ? { refresh: 1 } : undefined });
+      if (!data?.success) throw new Error(data?.message || 'Couldn’t load the Meta connection');
+      return data;
+    } catch (error) { throw metaAdsError(error); }
+  },
+  // body: { token? , mapping?: [{ accountId, brandId|null }] }
+  saveConnection: async (body) => {
+    try {
+      const { data } = await adminApi.put('/api/admin/meta-ads/connection', body);
+      return data;
+    } catch (error) { throw metaAdsError(error); }
+  },
+  syncNow: async (days) => {
+    try {
+      const { data } = await adminApi.post('/api/admin/meta-ads/sync', days ? { days } : {});
+      return data;
+    } catch (error) { throw metaAdsError(error); }
+  },
+};
+
 // System health (admin only) — server, job queue, webhooks, errors and the
 // scheduled jobs with their run log; "Run now" for one job.
 export const systemHealthService = {

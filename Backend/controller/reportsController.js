@@ -702,6 +702,24 @@ exports.getRevenueProfit = async (req, res) => {
       .map((b) => String(b.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/:?#].*$/, '').replace(/^www\./, ''))
       .filter(Boolean));
 
+    // Real ad spend synced from Meta (Reports → Ads), per store, by the Meta
+    // day in the range. A store with no rows keeps the manual per-unit figure
+    // on the page. The table may not exist yet before the first sync.
+    const ymdIst = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
+    const adSpendMap = new Map();
+    try {
+      const spendRows = await sequelize.query(
+        `SELECT brand_id, SUM(spend) AS spend, MAX(updated_at) AS updated_at
+           FROM ad_spend_daily
+          WHERE day BETWEEN :startDay AND :endDay AND brand_id IS NOT NULL
+          GROUP BY brand_id`,
+        { replacements: { startDay: ymdIst(start), endDay: ymdIst(end) }, type: QueryTypes.SELECT }
+      );
+      for (const r of spendRows) adSpendMap.set(Number(r.brand_id), { spend: Number(r.spend) || 0, updatedAt: r.updated_at });
+    } catch (e) {
+      logger.warn && logger.warn('ad_spend_daily skipped: ' + e.message);
+    }
+
     const ordMap = new Map(ord.map((r) => [r.brand_id, r]));
     const cogsMap = new Map(cogs.map((c) => [c.brand_id, c]));
     const n = (v) => Number(v) || 0;
@@ -751,8 +769,11 @@ exports.getRevenueProfit = async (req, res) => {
         prepaidRevenue: Math.round(n(r.prepaid_gross)),
         codRevenue: Math.round(n(r.cod_gross)),
         cogs: Math.round(n(c.cogs)),
+        // Meta ad spend for the period (null = no synced data → manual figure on the page).
+        adSpend: adSpendMap.has(b.id) ? Math.round(adSpendMap.get(b.id).spend) : null,
+        adSpendSource: adSpendMap.has(b.id) ? 'meta' : null,
       };
-      if (row.placedOrders || row.orders || row.shippedOrders || row.rtoOrders) rows.push(row);
+      if (row.placedOrders || row.orders || row.shippedOrders || row.rtoOrders || row.adSpend) rows.push(row);
     }
 
     const totals = rows.reduce((t, r) => {
@@ -769,7 +790,7 @@ exports.getRevenueProfit = async (req, res) => {
       // gateway % on prepaid revenue, COD handling % on COD revenue.
       defaults: { shippingPerOrder: 90, gatewayPct: 2, codPct: 2 }, // shipping rate already covers the RTO return leg
       brands: rows.sort((a, b) => b.revenue - a.revenue),
-      totals,
+      totals: { ...totals, adSpendFromMeta: rows.reduce((t, r) => t + (r.adSpend || 0), 0) },
       // Orders received per brand × source (channel names as in the traffic report).
       sources: sourceRows,
     });

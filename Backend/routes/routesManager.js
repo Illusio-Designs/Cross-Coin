@@ -51,6 +51,7 @@ router.use('/admin/customers',    require('./adminCustomerRoutes.js'));
 router.use('/admin/system',       require('./adminSystemRoutes.js'));
 router.use('/admin/nav-counts',   require('./adminNavRoutes.js'));
 router.use('/admin/attributes',   require('./adminAttributeRoutes.js'));
+router.use('/admin/meta-ads',     require('./metaAdsRoutes.js'));
 router.use('/admin',              optionalBrand, require('./brandSettingsRoutes.js'));
 router.use('/admin',              require('./brandRoutes.js'));
 router.use('/dashboard',          optionalBrand, require('./dashboardRoutes.js'));

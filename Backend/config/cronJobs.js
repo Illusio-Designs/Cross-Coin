@@ -187,6 +187,14 @@ async function dataRetention() {
   return { status: 'partial', summary: `${head} · couldn't clean ${errored.join(', ')}` };
 }
 
+// Meta ad spend (Reports → Ads): every store's linked ad account, ad level,
+// one row per ad per day into ad_spend_daily. First run backfills 90 days,
+// later runs refresh the last 3 (Meta revises recent days). Skipped until a
+// token and at least one ad account are linked.
+async function metaAdsSync() {
+  return require('../services/metaAdsService.js').syncAll();
+}
+
 // ── Abandoned Cart Recovery (logged-in carts) ─────────────────────────────
 // Finds carts with items that haven't converted to an order in 1 hour.
 async function abandonedCart() {
@@ -708,6 +716,8 @@ const JOBS = [
     cron: '*/5 * * * *', tz: null, mode: 'inline', run: reservationCleanup },
   { key: 'data-retention', name: 'Old data cleanup (privacy)', schedule: 'Daily 4 am',
     cron: '0 4 * * *', tz: IST, mode: 'inline', run: dataRetention },
+  { key: 'meta-ads-sync', name: 'Meta ad spend sync', schedule: 'Every 3 hours (:25)',
+    cron: '25 */3 * * *', tz: IST, mode: 'inline', lockMinutes: 30, run: metaAdsSync },
 ];
 
 const getJob = (key) => JOBS.find((j) => j.key === key) || null;

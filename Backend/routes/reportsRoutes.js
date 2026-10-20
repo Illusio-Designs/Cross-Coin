@@ -24,5 +24,7 @@ router.get('/products', isAuthenticated, isOrderManager, report('productReport')
 router.get('/customers', isAuthenticated, isOrderManager, report('customerReport'));
 router.get('/inventory', isAuthenticated, isOrderManager, report('inventoryReport'));
 router.get('/coupons', isAuthenticated, isOrderManager, report('couponReport'));
+// Admin only — Meta ad spend joined to our orders by campaign / ad set / ad name.
+router.get('/ads', isAuthenticated, isAdmin, report('adsReport'));
 
 module.exports = router;
