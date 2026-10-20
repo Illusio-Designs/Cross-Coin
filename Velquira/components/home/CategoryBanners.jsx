@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 
 // Same image-forward collection card as the /collections page (minus the
 // product count), so the home "Explore the Collections" section matches exactly.
@@ -20,7 +21,7 @@ export default function CategoryBanners({ items = [] }) {
         {items.map((c, i) => (
           <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
             {c.image
-              ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
+              ? <ShimmerImg className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
               : <span className="collection-card-fallback" aria-hidden><Icon name={ICONS[i % ICONS.length]} size={76} /></span>}
             <div className="collection-card-overlay">
               <div className="collection-card-text"><h3>{c.label}</h3></div>

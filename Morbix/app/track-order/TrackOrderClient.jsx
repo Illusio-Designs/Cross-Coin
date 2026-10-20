@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
+import { TrackCardSkeleton } from '@/components/ui/Skeleton';
 import { trackOrder } from '@/lib/api/orders';
 import { toast } from '@/lib/toast';
 import { orderStatusLabel, orderStatusTone, orderStatusNote, isCancelledStatus, trackingStep, paymentSummary } from '@/utils/orderStatus';
@@ -139,6 +140,8 @@ export default function TrackOrderClient() {
         </form>
 
         {error && <p className="auth-error" style={{ textAlign: 'center', marginTop: 14 }}>{error}</p>}
+
+        {loading && !order && <TrackCardSkeleton />}
 
         {order && (
           <div className="track-card">

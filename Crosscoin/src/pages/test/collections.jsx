@@ -3,7 +3,7 @@ import { R, shopUrl } from '@/components/test/routes';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { I, Thumb } from '../../components/test/ui';
+import { I, Thumb, SkBusy, CatTileSkeletons } from '../../components/test/ui';
 import { fetchCategories } from '../../components/test/real';
 
 export default function TestCollections({ preview = true }) {
@@ -33,7 +33,7 @@ export default function TestCollections({ preview = true }) {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && cats.length === 0
-          ? <div className="catgrid" style={{ marginTop: 24 }}>{Array.from({ length: 8 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 220 }} key={i} aria-hidden="true" />)}</div>
+          ? <SkBusy className="catgrid" style={{ marginTop: 24 }} label="Loading collections…"><CatTileSkeletons n={8} /></SkBusy>
           : (
             <div className="catgrid" style={{ marginTop: 24 }}>
               {cats.map((c) => (

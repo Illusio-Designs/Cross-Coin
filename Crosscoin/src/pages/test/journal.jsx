@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { fetchBlogs } from '../../components/test/real';
+import { SkBusy, PostCardSkeletons } from '../../components/test/ui';
 
 const GRADS = ['linear-gradient(150deg,#ffd7dd,#ffbac4)', 'linear-gradient(150deg,#d7cff2,#bcb0e8)', 'linear-gradient(150deg,#cdeee6,#aee0d3)'];
 
@@ -34,7 +35,7 @@ export default function TestJournal({ preview = true }) {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && posts.length === 0
-          ? <div className="jgrid" style={{ paddingTop: 20 }}>{Array.from({ length: 6 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ height: 230 }} key={i} aria-hidden="true" />)}</div>
+          ? <SkBusy className="jgrid" style={{ paddingTop: 20 }} label="Loading journal posts…"><PostCardSkeletons n={6} /></SkBusy>
           : posts.length === 0
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>No journal posts yet.</p>
             : (

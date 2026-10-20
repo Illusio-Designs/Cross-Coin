@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../../components/test/TestLayout';
 import { fetchBlog } from '../../../components/test/real';
-import { toast } from '../../../components/test/ui';
+import { toast, Sk, SkBusy, TextSkeleton } from '../../../components/test/ui';
 import { richHtml } from '../../../utils/sanitizeHtml';
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
@@ -56,8 +56,18 @@ export default function TestBlog({ preview = true }) {
           <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Journal</span> / {post?.title || '…'}
         </div>
 
-        {loading
-          ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Loading article…</p>
+        {loading || !router.isReady
+          ? (
+            // Article skeleton: meta row, title, share bar, 16:9 hero, body.
+            <SkBusy label="Loading article…">
+              <div className="artmeta" style={{ marginTop: 14 }} aria-hidden="true"><Sk w={74} h={22} /><Sk w={90} h={12} /><Sk w={84} h={12} /></div>
+              <Sk w="94%" h="clamp(28px, 5vw, 44px)" style={{ margin: '12px 0 8px' }} />
+              <Sk w="60%" h="clamp(28px, 5vw, 44px)" style={{ marginBottom: 16 }} />
+              <div className="artbar" aria-hidden="true"><Sk w={92} h={38} /><Sk w={110} h={38} /></div>
+              <div className="arthero sk-frame" aria-hidden="true"><Sk className="sk-fill" /></div>
+              <TextSkeleton paras={3} lines={4} />
+            </SkBusy>
+          )
           : !post
             ? <p className="mono" style={{ fontSize: 13, padding: '30px 0' }}>Article not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Back to journal</a></p>
             : (<>

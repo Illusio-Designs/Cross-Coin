@@ -1,6 +1,6 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   ArrowRight01Icon, ShoppingCart01Icon, FavouriteIcon, Search01Icon, UserIcon,
@@ -44,10 +44,146 @@ export function toast(msg) {
   window.dispatchEvent(new CustomEvent('cc-test-toast', { detail: msg }));
 }
 
-// Shimmer skeleton cards shown while the real catalogue loads. Drop them into a
-// .pgrid or .prail — they take the grid cells just like real product cards.
+/* ---- Loading skeletons: one kit for the whole Mint store. ---------------
+   Draw placeholders WHERE the content will land, in the real component's
+   frame (.cc-card, .cattile, .post, .order, .addr …), so nothing jumps when
+   the data arrives. Shimmer = `.sk` (styles/common/skeleton.css, Mint palette
+   in TestLayout). Keep page titles, crumbs and filters on screen; replace only
+   the part that is loading. On a refresh with data already shown, dim the old
+   data (className "sk-dim") instead of flashing skeletons.
+
+     <Sk w="60%" h={14} />                       one bar
+     <SkBusy label="Loading products…" className="pgrid"><SkeletonCards n={8} /></SkBusy>
+*/
+const LINE_W = ['92%', '78%', '86%', '64%', '88%', '71%'];
+
+export function Sk({ w = '100%', h = 12, r, circle = false, className = '', style }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`sk${circle ? ' sk--circle' : ''}${className ? ` ${className}` : ''}`}
+      style={{ width: circle ? h : w, height: h, borderRadius: r, ...style }}
+    />
+  );
+}
+
+// The announced wrapper around a skeleton region (screen readers hear the
+// label once; the shapes inside are aria-hidden).
+export function SkBusy({ label = 'Loading…', className, style, as: Tag = 'div', children }) {
+  return (
+    <Tag className={className} style={style} role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">{label}</span>
+      {children}
+    </Tag>
+  );
+}
+
+// True once the page has hydrated. Pages that read the browser (sign-in token,
+// saved wishlist) render a skeleton until then instead of flashing the
+// signed-out / empty state.
+const noopSubscribe = () => () => {};
+export function useHydrated() {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
+
+// A product card placeholder in the real .cc-card frame: square image,
+// brand / title / price lines and the Quick add button.
+export function ProductCardSkeleton() {
+  return (
+    <div className="cc-card sk-frame" aria-hidden="true">
+      <div className="sk-card__img"><Sk className="sk-fill" /></div>
+      <div className="cc-card__body">
+        <Sk w="38%" h={10} />
+        <Sk w="86%" h={15} style={{ marginTop: 2 }} />
+        <Sk w="52%" h={18} style={{ marginTop: 6 }} />
+      </div>
+      <Sk className="sk-card__btn" w="auto" h={47} />
+    </div>
+  );
+}
+
+// Product-card skeletons that take grid cells exactly like real cards. Drop
+// them straight into a .pgrid / .prail (wrap that grid in <SkBusy>).
 export function SkeletonCards({ n = 8 }) {
-  return Array.from({ length: n }).map((_, i) => <div className="cc-skel cc-skelcard" key={i} aria-hidden="true" />);
+  return Array.from({ length: n }).map((_, i) => <ProductCardSkeleton key={i} />);
+}
+
+// Category tiles (.catgrid cells): square image + name bar.
+export function CatTileSkeletons({ n = 8 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="cattile sk-frame" key={i} aria-hidden="true">
+      <span className="cattile__img"><Sk className="sk-fill" /></span>
+      <span className="cattile__bar"><Sk w={`${48 + (i % 3) * 12}%`} h={15} /><Sk w={16} h={16} /></span>
+    </div>
+  ));
+}
+
+// Journal post cards (.jgrid cells): 16:10 image + tag + title.
+export function PostCardSkeletons({ n = 3 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="post sk-frame" key={i} aria-hidden="true">
+      <div className="post__img"><Sk className="sk-fill" /></div>
+      <div className="post__b sk-stack"><Sk w="30%" h={10} /><Sk w={LINE_W[i % LINE_W.length]} h={16} /><Sk w="55%" h={16} /></div>
+    </div>
+  ));
+}
+
+// Review cards (.rev): avatar + name, stars, three lines of text.
+export function ReviewCardSkeletons({ n = 3 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="rev sk-frame" key={i} aria-hidden="true">
+      <div className="rev__top"><Sk circle h={40} /><div className="sk-stack" style={{ flex: 1, gap: 6 }}><Sk w="45%" h={12} /><Sk w="28%" h={10} /></div></div>
+      <Sk w={90} h={14} style={{ marginBottom: 10 }} />
+      <div className="sk-stack"><Sk w="96%" h={11} /><Sk w={LINE_W[i % LINE_W.length]} h={11} /><Sk w="58%" h={11} /></div>
+    </div>
+  ));
+}
+
+// Order / return cards (.order): number + date, status pill, items, total + actions.
+export function OrderCardSkeletons({ n = 3 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="order sk-frame" key={i} aria-hidden="true">
+      <div className="order__top">
+        <div className="sk-stack" style={{ gap: 6 }}><Sk w={130} h={14} /><Sk w={110} h={10} /></div>
+        <Sk w={82} h={22} r={999} />
+      </div>
+      <div className="order__items2" style={{ gap: 7 }}><Sk w={LINE_W[i % LINE_W.length]} h={12} /><Sk w="48%" h={12} /></div>
+      <div className="order__bot"><Sk w={120} h={14} /><div className="order__acts"><Sk w={64} h={32} /><Sk w={64} h={32} /></div></div>
+    </div>
+  ));
+}
+
+// Saved address cards (.addr).
+export function AddressSkeletons({ n = 2 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="addr sk-frame" key={i} aria-hidden="true">
+      <Sk w="34%" h={14} />
+      <div className="sk-stack" style={{ marginTop: 10, gap: 7 }}><Sk w={LINE_W[i % LINE_W.length]} h={11} /><Sk w="40%" h={11} /></div>
+    </div>
+  ));
+}
+
+// Labelled form fields (.ffield) — label line + input box.
+export function FieldSkeletons({ n = 3 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div className="ffield" key={i} aria-hidden="true"><Sk w={`${18 + (i % 3) * 7}%`} h={10} /><Sk h={46} /></div>
+  ));
+}
+
+// Running text (articles, policies): an optional heading then paragraph lines.
+export function TextSkeleton({ paras = 3, lines = 4, heading = true }) {
+  return (
+    <div aria-hidden="true">
+      {Array.from({ length: paras }).map((_, p) => (
+        <div key={p} style={{ marginBottom: 22 }}>
+          {heading && p > 0 && <Sk w={`${34 + (p % 3) * 10}%`} h={22} style={{ margin: '6px 0 14px' }} />}
+          <div className="sk-stack">
+            {Array.from({ length: lines }).map((_, l) => <Sk key={l} h={13} w={l === lines - 1 ? '58%' : LINE_W[(p + l) % LINE_W.length]} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // A product thumbnail that shows the real image, falling back to a neutral

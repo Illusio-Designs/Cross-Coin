@@ -773,8 +773,6 @@
 .m-fchip.on{background:var(--m-accent);border-color:var(--m-accent);color:#fff}
 .m-empty{text-align:center;background:var(--m-surface);border:1px solid var(--m-line-soft);border-radius:var(--m-radius);padding:60px 24px;color:var(--m-ink-soft)}
 .m-empty h3{font-size:28px;margin-bottom:10px}
-.m-skel{aspect-ratio:4/4.3;background:linear-gradient(100deg,var(--m-bg-tint),var(--m-surface),var(--m-bg-tint));background-size:200% 100%;animation:m-sheen 1.3s infinite;border-radius:var(--m-radius)}
-@keyframes m-sheen{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* Cart page */
 .m-cartgrid{display:grid;grid-template-columns:1.6fr .9fr;gap:clamp(24px,4vw,48px);align-items:start}
@@ -1006,3 +1004,34 @@
   .m-modal__actions .m-btn{flex:1 1 auto;justify-content:center}
 }
 @media (max-width:980px){.m-acct>.m-acctside{order:2}}
+
+/* ── Skeleton kit (app/_components/Skeleton.jsx) ──
+   One shimmer for every waiting state: a translucent ink wash built from the
+   Mint line tokens, so it reads on the page ground, inside cards and in the
+   bag drawer (which sits outside .m-root — hence the fallbacks). .m-skel is
+   the original tile shimmer, kept as an alias. .sk-img shimmers an <img> box
+   until it has loaded (SkImg). Kept at the end of the file so the shimmer
+   paints over the component backgrounds it is combined with. */
+.sk,.m-skel,.sk-img{
+  background-color:var(--m-line-soft,rgba(255,255,255,.06));
+  background-image:linear-gradient(100deg,transparent 30%,var(--m-line-soft,rgba(255,255,255,.06)) 50%,transparent 70%);
+  background-size:200% 100%;
+  animation:m-sheen 1.3s ease-in-out infinite;
+}
+.sk{display:block;border-radius:4px;max-width:100%}
+.sk--in{display:inline-block;vertical-align:middle}
+.sk--r{border-radius:var(--m-radius,8px)}
+.sk--flat{border-radius:0}
+.m-skel{aspect-ratio:4/4.3;border-radius:var(--m-radius)}
+.m-gshot.sk,.m-colcard.sk{border-radius:var(--m-radius)}
+@keyframes m-sheen{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk,.m-skel,.sk-img{animation:none;background-image:none}}
+/* Refetch while content is already on screen: keep it, dimmed. */
+.sk-dim{opacity:.55;transition:opacity .2s;pointer-events:none}
+/* Skeleton product card — same box as .m-card, no hover lift. */
+.m-card--sk,.m-card--sk:hover{transform:none;box-shadow:none;border-color:var(--m-line-soft)}
+.m-card--sk .m-card__tile{border-radius:0}
+.m-card__skbtn{display:none;margin-top:12px}
+@media (hover:none){.m-card__skbtn{display:block}}
+.m-card--sk .m-card__skbtn--on{display:block}
+.m-ph .sk{margin-inline:auto}

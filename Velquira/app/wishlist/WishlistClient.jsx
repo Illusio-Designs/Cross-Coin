@@ -44,8 +44,8 @@ export default function WishlistClient() {
         <p>Saved pairs, ready when you are.</p>
       </div>
 
-      {loading ? (
-        <div style={{ marginTop: 24 }}><ProductGridSkeleton count={4} /></div>
+      {loading && items.length === 0 ? (
+        <ProductGridSkeleton count={4} label="Loading your wishlist…" style={{ marginTop: 24 }} />
       ) : items.length === 0 ? (
         <div className="cart-empty">
           <Icon name="Heart" size={40} color="#c3ccd2" />
@@ -53,7 +53,7 @@ export default function WishlistClient() {
           <Link href="/products" className="btn btn-primary">Discover jewellery</Link>
         </div>
       ) : (
-        <div className="product-grid" style={{ marginTop: 24 }}>
+        <div className={`product-grid${loading ? ' sk-refreshing' : ''}`} style={{ marginTop: 24 }} aria-busy={loading || undefined}>
           {items.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
       )}

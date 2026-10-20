@@ -3,6 +3,7 @@ import { getPost } from '@/lib/api/blog';
 import { richHtml } from '@/lib/sanitizeHtml';
 import { absUrl, pageMeta } from '@/lib/site';
 import { ik } from '@/lib/imagekit';
+import SkImg from '../../_components/SkImg';
 
 export const revalidate = 600;
 
@@ -57,7 +58,7 @@ export default async function MaisonJournalPost({ params }) {
         <p style={{ color: 'var(--m-ink-faint)', marginTop: 14, fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase' }}>
           By {post.author?.name || 'Velmique'} · <time dateTime={post.publishedAt}>{fmtDate(post.publishedAt)}</time> · {post.readTime} min read
         </p>
-        {post.coverImage ? <img src={ik(post.coverImage, 1400)} alt="" fetchPriority="high" /> : null}
+        {post.coverImage ? <SkImg src={ik(post.coverImage, 1400)} alt="" fetchPriority="high" /> : null}
       </div>
       <div className="m-prose" style={{ marginTop: 40 }} {...richHtml(post.body || `<p>${post.excerpt || ''}</p>`)} />
       <div style={{ textAlign: 'center', marginTop: 40 }}>

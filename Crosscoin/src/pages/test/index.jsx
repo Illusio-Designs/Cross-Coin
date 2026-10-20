@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, I, toast, SkeletonCards, Thumb } from '../../components/test/ui';
+import { ProductCard, I, toast, SkeletonCards, Thumb, Sk, SkBusy, CatTileSkeletons, PostCardSkeletons, ReviewCardSkeletons } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 import { BENEFITS } from '../../components/test/data';
 import { R, shopUrl } from '../../components/test/routes';
@@ -44,6 +44,9 @@ export default function TestHome({ preview = true, initialData = null }) {
   // When the live route seeded SSR data, render the hero/categories straight
   // away; otherwise (the /test preview) start in the loading state as before.
   const [loading, setLoading] = useState(!seed.slide);
+  // The client fetch below fills the rails/reviews/journal even when the hero
+  // was seeded, so they show skeletons until it settles.
+  const [fetched, setFetched] = useState(false);
 
   useEffect(() => {
     let off = false;
@@ -56,7 +59,7 @@ export default function TestHome({ preview = true, initialData = null }) {
         setSlide(sliders[0] || null);
       })
       .catch(() => {})
-      .finally(() => { if (!off) setLoading(false); });
+      .finally(() => { if (!off) { setLoading(false); setFetched(true); } });
     return () => { off = true; };
   }, []);
 
@@ -69,13 +72,13 @@ export default function TestHome({ preview = true, initialData = null }) {
         <div className="wrap">
           <div className="hero__copy">
             {loading ? (
-              <>
-                <div className="cc-skel cc-skelblock" style={{ height: 24, width: 220, marginBottom: 18 }} aria-hidden="true" />
-                <div className="cc-skel cc-skelblock" style={{ height: 48, width: '92%', marginBottom: 12 }} aria-hidden="true" />
-                <div className="cc-skel cc-skelblock" style={{ height: 48, width: '70%', marginBottom: 18 }} aria-hidden="true" />
-                <div className="cc-skel cc-skelblock" style={{ height: 16, width: '85%', marginBottom: 8 }} aria-hidden="true" />
-                <div className="cc-skel cc-skelblock" style={{ height: 16, width: '60%', marginBottom: 22 }} aria-hidden="true" />
-              </>
+              <SkBusy label="Loading the latest drop…">
+                <Sk w={240} h={32} style={{ marginBottom: 18 }} />
+                <Sk w="92%" h="clamp(40px, 7vw, 78px)" style={{ marginBottom: 10 }} />
+                <Sk w="70%" h="clamp(40px, 7vw, 78px)" style={{ marginBottom: 22 }} />
+                <Sk w="85%" h={16} style={{ marginBottom: 9 }} />
+                <Sk w="60%" h={16} style={{ marginBottom: 28 }} />
+              </SkBusy>
             ) : (<>
             <span className="tagpill"><i>DROP 04</i> <span className="tagpill__t">{slide?.catName || 'The Winter Mint is live'}</span></span>
             {slide?.title
@@ -113,9 +116,10 @@ export default function TestHome({ preview = true, initialData = null }) {
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 01 ] Denominations</span><h2>Shop by category</h2></div>
             <span className="seelink" onClick={() => router.push(R.shop)}>Browse all →</span></div>
-          <div className="catgrid">
+          <div className="catgrid" {...(loading && cats.length === 0 ? { role: 'status', 'aria-busy': true } : {})}>
+            {loading && cats.length === 0 && <span className="sr-only">Loading categories…</span>}
             {loading && cats.length === 0
-              ? Array.from({ length: 8 }).map((_, i) => <div className="cc-skel cc-skelblock" style={{ minHeight: 220 }} key={i} aria-hidden="true" />)
+              ? <CatTileSkeletons n={6} />
               : cats.map((c) => (
                 <button className="cattile" key={c.id || c.name} onClick={() => router.push(shopUrl(c.name))}>
                   <span className="cattile__img"><Thumb src={c.img} /></span>
@@ -131,11 +135,9 @@ export default function TestHome({ preview = true, initialData = null }) {
         <div className="wrap">
           <div className="sechead"><div><span className="eyebrow">[ 02 ] In circulation</span><h2>Bestsellers</h2></div>
             <span className="seelink" onClick={() => router.push(R.shop)}>See all →</span></div>
-          <div className="prail">
-            {rail.length === 0
-              ? <SkeletonCards n={6} />
-              : rail.map((p) => <ProductCard key={p.id} p={p} />)}
-          </div>
+          {!fetched && rail.length === 0
+            ? <SkBusy className="prail" label="Loading bestsellers…"><SkeletonCards n={6} /></SkBusy>
+            : <div className="prail">{rail.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
         </div>
       </section>
 
@@ -160,6 +162,14 @@ export default function TestHome({ preview = true, initialData = null }) {
       </section>
 
       {/* reviews — real store reviews, auto-scrolling marquee (Morbix-style) */}
+      {!fetched && reviews.length === 0 && (
+        <section className="block">
+          <div className="wrap">
+            <div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div>
+            <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
+          </div>
+        </section>
+      )}
       {reviews.length > 0 && (
         <section className="block">
           <div className="wrap"><div className="sechead"><div><span className="eyebrow">[ 04 ] Vault notes</span><h2>What shoppers say</h2></div></div></div>
@@ -190,6 +200,14 @@ export default function TestHome({ preview = true, initialData = null }) {
       )}
 
       {/* journal — real blog posts */}
+      {!fetched && blogs.length === 0 && (
+        <section className="block" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="sechead"><div><span className="eyebrow">[ 05 ] The ledger</span><h2>Journal</h2></div></div>
+            <SkBusy className="jgrid" label="Loading journal posts…"><PostCardSkeletons n={3} /></SkBusy>
+          </div>
+        </section>
+      )}
       {blogs.length > 0 && (
         <section className="block" id="journal" style={{ paddingTop: 0 }}>
           <div className="wrap">

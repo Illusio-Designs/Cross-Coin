@@ -338,8 +338,17 @@ const Header = () => {
             {showSearch && searchQuery && (
               <div className="search-dropdown-results">
                 {isSearching ? (
-                  <div className="search-loading">
-                    <div className="loading-spinner"></div>
+                  <div role="status" aria-busy="true">
+                    <span className="sr-only">Searching…</span>
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="search-result-item" aria-hidden="true" style={{ pointerEvents: 'none' }}>
+                        <span className="search-result-image sk" />
+                        <div className="search-result-info" style={{ flex: 1 }}>
+                          <span className="sk" style={{ width: ['70%', '55%', '62%'][i], height: 14, marginBottom: 8 }} />
+                          <span className="sk" style={{ width: 56, height: 12 }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : searchResults.length > 0 ? (
                   <>

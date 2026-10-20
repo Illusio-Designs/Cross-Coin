@@ -10,7 +10,7 @@ import Head from 'next/head';
 import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups, getCart, restoreCart } from './store';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart } from '../../utils/cartRecovery';
-import { I, Thumb } from './ui';
+import { I, Thumb, Sk, SkBusy } from './ui';
 import { inr } from './data';
 import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
@@ -153,13 +153,24 @@ const MOBILE_CSS = `
 .cc-test-root .searchbar input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); color:var(--ink); font:inherit; font-size:15px; box-shadow:var(--stamp-sm); }
 .cc-test-root .searchbar input:focus{ outline:none; border-color:var(--crimson); }
 .cc-test-root .searchbar .btn{ flex:0 0 auto; }
-/* Loading shimmer / skeletons */
-.cc-test-root .cc-skel{ position:relative; overflow:hidden; background:var(--paper-2); border:2px solid var(--line-ink); border-radius:var(--r); box-shadow:var(--stamp-sm); }
-.cc-test-root .cc-skelcard{ height:0; padding-top:128%; }
-.cc-test-root .cc-skel::after{ content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--surface) 75%,transparent),transparent); animation:ccShimmer 1.25s infinite; }
-@keyframes ccShimmer{ 100%{ transform:translateX(100%); } }
-.cc-test-root .cc-skelblock{ border-radius:4px; }
-@media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel::after{ animation:none; } }
+/* Loading skeletons (Mint). The .sk shimmer itself lives in
+   styles/common/skeleton.css; here it takes the Mint palette, and the shapes
+   reuse the real stamped frames (.cc-card, .cattile, .post, .order …) so a
+   skeleton is the same size as what replaces it. Helpers: ui.jsx. */
+.cc-test-root{ --sk-base: var(--paper-2); --sk-hi: color-mix(in srgb, var(--paper-2) 30%, var(--surface)); }
+.cc-test-root .sk{ border-radius:var(--r); }
+.cc-test-root .sk--circle{ border-radius:50%; }
+/* stamped skeleton box (ink border + stamp shadow) for whole blocks */
+.cc-test-root .cc-skel{ position:relative; overflow:hidden; border:2px solid var(--line-ink); border-radius:var(--r); box-shadow:var(--stamp-sm); background:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%); background-size:200% 100%; animation:sk-shimmer 1.3s ease-in-out infinite; }
+.cc-test-root .cc-skelblock{ border-radius:var(--r); }
+.cc-test-root .sk-frame, .cc-test-root .sk-frame:hover{ transform:none !important; box-shadow:var(--stamp-sm); cursor:default; pointer-events:none; }
+.cc-test-root .sk.sk-fill{ position:absolute; inset:0; left:0; top:0; width:100%; height:100%; transform:none; border-radius:0; }
+.cc-test-root .sk-card__img{ position:relative; height:0; padding-top:100%; border-bottom:2px solid var(--line-ink); overflow:hidden; }
+.cc-test-root .sk-card__btn{ height:47px; margin:0 14px 14px; }
+.cc-test-root .sk-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.cc-test-root .sk-stack{ display:flex; flex-direction:column; gap:9px; }
+.cc-test-root .sk-dim{ opacity:.55; transition:opacity .2s var(--ease); pointer-events:none; }
+@media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel{ animation:none; background:var(--sk-base); } }
 /* cookie preferences modal */
 .cc-test-root .ckmodal{ position:fixed; left:50%; bottom:-100%; transform:translateX(-50%); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); padding:20px; transition:bottom .3s var(--ease); }
 .cc-test-root .ckmodal.on{ bottom:max(18px,env(safe-area-inset-bottom,0px)); }
@@ -485,11 +496,13 @@ export default function TestLayout({ children }) {
   const [offers, setOffers] = useState([]);
   const [tiersMap, setTiersMap] = useState({});
   const [suggested, setSuggested] = useState([]);
+  const [suggestedDone, setSuggestedDone] = useState(false);
   const [offersOpen, setOffersOpen] = useState(false);
   const [shipCfg, setShipCfg] = useState({ threshold: FREE_SHIP, codFee: 49, prepaidFee: 0 });
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [searchRes, setSearchRes] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [exitShow, setExitShow] = useState(false);
   const [lead, setLead] = useState({ open: false, phone: '', busy: false, done: false, msg: '' });
   const abCaptured = useRef(false);
@@ -565,9 +578,10 @@ export default function TestLayout({ children }) {
   useEffect(() => {
     if (!searchOpen) return;
     const q = searchQ.trim();
-    if (q.length < 2) { setSearchRes([]); return; }
+    if (q.length < 2) { setSearchRes([]); setSearching(false); return; }
     let off = false;
-    const t = setTimeout(() => { fetchSearch(q).then((r) => { if (!off) setSearchRes((r || []).slice(0, 6)); }).catch(() => {}); }, 250);
+    setSearching(true);
+    const t = setTimeout(() => { fetchSearch(q).then((r) => { if (!off) setSearchRes((r || []).slice(0, 6)); }).catch(() => {}).finally(() => { if (!off) setSearching(false); }); }, 250);
     return () => { off = true; clearTimeout(t); };
   }, [searchQ, searchOpen]);
 
@@ -601,7 +615,7 @@ export default function TestLayout({ children }) {
   useEffect(() => {
     if (!drawer || suggested.length) return;
     let off = false;
-    fetchProducts({ limit: 10 }).then((list) => { if (!off) setSuggested(list); }).catch(() => {});
+    fetchProducts({ limit: 10 }).then((list) => { if (!off) setSuggested(list); }).catch(() => {}).finally(() => { if (!off) setSuggestedDone(true); });
     return () => { off = true; };
   }, [drawer, suggested.length]);
 
@@ -780,8 +794,19 @@ export default function TestLayout({ children }) {
                 <button type="button" className="hsearch__x" aria-label="Close search" onClick={() => { setSearchOpen(false); setSearchQ(''); }}>{I.close(18)}</button>
               </form>
               {searchQ.trim().length >= 2 && (
-                <div className="hsearch__res">
-                  {searchRes.length === 0
+                <div className={`hsearch__res${searching && searchRes.length > 0 ? ' sk-dim' : ''}`}>
+                  {searching && searchRes.length === 0
+                    ? (
+                      <SkBusy label="Searching…">
+                        {[0, 1, 2].map((i) => (
+                          <div className="hsearch__row" key={i} aria-hidden="true">
+                            <Sk w={44} h={44} />
+                            <span className="hsearch__meta sk-stack" style={{ gap: 7, flex: 1 }}><Sk w={['70%', '55%', '62%'][i]} h={13} /><Sk w={60} h={12} /></span>
+                          </div>
+                        ))}
+                      </SkBusy>
+                    )
+                    : searchRes.length === 0
                     ? <div className="hsearch__empty mono">No matches for “{searchQ.trim()}”.</div>
                     : <>
                         {searchRes.map((r) => (
@@ -913,6 +938,19 @@ export default function TestLayout({ children }) {
               {(() => {
                 const inCart = new Set(cart.map((i) => String(i.id)));
                 const rows = suggested.filter((p) => !inCart.has(String(p.id))).slice(0, 8);
+                if (rows.length === 0 && !suggestedDone) return (
+                  <SkBusy className="bms" label="Loading suggestions…">
+                    <div className="bms__h mono" aria-hidden="true">✦ Buy more, save more — add one &amp; unlock bundle prices</div>
+                    <div className="bms__scroll" aria-hidden="true">
+                      {[0, 1].map((i) => (
+                        <div className="bms__card" key={i}>
+                          <div className="bms__top"><Sk w={52} h={52} /><div className="bms__info sk-stack" style={{ gap: 6 }}><Sk w="85%" h={12} /><Sk w="50%" h={12} /></div></div>
+                          <Sk h={37} />
+                        </div>
+                      ))}
+                    </div>
+                  </SkBusy>
+                );
                 if (rows.length === 0) return null;
                 return (
                   <div className="bms">

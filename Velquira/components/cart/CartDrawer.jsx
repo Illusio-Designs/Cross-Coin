@@ -816,10 +816,11 @@ export default function CartDrawer() {
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
               {coStep === 1 && items.length > 0 && !cartReady && (
-                <div className="cd-skel" aria-hidden="true">
-                  <div className="cd-skel-ship cd-skel-anim" />
-                  {[0, 1].map((n) => (
-                    <div className="cd-skel-item" key={n}>
+                <div className="cd-skel" role="status" aria-busy="true" aria-live="polite">
+                  <span className="sr-only">Loading your cart…</span>
+                  <div className="cd-skel-ship cd-skel-anim" aria-hidden="true" />
+                  {Array.from({ length: Math.min(Math.max(items.length, 1), 4) }, (_, n) => n).map((n) => (
+                    <div className="cd-skel-item" key={n} aria-hidden="true">
                       <div className="cd-skel-thumb cd-skel-anim" />
                       <div className="cd-skel-lines">
                         <span className="cd-skel-line cd-skel-anim" />
@@ -828,8 +829,8 @@ export default function CartDrawer() {
                       </div>
                     </div>
                   ))}
-                  <div className="cd-skel-chip cd-skel-anim" />
-                  <div className="cd-skel-chip tall cd-skel-anim" />
+                  <div className="cd-skel-chip cd-skel-anim" aria-hidden="true" />
+                  <div className="cd-skel-chip tall cd-skel-anim" aria-hidden="true" />
                 </div>
               )}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>

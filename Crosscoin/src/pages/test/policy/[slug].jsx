@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../../components/test/TestLayout';
 import { fetchPolicy } from '../../../components/test/real';
 import { richHtml } from '../../../utils/sanitizeHtml';
+import { SkBusy, TextSkeleton } from '../../../components/test/ui';
 
 const TITLES = {
   'privacy-policy': 'Privacy Policy',
@@ -45,7 +46,7 @@ export default function TestPolicy({ preview = true }) {
 
       <div className="wrap" style={{ paddingBottom: 70, maxWidth: 820 }}>
         {loading
-          ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Loading…</p>
+          ? <SkBusy label={`Loading ${title}…`} style={{ paddingTop: 28 }}><TextSkeleton paras={4} lines={4} /></SkBusy>
           : policy?.html
             ? <div className="legal" {...richHtml(policy.html)} />
             : <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>This policy isn&rsquo;t available right now.</p>}

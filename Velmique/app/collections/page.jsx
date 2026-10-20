@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getPublicCategories } from '@/lib/api/categories';
 import { absUrl, seoMeta } from '@/lib/site';
 import { ik } from '@/lib/imagekit';
+import SkImg from '../_components/SkImg';
 
 export const revalidate = 300;
 
@@ -40,7 +41,7 @@ export default async function CollectionsIndex() {
             {collections.map((c, i) => (
               <Link key={c.id} href={`/collections/${c.slug}`} className={`m-colcard ${i === 0 && collections.length > 2 ? 'wide' : ''}`}>
                 <span className="m-colcard__img">
-                  {c.image ? <img src={ik(c.image, i === 0 ? 1400 : 800)} alt="" loading={i < 2 ? 'eager' : 'lazy'} /> : null}
+                  {c.image ? <SkImg src={ik(c.image, i === 0 ? 1400 : 800)} alt="" loading={i < 2 ? 'eager' : 'lazy'} /> : null}
                 </span>
                 <span className="m-colcard__shade" />
                 <span className="m-colcard__b">

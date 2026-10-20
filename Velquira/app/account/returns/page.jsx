@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
+import { Skeleton, SkeletonRegion, OrderListSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
@@ -33,6 +34,7 @@ function ReturnsInner() {
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadedOnce, setLoadedOnce] = useState(false); // skeleton only before the first load
   const [form, setForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -48,7 +50,7 @@ function ReturnsInner() {
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
       setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoadedOnce(true); }
   }, []);
   useEffect(() => { if (isAuthenticated) load(); }, [isAuthenticated, load]);
 
@@ -157,10 +159,10 @@ function ReturnsInner() {
         </form>
       )}
 
-      {loading ? (
-        <p className="muted" style={{ marginTop: 20 }}>Loading…</p>
+      {loading && !loadedOnce ? (
+        <ReturnsSkeleton />
       ) : (
-        <>
+        <div className={loading ? 'sk-refreshing' : undefined} aria-busy={loading || undefined}>
           {/* existing returns */}
           {returns.length > 0 && (
             <div style={{ marginTop: 10 }}>
@@ -225,9 +227,19 @@ function ReturnsInner() {
             )}
             <p className="muted" style={{ marginTop: 12, fontSize: '.82rem' }}>Returns are accepted within 7 days of delivery.</p>
           </div>
-        </>
+        </div>
       )}
     </div>
+  );
+}
+
+// "Request a return" heading + eligible-order rows, as the real list draws them.
+function ReturnsSkeleton({ label = 'Loading your returns…' }) {
+  return (
+    <SkeletonRegion label={label} style={{ marginTop: 28 }}>
+      <Skeleton width={170} height={20} radius={4} style={{ marginBottom: 12 }} />
+      <OrderListSkeleton rows={3} label={null} />
+    </SkeletonRegion>
   );
 }
 
@@ -235,5 +247,17 @@ const lbl = { display: 'block', fontWeight: 600, fontSize: '.85rem', margin: '14
 const inp = { width: '100%', border: '1px solid var(--line, #d7dce4)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.92rem', background: 'var(--bg, #fff)' };
 
 export default function ReturnsPage() {
-  return <AccountGate><Suspense fallback={null}><ReturnsInner /></Suspense></AccountGate>;
+  const head = (
+    <>
+      <nav className="crumbs"><Link href="/account">Account</Link> <span>/</span> <b>Returns</b></nav>
+      <div className="page-hero"><span className="eyebrow">Account</span><h1>Returns &amp; refunds</h1></div>
+    </>
+  );
+  return (
+    <AccountGate bare crumbs={head} skeleton={<ReturnsSkeleton label={null} />}>
+      <Suspense fallback={<div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>{head}<ReturnsSkeleton /></div>}>
+        <ReturnsInner />
+      </Suspense>
+    </AccountGate>
+  );
 }

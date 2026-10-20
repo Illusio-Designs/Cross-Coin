@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { searchProducts } from '@/lib/api';
 
 // Live search — results update as you type (debounced), no Enter needed.
@@ -56,18 +56,15 @@ export default function SearchClient({ initialQuery = '' }) {
 
       {!trimmed ? (
         <div className="empty">Type something to search the Velquira catalogue.</div>
-      ) : loading ? (
-        <div className="product-grid" style={{ marginTop: 18 }}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i}><Skeleton height={260} radius={16} /><Skeleton height={14} width="70%" style={{ marginTop: 10 }} /><Skeleton height={14} width="40%" style={{ marginTop: 6 }} /></div>
-          ))}
-        </div>
+      ) : loading && results.length === 0 ? (
+        <ProductGridSkeleton count={4} label="Searching…" style={{ marginTop: 18 }} />
       ) : results.length === 0 ? (
         <div className="empty">No products match “{trimmed}”.</div>
       ) : (
         <>
           <p className="muted" style={{ margin: '18px 0' }}>{results.length} result{results.length === 1 ? '' : 's'}</p>
-          <div className="product-grid">
+          {/* While a new query runs, keep the last results (dimmed) — no flash. */}
+          <div className={`product-grid${loading ? ' sk-refreshing' : ''}`} aria-busy={loading || undefined}>
             {results.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
         </>

@@ -142,19 +142,14 @@ button { font-family: inherit; cursor: pointer; }
 .cd-ship-track { height: 6px; border-radius: 999px; background: #d5e7e4; margin-top: 9px; overflow: hidden; }
 .cd-ship-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; transition: width .35s ease; }
 .cd-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 8px 20px; display: flex; flex-direction: column; background: var(--bg); position: relative; z-index: 1; scrollbar-width: none; -ms-overflow-style: none; }
-/* Whole-cart shimmer skeleton — shown while the drawer's async loads settle. */
-.cd-skel { display: flex; flex-direction: column; gap: 16px; padding: 10px 0; }
-.cd-skel-anim { background: linear-gradient(90deg, var(--line-soft) 25%, var(--line) 37%, var(--line-soft) 63%); background-size: 400% 100%; animation: cdSkel 1.4s ease infinite; border-radius: 8px; }
-.cd-skel-ship { height: 46px; border-radius: 12px; }
-.cd-skel-item { display: flex; gap: 12px; align-items: center; }
-.cd-skel-thumb { width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; }
-.cd-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 9px; }
-.cd-skel-line { height: 13px; width: 80%; }
-.cd-skel-line.sm { width: 45%; }
-.cd-skel-chip { height: 50px; border-radius: 12px; }
-.cd-skel-chip.tall { height: 76px; }
-@keyframes cdSkel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { .cd-skel-anim { animation: none; } }
+/* Whole-cart skeleton — shown while the drawer's async loads settle. Shapes use
+   the shared .sk shimmer (see SKELETONS below) and mirror the real cart lines. */
+.cd-skel { display: flex; flex-direction: column; gap: 0; padding: 0; }
+.cd-skel-ship { height: 58px; border-radius: 16px; margin-bottom: 12px; }
+.cd-item--sk { align-items: center; animation: none !important; }
+.cd-skel-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.cd-skel-chip { height: 50px; border-radius: 12px; margin-top: 6px; }
+.cd-skel-chip.tall { height: 76px; margin-top: 10px; }
 .cd-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .cd-item { display: flex; gap: 12px; padding: 12px; margin-bottom: 10px; background: #fff; border: 1px solid var(--line-soft); border-radius: 16px; box-shadow: var(--shadow-soft); transition: box-shadow .2s ease, border-color .2s ease; }
 .cd-item:hover { border-color: var(--line); box-shadow: 0 8px 24px -14px rgba(27,35,64,.18); }
@@ -998,17 +993,58 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ============================================================================
-   SHIMMER / SKELETON
+   SKELETONS — Morbix shimmer kit (components/ui/Skeleton.jsx).
+   Cool-grey bars built from the store's own neutrals, drawn exactly where the
+   content will land so nothing jumps when it arrives. `.shimmer` is the older
+   name for the same thing (ShimmerImg uses it).
    ========================================================================== */
-@keyframes morbixShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-.shimmer {
-  background: linear-gradient(100deg, #e9edf0 30%, #f3f6f8 50%, #e9edf0 70%);
-  background-size: 800px 100%;
+@keyframes morbixShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.sk, .shimmer {
+  display: block;
+  max-width: 100%;
+  background-color: var(--line);
+  background-image: linear-gradient(100deg, var(--line) 30%, var(--line-soft) 50%, var(--line) 70%);
+  background-size: 200% 100%;
   animation: morbixShimmer 1.3s ease-in-out infinite;
 }
+/* On the navy hero band */
+.sk--dark { background-color: rgba(255,255,255,.10); background-image: linear-gradient(100deg, rgba(255,255,255,.08) 30%, rgba(255,255,255,.18) 50%, rgba(255,255,255,.08) 70%); }
+.sk-fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }
+.sk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sk-stack { display: grid; gap: 8px; align-content: start; }
 .shimmer-img-skeleton { position: absolute; inset: 0; display: block; border-radius: inherit; z-index: 0; }
 .shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .3s ease; }
 .shimmer-img.is-loaded { opacity: 1; }
+
+/* Skeleton versions of real cards keep the card's own box, minus hover lift */
+.pcard--sk, .pcard--sk:hover { transform: none; box-shadow: none; border-color: var(--line-soft); }
+.pcard--sk .pcard-name-sk { display: grid; gap: 9px; align-content: center; min-height: 40px; }
+.pcard--sk .pcard-price-sk { height: 28px; display: flex; align-items: center; }
+.collection-card--sk { box-shadow: none; }
+.collection-card--sk .collection-card-overlay { background: none; align-items: flex-end; }
+.blog-card--sk, .blog-card--sk:hover { transform: none; box-shadow: none; }
+.blog-card--sk .blog-media { position: relative; }
+.heroc-pc--sk, .heroc-pc--sk:hover { transform: none; box-shadow: none; }
+.heroc-pc--sk .heroc-ph { background: none; }
+.pdp-thumb--sk, .pdp-thumb--sk:hover { position: relative; cursor: default; border-color: var(--line-soft); }
+.pdp-main--sk { background: none; }
+.review--sk { flex: 0 0 340px; max-width: 100%; }
+.sk-rv-row { display: flex; gap: 16px; overflow: hidden; padding: 4px 0 14px; }
+.order-row--sk > div { gap: 7px; }
+.article-hero--sk { aspect-ratio: 16 / 9; position: relative; }
+.article-hero-img { position: relative; }
+.article-hero-img.is-pending { aspect-ratio: 16 / 9; }
+.article-hero-img.is-pending img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.article-hero-img img { transition: opacity .3s ease; }
+
+/* Refreshing with content already on screen: keep it, dimmed, instead of
+   flashing skeletons. */
+.sk-dim { opacity: .5; pointer-events: none; transition: opacity .2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk, .shimmer { animation: none; background-image: none; }
+  .sk-dim { transition: none; }
+}
 
 /* ============================================================================
    HEADER ICON PILLS

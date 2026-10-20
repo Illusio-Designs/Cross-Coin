@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
+import SkImg from './SkImg';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
@@ -58,7 +59,7 @@ export default function ProductCard({ product }) {
     <article className="m-card">
       <div className="m-card__fig">
         <Link className="m-card__imglink" href={href} aria-label={product.name}>
-          <span className="m-card__tile">{img ? <img src={ik(img, 600)} alt={product.name} loading="lazy" decoding="async" /> : null}</span>
+          <span className="m-card__tile">{img ? <SkImg src={ik(img, 600)} alt={product.name} loading="lazy" decoding="async" /> : null}</span>
           <span className="m-card__shade" />
         </Link>
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}

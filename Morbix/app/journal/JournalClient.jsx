@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 import Pagination from '@/components/Pagination';
 import { getBlogPage } from '@/lib/api';
+import { BlogGridSkeleton } from '@/components/ui/Skeleton';
 
 const LIMIT = 12;
 
@@ -48,9 +49,15 @@ export default function JournalClient() {
     return <div className="empty" style={{ marginTop: 20 }}>No articles yet — check back soon.</div>;
   }
 
+  // First load: card-shaped placeholders. Changing page keeps the current cards
+  // (dimmed) until the next page arrives.
+  if (loading && posts.length === 0) {
+    return <BlogGridSkeleton count={6} style={{ marginTop: 26 }} />;
+  }
+
   return (
     <>
-      <div className="blog-grid" style={{ marginTop: 26 }}>
+      <div className={`blog-grid${loading ? ' sk-dim' : ''}`} style={{ marginTop: 26 }} aria-busy={loading || undefined}>
         {posts.map((p) => (
           <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
             <div className="blog-media">

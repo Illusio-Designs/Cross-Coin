@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { ProductCard, toast, Dropdown } from '../../components/test/ui';
+import { ProductCard, toast, Dropdown, SkBusy, SkeletonCards, useHydrated } from '../../components/test/ui';
 import TestLayout from '../../components/test/TestLayout';
 import { useWishlist, clearWishlist } from '../../components/test/wishlist';
 import { addItem } from '../../components/test/store';
@@ -11,13 +11,15 @@ import { fetchProducts } from '../../components/test/real';
 export default function TestWishlist() {
   const router = useRouter();
   const items = useWishlist();
+  const hydrated = useHydrated();
   const [sort, setSort] = useState('new');
   const [recs, setRecs] = useState([]);
+  const [recsLoading, setRecsLoading] = useState(true);
 
   // Recommendations — real products not already saved.
   useEffect(() => {
     let off = false;
-    fetchProducts({ limit: 12 }).then((l) => { if (!off) setRecs(l); }).catch(() => {});
+    fetchProducts({ limit: 12 }).then((l) => { if (!off) setRecs(l); }).catch(() => {}).finally(() => { if (!off) setRecsLoading(false); });
     return () => { off = true; };
   }, []);
 
@@ -66,7 +68,11 @@ export default function TestWishlist() {
       </div>
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
-        {items.length === 0
+        {!hydrated
+          // Saved items live in this browser — hold the grid until they're read
+          // instead of flashing the empty state.
+          ? <SkBusy className="pgrid" label="Loading your wishlist…"><SkeletonCards n={4} /></SkBusy>
+          : items.length === 0
           ? (
             <div style={{ padding: '46px 0', textAlign: 'center' }}>
               <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, marginBottom: 16 }}>Nothing saved yet — tap the ♥ on any product to keep it here.</p>
@@ -75,10 +81,12 @@ export default function TestWishlist() {
           )
           : <div className="pgrid">{sorted.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
 
-        {recList.length > 0 && (
+        {(recList.length > 0 || recsLoading) && (
           <section className="block" style={{ paddingTop: 40 }}>
             <div className="sechead"><div><span className="eyebrow">You might also like</span><h2>More from the mint</h2></div></div>
-            <div className="prail">{recList.map((p) => <ProductCard key={p.id} p={p} />)}</div>
+            {recList.length === 0
+              ? <SkBusy className="prail" label="Loading suggestions…"><SkeletonCards n={4} /></SkBusy>
+              : <div className="prail">{recList.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
           </section>
         )}
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 
 // Ask ImageKit for a sized, format-negotiated hero image instead of the
@@ -20,6 +20,14 @@ function heroSrc(src, w = 1600) {
 export default function Hero({ features = [], slides = [] }) {
   const [current, setCurrent] = useState(0);
   const hasSlides = slides.length > 0;
+  // The arched frame already reserves the box; shimmer inside it until the
+  // first slide's photo has painted (the image itself is untouched).
+  const [firstReady, setFirstReady] = useState(false);
+  const sliderRef = useRef(null);
+  useEffect(() => {
+    const img = sliderRef.current?.querySelector('img');
+    if (!img || (img.complete && img.naturalWidth > 0)) setFirstReady(true);
+  }, []);
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -48,13 +56,16 @@ export default function Hero({ features = [], slides = [] }) {
 
         <div className="vq-hero-frame">
           {hasSlides ? (
-            <div className="vq-hero-slider">
+            <div className="vq-hero-slider" ref={sliderRef}>
+              {!firstReady && <span className="sk sk-fill" aria-hidden="true" />}
               {slides.map((s, i) => (
                 <picture key={i} style={{ display: 'contents' }}>
                   {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
                   <img src={heroSrc(s.image)} alt={s.title || 'Velquira'}
                     className={`vq-hero-img${i === current ? ' active' : ''}`}
                     loading={i === 0 ? 'eager' : 'lazy'}
+                    onLoad={i === 0 ? () => setFirstReady(true) : undefined}
+                    onError={i === 0 ? () => setFirstReady(true) : undefined}
                     fetchPriority={i === 0 ? 'high' : 'auto'}
                     decoding="async" />
                 </picture>

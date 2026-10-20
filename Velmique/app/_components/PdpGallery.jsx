@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ik } from '@/lib/imagekit';
+import SkImg from './SkImg';
 
 /* Stacked scroll gallery (sticky shots that slide over each other) with a
    click-to-zoom lightbox: tap any image for a fullscreen view, swipe through
@@ -32,7 +33,7 @@ export default function PdpGallery({ images = [], name = '' }) {
       <div className="m-gstack">
         {images.map((src, i) => (
           <button type="button" className="m-gshot m-gshot--btn" key={i} onClick={() => setOpen(i)} aria-label={`Zoom ${name} image ${i + 1}`}>
-            <img src={ik(src, 1000)} alt={`${name} — view ${i + 1}`} loading={i ? 'lazy' : 'eager'} fetchPriority={i ? undefined : 'high'} decoding="async" />
+            <SkImg src={ik(src, 1000)} alt={`${name} — view ${i + 1}`} loading={i ? 'lazy' : 'eager'} fetchPriority={i ? undefined : 'high'} decoding="async" />
             <span className="m-gzoom" aria-hidden>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3M11 8v6M8 11h6" /></svg>
             </span>

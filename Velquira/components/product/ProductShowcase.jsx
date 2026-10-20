@@ -70,6 +70,15 @@ export default function ProductShowcase({ product }) {
   // than the photo — extra thumbnails scroll inside it instead.
   const mainRef = useRef(null);
   const thumbsRef = useRef(null);
+  // Hold the main image box at the gallery's 4:5 ratio (shimmering) until the
+  // FIRST photo has loaded, so the buy card and page below never jump. Later
+  // thumbnail swaps are preloaded, so the box just follows the image.
+  const mainImgRef = useRef(null);
+  const [mainReady, setMainReady] = useState(false);
+  useEffect(() => {
+    const img = mainImgRef.current;
+    if (!img || (img.complete && img.naturalWidth > 0)) setMainReady(true);
+  }, []);
   const [railH, setRailH] = useState(0);
   useEffect(() => {
     const el = mainRef.current;
@@ -254,10 +263,16 @@ export default function ProductShowcase({ product }) {
           </div>
         )}
 
-        <div className="pdp-main" ref={mainRef}>
+        <div
+          className={`pdp-main${mainSrc && !mainReady ? ' sk-reserve' : ''}`}
+          ref={mainRef}
+          style={mainSrc && !mainReady ? { aspectRatio: '4 / 5' } : undefined}
+        >
+          {mainSrc && !mainReady && <span className="sk sk-fill" aria-hidden="true" />}
           {mainSrc ? (
             <button type="button" className="pdp-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-              <img src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async" />
+              <img ref={mainImgRef} src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async"
+                onLoad={() => setMainReady(true)} onError={() => setMainReady(true)} />
               {sku && <span className="pdp-style-badge">Style: #{sku}</span>}
               <span className="pdp-zoom-hint" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>

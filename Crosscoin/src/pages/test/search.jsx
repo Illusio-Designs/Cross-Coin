@@ -3,7 +3,7 @@ import { R } from '@/components/test/routes';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, SkeletonCards } from '../../components/test/ui';
+import { ProductCard, SkeletonCards, SkBusy, Sk } from '../../components/test/ui';
 import { fetchSearch } from '../../components/test/real';
 
 export default function TestSearch() {
@@ -57,16 +57,25 @@ export default function TestSearch() {
       </div>
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
-        {loading
-          ? <div className="pgrid" style={{ paddingTop: 20 }}><SkeletonCards n={8} /></div>
+        {(!router.isReady || loading || (q.trim() && !ran)) && results.length === 0
+          ? (
+            <SkBusy label="Searching…">
+              <div style={{ padding: '18px 0 8px' }}><Sk w={170} h={12} /></div>
+              <div className="pgrid"><SkeletonCards n={8} /></div>
+            </SkBusy>
+          )
           : !q.trim()
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>Type something above to search the real catalogue.</p>
-            : ran && results.length === 0
+            : !loading && ran && results.length === 0
               ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>No matches for &ldquo;{q}&rdquo;. Try another term.</p>
-              : (<>
-                  <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12, padding: '18px 0 8px' }}>{results.length} result{results.length === 1 ? '' : 's'} for &ldquo;{q}&rdquo;</p>
+              : (
+                // A new search keeps the previous results on screen (dimmed)
+                // until the new ones arrive, instead of flashing skeletons.
+                <div className={loading ? 'sk-dim' : undefined} aria-busy={loading || undefined}>
+                  <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 12, padding: '18px 0 8px' }}>{loading ? 'Searching…' : <>{results.length} result{results.length === 1 ? '' : 's'} for &ldquo;{q}&rdquo;</>}</p>
                   <div className="pgrid">{results.map((p) => <ProductCard key={p.id} p={p} />)}</div>
-                </>)}
+                </div>
+              )}
       </div>
     </TestLayout>
   );

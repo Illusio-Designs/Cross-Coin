@@ -9,6 +9,7 @@ import DeleteAccountSection from '@/components/account/DeleteAccountSection';
 import { useAuth } from '@/context/AuthContext';
 import { updateProfile } from '@/lib/api/auth';
 import { toast } from '@/lib/toast';
+import SettingsLoading from './loading';
 
 function Settings() {
   const router = useRouter();
@@ -73,5 +74,5 @@ function Settings() {
 }
 
 export default function SettingsPage() {
-  return <AccountGate title="Settings"><Settings /></AccountGate>;
+  return <AccountGate title="Settings" fallback={<SettingsLoading />}><Settings /></AccountGate>;
 }

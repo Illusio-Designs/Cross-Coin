@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { trackOrder, trackByAwb } from '../../components/test/real';
+import { Sk, SkBusy } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { orderStatusLabel, orderStatusNote, paymentSummary, isCancelledStatus } from '../../utils/orderStatus';
 
@@ -61,7 +62,19 @@ export default function TestTrack() {
       </div>
 
       <div className="wrap" style={{ paddingBottom: 60, maxWidth: 760 }}>
-        {loading && <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '24px 0' }}>Looking up your order…</p>}
+        {loading && (
+          <SkBusy className="trackcard" label="Looking up your order…">
+            <div className="trackcard__top" aria-hidden="true">
+              <div className="sk-stack" style={{ gap: 6 }}><Sk w={48} h={10} /><Sk w={150} h={20} /></div>
+              <Sk w={96} h={28} />
+            </div>
+            <div className="trackcard__meta" aria-hidden="true"><Sk w={120} h={11} /><Sk w={90} h={11} /><Sk w={140} h={11} /></div>
+            <div className="trackitems" aria-hidden="true">
+              {[0, 1].map((i) => <div className="trackitem" key={i}><Sk w={i ? '48%' : '64%'} h={13} /><Sk w={60} h={13} /></div>)}
+            </div>
+            <div className="trackitem" aria-hidden="true" style={{ borderTop: '2px solid var(--line-ink)', marginTop: 4, paddingTop: 10 }}><Sk w={50} h={14} /><Sk w={70} h={14} /></div>
+          </SkBusy>
+        )}
         {err && <p className="mono" style={{ color: 'var(--crimson)', fontSize: 13, padding: '24px 0' }}>{err}</p>}
         {order && (
           <div className="trackcard">

@@ -1,13 +1,18 @@
-import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
+import Icon from '@/components/Icon';
+import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 
 export default function SearchLoading() {
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
-      <Skeleton width="40%" height={38} />
-      <div style={{ height: 20 }} />
-      <Skeleton height={48} radius={999} width={520} style={{ maxWidth: '100%' }} />
-      <div style={{ height: 26 }} />
-      <ProductGridSkeleton count={4} />
+      <div className="page-hero">
+        <span className="eyebrow">Search</span>
+        <h1>Search products</h1>
+      </div>
+      <div className="search-input" style={{ margin: '20px auto 8px', maxWidth: 520 }}>
+        <Icon name="Search" size={18} color="#6a7186" />
+        <input placeholder="Search by style, metal or gemstone…" aria-label="Search products" disabled />
+      </div>
+      <ProductGridSkeleton count={4} label="Loading results…" style={{ marginTop: 18 }} />
     </div>
   );
 }

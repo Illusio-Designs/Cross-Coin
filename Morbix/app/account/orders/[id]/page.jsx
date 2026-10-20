@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
@@ -65,17 +65,9 @@ function OrderDetail({ id }) {
     catch {} finally { setCancelling(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
-        <div style={{ display: 'grid', gap: 14, maxWidth: 720 }}>
-          <Skeleton height={30} width="40%" />
-          <Skeleton height={120} radius={16} />
-          <Skeleton height={200} radius={16} />
-        </div>
-      </div>
-    );
-  }
+  // First load: the page's shape. A reload after cancelling keeps the order on
+  // screen (the Cancel button already shows its own progress).
+  if (loading && !order) return <OrderDetailSkeleton />;
 
   if (notFound || !order) {
     return (
@@ -174,5 +166,5 @@ function OrderDetail({ id }) {
 
 export default function OrderDetailPage({ params }) {
   const { id } = use(params);
-  return <AccountGate title="Order details"><OrderDetail id={id} /></AccountGate>;
+  return <AccountGate title="Order details" fallback={<OrderDetailSkeleton />}><OrderDetail id={id} /></AccountGate>;
 }
