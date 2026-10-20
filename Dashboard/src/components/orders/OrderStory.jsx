@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { orderService } from "../../services";
+import { SkeletonText } from "../ui/Skeleton";
 
 // Everything that happened to one order, for the order popup: status
 // timeline, payment + refund rows, the customer return and failed-delivery
@@ -42,7 +43,19 @@ export default function OrderStory({ orderId }) {
   }, [orderId]);
 
   if (error) return <div style={{ ...box, ...muted }}>{error}</div>;
-  if (!data) return <div style={{ ...box, ...muted }}>Loading order history…</div>;
+  // Loading: the same two cards the history lands in, with shimmer lines.
+  if (!data) return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={box}>
+        <div style={head}>Payments &amp; refunds</div>
+        <SkeletonText lines={2} label="Loading payments…" />
+      </div>
+      <div style={box}>
+        <div style={head}>Timeline</div>
+        <SkeletonText lines={4} label="Loading order history…" />
+      </div>
+    </div>
+  );
 
   const { history = [], payments = [], returns = [], ndr = [] } = data;
 

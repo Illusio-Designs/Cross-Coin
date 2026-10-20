@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Add01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
+import { SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Broadcasts — one template message to many customers.
@@ -95,6 +96,21 @@ function whenText(b, bucket) {
   if (bucket === 'cancelled') return fmtWhen(b.updatedAt || b.scheduled_at);
   return `Created ${fmtWhen(b.createdAt || b.created_at)}`;
 }
+
+const TABLE_HEAD = (
+  <thead>
+    <tr>
+      <th style={{ width: '26%' }}>Broadcast</th>
+      <th>Who got it</th>
+      <th>Status</th>
+      <th className="r">Sent</th>
+      <th className="r">Delivered</th>
+      <th className="r">Read</th>
+      <th className="r">Orders · sales</th>
+      <th><span className="wpa-sr">Actions</span></th>
+    </tr>
+  </thead>
+);
 
 export default function BroadcastsPage({ brandId = '', brands = [], isAdmin = false, goTo }) {
   const [rows, setRows] = useState(null);
@@ -258,26 +274,26 @@ export default function BroadcastsPage({ brandId = '', brands = [], isAdmin = fa
         </div>
       </header>
 
-      <section className="rep-kpis wpa-kpis" aria-label="Last 30 days">
+      <section className={`rep-kpis wpa-kpis${loading && rows ? ' is-stale' : ''}`} aria-label="Last 30 days" aria-busy={loading || undefined}>
         <div className="rep-kpi">
           <div className="rep-kl">Sent · 30 days</div>
           <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 70 }} /> : num(summary.sent)}</div>
-          <div className="rep-kf">{summary.count} broadcast{summary.count === 1 ? '' : 's'}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 80 }} /> : `${summary.count} broadcast${summary.count === 1 ? '' : 's'}`}</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Read</div>
           <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 50 }} /> : (readPct === null ? '—' : `${readPct}%`)}</div>
-          <div className="rep-kf">{summary.delivered === null ? 'of delivered' : `of ${num(summary.delivered)} delivered`}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 90 }} /> : summary.delivered === null ? 'of delivered' : `of ${num(summary.delivered)} delivered`}</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Orders within 3 days</div>
           <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 40 }} /> : num(summary.orders)}</div>
-          <div className="rep-kf">{summary.sales === null ? 'sales —' : `${inr(summary.sales)} sales`}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 70 }} /> : summary.sales === null ? 'sales —' : `${inr(summary.sales)} sales`}</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Couldn't send</div>
           <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 40 }} /> : num(summary.failed)}</div>
-          <div className="rep-kf">{failPct === null ? 'no messages yet' : `${failPct}% of messages`}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 80 }} /> : failPct === null ? 'no messages yet' : `${failPct}% of messages`}</div>
         </div>
       </section>
 
@@ -290,15 +306,19 @@ export default function BroadcastsPage({ brandId = '', brands = [], isAdmin = fa
         ))}
       </div>
 
-      <section className="wpa-card" aria-label="Broadcasts">
+      <section className={`wpa-card${loading && rows ? ' is-stale' : ''}`} aria-label="Broadcasts" aria-busy={loading || undefined}>
         {error ? (
           <div className="wpa-state wpa-state--error" role="alert">
             <span>Couldn't load broadcasts. {error}</span>
             <button type="button" className="wpa-btn wpa-btn--sm" onClick={load}>Try again</button>
           </div>
         ) : first ? (
-          <div className="wpa-skel-list" aria-busy="true" aria-label="Loading broadcasts">
-            {[80, 64, 90, 72].map((w, i) => <span key={i} className="wpa-skel" style={{ width: `${w}%` }} />)}
+          <div className="wpa-scroll" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading broadcasts…</span>
+            <table className="wpa-tbl wpa-tbl--mid" style={{ minWidth: 960 }} aria-hidden="true">
+              {TABLE_HEAD}
+              <tbody><SkeletonTableRows rows={6} cols={8} /></tbody>
+            </table>
           </div>
         ) : visible.length === 0 ? (
           <div className="wpa-state">
@@ -317,18 +337,7 @@ export default function BroadcastsPage({ brandId = '', brands = [], isAdmin = fa
         ) : (
           <div className="wpa-scroll">
             <table className="wpa-tbl wpa-tbl--mid" style={{ minWidth: 960 }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '26%' }}>Broadcast</th>
-                  <th>Who got it</th>
-                  <th>Status</th>
-                  <th className="r">Sent</th>
-                  <th className="r">Delivered</th>
-                  <th className="r">Read</th>
-                  <th className="r">Orders · sales</th>
-                  <th><span className="wpa-sr">Actions</span></th>
-                </tr>
-              </thead>
+              {TABLE_HEAD}
               <tbody>
                 {visible.map((b) => {
                   const meta = STATUS[b._bucket];

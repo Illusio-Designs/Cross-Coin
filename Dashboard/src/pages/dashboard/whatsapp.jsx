@@ -20,27 +20,41 @@ import {
 } from '@hugeicons/core-free-icons';
 import { brandService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
+import { Skeleton, SkeletonList, SkeletonPage, SkeletonForm } from '../../components/ui';
 
-function PageLoading() {
+// While a page's code downloads, draw its shape where it will appear.
+function InboxLoading() {
   return (
-    <div className="wst-loading" role="status" aria-label="Loading">
-      <span /><span /><span />
+    <div className="wib">
+      <section className="wib-list">
+        <div className="wib-list-top" aria-hidden="true">
+          <Skeleton h={38} r={9} />
+          <div className="wib-chips">
+            {[44, 66, 104, 100, 80].map((w, i) => <Skeleton key={i} w={w} h={30} r={999} />)}
+          </div>
+        </div>
+        <SkeletonList rows={8} avatar className="wib-list-skel" label="Loading inbox…" />
+      </section>
+      <section className="wib-chat" aria-hidden="true" />
     </div>
   );
 }
+const PageLoading = () => <SkeletonPage kpis={0} rows={6} cols={4} label="Loading…" />;
+const KpiPageLoading = () => <SkeletonPage kpis={4} rows={5} cols={4} label="Loading…" />;
+const FormPageLoading = () => <SkeletonForm fields={6} label="Loading…" />;
 
-const load = (importer) => dynamic(importer, { ssr: false, loading: PageLoading });
+const load = (importer, loading = PageLoading) => dynamic(importer, { ssr: false, loading });
 
 const PAGE_COMPONENTS = {
-  inbox:           load(() => import('../../components/whatsapp/InboxPage')),
-  automations:     load(() => import('../../components/whatsapp/AutomationsPage')),
-  broadcasts:      load(() => import('../../components/whatsapp/BroadcastsPage')),
-  'broadcast-new': load(() => import('../../components/whatsapp/NewBroadcastPage')),
+  inbox:           load(() => import('../../components/whatsapp/InboxPage'), InboxLoading),
+  automations:     load(() => import('../../components/whatsapp/AutomationsPage'), KpiPageLoading),
+  broadcasts:      load(() => import('../../components/whatsapp/BroadcastsPage'), KpiPageLoading),
+  'broadcast-new': load(() => import('../../components/whatsapp/NewBroadcastPage'), FormPageLoading),
   templates:       load(() => import('../../components/whatsapp/TemplatesPage')),
   'quick-replies': load(() => import('../../components/whatsapp/QuickRepliesPage')),
-  carts:           load(() => import('../../components/whatsapp/CartsPage')),
-  analytics:       load(() => import('../../components/whatsapp/AnalyticsPage')),
-  settings:        load(() => import('../../components/whatsapp/SettingsPage')),
+  carts:           load(() => import('../../components/whatsapp/CartsPage'), KpiPageLoading),
+  analytics:       load(() => import('../../components/whatsapp/AnalyticsPage'), KpiPageLoading),
+  settings:        load(() => import('../../components/whatsapp/SettingsPage'), FormPageLoading),
 };
 
 const NAV = [

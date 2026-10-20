@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PageHeader, StatusPill, EmptyState, ErrorState, SkeletonRows, ConfirmBar } from "../../../components/ui";
+import { PageHeader, StatusPill, EmptyState, ErrorState, SkeletonTableRows, ConfirmBar } from "../../../components/ui";
 import { userService } from "../../../services";
 import { useAuth, ROLE_VIEWS, ROLE_LABELS, STAFF_ROLES } from "../../../context/AuthContext";
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -215,13 +215,19 @@ export default function StaffUsers() {
           />
         )}
         {isLoading ? (
-          <SkeletonRows rows={4} label="Loading staff…" />
+          <div className="rep-tbl-wrap oss-tbl" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading staff…</span>
+            <table className="rep-table" aria-hidden="true">
+              <thead><tr><th>Person</th><th>Role</th><th>Last signed in</th><th>Did this week</th><th /></tr></thead>
+              <tbody><SkeletonTableRows rows={5} cols={5} /></tbody>
+            </table>
+          </div>
         ) : error && !data ? (
           <ErrorState message={`Couldn’t load staff — ${error?.message || "the server didn’t answer"}.`} onRetry={refetch} retrying={isFetching} />
         ) : users.length === 0 ? (
           <EmptyState title="No staff yet" description="Invite someone to help with orders, products or WhatsApp." />
         ) : (
-          <div className="rep-tbl-wrap oss-tbl">
+          <div className={`rep-tbl-wrap oss-tbl${isFetching ? " is-busy" : ""}`} aria-busy={isFetching || undefined}>
             <table className="rep-table">
               <thead><tr><th>Person</th><th>Role</th><th>Last signed in</th><th>Did this week</th><th aria-label="Actions" /></tr></thead>
               <tbody>

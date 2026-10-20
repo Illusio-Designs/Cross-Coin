@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Add01Icon, Search01Icon, Alert02Icon, Delete02Icon, Copy01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
+import { Skeleton, SkeletonList, SkeletonText } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Templates — the pre-approved messages WhatsApp lets a store use to
@@ -578,16 +579,14 @@ export default function TemplatesPage({ brandId = '', brands = [], isAdmin = fal
             </div>
           </div>
 
-          <section className="wpa-card" aria-label="Templates">
+          <section className={`wpa-card${loading && list ? ' is-stale' : ''}`} aria-label="Templates" aria-busy={loading || undefined}>
             {error ? (
               <div className="wpa-state wpa-state--error" role="alert">
                 <span>Couldn't load templates. {error}</span>
                 <button type="button" className="wpa-btn wpa-btn--sm" onClick={() => load()}>Try again</button>
               </div>
             ) : first ? (
-              <div className="wpa-skel-list" aria-busy="true" aria-label="Loading templates">
-                {[76, 58, 88, 64, 70].map((w, i) => <span key={i} className="wpa-skel" style={{ width: `${w}%` }} />)}
-              </div>
+              <SkeletonList rows={7} label="Loading templates…" />
             ) : visible.length === 0 ? (
               <div className="wpa-state">
                 {(list || []).length === 0
@@ -667,9 +666,18 @@ export default function TemplatesPage({ brandId = '', brands = [], isAdmin = fal
                 </div>
               )}
             </section>
+          ) : first ? (
+            <section className="wpa-card wpa-card--pad">
+              <div className="wpa-detail-head" aria-hidden="true">
+                <Skeleton w="55%" h={14} />
+                <Skeleton w={72} h={20} r={999} />
+              </div>
+              <Skeleton h={150} r={12} />
+              <SkeletonText lines={5} label="Loading template…" />
+            </section>
           ) : (
             <section className="wpa-card">
-              <div className="wpa-state">{first ? 'Loading…' : 'Pick a template to see it here.'}</div>
+              <div className="wpa-state">Pick a template to see it here.</div>
             </section>
           )}
         </aside>

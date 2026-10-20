@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import Loader from "../../../components/common/Loader";
+import { Skeleton, SkeletonTableRows } from "../../../components/ui";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import Dropdown from "../../../components/ui/Dropdown";
 import { PageHeader } from "../../../components/Dashboard/primitives";
@@ -218,7 +218,7 @@ export default function Consumers() {
           <button key={s.key} type="button" className={`cust-seg${segment === s.key ? " is-on" : ""}`}
             aria-pressed={segment === s.key} onClick={() => pickSegment(s.key)}>
             <span className="cust-seg-label">{s.label}</span>
-            <span className="cust-seg-n num">{data ? num(counts[s.key]) : "–"}</span>
+            <span className="cust-seg-n num">{data ? num(counts[s.key]) : isLoading ? <Skeleton w={48} h={26} /> : "–"}</span>
             <span className="cust-seg-note">{s.note}</span>
           </button>
         ))}
@@ -241,7 +241,18 @@ export default function Consumers() {
 
       <section className="rep-panel rep-panel--flush cust-panel">
         {isLoading ? (
-          <div className="rep-state"><Loader /></div>
+          <div className="rep-tbl-wrap cust-tbl" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading customers…</span>
+            <table className="rep-table" aria-hidden="true">
+              <thead>
+                <tr>
+                  <th>Customer</th><th>Brand</th><th className="r">Orders</th><th className="r">Spent</th>
+                  <th>Last order</th><th>RTO / returns</th><th>Account</th><th />
+                </tr>
+              </thead>
+              <tbody><SkeletonTableRows rows={10} cols={8} /></tbody>
+            </table>
+          </div>
         ) : error && !data ? (
           <div className="cust-empty">
             <h3>Couldn’t load customers</h3>
@@ -255,7 +266,7 @@ export default function Consumers() {
             <p className="mut">{emptyText.body}</p>
           </div>
         ) : (
-          <div className={`rep-tbl-wrap cust-tbl${isFetching ? " is-busy" : ""}`}>
+          <div className={`rep-tbl-wrap cust-tbl${isFetching ? " is-busy" : ""}`} aria-busy={isFetching || undefined}>
             <table className="rep-table">
               <thead>
                 <tr>

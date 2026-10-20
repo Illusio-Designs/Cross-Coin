@@ -5,6 +5,7 @@ import { Cancel01Icon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core
 import StatusPill from '../ui/StatusPill';
 import ErrorState from '../ui/ErrorState';
 import FilterChips from '../ui/FilterChips';
+import { Skeleton, SkeletonForm } from '../ui/Skeleton';
 import { brandLabel } from './webUtil';
 
 // Status filter chips (shared FilterChips) — chips: [{ id, label, count }].
@@ -22,11 +23,51 @@ export function WebBody({ children, panel }) {
   );
 }
 
-export function WebGridState({ loading, error, onRetry, empty, count }) {
+const SKEL_TITLE_W = ['72%', '58%', '80%', '64%', '76%', '52%', '68%', '60%'];
+
+/**
+ * Card-shaped placeholders in the same grid the cards use. `media` is the
+ * picture's aspect ratio ('16 / 9', '1 / 1') or null for text-only cards.
+ */
+export function WebGridSkeleton({ grid = 'web-grid', media = '16 / 9', count = 6, label = 'Loading…' }) {
+  return (
+    <div className={grid} role="status" aria-busy="true">
+      <span className="ds-sr-only">{label}</span>
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="web-card web-card--skel" aria-hidden="true">
+          <span className="web-card-main">
+            {media && <Skeleton w="100%" h="auto" r={10} style={{ aspectRatio: media }} />}
+            <span className="web-card-row"><Skeleton w={SKEL_TITLE_W[i % SKEL_TITLE_W.length]} h={13} /><Skeleton w={44} h={16} r={999} /></span>
+            <Skeleton w="50%" h={10} />
+            {!media && <Skeleton w="35%" h={10} />}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Error / first-load / empty states for a card grid. Skeleton only when there
+ * is nothing to show yet — on a refetch (search, filter, page) the tab keeps
+ * the old cards on screen, dimmed with `webStale(loading)`.
+ */
+export function WebGridState({ loading, error, onRetry, empty, count, grid, media, label }) {
   if (error) return <ErrorState message={`Couldn't load this list — ${error}`} onRetry={onRetry} />;
-  if (loading) return <div className="web-grid" aria-busy="true">{[0, 1, 2, 3, 4, 5].map((i) => <span key={i} className="web-skel-card" />)}</div>;
+  if (loading && !count) return <WebGridSkeleton grid={grid} media={media} label={label} />;
   if (!count) return empty;
   return null;
+}
+export const webStale = (loading) => (loading ? ' is-stale' : '');
+
+// Side-panel body while a record's details load (the panel header stays).
+export function WebPanelSkeleton({ fields = 4, editor = false, label = 'Loading…' }) {
+  return (
+    <>
+      <SkeletonForm fields={fields} label={label} />
+      {editor && <div className="web-editor-skel" aria-hidden="true" />}
+    </>
+  );
 }
 
 /**

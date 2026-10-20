@@ -4,6 +4,7 @@ import { ArrowLeft01Icon, ArrowRight01Icon, Search01Icon } from '@hugeicons/core
 import { seoAdminService } from '../../services';
 import { ConfirmModal } from '../common/AlertModal';
 import { showSuccess } from '../../utils/toastNotification';
+import { SkeletonTableRows } from '../ui/Skeleton';
 
 /*
  * "Fix SEO in bulk" — products missing a meta title, meta description or
@@ -140,11 +141,19 @@ export default function SeoBulkPanel({ brands = [], initialBrandId = '', onClose
         {error ? (
           <div className="pst-state"><p>{error}</p><button type="button" className="pst-btn" onClick={() => setReloadKey((k) => k + 1)}>Try again</button></div>
         ) : loading && !data ? (
-          <div className="pst-state">Loading…</div>
+          <div className="pst-scroll" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading products…</span>
+            <table className="pst-table pst-seo-table" aria-hidden="true">
+              <thead>
+                <tr><th>Product</th><th>Meta title</th><th>Meta description</th><th>Photo text</th></tr>
+              </thead>
+              <tbody><SkeletonTableRows rows={8} cols={4} /></tbody>
+            </table>
+          </div>
         ) : !items.length ? (
           <div className="pst-state">{gapsOnly ? 'No gaps left — every product has its meta title, description and photo text.' : 'No products match.'}</div>
         ) : (
-          <div className={`pst-scroll${loading ? ' is-busy' : ''}`}>
+          <div className={`pst-scroll${loading ? ' is-busy' : ''}`} aria-busy={loading || undefined}>
             <table className="pst-table pst-seo-table">
               <thead>
                 <tr><th>Product</th><th>Meta title</th><th>Meta description</th><th>Photo text</th></tr>

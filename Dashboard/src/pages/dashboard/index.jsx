@@ -5,6 +5,7 @@ import DashboardHeader from '../../components/Dashboard/DashboardHeader';
 import DashboardFooter from '../../components/Dashboard/DashboardFooter';
 import { useState, useEffect, Fragment } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { SkeletonPage } from "../../components/ui/Skeleton";
 import { handleViewChange, getViewFromPath } from "../../utils/dashboardRouting";
 
 import Products from "./products/products";
@@ -66,38 +67,10 @@ function NoAccess() {
 }
 
 // Shown while auth/role is still resolving, so we never flash "Access Denied"
-// before the role API has responded (e.g. on a dashboard reload).
+// before the role API has responded (e.g. on a dashboard reload). A page-shaped
+// skeleton in the content area — the menu and header are already on screen.
 function LoadingAccess() {
-  return (
-    <section
-      role="status"
-      aria-label="Loading"
-      aria-busy="true"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '60vh',
-        gap: 14,
-        color: 'var(--ds-color-text-muted)'
-      }}
-    >
-      <span
-        aria-hidden="true"
-        style={{
-          width: 34,
-          height: 34,
-          border: '3px solid var(--ds-color-border)',
-          borderTopColor: 'var(--ds-color-text)',
-          borderRadius: '50%',
-          animation: 'dashSpin 0.7s linear infinite'
-        }}
-      />
-      <p style={{ fontSize: 14, margin: 0 }}>Loading…</p>
-      <style jsx>{`@keyframes dashSpin { to { transform: rotate(360deg); } }`}</style>
-    </section>
-  );
+  return <SkeletonPage kpis={4} rows={7} cols={5} label="Loading your dashboard…" />;
 }
 
 function Dashboard() {

@@ -180,24 +180,72 @@
   .ui-panel__head, .ui-panel__body, .ui-panel__foot { padding-left: 16px; padding-right: 16px; }
 }
 
-/* ── SkeletonRows ───────────────────────────────────────────────── */
+/* ── Skeletons (components/ui/Skeleton.jsx, SkeletonRows) ───────────
+   One shimmer for the whole admin. Every older page-specific skeleton class
+   is listed in the unify rule below so they all move the same way. */
+:root {
+  --sk-base: var(--ds-color-surface-soft);
+  --sk-hi: color-mix(in srgb, var(--ds-color-border) 75%, var(--ds-color-surface-soft));
+}
+@keyframes ds-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.sk {
+  display: block;
+  max-width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.3s ease-in-out infinite;
+}
+.sk--circle { border-radius: 50%; flex: none; }
+
+.sk-text { display: flex; flex-direction: column; gap: 9px; }
+.sk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 12px; }
+.sk-kpi {
+  display: flex; flex-direction: column; gap: 10px; min-height: 88px; padding: 16px;
+  border-radius: 16px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
+}
+.sk-table { display: flex; flex-direction: column; }
+.sk-table__row { display: grid; gap: 16px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--ds-color-border-soft); }
+.sk-table__row:first-child { border-top: 0; }
+.sk-table__row--head { padding-block: 12px; background: var(--ds-color-surface-soft); }
+.sk-table__row--head .sk { background: var(--ds-color-border); animation: none; }
+.sk-tr td { padding-block: 14px; }
+.sk-cards { display: grid; gap: 12px; }
+.sk-card { display: flex; flex-direction: column; gap: 9px; padding: 10px; border-radius: 14px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface); }
+.sk-card__media { width: 100%; aspect-ratio: 16 / 9; height: auto; }
+.sk-list { display: flex; flex-direction: column; }
+.sk-list__row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--ds-color-border-soft); }
+.sk-list__row:first-child { border-top: 0; }
+.sk-list__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.sk-form { display: flex; flex-direction: column; gap: 16px; }
+.sk-form__field { display: flex; flex-direction: column; gap: 8px; }
+.sk-page { display: flex; flex-direction: column; gap: 16px; }
+.sk-page__head { display: flex; flex-direction: column; gap: 10px; padding-block: 4px; }
+.sk-panel { border-radius: 16px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface); overflow: hidden; }
+
+/* SkeletonRows (older API) */
 .ui-skel { display: flex; flex-direction: column; gap: 8px; }
 .ui-skel__row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 12px;
   border-radius: 10px;
-  background: var(--ds-color-surface-soft);
+  border: 1px solid var(--ds-color-border-soft);
 }
-.ui-skel__bar {
-  height: 12px;
-  border-radius: 6px;
-  background: var(--ds-color-border);
-  animation: ui-pulse 1.4s ease-in-out infinite;
-}
+.ui-skel__bar { height: 12px; border-radius: 6px; }
 .ui-skel__bar--short { width: 40%; }
-@keyframes ui-pulse { 50% { opacity: 0.5; } }
+
+/* Unify: page-specific skeletons share the same shimmer. */
+.ui-skel__bar,
+.web .web-skel-card, .web .web-skel-lines span, .web .web-editor-skel,
+.wpa-skel, .wpb-skel-row span, .wpb-skel-inline, .wpb-skel-block,
+.wib-skel-row span,
+.seo .seo-kpi--skel, .attr .attr-kpi--skel {
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.3s ease-in-out infinite;
+}
 
 .ui-error__retry:focus-visible,
 .ui-confirm__btn:focus-visible,
@@ -205,5 +253,10 @@
 .ui-panel__close:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ui-spin, .ui-skel__bar, .ui-panel, .ui-panel-backdrop { animation: none; }
+  .ui-spin, .ui-panel, .ui-panel-backdrop { animation: none; }
+  .sk, .ui-skel__bar,
+  .web .web-skel-card, .web .web-skel-lines span, .web .web-editor-skel,
+  .wpa-skel, .wpb-skel-row span, .wpb-skel-inline, .wpb-skel-block,
+  .wib-skel-row span,
+  .seo .seo-kpi--skel, .attr .attr-kpi--skel { animation: none; background: var(--sk-base); }
 }

@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Mic01Icon, Download01Icon, File01Icon, InformationCircleIcon } from '@hugeicons/core-free-icons';
+import { Skeleton } from '../ui';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -170,10 +171,24 @@ function AudioPlayer({ src }) {
   );
 }
 
+// Fixed-size shimmer box drawn where a photo / video will appear, so the
+// bubble keeps its size while the file downloads (no "Loading…" text).
+function MediaSkeleton({ kind }) {
+  return (
+    <span className={`wib-media-sk wib-media-sk--${kind}`} role="status" aria-busy="true">
+      <span className="ds-sr-only">{kind === 'video' ? 'Loading video…' : 'Loading photo…'}</span>
+      <Skeleton w="100%" h="100%" r={8} />
+    </span>
+  );
+}
+
 function ImageMsg({ src, caption }) {
   const [open, setOpen] = useState(false);
   const [blobUrl, setBlobUrl] = useState(() => mediaBlobCache.get(src) || null);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  // A cached blob decodes instantly — mark it loaded without a skeleton frame.
+  const imgRef = (el) => { if (el && el.complete && el.naturalWidth > 0 && !loaded) setLoaded(true); };
   useEffect(() => {
     if (!src) return undefined;
     if (mediaBlobCache.has(src)) { setBlobUrl(mediaBlobCache.get(src)); return undefined; }
@@ -188,12 +203,15 @@ function ImageMsg({ src, caption }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  if (!blobUrl) return <div className="wib-media-ph">{failed ? 'Photo unavailable' : 'Loading photo…'}</div>;
+  if (failed) return <div className="wib-media-ph">Photo unavailable</div>;
+  if (!blobUrl) return <MediaSkeleton kind="photo" />;
   return (
     <>
       <div>
-        <button type="button" className="wib-img-btn" onClick={() => setOpen(true)} aria-label="Open photo">
-          <img src={blobUrl} alt={caption || 'Photo from chat'} className="wib-img" />
+        {!loaded && <MediaSkeleton kind="photo" />}
+        <button type="button" className={`wib-img-btn${loaded ? '' : ' is-loading'}`} onClick={() => setOpen(true)} aria-label="Open photo">
+          <img ref={imgRef} src={blobUrl} alt={caption || 'Photo from chat'} className="wib-img"
+            onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
         </button>
         {caption && <div className="wib-media-caption">{caption}</div>}
       </div>
@@ -216,7 +234,8 @@ function VideoMsg({ src, caption }) {
     fetchMediaBlob(src).then((u) => { if (!cancelled) setBlobUrl(u); }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
   }, [src]);
-  if (!blobUrl) return <div className="wib-media-ph wib-media-ph--wide">{failed ? 'Video expired' : 'Loading video…'}</div>;
+  if (failed) return <div className="wib-media-ph wib-media-ph--wide">Video expired</div>;
+  if (!blobUrl) return <MediaSkeleton kind="video" />;
   return (
     <div className="wib-video">
       <video controls src={blobUrl} />

@@ -3,13 +3,16 @@ import { bundleService, brandService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from '../../../components/Dashboard/primitives';
 import { Badge, Select, Input, Switch } from '../../../components/ui';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true };
 
 export default function PackPricingManager() {
   const [brands, setBrands] = useState([]);
+  const [brandsLoaded, setBrandsLoaded] = useState(false);
   const [brandId, setBrandId] = useState(1);
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [productId, setProductId] = useState('');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState([]);
@@ -21,7 +24,8 @@ export default function PackPricingManager() {
   useEffect(() => {
     brandService.getAllBrands(true)
       .then((r) => { if (r?.success && Array.isArray(r.data)) setBrands(r.data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setBrandsLoaded(true));
   }, []);
 
   const brandSlug = useMemo(() => (brands.find((b) => b.id === brandId)?.slug) || '', [brands, brandId]);
@@ -30,7 +34,8 @@ export default function PackPricingManager() {
   useEffect(() => {
     let alive = true;
     setProductId(''); setItems([]); setForm(emptyForm); setEditing(null);
-    if (!brandSlug) { setProducts([]); return; }
+    if (!brandSlug) { setProducts([]); if (brandsLoaded) setProductsLoading(false); return undefined; }
+    setProductsLoading(true);
     productService.getAllProducts(1, 1000, '', null, false, brandSlug, true)
       .then((res) => {
         const list = res?.products || res?.data?.products || res?.data || (Array.isArray(res) ? res : []);
@@ -44,9 +49,10 @@ export default function PackPricingManager() {
         });
         if (alive) setProducts(active);
       })
-      .catch(() => { if (alive) setProducts([]); });
+      .catch(() => { if (alive) setProducts([]); })
+      .finally(() => { if (alive) setProductsLoading(false); });
     return () => { alive = false; };
-  }, [brandSlug]);
+  }, [brandSlug, brandsLoaded]);
 
   const selectedProduct = useMemo(
     () => products.find((p) => String(p.id) === String(productId)) || null,
@@ -74,7 +80,9 @@ export default function PackPricingManager() {
       setLoading(false);
     }
   };
-  useEffect(() => { reload(); }, [productId, brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A different product: drop the old product's packs so its rows don't show
+  // under the new name — the table draws skeleton rows until they arrive.
+  useEffect(() => { setItems([]); reload(); }, [productId, brandId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => { setEditing(null); setForm({ ...emptyForm }); };
   const openEdit = (t) => {
@@ -172,6 +180,12 @@ export default function PackPricingManager() {
       <div className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-4)', maxWidth: 880 }}>
         <FilterBar search={search} onSearchChange={setSearch} placeholder="Search products by name…">
           <div style={{ flex: '1 1 320px', minWidth: 240 }}>
+            {productsLoading ? (
+              <div role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading products…</span>
+                <Skeleton w="100%" h={38} r={10} />
+              </div>
+            ) : (
             <Select
               value={productId}
               onChange={(v) => setProductId(v)}
@@ -181,6 +195,7 @@ export default function PackPricingManager() {
               }))}
               placeholder={products.length ? 'Select a product…' : 'No products for this brand'}
             />
+            )}
           </div>
         </FilterBar>
         {selectedProduct && (
@@ -236,9 +251,12 @@ export default function PackPricingManager() {
             </div>
             <ResponsiveTable
               columns={packColumns}
-              data={loading ? [] : sortedItems}
+              data={sortedItems}
               rowKey="id"
-              emptyMessage={loading ? 'Loading…' : 'No packs for this product yet. Add one above — e.g. 2 pairs for ₹499, 3 pairs for ₹699.'}
+              loading={loading}
+              loadingLabel="Loading packs…"
+              skeletonRows={3}
+              emptyMessage={'No packs for this product yet. Add one above — e.g. 2 pairs for ₹499, 3 pairs for ₹699.'}
             />
           </Panel>
         </>
@@ -251,7 +269,7 @@ export default function PackPricingManager() {
 const emptyMix = { id: null, pairs: 2, discount_percent: '', label: '', badge: '', display_order: 0, is_active: true };
 function BuildYourPackPanel({ brandId }) {
   const [tiers, setTiers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyMix);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -266,7 +284,8 @@ function BuildYourPackPanel({ brandId }) {
       showError('loadFailed', typeof err === 'string' ? err : err.message);
     } finally { setLoading(false); }
   };
-  useEffect(() => { reload(); }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Another brand: clear its tiers so the old brand's rows don't linger.
+  useEffect(() => { setTiers([]); reload(); }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openEdit = (t) => { setEditing(t); setForm({ id: t.id, pairs: t.pairs, discount_percent: t.discount_percent != null ? String(Number(t.discount_percent)) : '', label: t.label || '', badge: t.badge || '', display_order: t.display_order, is_active: t.is_active }); };
 
@@ -340,8 +359,9 @@ function BuildYourPackPanel({ brandId }) {
         </div>
       </form>
       <Panel>
-        <ResponsiveTable columns={columns} data={loading ? [] : sorted} rowKey="id"
-          emptyMessage={loading ? 'Loading…' : 'No pack tiers yet. Add e.g. 2 items → 10%, 3 → 15%, 4 → 20%.'} />
+        <ResponsiveTable columns={columns} data={sorted} rowKey="id"
+          loading={loading} loadingLabel="Loading pack tiers…" skeletonRows={3}
+          emptyMessage={'No pack tiers yet. Add e.g. 2 items → 10%, 3 → 15%, 4 → 20%.'} />
       </Panel>
     </div>
   );

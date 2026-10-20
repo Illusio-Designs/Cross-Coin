@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import Loader from '../../../components/common/Loader';
+import { SkeletonKpis, SkeletonTableRows } from '../../../components/ui';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { systemHealthService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -267,7 +267,21 @@ export default function SystemHealth() {
       />
 
       {isLoading ? (
-        <div className="rep-panel rep-state"><Loader /></div>
+        <>
+          <SkeletonKpis count={4} label="Loading system health…" className="sh-tiles" />
+          <section className="rep-panel rep-panel--flush" aria-hidden="true">
+            <div className="rep-ph">
+              <h3>Scheduled jobs</h3>
+              <span className="hint">India time · click a job for its last 10 runs</span>
+            </div>
+            <div className="rep-tbl-wrap">
+              <table className="rep-table sh-table">
+                <thead><tr><th>Job</th><th>Runs</th><th>Last run</th><th>Result</th><th>Next</th><th /></tr></thead>
+                <tbody><SkeletonTableRows rows={8} cols={6} /></tbody>
+              </table>
+            </div>
+          </section>
+        </>
       ) : error && !data ? (
         <div className="rep-panel rep-state sh-error">
           Couldn't load system health: {error.response?.data?.message || error.message || 'try again'}

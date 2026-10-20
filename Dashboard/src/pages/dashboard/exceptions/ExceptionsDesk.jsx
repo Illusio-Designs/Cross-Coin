@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import Loader from '../../../components/common/Loader';
+import { Skeleton, SkeletonList, SkeletonText } from '../../../components/ui/Skeleton';
 import { EmptyState } from '../../../components/Dashboard/primitives';
 import { exceptionsService, ndrService, returnService, orderService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -34,6 +34,25 @@ const errText = (e) => (e && (e.message || (typeof e === 'string' ? e : null))) 
 function goToView(view) {
   window.history.pushState({}, '', `/dashboard/${view}`);
   window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
+// Detail card while an item loads: title + subtitle bars, then the body.
+function DetailSkeleton() {
+  return (
+    <div className="exc-card" role="status" aria-busy="true">
+      <span className="ds-sr-only">Loading item…</span>
+      <div className="exc-dtitle" aria-hidden="true">
+        <Skeleton w="55%" h={18} />
+        <Skeleton w="35%" h={12} />
+      </div>
+      <SkeletonText lines={4} label="Loading item details…" />
+      <SkeletonText lines={3} label="Loading timeline…" />
+      <div className="exc-links" aria-hidden="true">
+        <Skeleton w={150} h={38} r={10} />
+        <Skeleton w={110} h={38} r={10} />
+      </div>
+    </div>
+  );
 }
 
 function CopyButton({ text, label = 'Copy' }) {
@@ -124,7 +143,7 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
               placeholder="Order, AWB, return no. or phone" aria-label="Search the queue" />
           </div>
           {list.isLoading ? (
-            <div className="exc-state"><Loader /></div>
+            <SkeletonList rows={8} label="Loading the queue…" />
           ) : list.error && !list.data ? (
             <div className="exc-state">
               <EmptyState title="Couldn’t load the queue" message={errText(list.error)}
@@ -170,10 +189,12 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
         </section>
 
         <aside className="exc-detail" ref={detailRef} aria-label="Selected item">
-          {!picked ? (
+          {!picked && list.isLoading ? (
+            <DetailSkeleton />
+          ) : !picked ? (
             <div className="exc-card exc-state">{items.length ? 'Pick an item on the left.' : 'Nothing selected.'}</div>
           ) : detail.isLoading ? (
-            <div className="exc-card exc-state"><Loader /></div>
+            <DetailSkeleton />
           ) : detail.error ? (
             <div className="exc-card exc-state">
               <EmptyState title="Couldn’t open this item" message={errText(detail.error)}

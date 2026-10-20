@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
-import { Switch } from '../ui';
+import { Switch, Skeleton, SkeletonForm, SkeletonList } from '../ui';
 import Dropdown from '../ui/Dropdown';
 import { showSuccess, showError } from '../../utils/toastNotification';
 
@@ -334,7 +334,7 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
               <span>WhatsApp didn’t answer just now, so some details are missing. ({String(health.error)})</span>
             </div>
           )}
-          <section className="wpb-health" aria-label="Connection health" aria-busy={healthLoading}>
+          <section className={`wpb-health${healthLoading && health ? ' is-stale' : ''}`} aria-label="Connection health" aria-busy={healthLoading}>
             {(healthLoading && !health ? [0, 1, 2, 3, 4] : tiles).map((t, i) => (
               <div key={t.label || i} className="wpb-kpi">
                 {t.label ? (
@@ -366,7 +366,12 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
               </label>
               <div className="wpb-field wpb-grow">
                 <span>Template</span>
-                {tplLoading ? <div className="wpb-input wpb-input--fake">Loading templates…</div>
+                {tplLoading && !templates.length ? (
+                  <div className="wpb-input wpb-input--fake" role="status" aria-busy="true">
+                    <span className="wpb-sr">Loading templates…</span>
+                    <Skeleton w="60%" h={12} />
+                  </div>
+                )
                   : tplErr ? <div className="wpb-input wpb-input--fake t-danger">{tplErr} <button type="button" className="wpb-link" onClick={loadTemplates}>Retry</button></div>
                   : tplOptions.length === 0 ? <div className="wpb-input wpb-input--fake">No approved templates yet</div>
                   : <Dropdown value={testTpl} onChange={(v) => { setTestTpl(v); setTestResult(null); }} options={tplOptions} placeholder="Pick a template" className="wpb-dd" />}
@@ -385,7 +390,7 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
           <section className="wpb-card wpb-form">
             <h2 className="wpb-h2">Replies when nobody’s online</h2>
             {settingsLoading && !saved ? (
-              <div className="wpb-skel-list">{[0, 1].map((i) => <div key={i} className="wpb-skel-row"><span /><span /></div>)}</div>
+              <SkeletonForm fields={3} label="Loading settings…" />
             ) : settingsErr && !saved ? (
               <State kind="error" title="Couldn’t load these settings" text={settingsErr} onRetry={loadSettings} />
             ) : (
@@ -445,14 +450,14 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
                 ))}
               </div>
             </div>
-            {failLoading ? (
-              <div className="wpb-skel-list">{[0, 1, 2].map((i) => <div key={i} className="wpb-skel-row"><span /><span /></div>)}</div>
+            {failLoading && failed.length === 0 ? (
+              <SkeletonList rows={3} className="wpb-list-sk" label="Loading failed sends…" />
             ) : failErr ? (
               <State kind="error" title="Couldn’t load failed sends" text={failErr} onRetry={loadFailed} />
             ) : failed.length === 0 ? (
               <State title="Nothing failed" text={`Every message in the last ${hours === 24 ? '24 hours' : '7 days'} went out.`} />
             ) : (
-              <ul className="wpb-list">
+              <ul className={`wpb-list${failLoading ? ' is-stale' : ''}`} aria-busy={failLoading || undefined}>
                 {failed.map((r, i) => {
                   const who = r.customer_name || r.name || r.customer_phone_masked || r.phone_masked || r.customer_phone || r.phone;
                   const what = r.what || r.label || [r.template_title || r.template_name || r.template || r.kind || r.type, who].filter(Boolean).join(' · ') || 'Message';
@@ -480,7 +485,10 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
             <h2 className="wpb-h2">Opt-out words</h2>
             <span className="wpb-hint">A customer who replies with one of these stops getting broadcasts and sales messages. Order updates still go out.</span>
             {settingsLoading && !saved ? (
-              <div className="wpb-skel-row"><span /></div>
+              <div className="wpb-words" role="status" aria-busy="true">
+                <span className="wpb-sr">Loading opt-out words…</span>
+                {[52, 74, 48, 88].map((w, i) => <Skeleton key={i} w={w} h={26} r={999} />)}
+              </div>
             ) : settingsErr && !saved ? (
               <State kind="error" title="Couldn’t load the words" text={settingsErr} onRetry={loadSettings} />
             ) : (
@@ -508,7 +516,7 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
               <State kind="error" title="Couldn’t load opted-out customers" text={optErr} onRetry={loadOpted} />
             ) : (
               <span className="wpb-opted-line">
-                {optLoading ? 'Counting opted-out customers…' : <><b>{num(opted.total)}</b> {opted.total === 1 ? 'customer' : 'customers'} opted out</>}
+                {optLoading ? <Skeleton w={190} h={12} className="wpb-sk-inline" /> : <><b>{num(opted.total)}</b> {opted.total === 1 ? 'customer' : 'customers'} opted out</>}
                 {!optLoading && opted.total > 0 && (
                   <> · <button type="button" className="wpb-link" aria-expanded={showOpted} onClick={() => setShowOpted((s) => !s)}>{showOpted ? 'hide list' : 'see list'}</button></>
                 )}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
-  Button, PageHeader, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, SkeletonRows,
+  Button, PageHeader, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState,
+  Skeleton, SkeletonKpis, SkeletonTableRows,
 } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { loyaltyService, userService, brandService } from '../../../services';
@@ -70,12 +71,25 @@ const ruleLines = (r) => [
   ['Expire after', `${num(r.expiryDays)} days`],
 ];
 
+const DIM = { opacity: 0.6, transition: 'opacity .15s' };
+
 // ── Rules ────────────────────────────────────────────────────────
 function RulesCard({ data, brandId, brandName, isAdmin, expiryJob, onSaved }) {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  if (!data) return <section className="pl-side-card"><b>How points work</b><SkeletonRows rows={2} label="Loading rules…" /></section>;
+  if (!data) {
+    return (
+      <section className="pl-side-card" role="status" aria-busy="true">
+        <b>How points work</b>
+        <span className="ds-sr-only">Loading rules…</span>
+        <div className="pl-rules" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => <div key={i}><Skeleton w={70 + (i % 2) * 20} h={12} /><Skeleton w={130 + (i % 3) * 20} h={12} /></div>)}
+        </div>
+        <Skeleton w="85%" h={10} />
+      </section>
+    );
+  }
   const r = data.rules;
   const start = () => { setErr(''); setForm(Object.fromEntries(RULE_FIELDS.map((f) => [f.key, String(r[f.key])]))); };
   const save = async () => {
@@ -199,10 +213,16 @@ function GiveTake({ brandId, formRef, onDone }) {
             <input ref={formRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)}
               placeholder="Search customer by name or phone" aria-label="Customer" autoComplete="off" />
             {(searching || results) && (
-              <ul className="pl-pick-list" aria-live="polite">
-                {searching && <li className="pl-faint pl-small">Searching…</li>}
+              <ul className="pl-pick-list" aria-live="polite" aria-busy={searching || undefined}
+                style={searching && results ? { opacity: 0.6, transition: 'opacity .15s' } : undefined}>
+                {searching && !results && [0, 1, 2].map((i) => (
+                  <li key={`sk-${i}`} className="pl-small" aria-hidden="true">
+                    <Skeleton w={['60%', '48%', '55%'][i]} h={12} /><Skeleton w="35%" h={10} style={{ marginTop: 5 }} />
+                  </li>
+                ))}
+                {searching && !results && <li className="ds-sr-only" role="status">Searching…</li>}
                 {!searching && results && results.length === 0 && <li className="pl-faint pl-small">No customer accounts match. Guests who never signed up can’t hold points.</li>}
-                {!searching && (results || []).map((r) => (
+                {(results || []).map((r) => (
                   <li key={r.key}>
                     <button type="button" onClick={() => pick(r)}>
                       <b>{r.name || 'Customer'}</b>
@@ -217,7 +237,12 @@ function GiveTake({ brandId, formRef, onDone }) {
           <div className="pl-picked">
             <span>
               <b>{picked.name || 'Customer'}</b>
-              <span className="pl-faint pl-small">{[picked.contact, picked.points == null ? 'loading balance…' : `${num(picked.points)} points now`].filter(Boolean).join(' · ')}</span>
+              <span className="pl-faint pl-small">
+                {[picked.contact, picked.points == null ? null : `${num(picked.points)} points now`].filter(Boolean).join(' · ')}
+                {picked.points == null && !err && (
+                  <>{picked.contact ? ' · ' : ''}<Skeleton w={84} h={10} style={{ display: 'inline-block', verticalAlign: 'middle' }} /><span className="ds-sr-only">Loading balance…</span></>
+                )}
+              </span>
             </span>
             <button type="button" className="pl-link" onClick={reset}>Change</button>
           </div>
@@ -258,9 +283,11 @@ export default function Loyalty() {
   useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 350); return () => clearTimeout(t); }, [search]);
   useEffect(() => { setPage(1); }, [tab, brandId, q]);
 
+  // A brand change keeps the old totals on screen (dimmed) until the new ones land.
   const summary = useQuery({
     queryKey: ['loyalty', 'summary', brandId],
     queryFn: () => loyaltyService.summary(brandId),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
   });
   const params = { tab, page, limit: PAGE_SIZE, ...(q ? { q } : {}), ...(brandId ? { brandId } : {}) };
@@ -298,13 +325,17 @@ export default function Loyalty() {
 
       {summary.error && !s ? (
         <ErrorState message={`Couldn’t load the points totals — ${summary.error.message}`} onRetry={() => summary.refetch()} retrying={summary.isFetching} />
+      ) : !s ? (
+        <SkeletonKpis count={4} label="Loading points totals…" className="pl-kpis" />
       ) : (
-        <KpiGrid className="pl-kpis">
-          <KpiTile label="Points out there" value={s ? num(s.outstanding.points) : '–'} sub={s ? `worth ${inr(s.outstanding.value)} at checkout` : 'loading…'} />
-          <KpiTile label="Earned · 30 d" value={s ? num(s.earned30.points) : '–'} sub={s ? `on ${plural(s.earned30.orders, 'delivered order')}` : ''} />
-          <KpiTile label="Spent · 30 d" value={s ? num(s.spent30.points) : '–'} sub={s ? (s.spent30.times ? `${plural(s.spent30.times, 'time')}` : 'none in 30 days') : ''} />
-          <KpiTile label="Customers with points" value={s ? num(s.customers.withPoints) : '–'} sub={s ? `${num(s.customers.canRedeem100)} have 100+` : ''} />
-        </KpiGrid>
+        <div style={summary.isPlaceholderData ? DIM : undefined} aria-busy={summary.isPlaceholderData || undefined}>
+          <KpiGrid className="pl-kpis">
+            <KpiTile label="Points out there" value={num(s.outstanding.points)} sub={`worth ${inr(s.outstanding.value)} at checkout`} />
+            <KpiTile label="Earned · 30 d" value={num(s.earned30.points)} sub={`on ${plural(s.earned30.orders, 'delivered order')}`} />
+            <KpiTile label="Spent · 30 d" value={num(s.spent30.points)} sub={s.spent30.times ? `${plural(s.spent30.times, 'time')}` : 'none in 30 days'} />
+            <KpiTile label="Customers with points" value={num(s.customers.withPoints)} sub={`${num(s.customers.canRedeem100)} have 100+`} />
+          </KpiGrid>
+        </div>
       )}
 
       <div className="pl-split">
@@ -317,9 +348,17 @@ export default function Loyalty() {
                 placeholder="Customer name, phone or order" aria-label="Search customer" />
             </label>
           </div>
-          <div id="pl-loy-list">
+          <div id="pl-loy-list" style={list.isFetching && list.data ? DIM : undefined}>
             {list.isLoading ? (
-              <SkeletonRows rows={6} label="Loading points history…" />
+              <div className="pl-scroll" role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading points history…</span>
+                <table className="pl-table pl-table--loy" aria-hidden="true">
+                  <thead>
+                    <tr><th>Customer</th><th>What happened</th><th>Order</th><th className="r">Points</th><th className="r">Balance</th><th>When</th></tr>
+                  </thead>
+                  <tbody><SkeletonTableRows rows={8} cols={6} /></tbody>
+                </table>
+              </div>
             ) : list.error && !list.data ? (
               <ErrorState message={`Couldn’t load the points history — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
             ) : rows.length === 0 ? (
@@ -368,7 +407,12 @@ export default function Loyalty() {
 
           <section className="pl-side-card pl-side-card--warn" aria-labelledby="pl-exp-h">
             <b id="pl-exp-h" className="pl-warn-title">Expiring in the next 30 days</b>
-            {!s ? <SkeletonRows rows={1} label="Loading…" /> : s.expiring30.points > 0 ? (
+            {!s ? (
+              <div className="sk-text" role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading expiring points…</span>
+                <Skeleton w="92%" h={12} /><Skeleton w="60%" h={12} />
+              </div>
+            ) : s.expiring30.points > 0 ? (
               <>
                 <span className="pl-small"><b>{num(s.expiring30.points)} points</b> for <b>{plural(s.expiring30.customers, 'customer')}</b>. A WhatsApp reminder can bring them back to order before they lose them.</span>
                 <Button size="sm" onClick={() => goTo('/dashboard/whatsapp#broadcast-new')}>Send a reminder broadcast</Button>

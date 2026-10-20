@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import Loader from '../../../components/common/Loader';
 import { orderService, trafficReportService, brandService } from '../../../services';
-import { DateRangePicker } from '../../../components/ui';
+import { DateRangePicker, Skeleton, SkeletonKpis, SkeletonTableRows } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { showSuccess, showError } from '../../../utils/toastNotification';
@@ -101,6 +100,18 @@ const Bar = ({ name, right, pct, color = RAMP[0] }) => (
   </div>
 );
 
+/* First-load placeholder for a bar list: name + value line over a track. */
+const SkBars = ({ rows = 5 }) => (
+  <div className="rep-bars" aria-hidden="true">
+    {Array.from({ length: rows }, (_, i) => (
+      <div key={i} className="rep-bar-row">
+        <div className="rep-bar-top"><Skeleton w={`${40 + (i % 3) * 12}%`} h={12} /><Skeleton w={64} h={12} /></div>
+        <Skeleton w="100%" h={8} r={5} />
+      </div>
+    ))}
+  </div>
+);
+
 const Empty = ({ cols, text }) => (
   <tr><td colSpan={cols} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>{text}</td></tr>
 );
@@ -193,6 +204,12 @@ export default function Reports() {
     { label: 'Units RTO', value: (p) => p.rtoUnits },
   ], topProducts);
 
+  // First load (nothing to show yet) → skeletons in place of each section.
+  // A date-range / brand change keeps the old figures on screen, dimmed.
+  const first = isLoading && !data;
+  const refreshing = isFetching && !!data;
+  const dim = refreshing ? { opacity: 0.6, transition: 'opacity .15s' } : undefined;
+
   const flow = [
     { name: 'Waiting for COD call', v: s.toConfirm, c: RAMP[3] },
     { name: 'To ship / in transit', v: (s.inPipeline || 0) - (s.toConfirm || 0) - (s.problems || 0), c: RAMP[2] },
@@ -233,13 +250,59 @@ export default function Reports() {
         }
       />
 
-      {isLoading ? (
-        <div className="rep-state"><Loader /></div>
+      {first ? (
+        <>
+          <SkeletonKpis count={4} label="Loading the report…" />
+          <div className="rep-panel" aria-hidden="true">
+            <div className="rep-ph"><h3>Booked value per day</h3><span className="hint">orders placed (not cancelled), India days</span></div>
+            <Skeleton w="100%" h={180} r={10} />
+            <div className="rep-legend" style={{ marginTop: 12 }}>
+              {[0, 1, 2].map((i) => <div key={i} className="rep-leg"><div style={{ flex: 1 }}><Skeleton w="55%" h={16} /><Skeleton w="70%" h={10} style={{ marginTop: 4 }} /></div></div>)}
+            </div>
+          </div>
+          <div className="rep-masonry" aria-hidden="true">
+            <div className="rep-panel"><div className="rep-ph"><h3>Where the orders are now</h3></div><SkBars rows={5} /></div>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Rates</h3></div>
+              <div className="rep-tiles">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="rep-tile"><Skeleton w="50%" h={10} /><Skeleton w="45%" h={18} style={{ marginTop: 7 }} /><Skeleton w="70%" h={10} style={{ marginTop: 6 }} /></div>
+                ))}
+              </div>
+            </div>
+            {[
+              ['COD vs prepaid', ['', 'Orders', 'Delivered', 'Delivered value', 'RTO', 'RTO %'], 2],
+              ...(!brandId ? [['By brand', ['Brand', 'Booked', 'Delivered', 'Net sales', 'RTO %', 'Return %'], 4]] : []),
+              ['Top products', ['#', 'Product', 'Units', 'Value', 'Delivered', 'Back'], 6],
+              ['RTO by courier', ['Courier', 'Delivered', 'RTO', 'RTO %'], 4],
+            ].map(([title, cols, rows]) => (
+              <div key={title} className="rep-panel rep-panel--flush">
+                <div className="rep-ph"><h3>{title}</h3></div>
+                <div className="rep-tbl-wrap">
+                  <table className="rep-table">
+                    <thead><tr>{cols.map((c, i) => <th key={i} className={i ? 'r' : undefined}>{c}</th>)}</tr></thead>
+                    <tbody><SkeletonTableRows rows={rows} cols={cols.length} /></tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+            <div className="rep-panel"><div className="rep-ph"><h3>RTO by state</h3></div><SkBars rows={5} /></div>
+            <div className="rep-panel rep-panel--flush">
+              <div className="rep-ph"><h3>Returns by reason</h3></div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead><tr><th>Reason</th><th className="r">Returns</th><th className="r">Refunded</th><th className="r">Refund value</th></tr></thead>
+                  <tbody><SkeletonTableRows rows={4} cols={4} /></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </>
       ) : error ? (
         <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Couldn't load the report: {error.message || 'try again'}</div>
       ) : !data ? null : (
         <>
-          <div className="rep-kpis">
+          <div className="rep-kpis" style={dim} aria-busy={refreshing || undefined}>
             <div className="rep-kpi">
               <div className="rep-kl">Net sales</div>
               <div className="rep-kv num">{money(s.netSales)}</div>
@@ -262,12 +325,12 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="rep-panel">
+          <div className="rep-panel" style={dim} aria-busy={refreshing || undefined}>
             <div className="rep-ph"><h3>Booked value per day</h3><span className="hint">orders placed (not cancelled), India days</span></div>
             <DailyTrend daily={data.daily} from={from} to={to} />
           </div>
 
-          <div className="rep-masonry">
+          <div className="rep-masonry" style={dim} aria-busy={refreshing || undefined}>
             <div className="rep-panel">
               <div className="rep-ph"><h3>Where the orders are now</h3><span className="hint">{num(placed)} placed in this period</span></div>
               <div className="rep-bars">

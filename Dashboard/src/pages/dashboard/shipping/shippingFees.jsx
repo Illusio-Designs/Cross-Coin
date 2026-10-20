@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, SkeletonRows } from "../../../components/ui";
+import { PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows } from "../../../components/ui";
 import Dropdown from "../../../components/ui/Dropdown";
 import { shippingFeeService, orderService } from "../../../services";
 import { showSuccess, showError } from "../../../utils/toastNotification";
@@ -267,7 +267,13 @@ function CourierLog({ summary, brands, logRef }) {
       </div>
 
       {isLoading ? (
-        <SkeletonRows rows={5} label="Loading courier updates…" />
+        <div className="rep-tbl-wrap oss-tbl" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading courier updates…</span>
+          <table className="rep-table" aria-hidden="true">
+            <thead><tr><th>When</th><th>AWB · order</th><th>Courier said</th><th>We did</th><th /></tr></thead>
+            <tbody><SkeletonTableRows rows={8} cols={5} /></tbody>
+          </table>
+        </div>
       ) : error && !data ? (
         <ErrorState message={`Couldn’t load courier updates — ${error?.message || "the server didn’t answer"}.`} onRetry={refetch} retrying={isFetching} />
       ) : rows.length === 0 ? (
@@ -278,7 +284,7 @@ function CourierLog({ summary, brands, logRef }) {
           description={q ? "Try the full AWB or order number." : filter === "all" ? "Once iThink sends a status, it shows here within seconds." : (brandId ? "For this brand." : "")}
         />
       ) : (
-        <div className={`rep-tbl-wrap oss-tbl${isFetching ? " is-busy" : ""}`} id="courier-updates-table">
+        <div className={`rep-tbl-wrap oss-tbl${isFetching ? " is-busy" : ""}`} id="courier-updates-table" aria-busy={isFetching || undefined}>
           <table className="rep-table">
             <thead><tr><th>When</th><th>AWB · order</th><th>Courier said</th><th>We did</th><th aria-label="Actions" /></tr></thead>
             <tbody>
@@ -358,7 +364,26 @@ export default function ShippingFees({ focus }) {
       <PageHeader title="Shipping & courier" description="What shoppers pay for delivery on each store, and what the courier is telling us." />
 
       {isLoading ? (
-        <SkeletonRows rows={4} label="Loading delivery fees…" />
+        <>
+          <section className="oss-cards" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading delivery fees…</span>
+            {[0, 1, 2].map((i) => (
+              <article key={i} className="oss-card oss-fee" aria-hidden="true">
+                <header className="oss-card-head"><Skeleton w={110 + i * 20} h={15} style={{ marginRight: "auto" }} /><Skeleton w={48} h={26} r={8} /></header>
+                <dl className="oss-kv">
+                  {["Prepaid delivery", "COD delivery", "COD free over", "COD allowed up to"].map((k) => (
+                    <Fragment key={k}><dt>{k}</dt><dd><Skeleton w={70} h={12} style={{ marginLeft: "auto" }} /></dd></Fragment>
+                  ))}
+                </dl>
+                <div className="oss-shopper">
+                  <span className="oss-label">Shopper sees</span>
+                  <Skeleton w="85%" h={11} /><Skeleton w="65%" h={11} />
+                </div>
+              </article>
+            ))}
+          </section>
+          <SkeletonKpis count={3} label="Loading courier status…" className="oss-tiles" />
+        </>
       ) : error && !data ? (
         <ErrorState message={`Couldn’t load delivery fees — ${error?.message || "the server didn’t answer"}.`} onRetry={refetch} retrying={isFetching} />
       ) : (

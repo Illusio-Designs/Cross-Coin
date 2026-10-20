@@ -113,6 +113,8 @@
 .wpb-skel-row span + span { width: 85%; height: 10px; }
 .wpb-skel-inline { height: 22px; width: 90px; max-width: 100%; }
 .wpb-skel-inline--sm { height: 10px; width: 70px; }
+.wpb-sk-inline { display: inline-block; vertical-align: middle; }
+.wpb-list-sk .sk-list__row { padding: 9px 0; }
 .wpb-skel-block { height: 220px; }
 @media (prefers-reduced-motion: reduce) { .wpb-skel-row span, .wpb-skel-inline, .wpb-skel-block { animation: none; } }
 

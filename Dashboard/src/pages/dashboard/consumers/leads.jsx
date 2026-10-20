@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { leadService } from '../../../services';
 import { PageHeader, FilterBar, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge, Button, Select } from '../../../components/ui';
+import { Badge, Button, Select, Skeleton } from '../../../components/ui';
 
 /**
  * Leads & grievances — popup phone leads + contact-form messages
@@ -165,14 +165,20 @@ export default function Leads() {
       </Panel>
 
       {error && <p style={{ ...S.hint, color: 'var(--ds-color-danger,#dc2626)' }}>{error}</p>}
-      <div style={S.count}>{filtered.length} {filtered.length === 1 ? 'row' : 'rows'}{isFiltered && ` (of ${leads.length})`}</div>
+      {loading && !leads.length ? <Skeleton w={64} h={12} /> : (
+        <div style={S.count}>{filtered.length} {filtered.length === 1 ? 'row' : 'rows'}{isFiltered && ` (of ${leads.length})`}</div>
+      )}
 
       <Panel flush>
         <ResponsiveTable
           columns={columns}
           data={filtered}
           rowKey="id"
-          emptyMessage={loading ? 'Loading leads…' : 'No rows.'}
+          // First load → skeleton rows; Refresh keeps the rows (dimmed).
+          loading={loading && (!leads.length || filtered.length > 0)}
+          loadingLabel="Loading leads…"
+          skeletonRows={8}
+          emptyMessage="No rows."
         />
       </Panel>
     </div>

@@ -17,5 +17,6 @@ export { default as KpiTile, KpiGrid } from './KpiTile';
 export { default as FilterChips } from './FilterChips';
 export { default as SidePanel } from './SidePanel';
 export { default as SkeletonRows } from './SkeletonRows';
+export { default as Skeleton, SkeletonText, SkeletonKpis, SkeletonTable, SkeletonTableRows, SkeletonCards, SkeletonList, SkeletonForm, SkeletonPage } from './Skeleton';
 export { default as useFocusTrap } from './useFocusTrap';
 export { default as PageHeader } from '../Dashboard/primitives/PageHeader';

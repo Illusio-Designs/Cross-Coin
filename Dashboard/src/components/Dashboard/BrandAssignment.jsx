@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowUp01Icon, ArrowDown01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Skeleton } from '../ui/Skeleton';
 
 const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) => {
     const [brands, setBrands] = useState([]);
@@ -44,7 +45,12 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
             >
                 <div className="ba-selected-tags">
                     {loading ? (
-                        <span className="ba-placeholder">Loading brands…</span>
+                        // Tag-shaped placeholders where the chosen brands appear.
+                        <span role="status" aria-busy="true" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                            <span className="ds-sr-only">Loading brands…</span>
+                            <Skeleton w={84} h={22} r={999} />
+                            <Skeleton w={64} h={22} r={999} />
+                        </span>
                     ) : selected.length === 0 ? (
                         <span className="ba-placeholder">Select brands…</span>
                     ) : selected.map(b => (
@@ -63,7 +69,12 @@ const BrandAssignment = ({ selectedBrands = [], onChange, disabled = false }) =>
 
             {open && (
                 <div className="ba-dropdown">
-                    {brands.length === 0 ? (
+                    {loading && brands.length === 0 ? (
+                        <div role="status" aria-busy="true" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12 }}>
+                            <span className="ds-sr-only">Loading brands…</span>
+                            {[0, 1, 2].map((i) => <Skeleton key={i} w={`${70 - i * 12}%`} h={14} />)}
+                        </div>
+                    ) : brands.length === 0 ? (
                         <div className="ba-empty">No brands available</div>
                     ) : brands.map(b => {
                         const checked = selectedBrands.map(Number).includes(Number(b.id));

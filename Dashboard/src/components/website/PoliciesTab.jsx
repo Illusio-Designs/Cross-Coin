@@ -7,7 +7,8 @@ import { policyService, websiteService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { WebBody, WebGridState, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
+import { Skeleton } from '../ui/Skeleton';
+import { WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
 import { useLoad, errText, fmtDay, siteUrl, siteBase, policyPath, brandLabel } from './webUtil';
 
 const Editor = dynamic(() => import('../common/Editor'), {
@@ -53,9 +54,10 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
   const [gstin, setGstin] = useState('');
   const [gstinSaved, setGstinSaved] = useState('');
   const [gstinBusy, setGstinBusy] = useState(false);
+  const [gstinReady, setGstinReady] = useState(false);
 
   useEffect(() => {
-    policyService.getCompanyInfo().then((r) => { setGstin(r?.gstin || ''); setGstinSaved(r?.gstin || ''); }).catch(() => {});
+    policyService.getCompanyInfo().then((r) => { setGstin(r?.gstin || ''); setGstinSaved(r?.gstin || ''); }).catch(() => {}).finally(() => setGstinReady(true));
   }, []);
   const saveGstin = async () => {
     setGstinBusy(true);
@@ -139,7 +141,7 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
         </>
       ))}
     >
-      {form && form.loading && <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>}
+      {form && form.loading && <WebPanelSkeleton fields={2} editor label="Loading policy…" />}
       {form && !form.loading && (
         <>
           {row && (
@@ -174,17 +176,20 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
       <div className="web-gstin">
         <label htmlFor="po-gstin" className="web-label">Company GSTIN <span className="web-muted">— one value for every store, fills {'{{GSTIN}}'} in policies</span></label>
         <div className="web-inline">
-          <input id="po-gstin" className="web-input web-mono" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="24ABCDE1234F1Z5" maxLength={32} />
-          <button type="button" className="web-btn" onClick={saveGstin} disabled={gstinBusy || gstin.trim() === gstinSaved}>{gstinBusy ? 'Saving…' : 'Save GSTIN'}</button>
+          {gstinReady
+            ? <input id="po-gstin" className="web-input web-mono" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="24ABCDE1234F1Z5" maxLength={32} />
+            : <Skeleton className="web-gstin-sk" h={38} r={10} />}
+          <button type="button" className="web-btn" onClick={saveGstin} disabled={!gstinReady || gstinBusy || gstin.trim() === gstinSaved}>{gstinBusy ? 'Saving…' : 'Save GSTIN'}</button>
         </div>
       </div>
       <WebBody panel={panel}>
         <WebGridState
           loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+          grid="web-grid web-grid--text" media={null} label="Loading policies…"
           empty={<EmptyState title={q ? 'No policies match' : 'No policies yet'} description={q ? 'Try another search.' : 'Add returns, shipping, privacy and terms — every store needs them.'} action={!q ? <button type="button" className="web-btn web-btn--primary" onClick={openNew}>+ New policy</button> : null} />}
         />
-        {!list.loading && !list.error && items.length > 0 && (
-          <div className="web-grid web-grid--text">
+        {!list.error && items.length > 0 && (
+          <div className={`web-grid web-grid--text${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
             {items.map((p) => {
               const check = p.return_check ? returnLine(p.return_check.mentions, p.return_check.window_days) : null;
               return (

@@ -22,7 +22,7 @@ import StatusPill from '../ui/StatusPill';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
 import ErrorState from '../ui/ErrorState';
-import { Select } from '../ui';
+import { Select, Skeleton, SkeletonForm, SkeletonList, SkeletonTableRows } from '../ui';
 import SerpPreview, { brandSiteName } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
 import { richHtml } from '../../utils/sanitizeHtml';
@@ -77,7 +77,19 @@ export default function SeoPage({ initialTab = 'fix' }) {
   };
   const fixPage = (name) => { pickTab('pages'); setOpenPage(name); };
 
-  if (authLoading) return <div className="dashboard-sections web seo"><div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div></div>;
+  if (authLoading) {
+    return (
+      <div className="dashboard-sections web seo">
+        <header className="web-head">
+          <div className="web-head-text">
+            <h1 className="web-title">SEO</h1>
+            <p className="web-sub">How each store shows up on Google. Fix what’s missing, write the FAQs, and fill in the store’s details once.</p>
+          </div>
+        </header>
+        <ScoreSkeleton />
+      </div>
+    );
+  }
   if (!canSeo) {
     return (
       <div className="dashboard-sections web seo">
@@ -132,9 +144,19 @@ export default function SeoPage({ initialTab = 'fix' }) {
 }
 
 // ─── Score strip ─────────────────────────────────────────────────────────────
+function ScoreSkeleton() {
+  return (
+    <div className="seo-kpis" role="status" aria-busy="true">
+      <span className="ds-sr-only">Loading the SEO score…</span>
+      {[0, 1, 2, 3, 4].map((i) => <span key={i} className="seo-kpi seo-kpi--skel" aria-hidden="true" />)}
+    </div>
+  );
+}
+
 function Score({ o, loading, error, onRetry, onGo }) {
   if (error) return <ErrorState message={`Couldn't load the SEO score — ${error}`} onRetry={onRetry} />;
-  if (loading || !o) return <div className="seo-kpis" aria-busy="true">{[0, 1, 2, 3, 4].map((i) => <span key={i} className="seo-kpi seo-kpi--skel" />)}</div>;
+  // Skeleton only before the first answer; a store switch keeps the old strip, dimmed.
+  if (!o) return <ScoreSkeleton />;
   const score = o.score;
   const tone = score == null ? 'none' : score >= 80 ? 'good' : score >= 50 ? 'ok' : 'low';
   const tiles = [
@@ -144,7 +166,7 @@ function Score({ o, loading, error, onRetry, onGo }) {
     { label: 'FAQs', value: `${n(o.faqs.live)} live`, p: o.faqs.live ? 100 : 0, note: o.faqs.on.length ? `On ${o.faqs.on.join(' and ')}` : 'None yet — add 3 to 5 for the whole site', warn: !o.faqs.live, go: 'faqs', info: true },
   ];
   return (
-    <section className="seo-kpis" aria-label="SEO health">
+    <section className={`seo-kpis${loading ? ' is-stale' : ''}`} aria-label="SEO health" aria-busy={loading || undefined}>
       <div className="seo-kpi seo-kpi--score">
         <span className={`seo-ring seo-ring--${tone}`} style={{ '--p': `${score ?? 0}%` }}><b>{score ?? '–'}</b></span>
         <span className="seo-kpi-text">
@@ -167,6 +189,7 @@ function Score({ o, loading, error, onRetry, onGo }) {
 
 // ─── To fix ──────────────────────────────────────────────────────────────────
 const TYPE_LABEL = { product: 'Product', category: 'Category', page: 'Page', blog: 'Blog post' };
+const FIX_HEAD = <thead><tr><th>What</th><th>Type</th><th>Missing</th><th className="num">Sold · 30 days</th><th aria-label="Action" /></tr></thead>;
 
 function ToFix({ o, loading, error, q, onRetry, onFixPage }) {
   const rows = useMemo(() => {
@@ -176,7 +199,22 @@ function ToFix({ o, loading, error, q, onRetry, onFixPage }) {
   }, [o, q]);
   const productCount = (o?.issues || []).filter((r) => r.type === 'product').length;
   if (error) return null; // the score strip already shows the error with Retry
-  if (loading) return <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>;
+  if (!o) {
+    return (
+      <section className="seo-card">
+        <div className="seo-card-head">
+          <span className="seo-card-title"><b>What Google is missing</b><span>Best sellers first. Each item still shows on Google using the store’s defaults; its own title and description do better.</span></span>
+        </div>
+        <div className="seo-table-wrap" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading what to fix…</span>
+          <table className="seo-table" aria-hidden="true">
+            {FIX_HEAD}
+            <tbody><SkeletonTableRows rows={6} cols={5} /></tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
 
   const fix = (r) => {
     if (r.type === 'product') goToView('products', `edit=${r.id}`);
@@ -186,7 +224,7 @@ function ToFix({ o, loading, error, q, onRetry, onFixPage }) {
   };
 
   return (
-    <section className="seo-card">
+    <section className={`seo-card${loading ? ' is-stale' : ''}`} aria-busy={loading || undefined}>
       <div className="seo-card-head">
         <span className="seo-card-title"><b>What Google is missing</b><span>Best sellers first. Each item still shows on Google using the store’s defaults; its own title and description do better.</span></span>
         {productCount > 0 && <button type="button" className="web-btn web-btn--primary" onClick={() => goToView('products', 'seo=1')}>Fix {n(productCount)} product{productCount === 1 ? '' : 's'} in bulk →</button>}
@@ -196,7 +234,7 @@ function ToFix({ o, loading, error, q, onRetry, onFixPage }) {
       ) : (
         <div className="seo-table-wrap">
           <table className="seo-table">
-            <thead><tr><th>What</th><th>Type</th><th>Missing</th><th className="num">Sold · 30 days</th><th aria-label="Action" /></tr></thead>
+            {FIX_HEAD}
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.type}-${r.id}`}>
@@ -369,6 +407,7 @@ function Pages({ brand, brandId, q, openName, onOpened, onChanged }) {
           <details className="web-details">
             <summary>Advanced: page name, canonical link, keywords, structured data</summary>
             <p className="web-hint">Leave these empty unless you know you need them — the store fills sensible defaults.</p>
+            {form.loading ? <SkeletonForm fields={4} label="Loading page details…" /> : (<>
             {form.original && (
               <WebField label="Page name" htmlFor="sp-name2">
                 <input id="sp-name2" className="web-input" value={form.page_name} onChange={(e) => set('page_name', e.target.value)} />
@@ -388,6 +427,7 @@ function Pages({ brand, brandId, q, openName, onOpened, onChanged }) {
             <WebField label="Structured data (JSON-LD)" htmlFor="sp-sd" error={form.structured_data && !isValidJson(form.structured_data) ? 'Not valid JSON — it won’t save until fixed.' : null}>
               <textarea id="sp-sd" className="web-input web-textarea web-mono" rows={7} value={form.structured_data} onChange={(e) => set('structured_data', e.target.value)} placeholder='{"@context":"https://schema.org","@type":"Organization"}' />
             </WebField>
+            </>)}
           </details>
           {formErr && <p className="web-form-err" role="alert">{formErr}</p>}
         </>
@@ -405,12 +445,12 @@ function Pages({ brand, brandId, q, openName, onOpened, onChanged }) {
             <button type="button" className="seo-chip-add" onClick={() => openNew('')}>+ Other page</button>
           </div>
           {list.error ? <ErrorState message={`Couldn't load the pages — ${list.error}`} onRetry={() => list.reload()} />
-            : list.loading || !brandId ? <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>
+            : (list.loading || !brandId) && !items.length ? <SkeletonList rows={6} className="seo-rows-sk" label="Loading pages…" />
               : !items.length ? <EmptyState title={q ? 'No pages match' : 'No page SEO yet'} description={q ? 'Try another search.' : 'Start with the home, shop and about pages — the buttons above fill in the page name.'} />
                 : items.map((r) => {
                   const on = form?.original === r.page_name;
                   return (
-                    <button key={r.id} type="button" className={`seo-row${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => openEdit(r)}>
+                    <button key={r.id} type="button" className={`seo-row${on ? ' is-on' : ''}${list.loading ? ' is-stale' : ''}`} aria-pressed={on} onClick={() => openEdit(r)}>
                       <span className="seo-row-main"><b>{titleCase(r.page_name)}</b><span>{r.meta_title || r.problem || 'No title yet'}</span></span>
                       <span className="seo-row-side">
                         <span className="seo-len" title="Title · description length">{r.title_length} · {r.description_length}</span>
@@ -624,7 +664,12 @@ function Faqs({ brand, brandId, q, onChanged }) {
     <div className="web-body">
       <section className="web-main">
         {list.error ? <ErrorState message={`Couldn't load the FAQs — ${list.error}`} onRetry={() => list.reload()} />
-          : list.loading || !brandId ? <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>
+          : (list.loading || !brandId) && !all.length ? (
+            <div className="seo-card">
+              <div className="seo-card-head" aria-hidden="true"><Skeleton w={160} h={14} /><Skeleton w={96} h={30} r={10} /></div>
+              <SkeletonList rows={4} label="Loading FAQs…" />
+            </div>
+          )
             : !groups.length ? (
               <EmptyState
                 title={q ? 'No questions match' : 'No FAQs yet'}
@@ -636,7 +681,7 @@ function Faqs({ brand, brandId, q, onChanged }) {
                 {groups.map((g) => {
                   const [title, note] = groupTitle(g);
                   return (
-                    <div key={g.key} className="seo-card">
+                    <div key={g.key} className={`seo-card${list.loading ? ' is-stale' : ''}`}>
                       <div className="seo-card-head">
                         <span className="seo-card-title"><b>{title}</b><span>{note}</span></span>
                         <button type="button" className="web-btn web-btn--sm" onClick={() => openNew(presetFor(g))}>+ Question</button>
@@ -735,7 +780,25 @@ function StoreDetails({ brand, brandId }) {
   };
 
   if (load.error) return <ErrorState message={`Couldn't load the store details — ${load.error}`} onRetry={() => load.reload()} />;
-  if (load.loading || !brandId) return <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>;
+  if (load.loading || !brandId) {
+    // The sections are fixed — draw them with placeholder fields.
+    return (
+      <div className="web-body">
+        <section className="web-main seo-store-grid">
+          {SECTIONS.map((s) => (
+            <div key={s.title} className="seo-card seo-card--pad">
+              <span className="seo-sec-head"><b>{s.title}</b></span>
+              <span className="seo-sec-why">{s.why}</span>
+              <SkeletonForm fields={s.keys.length} label={`Loading ${s.title.toLowerCase()}…`} />
+            </div>
+          ))}
+        </section>
+        <aside className="seo-store-side" aria-hidden="true">
+          <Skeleton h={190} r={14} />
+        </aside>
+      </div>
+    );
+  }
 
   const name = v('SEO_ORGANIZATION_NAME') || brandLabel(brand);
   const initials = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();

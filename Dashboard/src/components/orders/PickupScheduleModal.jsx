@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, DateRangePicker } from '../ui';
+import { Skeleton } from '../ui/Skeleton';
 import { pickupScheduleService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 
@@ -12,6 +13,9 @@ const fmt = (s) => {
 // pickup). Auto-sync stamps each order with the next allowed pickup date.
 export default function PickupScheduleModal({ open, onClose }) {
   const [loading, setLoading] = useState(false);
+  // The schedule stays in state between opens, so only the very first load
+  // shows skeletons; re-opening keeps the last values while it refreshes.
+  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [weeklyOffDays, setWeeklyOffDays] = useState([0]);
   const [blockedRanges, setBlockedRanges] = useState([]);
@@ -34,7 +38,7 @@ export default function PickupScheduleModal({ open, onClose }) {
       setAffectedWarn(null);
     } catch (e) {
       showError(e?.response?.data?.message || 'Failed to load pickup schedule');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setLoaded(true); }
   }, []);
   useEffect(() => { if (open) load(); }, [open, load]);
 
@@ -72,19 +76,28 @@ export default function PickupScheduleModal({ open, onClose }) {
     } finally { setSaving(false); }
   };
 
+  const firstLoad = loading && !loaded;
   const lbl = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--ds-color-text-muted)', marginBottom: 8 };
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Pickup Schedule" closeOnOverlayClick={false}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 320, maxWidth: 440 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 320, maxWidth: 440 }} aria-busy={loading || undefined}>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
           One shared schedule for all stores. Orders are booked in a daily 11:00 AM IST batch so the courier picks them up the next working day; pickups skip Sundays and your blocked ranges (an order whose pickup would fall on a blocked day waits for the next allowed day).
         </p>
 
-        <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, cursor: 'pointer' }}>
-          <input type="checkbox" checked={weeklyOffDays.includes(0)} onChange={toggleSunday} style={{ width: 16, height: 16 }} />
-          Sundays off every week
-        </label>
+        {firstLoad ? (
+          <div role="status" style={{ display: 'flex', gap: 10, alignItems: 'center', minHeight: 21 }}>
+            <span className="ds-sr-only">Loading pickup schedule…</span>
+            <Skeleton w={16} h={16} r={4} />
+            <Skeleton w={170} h={12} />
+          </div>
+        ) : (
+          <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14, cursor: 'pointer' }}>
+            <input type="checkbox" checked={weeklyOffDays.includes(0)} onChange={toggleSunday} style={{ width: 16, height: 16 }} />
+            Sundays off every week
+          </label>
+        )}
 
         <div>
           <div style={lbl}>Block a date range (no pickup)</div>
@@ -113,7 +126,12 @@ export default function PickupScheduleModal({ open, onClose }) {
 
         <div>
           <div style={lbl}>Blocked ranges</div>
-          {blockedRanges.length === 0 && (
+          {firstLoad ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }} aria-hidden="true">
+              <Skeleton w="100%" h={36} r={9} />
+              <Skeleton w="100%" h={36} r={9} />
+            </div>
+          ) : blockedRanges.length === 0 && (
             <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--ds-color-text-muted)' }}>No blocked ranges.</div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -127,7 +145,7 @@ export default function PickupScheduleModal({ open, onClose }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--ds-color-border)' }}>
-          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>Next pickup: <b style={{ color: 'var(--ds-color-text)' }}>{nextDate ? fmt(nextDate) : '—'}</b></span>
+          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>Next pickup: {firstLoad ? <Skeleton w={84} h={12} style={{ display: 'inline-block', verticalAlign: 'middle' }} /> : <b style={{ color: 'var(--ds-color-text)' }}>{nextDate ? fmt(nextDate) : '—'}</b>}</span>
           <Button variant="primary" onClick={save} loading={saving} disabled={loading}>Save schedule</Button>
         </div>
       </div>

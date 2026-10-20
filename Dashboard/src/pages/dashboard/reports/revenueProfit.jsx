@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { trafficReportService } from '../../../services';
-import { Button, DateRangePicker, Input, Table } from '../../../components/ui';
+import { Button, DateRangePicker, Input, Table, SkeletonKpis } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import Dropdown from '../../../components/ui/Dropdown';
 
@@ -41,6 +41,14 @@ function exportCsv(filename, columns, rows) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+
+const MISSING_COLUMNS = [
+  { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand || '—' },
+  { header: 'Product', accessor: 'productName', align: 'left', cell: ({ productName }) => <strong>{productName}</strong> },
+  { header: 'Variant', accessor: 'variant', align: 'left', cell: ({ variant }) => variant || '—' },
+  { header: 'SKU', accessor: 'sku', align: 'left', cell: ({ sku }) => sku || '—' },
+  { header: 'Price', accessor: 'price', align: 'right', cell: ({ value }) => inr(value) },
+];
 
 // Profit cell — green when positive, red when negative; bold on the totals row.
 const ProfitCell = (v, bold) => (
@@ -264,7 +272,10 @@ export default function RevenueProfitReport() {
       ) : null}
 
       {/* ── KPI tiles ── */}
-      {totals ? (
+      {loading && !data ? (
+        <SkeletonKpis count={11} label="Loading revenue and profit…" />
+      ) : totals ? (
+        <div style={loading ? { opacity: 0.6, transition: 'opacity .15s' } : undefined} aria-busy={loading || undefined}>
         <StatGrid>
           <StatTile label="Orders received" value={num(placed?.placedOrders)} sub={`${inr(placed?.placedValue)} ordered`} />
           <StatTile label="Units ordered" value={num(placed?.placedUnits)} sub={placed?.placedOrders ? `${(placed.placedUnits / placed.placedOrders).toFixed(1)} per order` : undefined} />
@@ -278,6 +289,7 @@ export default function RevenueProfitReport() {
           <StatTile label="Margin · after ads" value={`${totals.marginAfter.toFixed(1)}%`} />
           <StatTile label="Delivered orders" value={num(totals.orders)} />
         </StatGrid>
+        </div>
       ) : null}
 
       {/* ── Per-brand table ── */}
@@ -328,6 +340,8 @@ export default function RevenueProfitReport() {
       >
         {missingError ? (
           <span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{missingError}</span>
+        ) : missingLoading && !missing ? (
+          <Table columns={MISSING_COLUMNS} data={[]} loading sortable={false} />
         ) : !missing ? (
           <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
             Click “Find missing cost prices” to list every active variation that still needs a cost price.
@@ -343,14 +357,9 @@ export default function RevenueProfitReport() {
               Search the SKU in <strong>Products</strong> to edit it.
             </div>
             <Table
-              columns={[
-                { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand || '—' },
-                { header: 'Product', accessor: 'productName', align: 'left', cell: ({ productName }) => <strong>{productName}</strong> },
-                { header: 'Variant', accessor: 'variant', align: 'left', cell: ({ variant }) => variant || '—' },
-                { header: 'SKU', accessor: 'sku', align: 'left', cell: ({ sku }) => sku || '—' },
-                { header: 'Price', accessor: 'price', align: 'right', cell: ({ value }) => inr(value) },
-              ]}
+              columns={MISSING_COLUMNS}
               data={missing.items}
+              loading={missingLoading}
               sortable={false}
               emptyMessage="None — all variations are costed."
             />

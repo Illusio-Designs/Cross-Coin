@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Alert02Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
+import { Skeleton, SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Automatic messages — every message the stores send by themselves,
@@ -72,14 +73,34 @@ function Switch({ on, disabled, busy, label, title, onToggle }) {
   );
 }
 
-function SkeletonTable() {
-  return (
-    <div className="wpa-card" aria-busy="true" aria-label="Loading automatic messages">
-      <div className="wpa-skel-list">
-        {[70, 92, 84, 60, 88].map((w, i) => <span key={i} className="wpa-skel" style={{ width: `${w}%` }} />)}
+const TABLE_HEAD = (
+  <thead>
+    <tr>
+      <th style={{ width: '26%' }}>Message</th>
+      <th>Sent when</th>
+      <th>Template</th>
+      <th className="r">Sent</th>
+      <th className="r">Read</th>
+      <th>Result</th>
+      <th className="r">On</th>
+    </tr>
+  </thead>
+);
+
+// First load: the group cards with their real table header and placeholder rows.
+function GroupsSkeleton() {
+  return [5, 3].map((rows, i) => (
+    <section key={i} className="wpa-card" role="status" aria-busy="true">
+      <span className="ds-sr-only">Loading automatic messages…</span>
+      <h2 className="wpa-card-title" aria-hidden="true"><Skeleton w={i ? 150 : 200} h={14} /></h2>
+      <div className="wpa-scroll">
+        <table className="wpa-tbl" aria-hidden="true">
+          {TABLE_HEAD}
+          <tbody><SkeletonTableRows rows={rows} cols={7} /></tbody>
+        </table>
       </div>
-    </div>
-  );
+    </section>
+  ));
 }
 
 export default function AutomationsPage({ brandId = '', brands = [], isAdmin = false, goTo }) {
@@ -144,6 +165,7 @@ export default function AutomationsPage({ brandId = '', brands = [], isAdmin = f
   }, [data]);
 
   const s = data?.summary || {};
+  const first = loading && !data;
   const deliveredPct = pctOf(s.delivered, s.sent);
   const readPct = pctOf(s.read, s.sent);
   const periodLabel = `${days} days`;
@@ -181,25 +203,25 @@ export default function AutomationsPage({ brandId = '', brands = [], isAdmin = f
         </div>
       </header>
 
-      <section className="rep-kpis wpa-kpis" aria-label={`Last ${periodLabel}`}>
+      <section className={`rep-kpis wpa-kpis${loading && data ? ' is-stale' : ''}`} aria-label={`Last ${periodLabel}`} aria-busy={loading || undefined}>
         <div className="rep-kpi">
           <div className="rep-kl">Sent · {periodLabel}</div>
-          <div className="rep-kv num">{loading && !data ? <span className="wpa-skel" style={{ width: 70 }} /> : num(s.sent)}</div>
-          <div className="rep-kf">{deliveredPct === null ? 'Delivered: —' : `${deliveredPct}% delivered`}</div>
+          <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 70 }} /> : num(s.sent)}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 90 }} /> : deliveredPct === null ? 'Delivered: —' : `${deliveredPct}% delivered`}</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Read</div>
-          <div className="rep-kv num">{loading && !data ? <span className="wpa-skel" style={{ width: 60 }} /> : fmtPct(readPct === null ? null : Math.round(readPct))}</div>
-          <div className="rep-kf">{num(s.read)} opened</div>
+          <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 60 }} /> : fmtPct(readPct === null ? null : Math.round(readPct))}</div>
+          <div className="rep-kf">{first ? <span className="wpa-skel wpa-skel--sm" style={{ width: 70 }} /> : `${num(s.read)} opened`}</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Customers acted</div>
-          <div className="rep-kv num">{loading && !data ? <span className="wpa-skel" style={{ width: 50 }} /> : num(s.acted)}</div>
+          <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 50 }} /> : num(s.acted)}</div>
           <div className="rep-kf">confirmed, chose an option or bought</div>
         </div>
         <div className="rep-kpi">
           <div className="rep-kl">Sales from WhatsApp</div>
-          <div className="rep-kv num">{loading && !data ? <span className="wpa-skel" style={{ width: 90 }} /> : inr(s.sales)}</div>
+          <div className="rep-kv num">{first ? <span className="wpa-skel" style={{ width: 90 }} /> : inr(s.sales)}</div>
           <div className="rep-kf">recovered carts, alerts, win-back</div>
         </div>
       </section>
@@ -231,7 +253,7 @@ export default function AutomationsPage({ brandId = '', brands = [], isAdmin = f
         </div>
       )}
 
-      {!error && loading && !data && <SkeletonTable />}
+      {!error && loading && !data && <GroupsSkeleton />}
 
       {!error && data && data.groups.length === 0 && (
         <div className="wpa-card">
@@ -243,21 +265,11 @@ export default function AutomationsPage({ brandId = '', brands = [], isAdmin = f
       )}
 
       {!error && data && data.groups.map((g) => (
-        <section key={g.key || g.title} className="wpa-card" aria-label={g.title}>
+        <section key={g.key || g.title} className={`wpa-card${loading ? ' is-stale' : ''}`} aria-label={g.title} aria-busy={loading || undefined}>
           <h2 className="wpa-card-title">{g.title}{g.sub ? <small> · {g.sub}</small> : null}</h2>
           <div className="wpa-scroll">
             <table className="wpa-tbl">
-              <thead>
-                <tr>
-                  <th style={{ width: '26%' }}>Message</th>
-                  <th>Sent when</th>
-                  <th>Template</th>
-                  <th className="r">Sent</th>
-                  <th className="r">Read</th>
-                  <th>Result</th>
-                  <th className="r">On</th>
-                </tr>
-              </thead>
+              {TABLE_HEAD}
               <tbody>
                 {(g.rows || []).length === 0 && (
                   <tr><td colSpan={7} className="wpa-cell-soft">Nothing in this group yet.</td></tr>
