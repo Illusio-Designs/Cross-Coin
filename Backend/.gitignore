@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 BUILD_INFO.json
+
+# Runtime uploads (local fallback when ImageKit refuses) — live only on the server
+uploads/

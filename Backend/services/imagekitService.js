@@ -1,13 +1,34 @@
 const ImageKit = require("imagekit");
+const fs = require('fs/promises');
+const path = require('path');
+const crypto = require('crypto');
 const { logger } = require('../config/logging.js');
+
+// Local fallback storage: Backend/uploads/<folder>/, served by Express under
+// /api/uploads (index.js). Used whenever ImageKit refuses an upload — most
+// often "Upload Limit Exceeded" when the account's plan quota is full — so no
+// upload in the admin or the stores ever fails because of ImageKit.
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const apiBase = () => (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
+// After a quota error, skip ImageKit for a while instead of waiting on a
+// request that will fail again.
+const QUOTA_PAUSE_MS = 30 * 60 * 1000;
+const isQuotaError = (e) => /limit|quota|exceeded|storage|bandwidth|plan/i.test(String((e && (e.message || e.help)) || e || ''));
 
 class ImageKitService {
   constructor() {
-    this.imagekit = new ImageKit({
-      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
-    });
+    // Missing keys must not take the server down: uploads then go to local
+    // storage (uploadImage checks the keys before using ImageKit).
+    try {
+      this.imagekit = new ImageKit({
+        publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+        privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+        urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+      });
+    } catch (e) {
+      logger.warn(`ImageKit not configured (${e.message}) — uploads are saved on this server.`);
+      this.imagekit = null;
+    }
   }
 
   /**
@@ -148,25 +169,48 @@ class ImageKitService {
    * @returns {Promise<Object>} Upload response
    */
   async uploadImage(fileBuffer, fileName, folder = '/products') {
-    try {
-      const response = await this.imagekit.upload({
-        file: fileBuffer,
-        fileName: fileName,
-        folder: folder,
-        useUniqueFileName: true,
-      });
+    const configured = this.imagekit && process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_URL_ENDPOINT;
+    if (configured && Date.now() >= (this.pausedUntil || 0)) {
+      try {
+        const response = await this.imagekit.upload({
+          file: fileBuffer,
+          fileName: fileName,
+          folder: folder,
+          useUniqueFileName: true,
+        });
 
-      return {
-        success: true,
-        fileId: response.fileId,
-        filePath: response.filePath,
-        url: response.url,
-        optimizedUrl: this.getOptimizedUrl(response.filePath),
-      };
-    } catch (error) {
-      console.error('ImageKit upload error:', error);
-      throw error;
+        return {
+          success: true,
+          fileId: response.fileId,
+          filePath: response.filePath,
+          url: response.url,
+          optimizedUrl: this.getOptimizedUrl(response.filePath),
+        };
+      } catch (error) {
+        const msg = (error && (error.message || error.help)) || String(error);
+        if (isQuotaError(error)) this.pausedUntil = Date.now() + QUOTA_PAUSE_MS;
+        logger.warn(`ImageKit upload failed (${msg}) — saving ${fileName} to local storage instead`);
+      }
     }
+    return this.saveLocal(fileBuffer, fileName, folder);
+  }
+
+  /**
+   * Save an upload on this server (Backend/uploads/<folder>/) and return the
+   * same shape as an ImageKit upload. filePath/url are a FULL backend URL
+   * (/api/uploads/…), which getOptimizedUrl and every page already use as-is.
+   */
+  async saveLocal(fileBuffer, fileName, folder = '/products') {
+    // Folder like "/returns/RT-1" → "returns/RT-1": safe segments only.
+    const sub = String(folder || '').split('/').map((p) => p.replace(/[^a-z0-9_-]/gi, '')).filter(Boolean).join('/') || 'misc';
+    const base = path.basename(String(fileName || 'file')).replace(/[^a-z0-9._-]/gi, '-').replace(/-+/g, '-').slice(-80) || 'file';
+    const name = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${base}`;
+    const dir = path.join(UPLOADS_DIR, sub);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, name), fileBuffer);
+    const url = `${apiBase()}/api/uploads/${sub}/${name}`;
+    logger.info(`Saved upload locally: ${url}`);
+    return { success: true, local: true, fileId: null, filePath: url, url, optimizedUrl: url };
   }
 
   /**
@@ -175,6 +219,14 @@ class ImageKitService {
    * @returns {Promise<void>}
    */
   async deleteImage(filePath) {
+    // A local fallback file: remove it from Backend/uploads (never outside it).
+    const m = /\/uploads\/(.+?)(?:\?.*)?$/.exec(String(filePath || ''));
+    if (m) {
+      const target = path.resolve(UPLOADS_DIR, decodeURIComponent(m[1]).replace(/^\/+/, ''));
+      if (target.startsWith(UPLOADS_DIR + path.sep)) await fs.unlink(target).catch(() => {});
+      return;
+    }
+    if (!this.imagekit) return;
     try {
       // ImageKit delete requires fileId, but we can search by path first
       const files = await this.imagekit.listFiles({ path: filePath });
