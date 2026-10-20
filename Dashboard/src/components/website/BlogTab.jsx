@@ -225,18 +225,16 @@ function Posts({ brands, brand, brandId, q, registerAction }) {
               <input id="bp-author" className="web-input" value={form.author_name} onChange={(e) => set('author_name', e.target.value)} placeholder="Kiran" />
             </WebField>
             <WebField label="Status" htmlFor="bp-status">
-              <select id="bp-status" className="web-input" value={form.status} onChange={(e) => set('status', e.target.value)}>
-                <option value="draft">Draft — not on the site</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived — hidden</option>
-              </select>
+              <Select value={form.status} onChange={(v) => set('status', v)} options={[
+                { value: 'draft', label: 'Draft — not on the site' },
+                { value: 'published', label: 'Published' },
+                { value: 'archived', label: 'Archived — hidden' },
+              ]} />
             </WebField>
           </div>
           <WebField label="Category" htmlFor="bp-cat">
-            <select id="bp-cat" className="web-input" value={form.blog_category_id} onChange={(e) => set('blog_category_id', e.target.value)}>
-              <option value="">None</option>
-              {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-            </select>
+            <Select value={form.blog_category_id} onChange={(v) => set('blog_category_id', v ?? '')} searchable={categories.length > 8} placeholder="None"
+              options={[{ value: '', label: 'None' }, ...categories.map((c) => ({ value: String(c.id), label: c.name }))]} />
           </WebField>
           <WebField label="Stores">
             <StoreChecks brands={brands} value={form.brand_ids} onChange={(v) => set('brand_ids', v)} disabled={saving} />
@@ -420,10 +418,10 @@ function Categories({ q, registerAction }) {
             <textarea id="bc-desc" className="web-input web-textarea" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </WebField>
           <WebField label="Status" htmlFor="bc-status">
-            <select id="bc-status" className="web-input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              <option value="active">Shown on the blog</option>
-              <option value="inactive">Hidden</option>
-            </select>
+            <Select value={form.status} onChange={(v) => setForm({ ...form, status: v })} options={[
+              { value: 'active', label: 'Shown on the blog' },
+              { value: 'inactive', label: 'Hidden' },
+            ]} />
           </WebField>
           {formErr && <p className="web-form-err" role="alert">{formErr}</p>}
         </>

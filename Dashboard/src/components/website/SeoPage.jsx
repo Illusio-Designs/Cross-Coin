@@ -420,9 +420,7 @@ function Pages({ brand, brandId, q, openName, onOpened, onChanged }) {
               <input id="sp-kw" className="web-input" value={form.meta_keywords} onChange={(e) => set('meta_keywords', e.target.value)} placeholder="sports socks, ankle socks" />
             </WebField>
             <WebField label="Google" htmlFor="sp-robots">
-              <select id="sp-robots" className="web-input" value={form.robots} onChange={(e) => set('robots', e.target.value)}>
-                {ROBOTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              <Select value={form.robots} onChange={(v) => set('robots', v)} options={ROBOTS.map(([v, l]) => ({ value: v, label: l }))} />
             </WebField>
             <WebField label="Structured data (JSON-LD)" htmlFor="sp-sd" error={form.structured_data && !isValidJson(form.structured_data) ? 'Not valid JSON — it won’t save until fixed.' : null}>
               <textarea id="sp-sd" className="web-input web-textarea web-mono" rows={7} value={form.structured_data} onChange={(e) => set('structured_data', e.target.value)} placeholder='{"@context":"https://schema.org","@type":"Organization"}' />
@@ -624,9 +622,8 @@ function Faqs({ brand, brandId, q, onChanged }) {
             <Editor allowImages={false} value={form.answer} onChange={(v) => set('answer', v)} placeholder="Type the answer. Lists and links are fine." headingBase={3} />
           </WebField>
           <WebField label="Shows on" htmlFor="fq-scope">
-            <select id="fq-scope" className="web-input" value={form.attached_to_type} onChange={(e) => setForm({ ...form, attached_to_type: e.target.value, attached_to_id: '', attached_to_slug: '', product_ids: [] })}>
-              {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <Select value={form.attached_to_type} onChange={(v) => setForm({ ...form, attached_to_type: v, attached_to_id: '', attached_to_slug: '', product_ids: [] })}
+              options={SCOPES.map((s) => ({ value: s.value, label: s.label }))} />
           </WebField>
           {form.attached_to_type === 'product' && (
             <WebField label={form.id ? 'Product' : 'Products (one or more)'}>

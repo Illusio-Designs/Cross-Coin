@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService } from '../../services';
-import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar } from '../../components/ui';
+import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar, Select } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
 
@@ -125,10 +125,10 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
     control = <input id={id} readOnly value={f.isSet ? f.value : 'Not set'} className="oss-masked" />;
   } else if (f.type === 'select') {
     control = (
-      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        {!f.options.some(([o]) => o === value) && <option value="">{f.default ? `Default (${f.default})` : 'Not set'}</option>}
-        {f.options.map(([o, l]) => <option key={o} value={o}>{l}</option>)}
-      </select>
+      <Select value={value ?? ''} onChange={(v) => onChange(v ?? '')} disabled={disabled} placeholder={f.default ? `Default (${f.default})` : 'Not set'} options={[
+        ...(!f.options.some(([o]) => o === value) ? [{ value: '', label: f.default ? `Default (${f.default})` : 'Not set' }] : []),
+        ...f.options.map(([o, l]) => ({ value: o, label: l })),
+      ]} />
     );
   } else if (f.type === 'textarea') {
     control = <textarea id={id} rows={3} value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error} disabled={disabled} />;
@@ -149,7 +149,7 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
   const note = error
     || (f.source === 'server' && !f.secret ? `Using the shared server value${f.hint ? ` · ${f.hint}` : ''}` : null)
     || (f.secret && f.source === 'server' ? 'Using the shared server value (Cross Coin’s)' : null)
-    || (f.readOnly ? 'Managed on WhatsApp → Settings' : null)
+    || (f.readOnly ? 'Managed on WhatsApp → Profile' : null)
     || f.hint;
   return (
     <div className={`oss-field${error ? ' is-bad' : ''}${f.type === 'textarea' ? ' oss-field--wide' : ''}`}>
@@ -344,6 +344,17 @@ export function BrandManager() {
   const brands = listQuery.data || [];
   const brand = brands.find((b) => b.id === selectedId) || brands[0] || null;
   useEffect(() => { if (!selectedId && brands[0]) setSelectedId(brands[0].id); }, [brands, selectedId]);
+  // Deep link from WhatsApp → Profile ("Edit on Brands"): open that store on the given tab.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('obz-brand-open');
+      if (!raw) return;
+      sessionStorage.removeItem('obz-brand-open');
+      const { brandId, tab: openTab } = JSON.parse(raw) || {};
+      if (Number(brandId)) setSelectedId(Number(brandId));
+      if (typeof openTab === 'string' && openTab) setTab(openTab);
+    } catch { /* storage blocked or bad JSON */ }
+  }, []);
 
   const formQuery = useQuery({
     queryKey: ['brandSettingsForm', brand?.id],

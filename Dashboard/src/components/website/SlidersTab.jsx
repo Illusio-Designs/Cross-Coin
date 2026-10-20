@@ -6,6 +6,7 @@ import { sliderService, categoryService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
+import { Select } from '../ui';
 import { WebChips, WebBody, WebGridState, webStale, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks, Toggle } from './webParts';
 import { useLoad, useObjectUrl, errText, fmtDay, dayInputValue, dayStartIso, dayEndIso, siteUrl, brandLabel } from './webUtil';
 
@@ -181,10 +182,8 @@ export default function SlidersTab({ brands, brand, brandId, q, registerAction }
               <input id="sl-btn" className="web-input" value={form.buttonText} onChange={(e) => set('buttonText', e.target.value)} placeholder="Shop now" />
             </WebField>
             <WebField label="Button opens" htmlFor="sl-cat" hint="A category page">
-              <select id="sl-cat" className="web-input" value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-                <option value="">No link</option>
-                {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-              </select>
+              <Select value={form.categoryId} onChange={(v) => set('categoryId', v ?? '')} searchable={categories.length > 8} placeholder="No link"
+                options={[{ value: '', label: 'No link' }, ...categories.map((c) => ({ value: String(c.id), label: c.name }))]} />
             </WebField>
           </div>
           <div className="web-2col">

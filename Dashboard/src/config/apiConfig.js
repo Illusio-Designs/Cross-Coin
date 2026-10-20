@@ -33,6 +33,12 @@ export const API_TIMEOUTS = {
  * @returns {number} Timeout in milliseconds
  */
 export const getTimeoutForEndpoint = (endpoint) => {
+  // Long-polls: the server deliberately holds these open (~25s) until there
+  // is news, then answers — they must never time out before the server does.
+  if (endpoint.includes('/whatsapp/stream') || endpoint.includes('/notifications/poll')) {
+    return API_TIMEOUTS.longRunning;
+  }
+
   // Long-running operations
   if (endpoint.includes('/checkout') || 
       endpoint.includes('/payment') ||
