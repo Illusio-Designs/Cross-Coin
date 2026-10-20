@@ -2137,6 +2137,17 @@ export const brandSettingsService = {
     }
   },
 
+  // General · all stores: shared Meta / iThink / Razorpay keys + win-back code.
+  getGeneral: async () => {
+    try { return (await adminApi.get("/api/admin/brand-settings/general")).data; }
+    catch (error) { throw error.response?.data || error.message; }
+  },
+  // body: { values: { KEY: value }, remove: [KEY], copyFrom: { KEY: brandId }, winbackCoupon }
+  saveGeneral: async (body) => {
+    try { return (await adminApi.put("/api/admin/brand-settings/general", body)).data; }
+    catch (error) { throw error.response?.data || error.message; }
+  },
+
   getForm: async (brandId, { checkSite = true } = {}) => {
     try {
       const response = await adminApi.get("/api/admin/brand-settings/form", { params: { brandId, checkSite: checkSite ? 1 : 0 } });

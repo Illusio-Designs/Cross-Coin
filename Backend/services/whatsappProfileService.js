@@ -574,11 +574,10 @@ async function storesIdentity() {
   let winOn = true;
   try { winOn = await ws().isAutomationEnabled('win_back'); } catch (_) { winOn = true; }
 
+  // One win-back code for every store (WhatsApp → Abandoned carts → rules).
+  const winCode = await require('./cartRecoveryService.js').getWinbackCode();
   const codes = new Map();
-  for (const b of brands) {
-    const code = (own.get(`${b.id}:WINBACK_COUPON_CODE`) || 'CART10').trim().toUpperCase();
-    codes.set(b.id, code);
-  }
+  for (const b of brands) codes.set(b.id, winCode);
   const coupons = codes.size ? await Coupon.findAll({ where: { code: [...new Set(codes.values())] } }) : [];
   const byCode = new Map();
   for (const c of coupons) {
@@ -625,7 +624,7 @@ async function storesIdentity() {
       domain,
       winback: {
         code,
-        isDefault: !own.get(`${b.id}:WINBACK_COUPON_CODE`),
+        isDefault: winCode === 'CART10',
         status: status === 'live' ? 'active' : status,
         active: status === 'live' && winOn,
         endedAt: mine && status === 'ended' ? mine.endDate : null,

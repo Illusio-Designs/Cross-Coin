@@ -180,6 +180,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
       quietEnd: toHHMM(rules?.quietEnd) || '09:00',
       coupon: rules?.coupon || '',
       minValue: rules?.minValue ?? 0,
+      winbackCoupon: rules?.winbackCoupon || 'CART10',
     });
     setEditRules(true);
   }
@@ -196,6 +197,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
       quietEnd: fromHHMM(draft.quietEnd, rules?.quietEnd),
       coupon: String(draft.coupon || '').trim().toUpperCase(),
       minValue: min,
+      winbackCoupon: String(draft.winbackCoupon || '').trim().toUpperCase() || 'CART10',
     };
     setSavingRules(true);
     try {
@@ -331,6 +333,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
                   {toHHMM(rules.quietStart) && toHHMM(rules.quietEnd) && <> · not between <b>{niceClock(rules.quietStart)}</b> and <b>{niceClock(rules.quietEnd)}</b></>}
                   {rules.coupon ? <> · code <b>{rules.coupon}</b></> : <> · no discount code</>}
                   {Number(rules.minValue) > 0 && <> · skip carts under <b>{inr(rules.minValue)}</b></>}
+                  {' '}· win-back code <b>{rules.winbackCoupon || 'CART10'}</b> (all stores)
                 </span>
               ) : (
                 loading ? <Skeleton w="min(420px, 70%)" h={12} /> : <span>Rules not available.</span>
@@ -358,12 +361,16 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
                 <input className="wpb-input wpb-mono" value={draft.coupon} maxLength={30} placeholder="CART10"
                   onChange={(e) => setDraft((d) => ({ ...d, coupon: e.target.value.toUpperCase() }))} />
               </label>
+              <label className="wpb-field">Win-back code — all stores
+                <input className="wpb-input wpb-mono" value={draft.winbackCoupon} maxLength={30} placeholder="CART10"
+                  onChange={(e) => setDraft((d) => ({ ...d, winbackCoupon: e.target.value.toUpperCase() }))} />
+              </label>
               <label className="wpb-field">Skip carts under (₹)
                 <input className="wpb-input" type="number" min="0" step="1" inputMode="numeric"
                   value={draft.minValue} onChange={(e) => setDraft((d) => ({ ...d, minValue: e.target.value }))} />
               </label>
             </div>
-            <span className="wpb-hint">Each cart gets one message only. Times are India time.</span>
+            <span className="wpb-hint">Each cart gets one message only. Times are India time. The win-back code is sent 30 days after a customer’s last order; each store needs an active coupon with that code (Growth → Coupons).</span>
             <div className="wpb-actions">
               <button type="submit" className="wpb-btn" disabled={savingRules}>{savingRules ? 'Saving…' : 'Save rules'}</button>
               <button type="button" className="wpb-btn wpb-btn--ghost" onClick={() => setEditRules(false)} disabled={savingRules}>Cancel</button>

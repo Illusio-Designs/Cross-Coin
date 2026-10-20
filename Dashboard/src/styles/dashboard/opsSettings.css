@@ -229,3 +229,11 @@
   margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px;
   background: var(--ds-color-bg); border: 1px dashed var(--ds-color-border); color: var(--ds-color-text);
 }
+
+/* General · all stores */
+.oss .oss-brand--general { border-bottom: 1px dashed var(--ds-color-border); border-radius: 9px 9px 0 0; margin-bottom: 4px; }
+.oss .oss-general-row { flex-wrap: wrap; gap: 10px; align-items: center; }
+.oss .oss-general-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.oss .oss-general-note { font-size: 12px; color: var(--ds-color-text-muted); line-height: 1.5; overflow-wrap: anywhere; }
+.oss .oss-general-note .oss-link { margin-left: 8px; }
+.oss .oss-general-note.is-on { color: var(--ds-color-text); font-weight: 600; }

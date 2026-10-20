@@ -23,6 +23,18 @@ function envFallbackAllowed(brandId, key, brandOnly = false) {
     return String(key).startsWith('WHATSAPP_') && id === (Number(process.env.WHATSAPP_SHARED_BRAND_ID) || PRIMARY_BRAND_ID);
 }
 
+// Account credentials shared by ALL stores ("General · all stores" on the
+// Brands page). Stored once, on GLOBAL_BRAND_ID, under the key ALL_<KEY>. When
+// set they win for every store; until then each store's own value (then the
+// usual env fallback) is used, so nothing changes until General is filled in.
+const GLOBAL_BRAND_ID = 1;
+const GLOBAL_PREFIX = 'ALL_';
+const GLOBAL_KEYS = new Set([
+    'FB_ACCESS_TOKEN', 'META_ADS_TOKEN',
+    'ITHINK_ACCESS_TOKEN', 'ITHINK_SECRET_KEY', 'ITHINK_ENVIRONMENT',
+    'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET',
+]);
+
 /**
  * Helper to get brand settings from database
  * Falls back to environment variables if not found
@@ -41,7 +53,26 @@ class SettingsHelper {
      * @param {object} options - brandOnly disables shared environment fallbacks
      * @returns {Promise<string>} Setting value
      */
+    // The all-stores value of `key` (row ALL_<key> on GLOBAL_BRAND_ID), or null.
+    async getGlobal(key) {
+        const cacheKey = `global:${key}`;
+        const hit = this.cache.get(cacheKey);
+        if (hit && Date.now() - hit.timestamp < this.cacheTTL) return hit.value;
+        let value = null;
+        try {
+            const row = await BrandSetting.findOne({ where: { brand_id: GLOBAL_BRAND_ID, key: GLOBAL_PREFIX + key } });
+            const raw = row ? row.getDataValue('value') : null;
+            value = raw ? (row.is_encrypted ? decrypt(raw) : raw) : null;
+        } catch (_) { value = null; }
+        this.cache.set(cacheKey, { value: value || null, timestamp: Date.now() });
+        return value || null;
+    }
+
     async getSetting(brandId, key, defaultValue = null, { brandOnly = false } = {}) {
+        if (GLOBAL_KEYS.has(key)) {
+            const shared = await this.getGlobal(key);
+            if (shared) return shared;
+        }
         const cacheKey = `${brandId}:${key}`;
         
         // Check cache
@@ -119,8 +150,11 @@ class SettingsHelper {
      * @param {number} brandId - Brand ID
      */
     clearCache(brandId) {
+        // The all-stores values live on GLOBAL_BRAND_ID: clearing it (or
+        // clearing everything) also drops them.
+        const all = brandId === undefined || brandId === null;
         for (const key of this.cache.keys()) {
-            if (key.startsWith(`${brandId}:`)) {
+            if (all || key.startsWith(`${brandId}:`) || (Number(brandId) === GLOBAL_BRAND_ID && key.startsWith('global:'))) {
                 this.cache.delete(key);
             }
         }
@@ -132,3 +166,6 @@ class SettingsHelper {
 module.exports = new SettingsHelper();
 module.exports.envFallbackAllowed = envFallbackAllowed;
 module.exports.BRAND_CREDENTIAL_KEYS = BRAND_CREDENTIAL_KEYS;
+module.exports.GLOBAL_KEYS = GLOBAL_KEYS;
+module.exports.GLOBAL_BRAND_ID = GLOBAL_BRAND_ID;
+module.exports.GLOBAL_PREFIX = GLOBAL_PREFIX;

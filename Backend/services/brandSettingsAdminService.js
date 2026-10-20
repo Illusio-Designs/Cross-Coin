@@ -80,10 +80,8 @@ const FIELDS = [
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Custom checkout API key', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Custom checkout signing secret', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
 
-  // WhatsApp is universal (one shared number, set on WhatsApp → Profile). The
-  // store's name and link in messages come from the Store tab; only the
-  // win-back offer is per store.
-  F('WINBACK_COUPON_CODE', 'store', 'Win-back coupon (WhatsApp)', { default: 'CART10', rule: 'code', group: 'Messages', hint: 'Offered in “come back” WhatsApp messages for this store.' }),
+  // WhatsApp is universal: one shared number (WhatsApp → Profile) and one
+  // win-back coupon for every store (WhatsApp → Abandoned carts → rules).
 
   // Tracking (trackingConfigController + integrations read these brand-only)
   F('FB_PIXEL_ID', 'tracking', 'Meta pixel ID', { rule: 'digits', category: 'analytics', group: 'Meta' }),
@@ -130,7 +128,6 @@ const GUIDES = {
   FREE_SHIPPING_THRESHOLD: 'Your own rule: orders above this amount ship free. 0 turns it off.',
   CUSTOM_CHECKOUT_API_KEY: 'Shared with your custom-checkout partner. Both sides must use exactly the same value.',
   CUSTOM_CHECKOUT_HMAC_SECRET: 'Shared with your custom-checkout partner to sign messages. Both sides must use exactly the same value.',
-  WINBACK_COUPON_CODE: 'Any active code for this store from Growth → Coupons (default CART10).',
   FB_PIXEL_ID: 'Meta Events Manager → Data sources → your pixel (dataset): the 15–16 digit ID under its name.',
   FB_ACCESS_TOKEN: 'Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.',
   FB_TEST_EVENT_CODE: 'Meta Events Manager → your pixel → Test events → the code like TEST12345. Remove it once testing is done.',
@@ -145,8 +142,21 @@ const GUIDES = {
 };
 for (const f of FIELDS) f.guide = GUIDES[f.key] || (f.key.startsWith('GOOGLE_ADS_LABEL_') ? GOOGLE_ADS_LABEL_GUIDE : null);
 
-const FIELD_BY_KEY = new Map(FIELDS.map((f) => [f.key, f]));
 for (const f of FIELDS) if (f.type === 'secret') f.secret = true;
+
+// "General · all stores": the account credentials every store shares (Meta
+// token, iThink account, Razorpay account). They leave the per-store forms and
+// are edited once; settingsHelper serves the shared value to every store.
+const GENERAL_KEYS = settingsHelper.GLOBAL_KEYS;
+const GENERAL_PAIRS = [['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'], ['ITHINK_ACCESS_TOKEN', 'ITHINK_SECRET_KEY']];
+const GENERAL_FIELDS = [];
+for (let i = FIELDS.length - 1; i >= 0; i--) {
+  if (GENERAL_KEYS.has(FIELDS[i].key)) GENERAL_FIELDS.unshift({ ...FIELDS.splice(i, 1)[0], tab: 'general', brandOnly: false });
+}
+const GENERAL_BY_KEY = new Map(GENERAL_FIELDS.map((f) => [f.key, f]));
+const ALL_KEY = (key) => settingsHelper.GLOBAL_PREFIX + key;
+
+const FIELD_BY_KEY = new Map(FIELDS.map((f) => [f.key, f]));
 
 // Friendly labels for known keys that have no tab (shown under "Other settings").
 const OTHER_LABELS = {
@@ -204,6 +214,7 @@ function unusedLabel(key, brandId) {
   if (/^BUNDLE_TIER_IMAGE_/i.test(key)) return 'Old pack banner image — that feature was removed, nothing uses it. Safe to remove.';
   if (key === 'ADS_PRODUCT_COST') return 'Not used — product cost comes from each variant’s cost price (Products). Safe to remove.';
   if (key === 'SHIPPING_PROVIDER') return 'Not needed — orders always ship with iThink. Safe to remove.';
+  if (key === 'WINBACK_COUPON_CODE') return 'Not used — the win-back coupon is set once for all stores on WhatsApp → Abandoned carts. Safe to remove.';
   if (key === 'STORE_NAME') return 'Not needed — messages use the Store name above. Safe to remove.';
   if (key === 'STORE_URL') return 'Not needed — messages use the Website address above. Safe to remove.';
   if (WA_KEY.test(key) && brandId !== SHARED_WA_BRAND_ID) return 'Old per-store WhatsApp key — not used: WhatsApp is the same for every store (WhatsApp → Profile). Safe to remove.';
@@ -347,7 +358,7 @@ async function winBackWarnings() {
     for (const w of warnings || []) {
       if (w.automation !== 'win_back' || !w.brandId) continue;
       if (!byBrand.has(w.brandId)) byBrand.set(w.brandId, []);
-      byBrand.get(w.brandId).push({ tab: 'store', field: 'WINBACK_COUPON_CODE', text: w.message });
+      byBrand.get(w.brandId).push({ tab: 'store', field: null, text: `${w.message} (create the coupon for this store in Growth → Coupons).` });
     }
     return byBrand;
   } catch (_) {
@@ -356,10 +367,10 @@ async function winBackWarnings() {
 }
 
 // Cheap, no-network warnings for one brand.
-async function brandWarnings(brand, rows, winBack = new Map()) {
-  const get = (key) => effective(FIELD_BY_KEY.get(key) || { key }, rows.get(key), brand.id).value;
+async function brandWarnings(brand, rows, winBack = new Map(), globals = new Map()) {
+  const get = (key) => (GENERAL_KEYS.has(key) && globals.get(key)) || effective(FIELD_BY_KEY.get(key) || { key }, rows.get(key), brand.id).value;
   const out = [...domainWarnings(brand)];
-  if (!get('ITHINK_ACCESS_TOKEN') || !get('ITHINK_SECRET_KEY')) out.push({ tab: 'shipping', field: 'ITHINK_ACCESS_TOKEN', text: 'Courier account not connected — orders for this store can’t be booked with iThink.' });
+  if (!get('ITHINK_ACCESS_TOKEN') || !get('ITHINK_SECRET_KEY')) out.push({ tab: 'shipping', field: 'ITHINK_ACCESS_TOKEN', text: 'Courier account not connected — add the iThink keys in General · all stores.' });
   else if (!get('ITHINK_PICKUP_ADDRESS_ID')) out.push({ tab: 'shipping', field: 'ITHINK_PICKUP_ADDRESS_ID', text: 'No pickup warehouse ID — orders can’t be booked until it’s set.' });
 
   const gstin = get('GSTIN');
@@ -367,13 +378,13 @@ async function brandWarnings(brand, rows, winBack = new Map()) {
   else if (RULES.gstin(gstin)) out.push({ tab: 'tax', field: 'GSTIN', text: 'GSTIN doesn’t look right — check it before invoices go out.' });
   if (get('GST_PERCENTAGE') === '') out.push({ tab: 'tax', field: 'GST_PERCENTAGE', text: 'No GST rate — invoices show no tax breakdown.' });
 
-  if (!get('RAZORPAY_KEY_ID') || !get('RAZORPAY_KEY_SECRET')) out.push({ tab: 'payments', field: 'RAZORPAY_KEY_ID', text: 'This store has no Razorpay keys of its own — shoppers can’t pay online until they’re added.' });
+  if (!get('RAZORPAY_KEY_ID') || !get('RAZORPAY_KEY_SECRET')) out.push({ tab: 'payments', field: 'RAZORPAY_KEY_ID', text: 'No Razorpay keys — add them in General · all stores so shoppers can pay online.' });
   else if (/^rzp_test_/.test(get('RAZORPAY_KEY_ID'))) out.push({ tab: 'payments', field: 'RAZORPAY_KEY_ID', text: 'These are Razorpay test keys — real payments won’t go through.' });
 
   out.push(...(winBack.get(Number(brand.id)) || []));
 
   if (!get('FB_PIXEL_ID')) out.push({ tab: 'tracking', field: 'FB_PIXEL_ID', text: 'No Meta pixel of its own — purchases on this store aren’t reported to Meta.' });
-  else if (!get('FB_ACCESS_TOKEN')) out.push({ tab: 'tracking', field: 'FB_ACCESS_TOKEN', text: 'Meta pixel is set but the Conversions API token is missing — Meta only sees browser events.' });
+  else if (!get('FB_ACCESS_TOKEN')) out.push({ tab: 'tracking', field: 'FB_ACCESS_TOKEN', text: 'Meta pixel is set but there’s no Conversions API token — add it in General · all stores.' });
   return out;
 }
 
@@ -399,9 +410,10 @@ async function overview() {
   const brands = await Brand.findAll({ order: [['id', 'ASC']] });
   const rowsBy = await loadRows(brands.map((b) => b.id));
   const winBack = await winBackWarnings();
+  const globals = await loadGlobals();
   const out = [];
   for (const b of brands) {
-    const warnings = await brandWarnings(b, rowsBy.get(b.id) || new Map(), winBack);
+    const warnings = await brandWarnings(b, rowsBy.get(b.id) || new Map(), winBack, globals);
     out.push({
       id: b.id, name: b.name, display_name: b.display_name, slug: b.slug, domain: b.domain, status: b.status,
       logo_url: b.logo_url, warnings, health: warnings.length ? 'warn' : 'ok',
@@ -414,6 +426,7 @@ async function form(brandId, { checkSite = true } = {}) {
   const brand = await Brand.findByPk(brandId);
   if (!brand) return null;
   const rows = (await loadRows([brand.id])).get(brand.id) || new Map();
+  const globals = await loadGlobals();
 
   const fields = FIELDS.map((f) => {
     const row = rows.get(f.key);
@@ -431,17 +444,21 @@ async function form(brandId, { checkSite = true } = {}) {
   for (const [key, row] of rows) {
     if (FIELD_BY_KEY.has(key) || OWNED_ELSEWHERE(key, row.category)) continue;
     if (WA_KEY.test(key) && brand.id === SHARED_WA_BRAND_ID) continue; // the shared number itself
+    if (brand.id === settingsHelper.GLOBAL_BRAND_ID && key.startsWith(settingsHelper.GLOBAL_PREFIX)) continue; // General · all stores
     const secret = isSecret(key, row);
-    const unused = unusedLabel(key, brand.id);
+    const general = GENERAL_KEYS.has(String(key).toUpperCase());
+    const unused = general
+      ? (globals.get(String(key).toUpperCase()) ? 'Not used — the General · all stores value is used for every store. Safe to remove.' : null)
+      : unusedLabel(key, brand.id);
     other.push({
-      key, label: unused || OTHER_LABELS[key] || null, unused: !!unused,
+      key, label: unused || (general ? 'Used for this store until General · all stores has a value — then this copy can be removed.' : null) || OTHER_LABELS[key] || null, unused: !!unused,
       value: secret ? audit.maskValue(rowValue(row)) : rowValue(row), secret, isSet: rowValue(row) !== '',
       category: row.category, description: row.description || null, updated_at: row.updatedAt || row.updated_at || null,
     });
   }
   other.sort((a, b) => a.key.localeCompare(b.key));
 
-  const warnings = await brandWarnings(brand, rows, await winBackWarnings());
+  const warnings = await brandWarnings(brand, rows, await winBackWarnings(), globals);
   if (checkSite && !warnings.some((w) => w.field === 'domain')) {
     const t = await reachability(normalizeHost(brand.domain));
     if (t) warnings.unshift({ tab: 'store', field: 'domain', text: t });
@@ -590,6 +607,135 @@ async function testRazorpay(brandId) {
   }
 }
 
+// ── General · all stores ─────────────────────────────────────────────────────
+// Decrypted shared values (key → value) from the ALL_<KEY> rows.
+async function loadGlobals() {
+  const map = new Map();
+  try {
+    const rows = await BrandSetting.findAll({ where: { brand_id: settingsHelper.GLOBAL_BRAND_ID, key: { [Op.in]: [...GENERAL_KEYS].map(ALL_KEY) } } });
+    for (const r of rows) {
+      const v = rowValue(r);
+      if (v) map.set(String(r.key).slice(settingsHelper.GLOBAL_PREFIX.length), v);
+    }
+  } catch (_) { /* table issues → nothing shared yet */ }
+  return map;
+}
+
+async function general() {
+  const brands = await Brand.findAll({ order: [['id', 'ASC']] });
+  const rowsBy = await loadRows(brands.map((b) => b.id));
+  const sharedRows = (rowsBy.get(settingsHelper.GLOBAL_BRAND_ID)) || new Map();
+  const nameOf = (b) => b.display_name || b.name;
+  const fields = GENERAL_FIELDS.map((f) => {
+    const row = sharedRows.get(ALL_KEY(f.key));
+    const v = rowValue(row);
+    // Stores that still carry their own copy (used until the shared one is set).
+    const stores = brands.map((b) => {
+      const own = (rowsBy.get(b.id) || new Map()).get(f.key);
+      return own && rowValue(own) !== '' ? { brandId: b.id, name: nameOf(b), value: publicValue(f.key, rowValue(own), own) } : null;
+    }).filter(Boolean);
+    return {
+      key: f.key, group: f.group || null, label: f.label, type: f.type, hint: f.hint || null, guide: f.guide || null,
+      options: f.options || null, rule: f.rule || null, secret: !!f.secret, default: f.default ?? null,
+      value: v ? publicValue(f.key, v, row) : '', isSet: v !== '', updated_at: row ? row.updatedAt || row.updated_at : null,
+      envSet: !!process.env[f.key], stores,
+    };
+  });
+  let winbackCoupon = 'CART10';
+  try { winbackCoupon = await require('./cartRecoveryService.js').getWinbackCode(); } catch (_) { /* default */ }
+  const waRows = sharedRows;
+  const waSet = ['WHATSAPP_API_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_BUSINESS_ACCOUNT_ID'].filter((k) => rowValue(waRows.get(k)) !== '' || process.env[k]).length;
+  return {
+    fields,
+    winbackCoupon,
+    whatsapp: { connected: waSet === 3, keysSet: waSet },
+    audit: await audit.list({ brandId: settingsHelper.GLOBAL_BRAND_ID, area: 'general', limit: 8 }).catch(() => []),
+  };
+}
+
+// Save: { values: { KEY: value }, remove: [KEY], copyFrom: { KEY: brandId }, winbackCoupon }
+async function saveGeneral(body, userId) {
+  const values = body && typeof body.values === 'object' && body.values ? body.values : {};
+  const remove = Array.isArray(body?.remove) ? body.remove.map(String) : [];
+  const copyFrom = body && typeof body.copyFrom === 'object' && body.copyFrom ? body.copyFrom : {};
+  const G = settingsHelper.GLOBAL_BRAND_ID;
+  const brandIds = (await Brand.findAll({ attributes: ['id'] })).map((b) => b.id);
+  const rowsBy = await loadRows(brandIds);
+  const shared = rowsBy.get(G) || new Map();
+  const errors = {};
+  const writes = [];
+
+  for (const [key, brandId] of Object.entries(copyFrom)) {
+    const f = GENERAL_BY_KEY.get(key);
+    const src = f && (rowsBy.get(Number(brandId)) || new Map()).get(key);
+    if (!f || !src || rowValue(src) === '') { errors[key] = 'That store has no value to copy.'; continue; }
+    writes.push({ f, value: rowValue(src), row: shared.get(ALL_KEY(key)) });
+  }
+  for (const [key, raw] of Object.entries(values)) {
+    const f = GENERAL_BY_KEY.get(key);
+    if (!f || key in copyFrom) continue;
+    if (f.secret && /^•+/.test(str(raw))) continue; // unchanged mask echoed back
+    const v = normalise(f, raw);
+    const err = validate(f, v);
+    if (err) { errors[key] = err; continue; }
+    const row = shared.get(ALL_KEY(key));
+    if (rowValue(row) === v) continue;
+    if (v === '') { if (row) writes.push({ f, remove: true, row }); continue; }
+    writes.push({ f, value: v, row });
+  }
+  for (const key of remove) {
+    const row = shared.get(ALL_KEY(key));
+    if (GENERAL_BY_KEY.has(key) && row) writes.push({ f: GENERAL_BY_KEY.get(key), remove: true, row });
+  }
+  let winback = null;
+  if (body && body.winbackCoupon != null) {
+    const code = str(body.winbackCoupon).trim().toUpperCase();
+    if (code && RULES.code(code)) errors.winbackCoupon = RULES.code(code);
+    else winback = code || 'CART10';
+  }
+  // A key ID and its secret must both be shared or both empty — otherwise a
+  // store would pair the shared ID with its own (different) secret.
+  const after = new Map([...GENERAL_KEYS].map((k) => [k, rowValue(shared.get(ALL_KEY(k))) !== '']));
+  for (const w of writes) after.set(w.f.key, !w.remove);
+  for (const [a, b] of GENERAL_PAIRS) {
+    if (after.get(a) === after.get(b) || errors[a] || errors[b]) continue;
+    const missing = after.get(a) ? b : a;
+    const other = after.get(a) ? a : b;
+    errors[missing] = `Set this too — “${GENERAL_BY_KEY.get(other).label}” is set for all stores, so this one must be as well (the two belong to one account).`;
+  }
+  if (Object.keys(errors).length) return { errors };
+
+  const settingsService = require('./brandSettingsService.js');
+  const encOk = canEncrypt();
+  for (const w of writes) {
+    const key = ALL_KEY(w.f.key);
+    const secret = !!w.f.secret;
+    if (w.remove) {
+      await settingsService.deleteBrandSetting(G, w.row.key);
+      await audit.record({ brandId: G, area: 'general', key: w.f.key, action: 'delete', oldValue: rowValue(w.row), userId, secret });
+      continue;
+    }
+    if (w.row) {
+      await settingsService.updateSetting(G, w.row.key, { value: w.value, is_encrypted: secret ? (w.row.is_encrypted || encOk) : w.row.is_encrypted, updated_by: userId });
+    } else {
+      await settingsService.createSetting({ brand_id: G, key, value: w.value, category: w.f.category || 'general', description: `${w.f.label} (all stores)`, is_encrypted: secret && encOk, updated_by: userId });
+    }
+    await audit.record({ brandId: G, area: 'general', key: w.f.key, action: w.row ? 'update' : 'create', oldValue: rowValue(w.row), newValue: w.value, userId, secret });
+  }
+  if (winback) {
+    const before = await require('./cartRecoveryService.js').getWinbackCode().catch(() => 'CART10');
+    if (before !== winback) {
+      await require('./whatsappInsightsService.js').saveCartRules({ winbackCoupon: winback });
+      await audit.record({ brandId: G, area: 'general', key: 'WINBACK_COUPON', action: 'update', oldValue: before, newValue: winback, userId, secret: false });
+    }
+  }
+  // Every store reads these: drop all cached settings and provider instances.
+  settingsHelper.clearCache();
+  try { require('./shippingProviderFactory.js').clearCache(); } catch (_) { /* optional */ }
+  try { require('./razorpayService.js').clearCache(); } catch (_) { /* optional */ }
+  return { saved: writes.length + (winback ? 1 : 0) };
+}
+
 // Can this store's Meta token read its ad account (needed to pull ad spend)?
 // Uses the Conversions API token already saved for the pixel; read-only call.
 async function testMetaAds(brandId) {
@@ -622,7 +768,7 @@ async function testMetaAds(brandId) {
 }
 
 module.exports = {
-  SECTIONS, FIELDS, overview, form, save, testRazorpay, testMetaAds, isSecret, publicValue,
+  SECTIONS, FIELDS, GENERAL_FIELDS, overview, form, save, general, saveGeneral, loadGlobals, testRazorpay, testMetaAds, isSecret, publicValue,
   // exported for the legacy controller's masking
   maskRow(row) {
     const plain = typeof row?.toJSON === 'function' ? row.toJSON() : { ...row };

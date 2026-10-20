@@ -2257,7 +2257,7 @@ async function _fillValues(conv, latestOrder) {
     v.courier = latestOrder.courier || latestOrder.courier_name || 'our courier partner';
     if (orderNo) v.tracking_link = await _trackingUrl(brandId, orderNo);
   }
-  v.coupon = (await settingsHelper.getSetting(brandId, 'WINBACK_COUPON_CODE')) || 'CART10';
+  v.coupon = await require('./cartRecoveryService.js').getWinbackCode();
   v.review_link = await _brandUrl(brandId);
   v.refund_mode = 'Original payment method';
   return v;

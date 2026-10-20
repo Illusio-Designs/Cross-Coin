@@ -48,6 +48,9 @@ exports.saveCartRules = async (req, res) => {
     if (b.coupon != null && !/^[A-Za-z0-9_-]{0,32}$/.test(String(b.coupon).trim())) {
       return res.status(400).json({ success: false, message: 'Coupon code can only have letters, numbers, - and _' });
     }
+    if (b.winbackCoupon != null && !/^[A-Za-z0-9_-]{0,32}$/.test(String(b.winbackCoupon).trim())) {
+      return res.status(400).json({ success: false, message: 'Win-back code can only have letters, numbers, - and _' });
+    }
     const rules = await svc.saveCartRules(b);
     res.json({ success: true, rules });
   } catch (err) { fail(res, err, 'saveCartRules'); }
