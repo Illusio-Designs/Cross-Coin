@@ -59,6 +59,7 @@ export const MENU = [
           { key: 'reports-overview', label: 'Overview', view: 'reports' },
           { key: 'revenue-profit', label: 'Revenue & Profit', view: 'revenue-profit', roles: ADMIN },
           { key: 'traffic', label: 'Traffic', view: 'traffic-report', roles: ADMIN },
+          { key: 'report-ads', label: 'Ads', view: 'report-ads', roles: ADMIN },
           { key: 'report-location', label: 'Location', view: 'report-location' },
           { key: 'report-products', label: 'Products', view: 'report-products' },
           { key: 'report-customers', label: 'Customers', view: 'report-customers' },

@@ -37,6 +37,7 @@ import ProductReport from "./reports/productReport";
 import CustomerReport from "./reports/customerReport";
 import InventoryReport from "./reports/inventoryReport";
 import CouponReport from "./reports/couponReport";
+import AdsReport from "./reports/adsReport";
 import SystemHealth from "./system/systemHealth";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
@@ -215,6 +216,8 @@ function Dashboard() {
       case 'report-customers': return <CustomerReport />;
       case 'report-inventory': return <InventoryReport />;
       case 'report-coupons':  return <CouponReport />;
+      // Meta ad spend (admin only — no other role lists it in ROLE_VIEWS).
+      case 'report-ads':      return <AdsReport />;
       case 'leads':           return <Leads />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;
