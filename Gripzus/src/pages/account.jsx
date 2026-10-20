@@ -6,6 +6,37 @@ import { getUserOrders, cancelOrder } from '../services/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { updateProfile } from '../services/auth';
 import DeleteAccountSection from '../components/account/DeleteAccountSection';
+import { Sk, SkBusy } from '../components/common/Skeleton';
+import GzImage from '../components/common/GzImage';
+
+const StatSk = () => <Sk className="h-[1.7rem] w-8 mx-auto" />;
+
+/* Placeholders in the real account frames (order card / address card). */
+function OrderCardSkeletons({ n = 2 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div key={i} className="acc-order-card" aria-hidden="true">
+      <div className="acc-order-head">
+        <div className="space-y-2"><Sk className="h-4 w-32" /><Sk className="h-2.5 w-24" /></div>
+        <Sk className="h-5 w-20" />
+      </div>
+      <div className="acc-order-item">
+        <Sk className="shrink-0" w={56} h={56} />
+        <div className="flex-1 space-y-2"><Sk className="h-3 w-3/4" /><Sk className="h-2.5 w-12" /></div>
+        <Sk className="h-3 w-12" />
+      </div>
+      <div className="acc-order-foot"><Sk className="h-4 w-28" /><div className="acc-order-actions"><Sk className="h-3 w-20" /><Sk className="h-3 w-14" /></div></div>
+    </div>
+  ));
+}
+function AddressCardSkeletons({ n = 2 }) {
+  return Array.from({ length: n }).map((_, i) => (
+    <div key={i} className="acc-addr-card" aria-hidden="true">
+      <Sk className="h-4 w-2/5 mb-4" />
+      <div className="space-y-2"><Sk className="h-3 w-11/12" /><Sk className="h-3 w-3/5" /><Sk className="h-3 w-1/4" /></div>
+      <div className="acc-addr-actions"><Sk className="h-3 w-16" /><Sk className="h-3 w-10" /><Sk className="h-3 w-12" /></div>
+    </div>
+  ));
+}
 import {
   toastProfileUpdated, toastProfileError,
   toastAddressAdded, toastAddressUpdated, toastAddressDeleted,
@@ -172,9 +203,34 @@ export default function AccountPage() {
 
   // ── Gates ─────────────────────────────────────────────────────────
   if (loading) {
+    // Account page shape while we learn who is signed in: dark hero card,
+    // stats row, sidebar and a couple of order cards.
     return (
-      <main className="bg-paper min-h-[60vh] flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-line border-t-ink animate-spin" />
+      <main className="acc-page">
+        <SkBusy label="Loading your account…">
+          <section className="acc-hero" aria-hidden="true" style={{ '--sk-base': 'rgba(255,255,255,0.07)', '--sk-hi': 'rgba(255,255,255,0.16)' }}>
+            <div className="wrap">
+              <div className="acc-hero-inner">
+                <Sk w={68} h={68} />
+                <div className="acc-hero-info space-y-2.5"><Sk className="h-2.5 w-24" /><Sk className="h-7 w-48" /><Sk className="h-3 w-56" /></div>
+              </div>
+            </div>
+          </section>
+          <div className="wrap" aria-hidden="true">
+            <div className="acc-stats">
+              {[0, 1, 2, 3].map((i) => <div key={i} className="acc-stat flex flex-col items-center gap-2.5"><Sk className="h-7 w-10" /><Sk className="h-2.5 w-16" /></div>)}
+            </div>
+          </div>
+          <div className="wrap" aria-hidden="true">
+            <div className="acc-body">
+              <aside className="acc-sidebar"><Sk h={180} /></aside>
+              <div className="acc-main">
+                <div className="acc-section-header"><Sk className="h-6 w-36" /></div>
+                <div className="acc-orders"><OrderCardSkeletons n={2} /></div>
+              </div>
+            </div>
+          </div>
+        </SkBusy>
       </main>
     );
   }
@@ -229,10 +285,10 @@ export default function AccountPage() {
         {/* Stats */}
         <div className="wrap">
           <div className={`acc-stats${hasPoints ? ' has-points' : ''}`}>
-            <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
-            <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
-            <div className="acc-stat"><div className="acc-stat-val">{deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
-            <div className="acc-stat"><div className="acc-stat-val">{activeCount}</div><div className="acc-stat-label">Active</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <StatSk /> : orders.length}</div><div className="acc-stat-label">Orders</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{loadingAddresses ? <StatSk /> : addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <StatSk /> : deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
+            <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <StatSk /> : activeCount}</div><div className="acc-stat-label">Active</div></div>
             {hasPoints && (
               <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
                 <div className="acc-stat-val">{user.loyalty_points}</div>
@@ -276,8 +332,8 @@ export default function AccountPage() {
                   <div className="acc-section-header">
                     <h2 className="acc-section-title">My Orders</h2>
                   </div>
-                  {loadingOrders ? (
-                    <p className="acc-note" style={{ padding: '48px 0', textAlign: 'center' }}>Loading orders…</p>
+                  {loadingOrders && orders.length === 0 ? (
+                    <SkBusy label="Loading orders…" className="acc-orders"><OrderCardSkeletons n={2} /></SkBusy>
                   ) : orders.length === 0 ? (
                     <div className="acc-empty">
                       <p className="acc-empty-title">No orders yet</p>
@@ -301,7 +357,7 @@ export default function AccountPage() {
                             {o.OrderItems?.map((item) => (
                               <div key={item.id} className="acc-order-item">
                                 <div className="acc-order-img">
-                                  {getOrderImage(item) && <img src={getOrderImage(item)} alt="" />}
+                                  {getOrderImage(item) && <GzImage src={getOrderImage(item)} w={200} />}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div className="acc-order-item-name">{item.Product?.name || item.product_name}</div>
@@ -352,8 +408,8 @@ export default function AccountPage() {
                     <h2 className="acc-section-title">Saved Addresses</h2>
                     <button onClick={openAddAddr} className="cta !py-2.5 !px-4 text-[11px]">+ Add Address</button>
                   </div>
-                  {loadingAddresses ? (
-                    <p className="acc-note" style={{ padding: '48px 0', textAlign: 'center' }}>Loading addresses…</p>
+                  {loadingAddresses && addresses.length === 0 ? (
+                    <SkBusy label="Loading addresses…" className="acc-addr-grid"><AddressCardSkeletons n={2} /></SkBusy>
                   ) : addresses.length === 0 ? (
                     <div className="acc-empty">
                       <p className="acc-note">No addresses saved.</p>

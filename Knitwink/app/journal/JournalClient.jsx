@@ -5,6 +5,7 @@ import { getBlogPage } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
 import Pagination from '@/components/common/Pagination'
 import SeoWrapper from '@/components/SeoWrapper'
+import { BlogCardSkeleton, SkeletonRegion } from '@/components/ui/Skeleton'
 
 const LIMIT = 12
 
@@ -57,24 +58,17 @@ export default function JournalClient() {
 
       {/* Grid — 4 columns */}
       <section className="bg-off-white px-4 py-10 sm:px-6 md:py-12">
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="aspect-[3/4] animate-pulse bg-gray-100" />
-                <div className="flex flex-col gap-2 p-4">
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
-                  <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* First load: card skeletons. Changing page keeps the current posts
+            on screen (dimmed) until the next page arrives. */}
+        {loading && posts.length === 0 ? (
+          <SkeletonRegion label="Loading journal posts…" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => <BlogCardSkeleton key={i} />)}
+          </SkeletonRegion>
         ) : posts.length === 0 ? (
           <p className="py-20 text-center text-sm text-gray-400">No posts yet. Check back soon.</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4${loading ? ' sk-refreshing' : ''}`} aria-busy={loading || undefined}>
               {posts.map((post) => <BlogCard key={post.id} post={post} />)}
             </div>
             <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={loading} />

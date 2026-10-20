@@ -44,8 +44,8 @@ export default function WishlistClient() {
         <p>Saved pairs, ready when you are.</p>
       </div>
 
-      {loading ? (
-        <div style={{ marginTop: 24 }}><ProductGridSkeleton count={4} /></div>
+      {loading && items.length === 0 ? (
+        <ProductGridSkeleton count={5} label="Loading your wishlist…" style={{ marginTop: 24 }} />
       ) : items.length === 0 ? (
         <div className="cart-empty">
           <Icon name="Heart" size={40} color="#c3ccd2" />

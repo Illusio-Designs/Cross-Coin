@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { GatedImage } from '@/components/ui/GatedImage';
 import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { formatPrice } from '@/lib/utils';
@@ -33,7 +33,7 @@ export function CartUpsell({ products }) {
                 className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2">
                 
                 {image &&
-                <Image src={image.url} alt={image.alt} fill className="object-cover" />
+                <GatedImage src={image.url} alt={image.alt} fill sizes="56px" className="object-cover" />
                 }
               </Link>
 

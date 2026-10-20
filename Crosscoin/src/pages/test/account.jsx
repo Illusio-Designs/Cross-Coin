@@ -3,7 +3,7 @@ import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { I, toast } from '../../components/test/ui';
+import { I, toast, Sk, SkBusy, useHydrated, OrderCardSkeletons, AddressSkeletons, FieldSkeletons } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { useAuthed, signOut, fetchMe, fetchMyOrders, fetchMyAddresses } from '../../components/test/auth';
 import { orderStatusLabel, orderStatusTone, orderStatusNote, paymentSummary, canRequestReturn } from '../../utils/orderStatus';
@@ -18,11 +18,12 @@ const TABS = [['orders', 'My Orders'], ['addr', 'Addresses'], ['acct', 'Account 
 export default function TestAccount() {
   const router = useRouter();
   const authed = useAuthed();
+  const hydrated = useHydrated();
   const [tab, setTab] = useState('orders');
   const [me, setMe] = useState(null);
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!authed) return;
@@ -58,7 +59,14 @@ export default function TestAccount() {
       </div>
 
       <div className="wrap" style={{ paddingBottom: 60, maxWidth: 860 }}>
-        {!authed ? (
+        {!hydrated ? (
+          // Sign-in state lives in the browser — hold the page shape until we know it.
+          <SkBusy label="Loading your account…">
+            <div className="phead sk-frame" aria-hidden="true"><Sk circle h={56} /><div className="sk-stack" style={{ flex: '1 1 180px', gap: 8 }}><Sk w="45%" h={20} /><Sk w="60%" h={12} /></div><div className="phead__stats"><Sk w={74} h={52} /><Sk w={74} h={52} /></div></div>
+            <div className="accttabs" aria-hidden="true">{TABS.map(([k]) => <Sk key={k} w={120} h={38} />)}</div>
+            <OrderCardSkeletons n={2} />
+          </SkBusy>
+        ) : !authed ? (
           <>
             <div className="acctsignin">
               <div className="acctsignin__ic">{I.user(26)}</div>
@@ -80,11 +88,13 @@ export default function TestAccount() {
           <>
             {/* Signed-in header */}
             <div className="phead">
-              <div className="phead__av">{initials(name)}</div>
-              <div className="phead__who"><b>{name || 'Welcome back'}</b><span>{contact || 'CrossCoin member'}</span></div>
+              {loading && !me
+                ? <><Sk circle h={56} /><div className="phead__who sk-stack" style={{ gap: 8 }}><Sk w="45%" h={20} /><Sk w="60%" h={12} /></div></>
+                : <><div className="phead__av">{initials(name)}</div>
+                  <div className="phead__who"><b>{name || 'Welcome back'}</b><span>{contact || 'CrossCoin member'}</span></div></>}
               <div className="phead__stats">
-                <div className="pstat"><b>{orders.length}</b><span>Orders</span></div>
-                <div className="pstat"><b>{addresses.length}</b><span>Saved</span></div>
+                <div className="pstat"><b>{loading ? <Sk w={22} h={18} style={{ margin: '0 auto' }} /> : orders.length}</b><span>Orders</span></div>
+                <div className="pstat"><b>{loading ? <Sk w={22} h={18} style={{ margin: '0 auto' }} /> : addresses.length}</b><span>Saved</span></div>
               </div>
               <button className="btn" onClick={doSignOut}>Sign out</button>
             </div>
@@ -93,7 +103,11 @@ export default function TestAccount() {
               {TABS.map(([k, label]) => <button key={k} className={`accttab${tab === k ? ' on' : ''}`} onClick={() => setTab(k)}>{label}</button>)}
             </div>
 
-            {loading && <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '18px 0' }}>Loading your account…</p>}
+            {loading && (
+              tab === 'orders' ? <SkBusy label="Loading your orders…"><OrderCardSkeletons n={3} /></SkBusy>
+                : tab === 'addr' ? <SkBusy label="Loading your addresses…"><AddressSkeletons n={2} /></SkBusy>
+                  : <SkBusy label="Loading your details…" style={{ maxWidth: 440 }}><FieldSkeletons n={3} /><Sk w={150} h={48} /></SkBusy>
+            )}
 
             {!loading && tab === 'orders' && (
               orders.length === 0

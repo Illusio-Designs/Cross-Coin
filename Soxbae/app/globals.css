@@ -146,19 +146,14 @@ button { font-family: inherit; cursor: pointer; }
 .cd-ship-track { height: 6px; border-radius: 999px; background: #d5e7e4; margin-top: 9px; overflow: hidden; }
 .cd-ship-fill { display: block; height: 100%; background: var(--teal); border-radius: 999px; transition: width .35s ease; }
 .cd-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 8px 20px; display: flex; flex-direction: column; background: var(--bg); position: relative; z-index: 1; scrollbar-width: none; -ms-overflow-style: none; }
-/* Whole-cart shimmer skeleton (shown until coupons + cross-sell + fees settle) */
-.cd-skel { display: flex; flex-direction: column; gap: 16px; padding: 10px 0; }
-.cd-skel-anim { background: linear-gradient(90deg, var(--line-soft) 25%, var(--line) 37%, var(--line-soft) 63%); background-size: 400% 100%; animation: cdSkel 1.4s ease infinite; border-radius: 8px; }
-.cd-skel-ship { height: 46px; border-radius: 12px; }
-.cd-skel-item { display: flex; gap: 12px; align-items: center; }
-.cd-skel-thumb { width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; }
-.cd-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 9px; }
-.cd-skel-line { height: 13px; width: 80%; }
-.cd-skel-line.sm { width: 45%; }
-.cd-skel-chip { height: 50px; border-radius: 12px; }
-.cd-skel-chip.tall { height: 76px; }
-@keyframes cdSkel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { .cd-skel-anim { animation: none; } }
+/* Whole-cart skeleton (until coupons + cross-sell + fees settle). Shapes use the
+   shared .sk shimmer (SKELETONS at the end of this file) and mirror the cart lines. */
+.cd-skel { display: flex; flex-direction: column; padding: 0; }
+.cd-skel-ship { height: 58px; border-radius: 12px; margin-bottom: 12px; }
+.cd-item--sk { align-items: center; animation: none !important; }
+.cd-skel-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.cd-skel-chip { height: 50px; border-radius: 12px; margin-top: 6px; }
+.cd-skel-chip.tall { height: 76px; margin-top: 10px; }
 .cd-body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .cd-item { display: flex; gap: 12px; padding: 12px; margin-bottom: 10px; background: #fff; border: 1px solid var(--line-soft); border-radius: 12px; box-shadow: var(--shadow-soft); transition: box-shadow .2s ease, border-color .2s ease; }
 .cd-item:hover { border-color: var(--line); box-shadow: 0 8px 24px -14px rgba(27,35,64,.18); }
@@ -854,18 +849,7 @@ button { font-family: inherit; cursor: pointer; }
   .reviews-layout { grid-template-columns: 240px 1fr; }
 }
 
-/* ============================================================================
-   SHIMMER / SKELETON
-   ========================================================================== */
-@keyframes morbixShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-.shimmer {
-  background: linear-gradient(100deg, #e9edf0 30%, #f3f6f8 50%, #e9edf0 70%);
-  background-size: 800px 100%;
-  animation: morbixShimmer 1.3s ease-in-out infinite;
-}
-.shimmer-img-skeleton { position: absolute; inset: 0; display: block; border-radius: inherit; z-index: 0; }
-.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .3s ease; }
-.shimmer-img.is-loaded { opacity: 1; }
+/* SHIMMER / SKELETON — see the SKELETONS block at the end of this file. */
 
 /* ============================================================================
    HEADER ICON PILLS
@@ -2489,4 +2473,64 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 @media (max-width: 767px) {
   .pdx-desc-rich .only-desktop { display: none; }
   .pdx-desc-rich .only-mobile { display: block; }
+}
+
+/* ============================================================================
+   SKELETONS — Soxbae shimmer kit (components/ui/Skeleton.jsx).
+   Warm ivory bars from the store's own neutrals (--line / --line-soft), drawn
+   exactly where content will land so nothing jumps when it arrives. Kept at the
+   end so it sits on top of the layered theme rules above. `.shimmer` is the
+   older name for the same thing.
+   ========================================================================== */
+@keyframes soxbaeShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.sk, .shimmer {
+  display: block;
+  max-width: 100%;
+  background-color: var(--line-soft);
+  background-image: linear-gradient(100deg, var(--line-soft) 30%, var(--card) 50%, var(--line-soft) 70%);
+  background-size: 200% 100%;
+  animation: soxbaeShimmer 1.3s ease-in-out infinite;
+}
+/* Deeper warm tone, for bars that sit on a shimmer (hero copy, tile captions) */
+.sk--deep { background-color: var(--line); background-image: linear-gradient(100deg, var(--line) 30%, var(--line-soft) 50%, var(--line) 70%); }
+.sk-fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }
+.sk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sk-stack { display: grid; gap: 8px; align-content: start; }
+
+/* ShimmerImg: the picture stays hidden until fully downloaded + decoded (no
+   top-half-first painting), then fades in. Cached images skip the fade. */
+.shimmer-img-skeleton { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: inherit; z-index: 0; }
+:where(.shimmer-img) { position: relative; }
+.shimmer-img { z-index: 1; opacity: 0; }
+.shimmer-img.is-loaded { opacity: 1; }
+.shimmer-img.is-fading { transition: opacity .18s ease; }
+/* Image boxes the skeleton overlay positions against */
+.cd-thumb, .pdx-thumb, .excl-thumb, .excl-switch-thumb, .sx-made-circle, .pdx-sticky-thumb, .sx-article-hero { position: relative; }
+.pdx-sticky-thumb { width: 46px; height: 46px; flex-shrink: 0; border-radius: 10px; overflow: hidden; }
+/* Hero slides: hidden until decoded (the stage shows a shimmer until the first is in) */
+.sxh-img.is-pending { opacity: 0 !important; }
+/* Article cover: fixed 16:9 box so it never shifts the text; whole picture (contain) */
+.sx-article-hero { aspect-ratio: 16 / 9; }
+.sx-article-hero img { height: 100%; object-fit: contain; }
+
+/* Skeleton versions of real cards keep the card's own box, minus hover motion */
+.sxp--sk .sxp-media { padding: 0; }
+.sxp--sk .sxp-info { box-shadow: none; }
+.sxp--sk .sxp-name-sk { display: grid; gap: 7px; flex: 1; min-width: 0; }
+.sx-col-card--sk .sx-col-cap, .sx-col-card--sk:hover .sx-col-cap { transform: none; box-shadow: none; }
+.sx-jr-card--sk .sx-jr-media { background: none; }
+.sx-review--sk { flex: 0 0 340px; max-width: 100%; }
+.sk-rv-row { display: flex; gap: 16px; overflow: hidden; padding-bottom: 4px; }
+.pdx-thumb--sk { cursor: default; }
+.order-row--sk > div { gap: 7px; }
+.acc-hero--sk { background: linear-gradient(120deg, var(--line), var(--line-soft)); box-shadow: none; }
+.acc-hero--sk .acc-avatar { background: var(--card); border-color: var(--line); }
+
+/* Refreshing with content already on screen: keep it, dimmed, instead of
+   flashing skeletons. */
+.sk-dim { opacity: .5; pointer-events: none; transition: opacity .2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk, .shimmer { animation: none; background-image: none; }
+  .sk-dim, .shimmer-img.is-fading { transition: none; }
 }

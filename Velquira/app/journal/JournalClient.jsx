@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import BlogCard from '@/components/home/BlogCard';
 import Pagination from '@/components/Pagination';
+import { BlogGridSkeleton } from '@/components/ui/Skeleton';
 import { getBlogPage } from '@/lib/api';
 
 const LIMIT = 12;
@@ -37,9 +38,15 @@ export default function JournalClient() {
     return <div className="empty" style={{ marginTop: 20 }}>No articles yet — check back soon.</div>;
   }
 
+  // First load: card-shaped placeholders. Page changes keep the current
+  // articles on screen (dimmed) until the next page arrives.
+  if (loading && posts.length === 0) {
+    return <BlogGridSkeleton count={6} style={{ marginTop: 26 }} />;
+  }
+
   return (
     <>
-      <div className="blog-grid" style={{ marginTop: 26 }}>
+      <div className={`blog-grid${loading ? ' sk-refreshing' : ''}`} style={{ marginTop: 26 }} aria-busy={loading || undefined}>
         {posts.map((p) => <BlogCard post={p} key={p.slug} />)}
       </div>
       <Pagination page={page} totalPages={totalPages} onChange={goToPage} disabled={loading} />

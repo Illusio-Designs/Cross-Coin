@@ -39,7 +39,11 @@ export function CategoryCards({ categories = [] }) {
             {img
               ? <ShimmerImg
                   src={img}
+                  width={600}
+                  widths={[400, 600, 900]}
+                  sizes="(max-width: 768px) 50vw, 25vw"
                   alt={c.name}
+                  fallback={<div className="absolute inset-0 bg-gray-200" />}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               : <div className="absolute inset-0 bg-gray-200" />

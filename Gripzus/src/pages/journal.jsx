@@ -4,6 +4,7 @@ import PageHero from '../components/common/PageHero';
 import BlogCard from '../components/common/BlogCard';
 import Pagination from '../components/common/Pagination';
 import SeoWrapper from '../components/SeoWrapper';
+import GzImage from '../components/common/GzImage';
 import { JOURNAL_POSTS } from '../data/journal';
 import { getPostsPage } from '../services/blog';
 
@@ -51,7 +52,11 @@ export default function JournalPage({ initialPosts = [], initialTotalPages = 1 }
           {/* Featured */}
           <Link href={`/journal/${feature.slug}`} className="group grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 md:mb-20 md:items-center">
             <div className="relative overflow-hidden rounded-xl bg-paper-deep self-start">
-              <img src={feature.image} alt={feature.title} className="w-full h-auto transition-transform duration-700 group-hover:scale-[1.03]" />
+              {/* Whole picture (natural height); a 16:10 box is held until it has loaded. */}
+              <div>
+                <GzImage src={feature.image} alt={feature.title} w={1400} widths={[800, 1400]} sizes="(max-width: 767px) 100vw, 50vw"
+                  className="w-full h-auto transition-transform duration-700 group-hover:scale-[1.03]" style={{ aspectRatio: 'auto 16 / 10' }} />
+              </div>
               <span className="absolute top-5 left-5 bg-paper/95 text-ink eyebrow px-3 py-1.5 rounded-sm">Featured · {feature.category}</span>
             </div>
             <div className="flex flex-col justify-center">
@@ -68,8 +73,8 @@ export default function JournalPage({ initialPosts = [], initialTotalPages = 1 }
             </div>
           </Link>
 
-          {/* Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+          {/* Grid — while the next page loads, the current one stays (dimmed). */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
             {rest.map((p) => <BlogCard key={p.slug} post={p} />)}
           </div>
 

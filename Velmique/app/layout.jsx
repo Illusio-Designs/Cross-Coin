@@ -70,6 +70,8 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700;800&display=swap"
         />
+        {/* Without JS the no-half-draw images (SkImg) could never reveal. */}
+        <noscript><style>{'.sk-frame>img{opacity:1!important}.sk-img{animation:none!important;background-image:none!important}'}</style></noscript>
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
         <link rel="dns-prefetch" href="https://api.crosscoin.in" />
         {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp for
@@ -114,6 +116,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        {/* Pictures stay hidden until fully loaded + decoded; this shows them
+            as soon as they are ready, even before React has started. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG')return;var f=t.parentNode;if(!f||!f.classList||!f.classList.contains('sk-frame')||!f.classList.contains('sk-img'))return;var r=function(){if(t.naturalWidth>0){f.classList.remove('sk-img');f.classList.add('is-ready')}};if(t.decode){t.decode().then(r,function(){})}else{r()}},true)}catch(_){}})();" }} />
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />

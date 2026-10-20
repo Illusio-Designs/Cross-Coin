@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
+import { FormSkeleton } from '@/components/ui/Skeleton';
 import DeleteAccountSection from '@/components/account/DeleteAccountSection';
 import { useAuth } from '@/context/AuthContext';
 import { updateProfile } from '@/lib/api/auth';
@@ -73,5 +74,13 @@ function Settings() {
 }
 
 export default function SettingsPage() {
-  return <AccountGate title="Settings"><Settings /></AccountGate>;
+  return (
+    <AccountGate
+      title="Settings"
+      crumbs={<nav className="crumbs"><Link href="/account">Account</Link> <span>/</span> <b>Settings</b></nav>}
+      skeleton={<div className="settings-single" style={{ marginTop: 0 }}><FormSkeleton fields={3} /></div>}
+    >
+      <Settings />
+    </AccountGate>
+  );
 }

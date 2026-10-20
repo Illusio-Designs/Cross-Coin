@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useCart } from '../../context/CartContext';
 import { resolveVariationId } from '../../services/products';
+import GzImage from '../common/GzImage';
 
 /* "Hand-Picked" — featured-product spotlight (same idea as the sibling brands,
    Morbix / Soxbae). The main image auto-advances through the selected colour's
@@ -167,13 +168,13 @@ export default function ExclusiveSection({ products = [] }) {
                   {gallery.map((img, i) => (
                     <button key={img + i} type="button" data-thumb={i} onClick={() => setImgIdx(i)}
                       className={`excl3-thumb ${i === safeIdx ? 'on' : ''}`} aria-label={`View image ${i + 1}`}>
-                      <img src={img} alt="" loading="lazy" />
+                      <GzImage src={img} w={200} />
                     </button>
                   ))}
                 </div>
               )}
               <div className="excl3-frame" ref={frameRef}>
-                <img key={heroImg} src={heroImg} alt={product.name} className="excl3-img" />
+                <GzImage key={heroImg} src={heroImg} alt={product.name} w={1000} widths={[600, 1000]} sizes="(max-width: 767px) 280px, 460px" fade={false} className="excl3-img" />
                 {product.badge && <span className="excl3-badge">{product.badge}</span>}
                 <ReviewBadge rating={product.rating} count={product.reviewCount} style={{ left: 12, bottom: 12 }} />
               </div>
@@ -234,7 +235,7 @@ export default function ExclusiveSection({ products = [] }) {
                     const poff = p.oldPrice && p.oldPrice > p.price;
                     return (
                       <button key={p.id} type="button" className="excl3-orow" onClick={() => pick(idx)} title={p.name}>
-                        <span className="excl3-orow-img"><img src={p.images?.[0] || FALLBACK_IMG} alt={p.name} loading="lazy" /></span>
+                        <span className="excl3-orow-img"><GzImage src={p.images?.[0] || FALLBACK_IMG} alt={p.name} w={200} fallback={FALLBACK_IMG} /></span>
                         <span className="excl3-orow-name">{p.name}</span>
                         <span className="excl3-orow-price">₹{p.price.toLocaleString('en-IN')}{poff && <em>₹{p.oldPrice.toLocaleString('en-IN')}</em>}</span>
                       </button>
@@ -248,7 +249,7 @@ export default function ExclusiveSection({ products = [] }) {
       </div>
 
       <style jsx>{`
-        .excl3 { background: #0A0A0A; color: #fff; padding: 72px 0; overflow: hidden; }
+        .excl3 { background: #0A0A0A; color: #fff; padding: 72px 0; overflow: hidden; --sk-base: rgba(255,255,255,0.04); --sk-hi: rgba(255,255,255,0.11); }
         @media (min-width: 768px) { .excl3 { padding: 104px 0; } }
         .excl3-head { margin-bottom: 56px; opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
         .is-shown .excl3-head { opacity: 1; transform: none; }
@@ -268,7 +269,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-thumb { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 0; overflow: hidden; opacity: .5; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); transition: opacity .25s ease, box-shadow .25s ease; }
         .excl3-thumb:hover { opacity: .85; }
         .excl3-thumb.on { opacity: 1; box-shadow: 0 0 0 2px #fff; }
-        .excl3-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .excl3-thumb :global(img) { width: 100%; height: 100%; object-fit: cover; }
 
         /* Main image — DESKTOP: the original larger natural image (max 460px).
            MOBILE: a compact fixed square (see the mobile media block). */
@@ -281,7 +282,9 @@ export default function ExclusiveSection({ products = [] }) {
           transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1);
         }
         .is-shown .excl3-frame { opacity: 1; transform: none; }
-        .excl3-img { width: 100%; height: auto; object-fit: contain; display: block; animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
+        .excl3-frame :global(.excl3-img) { width: 100%; height: auto; aspect-ratio: auto 1 / 1; object-fit: contain; display: block; }
+        /* GzImage keeps it hidden until fully loaded + decoded, then this reveal plays. */
+        .excl3-frame :global(.excl3-img.is-on) { animation: excl3-reveal .7s cubic-bezier(.22,1,.36,1); }
         @keyframes excl3-reveal { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
         .excl3-badge { position: absolute; top: 14px; left: 14px; z-index: 2; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; background: #fff; color: #0A0A0A; padding: 5px 11px; border-radius: 0; box-shadow: 0 6px 20px -8px rgba(0,0,0,0.5); }
 
@@ -323,7 +326,7 @@ export default function ExclusiveSection({ products = [] }) {
         .excl3-orow { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 8px; border-radius: 0; border: 1px solid transparent; transition: background .2s ease, border-color .2s ease; }
         .excl3-orow:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
         .excl3-orow-img { width: 52px; height: 52px; flex: 0 0 auto; border-radius: 0; overflow: hidden; background: rgba(255,255,255,0.04); box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
-        .excl3-orow-img img { width: 100%; height: 100%; object-fit: cover; }
+        .excl3-orow-img :global(img) { width: 100%; height: 100%; object-fit: cover; }
         .excl3-orow-name { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; color: #fff; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .excl3-orow-price { flex: 0 0 auto; font-size: 14px; color: rgba(255,255,255,0.8); }
         .excl3-orow-price em { font-style: normal; color: rgba(255,255,255,0.4); text-decoration: line-through; font-size: 12px; margin-left: 6px; }
@@ -344,7 +347,7 @@ export default function ExclusiveSection({ products = [] }) {
           .excl3-thumb { width: 54px; height: 54px; }
           /* MOBILE ONLY — compact fixed square (desktop keeps the larger image). */
           .excl3-frame { max-width: 280px; aspect-ratio: 1 / 1; display: grid; place-items: center; }
-          .excl3-img { height: 100%; }
+          .excl3-frame :global(.excl3-img) { height: 100%; }
 
           .excl3-name { margin-top: 8px; }
           .excl3-price { margin-top: 14px; }

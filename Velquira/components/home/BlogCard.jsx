@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 
 // Right-size ImageKit covers to an exact 16:9 (800x450) server-side — matches
 // the CrossCoin blog card so every card image is pre-cropped, sharp and light.
@@ -20,7 +21,7 @@ export default function BlogCard({ post }) {
     <Link href={`/journal/${p.slug}`} className="blog-card">
       <div className="blog-media">
         {(p.thumb || p.image)
-          ? <img src={ik(p.thumb || p.image)} alt={p.title} loading="lazy" />
+          ? <ShimmerImg src={ik(p.thumb || p.image)} alt={p.title} />
           : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
         <div className="blog-cap">
           <div className="blog-meta">

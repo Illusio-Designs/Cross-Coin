@@ -698,3 +698,39 @@ body:has([data-sticky-atc]) [data-scrolltop] { bottom: 172px; }
 .mbx .faq-answer ul, .mbx .faq-answer ol { margin: 8px 0; padding-left: 20px; }
 .mbx .faq-answer li { margin: 4px 0; }
 @media (prefers-reduced-motion: reduce) { .mbx .faq-a, .mbx .faq-plus { transition: none; } }
+
+/* ===================================================================
+   SKELETONS — one kit for the store (components/common/Skeleton.jsx).
+   Draw placeholders WHERE content will land, in the same square frames
+   (1px hairline, paper tones), so nothing jumps when data arrives.
+   =================================================================== */
+:root { --sk-base: var(--paper-deep); --sk-hi: var(--paper-warm); }
+.sk {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+}
+.sk-fill { position: absolute; inset: 0; width: 100%; height: 100%; }
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+/* A refresh with data already on screen dims it instead of flashing skeletons. */
+.sk-dim { opacity: .5; transition: opacity .2s ease; pointer-events: none; }
+
+/* No half-drawn images (GzImage): hidden until fully downloaded + decoded,
+   while the (already sized) parent box shimmers; then a short fade. */
+img.gzimg:not(.is-on) { opacity: 0 !important; }
+img.gzimg.gz-fade { animation: gz-img-in .18s ease; }
+@keyframes gz-img-in { from { opacity: 0; } }
+:has(> img.gzimg:not(.is-on)) {
+  background-image: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%) !important;
+  background-size: 200% 100% !important;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; background: var(--sk-base); }
+  :has(> img.gzimg:not(.is-on)) { animation: none; }
+  img.gzimg.gz-fade { animation: none; }
+}

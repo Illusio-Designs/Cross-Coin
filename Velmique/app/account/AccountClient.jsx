@@ -19,6 +19,9 @@ import {
 } from '@/utils/orderStatus';
 import { resolveImageUrl, pickItemImage, fmtAttrs } from '@/lib/orderItems';
 import ConfirmDialog from '../_components/ConfirmDialog';
+import SkImg from '../_components/SkImg';
+import { AccountSkeleton, AddressListSkeleton, OrderListSkeleton, Sk } from '../_components/Skeleton';
+import { ik } from '@/lib/imagekit';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
@@ -77,7 +80,7 @@ export default function AccountClient() {
   };
 
   if (loading) {
-    return <div className="m-wrap m-ph"><span className="m-eyebrow">Your account</span><h1>My Maison.</h1><p>Loading…</p></div>;
+    return <AccountSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -103,6 +106,8 @@ export default function AccountClient() {
   const loyalty = points ?? Number(user?.loyalty_points || 0);
   const delivered = orders.filter((o) => String(o.status || '').toLowerCase() === 'delivered').length;
   const active = orders.filter((o) => isActiveOrder(o.status)).length;
+  // Counts read 0 until the first orders fetch lands — show bars, not zeros.
+  const statsReady = !ordersLoading || orders.length > 0 || !!ordersError;
 
   return (
     <>
@@ -113,9 +118,9 @@ export default function AccountClient() {
             <div className="nm">{name}</div>
             <div className="em">{user?.email && !/@phone\./.test(user.email) ? user.email : ''}{user?.phone ? <><br />+91 {user.phone}</> : null}</div>
             <dl className="m-stats">
-              <div><dt>Orders</dt><dd>{orders.length}</dd></div>
-              <div><dt>Active</dt><dd>{active}</dd></div>
-              <div><dt>Delivered</dt><dd>{delivered}</dd></div>
+              <div><dt>Orders</dt><dd>{statsReady ? orders.length : <Sk w={30} h={24} inline />}</dd></div>
+              <div><dt>Active</dt><dd>{statsReady ? active : <Sk w={30} h={24} inline />}</dd></div>
+              <div><dt>Delivered</dt><dd>{statsReady ? delivered : <Sk w={30} h={24} inline />}</dd></div>
               <div title="Earn points on delivered orders and redeem them on future orders."><dt>Points</dt><dd>{loyalty}</dd></div>
             </dl>
             <div style={{ display: 'grid', gap: 10, marginTop: 20 }}>
@@ -166,7 +171,7 @@ function OrdersTab({ orders, loading, error, reload }) {
     },
   });
 
-  if (loading) return <div className="m-empty" style={{ padding: '40px 24px' }}><p>Loading your orders…</p></div>;
+  if (loading && !orders.length) return <OrderListSkeleton />;
   if (error) {
     return (
       <div className="m-empty" style={{ padding: '40px 24px' }}>
@@ -188,7 +193,8 @@ function OrdersTab({ orders, loading, error, reload }) {
 
   return (
     <>
-      <ul className="m-olist">
+      {/* A reload (e.g. after a cancel) keeps the list on screen, dimmed. */}
+      <ul className={`m-olist${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
         {orders.map((o) => {
           const items = o.OrderItems || o.items || [];
           const ref = o.order_number || o.orderNumber || `#${o.id}`;
@@ -207,7 +213,7 @@ function OrdersTab({ orders, loading, error, reload }) {
               <div className="m-othumbs" aria-hidden="true">
                 {items.slice(0, 4).map((it, i) => {
                   const img = pickItemImage(it);
-                  return img ? <img key={it.id || i} src={resolveImageUrl(img)} alt="" loading="lazy" /> : <span key={it.id || i} className="m-olines__ph" />;
+                  return img ? <SkImg key={it.id || i} frameClassName="m-othumbs__img" src={ik(resolveImageUrl(img), 120)} alt="" loading="lazy" /> : <span key={it.id || i} className="m-olines__ph" />;
                 })}
                 {items.length > 4 ? <span className="m-othumbs__more">+{items.length - 4}</span> : null}
               </div>
@@ -223,7 +229,7 @@ function OrdersTab({ orders, loading, error, reload }) {
                       const attrs = fmtAttrs(it.ProductVariation?.attributes || it.variation?.attributes);
                       return (
                         <li key={it.id || i}>
-                          {img ? <img src={resolveImageUrl(img)} alt="" loading="lazy" /> : <span className="m-olines__ph" />}
+                          {img ? <SkImg frameClassName="m-olines__ph" src={ik(resolveImageUrl(img), 120)} alt="" loading="lazy" /> : <span className="m-olines__ph" />}
                           <div>
                             {it.Product?.slug ? <Link href={`/product/${it.Product.slug}`}><b>{it.Product?.name}</b></Link> : <b>{it.Product?.name || it.name || 'Item'}</b>}
                             <small>{attrs ? `${attrs} · ` : ''}Qty {it.quantity}</small>
@@ -333,7 +339,8 @@ function AddressesTab() {
   };
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
-  if (loading) return <div className="m-empty" style={{ padding: '40px 24px' }}><p>Loading addresses…</p></div>;
+  // First load only; a reload after a save keeps the saved cards (dimmed).
+  if (loading && !addrs.length) return <AddressListSkeleton />;
 
   return (
     <>
@@ -365,7 +372,7 @@ function AddressesTab() {
       {addrs.length === 0 && editing !== 'new' ? (
         <div className="m-empty" style={{ padding: '36px 24px' }}><h3>No saved addresses</h3><p>Add one to check out faster.</p></div>
       ) : (
-        <ul className="m-addrgrid">
+        <ul className={`m-addrgrid${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
           {addrs.filter((a) => a.id !== editing).map((a) => (
             <li key={a.id} className="m-ordcard m-addr">
               <div className="m-ordhead">

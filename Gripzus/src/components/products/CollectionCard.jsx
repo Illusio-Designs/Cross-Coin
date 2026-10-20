@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import GzImage from '../common/GzImage';
 
 /* Gripzus CollectionCard — GROUND INDEX architectural edition.
    A 1px-framed image (square corners, no shadow) with a solid black square
@@ -18,7 +19,7 @@ export default function CollectionCard({ collection = {}, index = 0, ratio = 'as
     <Link href={href} className={`group block ${className}`}>
       <div className={`media-zoom relative ${ratio} overflow-hidden border border-line bg-paper-warm`}>
         {image
-          ? <img src={image} alt={name} loading="lazy"
+          ? <GzImage src={image} alt={name} w={600} widths={[400, 600]} sizes="(max-width: 767px) 50vw, 25vw"
                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]" />
           : <div className="absolute inset-0 bg-paper-deep" />}
 

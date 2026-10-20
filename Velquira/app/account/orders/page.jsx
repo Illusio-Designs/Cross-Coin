@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { orderStatusLabel, orderStatusTone, canRequestReturn } from '@/utils/orderStatus';
@@ -47,9 +47,7 @@ function OrdersList() {
       <div className="page-hero"><span className="eyebrow">Account</span><h1>My orders</h1></div>
 
       {loading ? (
-        <div style={{ display: 'grid', gap: 12, marginTop: 24 }}>
-          {[0, 1, 2].map((i) => <Skeleton key={i} height={72} radius={14} />)}
-        </div>
+        <OrderListSkeleton rows={4} style={{ marginTop: 24 }} />
       ) : orders.length === 0 ? (
         <div className="cart-empty">
           <Icon name="ShoppingBag" size={40} color="#c3ccd2" />
@@ -83,5 +81,13 @@ function OrdersList() {
 }
 
 export default function OrdersPage() {
-  return <AccountGate title="My orders"><OrdersList /></AccountGate>;
+  return (
+    <AccountGate
+      title="My orders"
+      crumbs={<nav className="crumbs"><Link href="/account">Account</Link> <span>/</span> <b>Orders</b></nav>}
+      skeleton={<OrderListSkeleton rows={4} label={null} />}
+    >
+      <OrdersList />
+    </AccountGate>
+  );
 }

@@ -63,9 +63,16 @@ export default function Document({ tracking }) {
   return (
     <Html lang="en">
       <Head>
+        {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
+        <noscript><style>{'.cc-test-root img.ccimg{opacity:1!important}.cc-test-root :has(> img.ccimg){animation:none!important;background-image:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
+        {/* No half-drawn images: Mint <img class="ccimg"> stays transparent until
+            fully loaded + decoded. This reveals server-rendered images that
+            finish before React hydrates (the hero/LCP) — after that the Thumb
+            component in components/test/ui.jsx takes over. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.classList||!t.classList.contains('ccimg'))return;var d=function(){t.classList.add('is-on')};if(t.decode){t.decode().then(d,d)}else{d()}},true);" }} />
         {/* Deploy resilience (no Vercel Pro / Skew Protection): if a Next.js CSS
             chunk fails to load — deploy skew, or a flaky mobile connection — the
             page renders unstyled ("raw HTML"). Reload ONCE to fetch the current

@@ -953,20 +953,27 @@ export default function CartDrawer() {
           <>
             <div className="cd-body cd-body-checkout" data-lenis-prevent>
               {coStep === 1 && items.length > 0 && !cartReady && (
-                <div className="cd-skel" aria-hidden="true">
-                  <div className="cd-skel-ship cd-skel-anim" />
-                  {[0, 1].map((n) => (
-                    <div className="cd-skel-item" key={n}>
-                      <div className="cd-skel-thumb cd-skel-anim" />
-                      <div className="cd-skel-lines">
-                        <span className="cd-skel-line cd-skel-anim" />
-                        <span className="cd-skel-line sm cd-skel-anim" />
-                        <span className="cd-skel-line sm cd-skel-anim" />
+                <div className="cd-skel" role="status" aria-busy="true" aria-live="polite">
+                  <span className="sr-only">Loading your cart…</span>
+                  <span className="cd-skel-ship sk" aria-hidden="true" />
+                  <div className="cd-co-section" aria-hidden="true">
+                    <div className="cd-section-title">Items</div>
+                    {items.slice(0, 4).map((it) => (
+                      <div className="cd-item cd-item--sk" key={it.key}>
+                        <span className="cd-thumb sk" />
+                        <div className="cd-skel-lines">
+                          <span className="sk" style={{ width: '78%', height: 14, borderRadius: 6 }} />
+                          <span className="sk" style={{ width: '40%', height: 11, borderRadius: 6 }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                            <span className="sk" style={{ width: 70, height: 14, borderRadius: 6 }} />
+                            <span className="sk" style={{ width: 92, height: 32, borderRadius: 999 }} />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  <div className="cd-skel-chip cd-skel-anim" />
-                  <div className="cd-skel-chip tall cd-skel-anim" />
+                    ))}
+                  </div>
+                  <span className="cd-skel-chip sk" aria-hidden="true" />
+                  <span className="cd-skel-chip tall sk" aria-hidden="true" />
                 </div>
               )}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
@@ -1057,7 +1064,7 @@ export default function CartDrawer() {
                 {items.map((i) => (
                   <div className="cd-item" key={i.key}>
                     <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
-                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Footprints" size={26} />}
+                      {i.image ? <ShimmerImg src={i.image} alt="" width={200} fallback={<Icon name="Footprints" size={26} />} /> : <Icon name="Footprints" size={26} />}
                     </Link>
                     <div className="cd-item-main">
                       <div className="cd-item-top">
@@ -1287,7 +1294,7 @@ export default function CartDrawer() {
                             <div key={r.key} dir="ltr" style={{ flex: '0 0 auto', width: 230, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid var(--line-soft)', borderRadius: 12, padding: 8, boxShadow: 'var(--shadow-soft)' }}>
                               <div style={{ position: 'relative', width: 46, height: 46, borderRadius: 9, overflow: 'hidden', background: '#eef1f4', flexShrink: 0, display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>
                                 {r.image
-                                  ? <ShimmerImg src={r.image} alt={r.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ? <ShimmerImg src={r.image} alt={r.name} width={200} fallback={<Icon name="Footprints" size={18} />} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                   : <Icon name="Footprints" size={18} />}
                               </div>
                               <div style={{ minWidth: 0, flex: 1 }}>

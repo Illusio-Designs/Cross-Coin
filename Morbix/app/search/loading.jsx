@@ -3,11 +3,12 @@ import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
 export default function SearchLoading() {
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
-      <Skeleton width="40%" height={38} />
-      <div style={{ height: 20 }} />
-      <Skeleton height={48} radius={999} width={520} style={{ maxWidth: '100%' }} />
-      <div style={{ height: 26 }} />
-      <ProductGridSkeleton count={4} />
+      <div className="page-hero">
+        <span className="eyebrow">Search</span>
+        <Skeleton width={280} height={40} radius={10} style={{ margin: '10px 0 12px' }} />
+      </div>
+      <Skeleton height={62} radius={999} width={520} style={{ margin: '20px 0 8px' }} />
+      <ProductGridSkeleton count={5} label="Searching…" style={{ marginTop: 18 }} />
     </div>
   );
 }

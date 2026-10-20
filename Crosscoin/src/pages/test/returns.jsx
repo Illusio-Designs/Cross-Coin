@@ -3,7 +3,7 @@ import { R } from '@/components/test/routes';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { Dropdown, I, toast } from '../../components/test/ui';
+import { Dropdown, I, toast, Sk, SkBusy, useHydrated, FieldSkeletons, OrderCardSkeletons } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { useAuthed, fetchMyOrders } from '../../components/test/auth';
 import { createReturn, getMyReturns } from '../../services/publicApi';
@@ -33,9 +33,10 @@ const isCod = (o) => String(o?.paymentType || '').toLowerCase() === 'cod';
 export default function TestReturns() {
   const router = useRouter();
   const authed = useAuthed();
+  const hydrated = useHydrated();
   const [orders, setOrders] = useState([]);
   const [returns, setReturns] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [orderId, setOrderId] = useState('');
   const [reason, setReason] = useState('damaged');
@@ -148,7 +149,18 @@ export default function TestReturns() {
       </div>
 
       <div className="wrap" style={{ maxWidth: 560, paddingBottom: 70 }}>
-        {!authed ? (
+        {!hydrated || (authed && loading) ? (
+          // Form + request list in their real frames while we learn the
+          // sign-in state and fetch the orders.
+          <SkBusy label="Loading your orders…">
+            <div className="authcard sk-frame" aria-hidden="true">
+              <FieldSkeletons n={4} />
+              <Sk h={56} style={{ marginTop: 14 }} />
+            </div>
+            <h3 style={{ fontFamily: 'Fraunces,serif', fontSize: 22, margin: '34px 0 14px' }}>Your return requests</h3>
+            <OrderCardSkeletons n={1} />
+          </SkBusy>
+        ) : !authed ? (
           <div className="acctsignin">
             <div className="acctsignin__ic">{I.user(26)}</div>
             <div className="acctsignin__t"><b>Sign in to request a return</b><span>Returns are linked to your account so we can match them to your order.</span></div>
@@ -157,8 +169,6 @@ export default function TestReturns() {
               <button className="btn" onClick={() => router.push(R.track)}>Track an order</button>
             </div>
           </div>
-        ) : loading ? (
-          <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '18px 0' }}>Loading your orders…</p>
         ) : (
           <>
             {done ? (

@@ -124,8 +124,11 @@ export default async function CollectionPage({ params }) {
         {category.image && (
           <ShimmerImg
             src={category.image}
+            width={1600}
+            widths={[800, 1200, 1600]}
+            sizes="100vw"
             alt={category.name}
-            shimmerClassName="bg-gray-800"
+            shimmerClassName="sk--dark"
             className="absolute inset-0 h-full w-full object-cover opacity-60"
           />
         )}

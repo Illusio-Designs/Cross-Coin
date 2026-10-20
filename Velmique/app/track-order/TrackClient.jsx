@@ -9,6 +9,9 @@ import {
   trackingStep, orderStatusNote, paymentSummary, canRequestReturn,
 } from '@/utils/orderStatus';
 import { resolveImageUrl, pickItemImage, fmtAttrs } from '@/lib/orderItems';
+import { ik } from '@/lib/imagekit';
+import SkImg from '../_components/SkImg';
+import { TrackResultSkeleton } from '../_components/Skeleton';
 
 const STEPS = [
   { key: 'placed', label: 'Placed' },
@@ -54,7 +57,9 @@ export default function TrackClient() {
   const initial = params?.get('order') || '';
   const [input, setInput] = useState(initial);
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  // A ?order= link starts tracking on mount — start in the loading state so
+  // the empty "enter your order number" card never flashes first.
+  const [loading, setLoading] = useState(() => !!initial);
   const [error, setError] = useState('');
 
   const track = async (ref) => {
@@ -94,7 +99,7 @@ export default function TrackClient() {
         </form>
 
         {error && !loading ? <div className="m-alert m-alert--err" role="alert">{error}</div> : null}
-        {loading ? <div className="m-ordcard"><div className="m-skel" style={{ aspectRatio: 'auto', height: 140 }} /></div> : null}
+        {loading ? <TrackResultSkeleton /> : null}
 
         {o ? (
           <>
@@ -155,7 +160,7 @@ export default function TrackClient() {
                   const attrs = fmtAttrs(it.variation?.attributes || it.ProductVariation?.attributes);
                   return (
                     <li key={it.id || i}>
-                      {img ? <img src={resolveImageUrl(img)} alt="" loading="lazy" /> : <span className="m-olines__ph" />}
+                      {img ? <SkImg frameClassName="m-olines__ph" src={ik(resolveImageUrl(img), 120)} alt="" loading="lazy" /> : <span className="m-olines__ph" />}
                       <div>
                         <b>{it.product?.name || it.Product?.name || 'Item'}</b>
                         <small>{attrs ? `${attrs} · ` : ''}Qty {it.quantity}</small>

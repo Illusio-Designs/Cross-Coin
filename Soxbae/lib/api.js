@@ -6,6 +6,7 @@
  * these functions return an empty value ([] / null) and the UI renders a real
  * empty state.
  */
+import { ikSrc } from './image';
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
 import { plainText } from './plainText';
@@ -357,11 +358,11 @@ function cleanUrl(url) {
   return u;
 }
 
-// Drop an ImageKit resize transform (…?tr=w-900,h-900,q-82,f-auto) so the FULL
-// original image is served instead of a square-cropped 900×900 version. Used for
-// blog hero images, where the whole picture should show.
+// Swap an ImageKit resize transform (…?tr=w-900,h-900,q-82,f-auto) for a
+// width-only one so the WHOLE picture shows (no square crop) without
+// downloading the original file. Used for blog cover images.
 function fullImage(url) {
-  return String(url || '').split(/[?&]tr=/)[0];
+  return ikSrc(String(url || '').split(/[?&]tr=/)[0], 1400);
 }
 
 // Pull a usable URL string out of a backend image (string or object shape).

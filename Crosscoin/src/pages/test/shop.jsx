@@ -3,7 +3,7 @@ import { R } from '@/components/test/routes';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, SkeletonCards, Dropdown } from '../../components/test/ui';
+import { ProductCard, SkeletonCards, SkBusy, Dropdown } from '../../components/test/ui';
 import { fetchProducts, fetchCategories } from '../../components/test/real';
 
 const SORTS = [
@@ -77,7 +77,7 @@ export default function TestShop({ preview = true }) {
 
       <div className="wrap" style={{ paddingBottom: 60 }}>
         {loading && products.length === 0
-          ? <div className="pgrid" style={{ paddingTop: 20 }}><SkeletonCards n={8} /></div>
+          ? <SkBusy className="pgrid" label="Loading products…"><SkeletonCards n={8} /></SkBusy>
           : list.length === 0
             ? <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '30px 0' }}>No products in this category.</p>
             : <div className="pgrid">{list.map((p) => <ProductCard key={p.id} p={p} />)}</div>}

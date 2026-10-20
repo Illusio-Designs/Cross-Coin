@@ -1,32 +1,29 @@
 import Hero from '@/components/home/Hero';
+import { ikSrc, ikSrcSet, HERO_W, HERO_MOBILE_W, HERO_WIDTHS, HERO_SIZES } from '@/lib/image';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
-import ConditionsSection from '@/components/product/ConditionsSection';
-import ReviewsSection from '@/components/home/ReviewsSection';
-import FaqSection from '@/components/home/FaqSection';
+import ProductBenefits from '@/components/product/ProductBenefits';
+import ProductFaq from '@/components/product/ProductFaq';
+import Reviews from '@/components/reviews/Reviews';
 import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
-import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs, getSeoOrg } from '@/lib/api';
+import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
 
-// Static/ISR — regenerate every 1 min.
+// Static/ISR — regenerate every 60s so dashboard edits (hero slider, featured
+// products, etc.) reflect on the homepage within about a minute.
 export const revalidate = 60;
 
+// Self-referencing canonical for the homepage. Next App Router does NOT emit a
+// canonical automatically, so without this the home page had no <link rel=
+// "canonical">. Resolved against metadataBase (https://soxbae.com).
+// Dashboard-controlled page SEO is merged OVER this fallback; canonical '/'
+// is preserved unless the backend supplies a non-empty canonical_url.
 export async function generateMetadata() {
-  return buildMetadata('home', {});
+  return buildMetadata('home', { alternates: { canonical: '/' } });
 }
 
-// Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
-// hero <img>/<source> will request (same ImageKit tr= params), avoiding a
-// double download.
-function heroSrc(src, w = 1200) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
 
 export default async function HomePage() {
   const [products, categories, storeReviews, posts, slides, faqs, seoOrg] = await Promise.all([
@@ -35,20 +32,10 @@ export default async function HomePage() {
     getStoreReviews(60),
     getBlogPosts(),
     getSliders(),
-    getFaqs('global'),
+    getGlobalFaqs(),
     getSeoOrg(),
   ]);
   const reviews = storeReviews.reviews;
-
-  // Real store-wide rating for the trust marquee — average from the fetched
-  // reviews, exact total from the API. Null when there are no real reviews.
-  const ratedReviews = (reviews || []).filter((r) => Number(r.rating) > 0);
-  const reviewAvg = ratedReviews.length
-    ? ratedReviews.reduce((a, r) => a + Number(r.rating), 0) / ratedReviews.length
-    : 0;
-  const marqueeRating = reviewAvg > 0 && Number(storeReviews.total) > 0
-    ? { avg: reviewAvg, total: storeReviews.total }
-    : null;
 
   // Collection cards from live categories — same card as the /collections page.
   // Use the category image, or fall back to a product photo from that category.
@@ -59,29 +46,30 @@ export default async function HomePage() {
   }));
 
   // Preload the first slide's hero image (the LCP element). Hero renders a
-  // <picture> whose desktop <img> requests heroSrc(image, 1200) and whose
-  // mobile <source media="(max-width:767px)"> requests heroSrc(mobileImage,
-  // 820). imageSrcSet + imageSizes make the browser preload the matching
+  // <picture> whose desktop <img> requests ikSrc(image, HERO_W) (or a srcSet
+  // when there's no mobile art) and whose mobile <source> requests
+  // ikSrc(mobileImage, HERO_MOBILE_W). imageSrcSet + imageSizes preload the matching
   // variant per viewport. Rendering <link rel="preload"> here lets Next hoist
   // it into <head> so the LCP URL is in the initial HTML.
   const heroSlide = slides[0];
 
-  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com').replace(/\/+$/, '');
-  // Prefer the backend's per-brand Organization schema when available; fall
-  // back to the hardcoded one otherwise (best-effort — renders if backend down).
-  const orgLd = seoOrg?.organization ?? {
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbae.com').replace(/\/+$/, '');
+  // Prefer the dashboard-managed Organization schema when the brand has filled
+  // its SEO settings; otherwise fall back to the hardcoded one. The WebSite
+  // entry below is always kept as-is.
+  const organizationJsonLd = seoOrg?.organization || {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Morbix',
+    name: 'Soxbae',
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
   };
   const homeJsonLd = [
-    orgLd,
+    organizationJsonLd,
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'Morbix',
+      name: 'Soxbae',
       url: SITE_URL,
       potentialAction: {
         '@type': 'SearchAction',
@@ -100,24 +88,26 @@ export default async function HomePage() {
         <link
           rel="preload"
           as="image"
-          href={heroSrc(heroSlide.image, 1200)}
+          href={ikSrc(heroSlide.image, HERO_W)}
           fetchPriority="high"
           {...(heroSlide.mobileImage
             ? {
-                imageSrcSet: `${heroSrc(heroSlide.mobileImage, 820)} 820w, ${heroSrc(heroSlide.image, 1200)} 1200w`,
-                imageSizes: '(max-width: 767px) 820px, 1200px',
+                imageSrcSet: `${ikSrc(heroSlide.mobileImage, HERO_MOBILE_W)} ${HERO_MOBILE_W}w, ${ikSrc(heroSlide.image, HERO_W)} ${HERO_W}w`,
+                imageSizes: `(max-width: 767px) ${HERO_MOBILE_W}px, ${HERO_W}px`,
               }
-            : {})}
+            : (ikSrcSet(heroSlide.image, HERO_WIDTHS)
+              ? { imageSrcSet: ikSrcSet(heroSlide.image, HERO_WIDTHS), imageSizes: HERO_SIZES }
+              : {}))}
         />
       )}
-      <Hero features={getHeroFeatures()} slides={slides} products={products} />
+      <Hero features={getHeroFeatures()} slides={slides} />
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
-      <Reveal as="section"><ConditionsSection /></Reveal>
-      <Reveal as="section"><ReviewsSection reviews={reviews} total={storeReviews.total} /></Reveal>
+      <Reveal as="section"><ProductBenefits /></Reveal>
+      <Reveal as="section"><Reviews reviews={reviews} total={storeReviews.total} title="In their words" /></Reveal>
       {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
-      {faqs.length > 0 && <Reveal as="section"><FaqSection faqs={faqs} /></Reveal>}
+      {faqs.length > 0 && <Reveal as="section"><ProductFaq faqs={faqs} /></Reveal>}
     </>
   );
 }

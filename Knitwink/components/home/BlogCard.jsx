@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }
@@ -26,8 +27,7 @@ export function BlogCard({ post }) {
           non-16:11 images letterboxed with a messy blurred text bleed). */}
       <div className="relative aspect-[16/9] overflow-hidden bg-gray-100">
         {(post.thumbImage || post.coverImage) && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={blogImg(post.thumbImage || post.coverImage)} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
+          <ShimmerImg src={blogImg(post.thumbImage || post.coverImage)} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
         )}
       </div>
 

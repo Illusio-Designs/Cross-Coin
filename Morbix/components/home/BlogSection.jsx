@@ -1,15 +1,7 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 
-// Pre-crop blog card images to 16:9 (800x450) via ImageKit — sharp, light and
-// uniform, same as the CrossCoin journal cards. Non-ImageKit URLs pass through.
-function blogImg(url) {
-  if (!url || typeof url !== 'string') return url;
-  if (url.includes('ik.imagekit.io')) {
-    return `${url.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`;
-  }
-  return url;
-}
 
 export default function BlogSection({ posts = [] }) {
   return (
@@ -27,7 +19,8 @@ export default function BlogSection({ posts = [] }) {
           <Link href={`/journal/${p.slug}`} className="blog-card" key={p.slug}>
             <div className="blog-media">
               {(p.thumb || p.image)
-                ? <img src={blogImg(p.thumb || p.image)} alt={p.title} loading="lazy" />
+                ? <ShimmerImg src={p.thumb || p.image} alt={p.title} width={800} widths={[400, 800]} sizes="(max-width: 760px) 100vw, 400px"
+                    fallback={<span aria-hidden><Icon name="Sparkles" size={40} /></span>} />
                 : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
             </div>
             <div className="blog-body">

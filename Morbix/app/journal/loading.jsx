@@ -1,12 +1,14 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import { BlogGridSkeleton } from '@/components/ui/Skeleton';
 
 export default function JournalLoading() {
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
-      <Skeleton width="35%" height={38} />
-      <div className="blog-grid" style={{ marginTop: 26 }}>
-        {[0, 1, 2].map((i) => <Skeleton key={i} height={320} radius={20} />)}
+      <div className="page-hero">
+        <span className="eyebrow">Journal</span>
+        <h1>Stories &amp; guides</h1>
+        <p>Notes on comfort, technology and life in motion.</p>
       </div>
+      <BlogGridSkeleton count={6} style={{ marginTop: 26 }} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
+import { ReturnsBodySkeleton, ReturnsSkeleton } from '../../_components/Skeleton';
 
 const REASONS = [
   ['damaged', 'Damaged or leaking on arrival'],
@@ -111,7 +112,7 @@ export default function ReturnsClient() {
   };
 
   if (authLoading || !isAuthenticated) {
-    return <div className="m-wrap m-ph"><span className="m-eyebrow">Account</span><h1>Returns &amp; Refunds.</h1><p>Loading…</p></div>;
+    return <ReturnsSkeleton />;
   }
 
   return (
@@ -177,8 +178,9 @@ export default function ReturnsClient() {
           </form>
         ) : null}
 
-        {loading ? <div className="m-empty" style={{ padding: '40px 24px' }}><p>Loading…</p></div> : (
-          <>
+        {/* First load only — a reload after submitting keeps the lists, dimmed. */}
+        {loading && !returns.length && !orders.length ? <ReturnsBodySkeleton /> : (
+          <div className={loading ? 'sk-dim' : undefined} aria-busy={loading || undefined}>
             {returns.length ? (
               <>
                 <h2 className="m-card-h" style={{ margin: '6px 0 14px' }}>Your return requests</h2>
@@ -223,7 +225,7 @@ export default function ReturnsClient() {
               </ul>
             )}
             <p className="m-muted" style={{ marginTop: 14, fontSize: 12.5 }}>Returns are accepted within 7 days of delivery. See our <Link className="m-textlink" href="/cancellation-refund">cancellation &amp; refund policy</Link>.</p>
-          </>
+          </div>
         )}
       </div>
     </>

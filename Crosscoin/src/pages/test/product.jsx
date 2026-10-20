@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, I, Thumb, toast } from '../../components/test/ui';
+import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons } from '../../components/test/ui';
 import { inr, BENEFITS } from '../../components/test/data';
 import { R } from '../../components/test/routes';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
@@ -32,6 +32,10 @@ export default function TestProduct({ preview = true }) {
   const [mainImg, setMainImg] = useState('');
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
   const [prodFaqs, setProdFaqs] = useState([]);
+  // Secondary fetches that fill parts of the page after the product itself.
+  const [revLoading, setRevLoading] = useState(true);
+  const [tiersLoading, setTiersLoading] = useState(true);
+  const [alsoLoading, setAlsoLoading] = useState(true);
   const [faqOpen, setFaqOpen] = useState(0);
   const [packTiers, setPackTiers] = useState([]); // admin "Buy More, Save More" ladder
   const [packSel, setPackSel] = useState(1); // selected number of pairs
@@ -70,11 +74,13 @@ export default function TestProduct({ preview = true }) {
           } catch (_) { /* analytics never blocks the page */ }
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
           setPackTiers([]); setPackSel(1); setPin(''); setPinRes(null);
-          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {});
+          setRevLoading(true); setTiersLoading(true);
+          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
-          fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {});
+          fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {}).finally(() => { if (!off) setTiersLoading(false); });
         }
-        fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {});
+        setAlsoLoading(true);
+        fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {}).finally(() => { if (!off) setAlsoLoading(false); });
       } catch (_) { if (!off) setP(null); }
       finally { if (!off) setLoading(false); }
     })();
@@ -104,21 +110,41 @@ export default function TestProduct({ preview = true }) {
     else setPackColors([]);
   }, [packSel, p]);
 
+  // Page skeleton in the real PDP layout: crumbs stay, gallery (square main
+  // image + thumbnails), buy panel (brand, title, rating, price, sizes,
+  // options, buttons) and the reviews block below.
   if (loading) return (
     <TestLayout>
       {preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}
       <div className="wrap">
-        <div className="pd" style={{ paddingTop: 24 }}>
-          <div className="gallery"><div className="cc-skel cc-skelblock" style={{ aspectRatio: '1/1', width: '100%' }} aria-hidden="true" /></div>
-          <div className="buy">
-            <div className="cc-skel cc-skelblock" style={{ height: 14, width: '35%', marginBottom: 14 }} aria-hidden="true" />
-            <div className="cc-skel cc-skelblock" style={{ height: 30, width: '85%', marginBottom: 16 }} aria-hidden="true" />
-            <div className="cc-skel cc-skelblock" style={{ height: 24, width: '50%', marginBottom: 22 }} aria-hidden="true" />
-            <div className="cc-skel cc-skelblock" style={{ height: 48, marginBottom: 10 }} aria-hidden="true" />
-            <div className="cc-skel cc-skelblock" style={{ height: 48, marginBottom: 10 }} aria-hidden="true" />
-            <div className="cc-skel cc-skelblock" style={{ height: 48 }} aria-hidden="true" />
-          </div>
+        <div className="crumbs" style={{ paddingTop: 20 }}>
+          <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Shop</span> / …
         </div>
+        <SkBusy className="pd" label="Loading product…">
+          <div className="gallery" aria-hidden="true">
+            <div className="gmain"><Sk className="sk-fill" /></div>
+            <div className="gthumbs">{[0, 1, 2, 3].map((i) => <span key={i} className="gthumb sk-frame" style={{ overflow: 'hidden', position: 'relative' }}><Sk className="sk-fill" /></span>)}</div>
+          </div>
+          <div className="buy" aria-hidden="true">
+            <Sk w="32%" h={12} />
+            <Sk w="90%" h="clamp(26px, 4vw, 40px)" style={{ margin: '12px 0 8px' }} />
+            <Sk w="62%" h="clamp(26px, 4vw, 40px)" style={{ marginBottom: 12 }} />
+            <Sk w={110} h={22} />
+            <div className="sk-row" style={{ margin: '16px 0 8px' }}><Sk w={110} h={28} /><Sk w={70} h={18} /><Sk w={64} h={22} /></div>
+            <Sk w={150} h={11} />
+            <div className="sk-row" style={{ marginTop: 14 }}><Sk w={80} h={14} /><Sk w={190} h={14} /></div>
+            <Sk w={60} h={11} style={{ margin: '24px 0 12px' }} />
+            <div className="sk-row" style={{ gap: 8 }}>{[0, 1, 2, 3].map((i) => <Sk key={i} w={56} h={44} />)}</div>
+            <Sk w={130} h={11} style={{ margin: '24px 0 12px' }} />
+            <div className="sk-stack" style={{ gap: 10 }}><Sk h={64} /><Sk h={64} /><Sk h={64} /></div>
+            <div className="sk-row" style={{ margin: '22px 0 14px', flexWrap: 'nowrap' }}><Sk w={120} h={52} style={{ flex: '0 0 auto' }} /><Sk h={54} style={{ flex: 1 }} /></div>
+            <Sk h={58} style={{ marginTop: 12 }} />
+          </div>
+        </SkBusy>
+        <section className="block">
+          <div className="sechead"><div><span className="eyebrow">Reviews</span><h2>What buyers say</h2></div></div>
+          <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
+        </section>
       </div>
     </TestLayout>
   );
@@ -184,11 +210,11 @@ export default function TestProduct({ preview = true }) {
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} color={cur.colors?.[0]} />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
+            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200} widths={[600, 1200]} sizes="(max-width: 860px) 100vw, 600px" priority />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
-                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)}><Thumb src={src} /></button>
+                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)}><Thumb src={src} w={200} /></button>
                 ))}
               </div>
             )}
@@ -219,6 +245,15 @@ export default function TestProduct({ preview = true }) {
               <div className="optlabel">Size {SIZE_GUIDE.rows?.length > 0 && <a onClick={() => setSizeChart(true)}>Size chart</a>}</div>
               <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </>)}
+
+            {/* Pack options are decided by the bundle tiers — hold their place
+                while those load so the ladder doesn't pop in and push the buttons. */}
+            {tiersLoading && !hasPacks && (
+              <SkBusy label="Loading pack options…">
+                <Sk w={130} h={11} style={{ margin: '24px 0 12px' }} />
+                <div className="sk-stack" style={{ gap: 10 }}><Sk h={64} /><Sk h={64} /></div>
+              </SkBusy>
+            )}
 
             {/* CHOOSE YOUR PACK — admin pack-pricing ladder (per-pair + total, badges) */}
             {hasPacks && (<>
@@ -265,7 +300,7 @@ export default function TestProduct({ preview = true }) {
               </div>
             )}
 
-            {variants.length > 1 && !hasPacks && (<>
+            {variants.length > 1 && !hasPacks && !tiersLoading && (<>
               <div className="optlabel">Choose your option</div>
               <div className="packs">
                 {variants.map((v) => (
@@ -385,7 +420,7 @@ export default function TestProduct({ preview = true }) {
           <div className="benefitgrid">
             {BENEFITS.map((b, i) => (
               <div className="benefit" key={b.t}>
-                <span className="benefit__img"><Thumb src={benefitImgs.length ? benefitImgs[i % benefitImgs.length] : ''} color={cur.colors?.[0]} /></span>
+                <span className="benefit__img"><Thumb src={benefitImgs.length ? benefitImgs[i % benefitImgs.length] : ''} color={cur.colors?.[0]} w={300} /></span>
                 <b>{b.t}</b>
                 <span className="benefit__d">{b.d}</span>
               </div>
@@ -429,7 +464,9 @@ export default function TestProduct({ preview = true }) {
           )}
           {rv.done && <p className="mono" style={{ color: 'var(--ink-soft)', fontSize: 13, padding: '8px 0 18px' }}>✓ Thanks! Your review is in for moderation.</p>}
 
-          {prodReviews.items.length > 0 ? (
+          {revLoading && prodReviews.items.length === 0 ? (
+            <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
+          ) : prodReviews.items.length > 0 ? (
             // Show the ACTUAL reviews once each, in a tidy grid. (Previously
             // these were rotated across 3 rows and doubled, which turned a
             // couple of real reviews into a wall of repeats that read as fake.)
@@ -465,10 +502,12 @@ export default function TestProduct({ preview = true }) {
           </section>
         )}
 
-        {also.length > 0 && (
+        {(also.length > 0 || alsoLoading) && (
           <section className="block" style={{ paddingTop: 20 }}>
             <div className="sechead"><div><span className="eyebrow">Also minted</span><h2>You may also like</h2></div></div>
-            <div className="prail">{also.map((x) => <ProductCard key={x.id} p={x} />)}</div>
+            {also.length === 0
+              ? <SkBusy className="prail" label="Loading related products…"><SkeletonCards n={4} /></SkBusy>
+              : <div className="prail">{also.map((x) => <ProductCard key={x.id} p={x} />)}</div>}
           </section>
         )}
       </div>
@@ -477,7 +516,7 @@ export default function TestProduct({ preview = true }) {
       <div className={`pdpsticky${sticky ? ' on' : ''}`}>
         <div className="wrap pdpsticky__in">
           <div className="pdpsticky__p">
-            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} /></div>
+            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} w={200} /></div>
             <div className="pdpsticky__meta"><b>{p.name}</b><span>{inr(payable)}</span></div>
           </div>
           <div className="pdpsticky__btns">
@@ -492,7 +531,7 @@ export default function TestProduct({ preview = true }) {
         <div className="lbox" onClick={() => setLightbox(-1)}>
           <button className="lbox__x" aria-label="Close" onClick={() => setLightbox(-1)}>{I.close(24)}</button>
           {thumbs.length > 1 && <button className="lbox__nav lbox__prev" aria-label="Previous" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i - 1 + thumbs.length) % thumbs.length); }}>‹</button>}
-          <div className="lbox__img" onClick={(e) => e.stopPropagation()}><Thumb src={thumbs[lightbox]} /></div>
+          <div className="lbox__img" onClick={(e) => e.stopPropagation()}><Thumb src={thumbs[lightbox]} alt={p.name} w={1200} /></div>
           {thumbs.length > 1 && <button className="lbox__nav lbox__next" aria-label="Next" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i + 1) % thumbs.length); }}>›</button>}
         </div>
       )}

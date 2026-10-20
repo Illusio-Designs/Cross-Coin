@@ -905,15 +905,56 @@ button { font-family: inherit; cursor: pointer; }
 /* ============================================================================
    SHIMMER / SKELETON
    ========================================================================== */
-@keyframes morbixShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-.shimmer {
-  background: linear-gradient(100deg, #e9edf0 30%, #f3f6f8 50%, #e9edf0 70%);
-  background-size: 800px 100%;
-  animation: morbixShimmer 1.3s ease-in-out infinite;
+/* One shimmer for the whole store (Skeleton.jsx → .sk). Warm ivory, built on
+   the store's own hairline + card tokens. `.shimmer` (ShimmerImg) and the cart
+   drawer's `.cd-skel-anim` share it so every waiting state looks the same. */
+:root { --sk-base: var(--line); --sk-hi: var(--card); }
+@keyframes vqShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.sk, .shimmer, .cd-skel-anim {
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
+  background-size: 200% 100%;
+  animation: vqShimmer 1.3s ease-in-out infinite;
+}
+.sk { display: block; max-width: 100%; border-radius: 6px; }
+.sk--circle { border-radius: 50%; flex: none; }
+/* on the dark espresso account band */
+.sk--dark { --sk-base: rgba(255,248,236,.16); --sk-hi: rgba(255,248,236,.32); }
+.sk-fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }
+.sk-text { display: flex; flex-direction: column; }
+.sk-hero { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+/* product / collection / journal card skeletons keep the real card box */
+.sk-vqp .vqp-media, .sk-card-box { background: none; box-shadow: none; }
+.sk-vqp-cap { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.sk-vqp-line { display: block; height: 14px; border-radius: 3px; background: rgba(42,33,24,.09); }
+.sk-vqp-line.sm { height: 10px; }
+@media (max-width: 700px) {
+  .sk-vqp-cap { left: 12px; right: 12px; bottom: 12px; align-items: flex-start; gap: 6px; }
+  .sk-vqp-line { height: 11px; }
+  .sk-vqp-line.sm { height: 8px; }
+}
+/* Data already on screen and being refreshed: keep it, just dim it. */
+.sk-refreshing { opacity: .55; transition: opacity .2s ease; }
+/* Image boxes held at a reserved ratio until the photo arrives. */
+.sk-reserve { position: relative; overflow: hidden; }
+.sk-reserve > .sk-fill { z-index: 0; }
+.sk-reserve > img { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .sk, .shimmer, .cd-skel-anim { animation: none; background: var(--sk-base); }
+  .sk-refreshing { transition: none; }
 }
 .shimmer-img-skeleton { position: absolute; inset: 0; display: block; border-radius: inherit; z-index: 0; }
-.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .3s ease; }
+/* Never paint a half-downloaded photo: hidden until loaded + decoded, then a
+   short fade (no fade when it was already cached). */
+.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .18s ease; }
 .shimmer-img.is-loaded { opacity: 1; }
+.shimmer-img.is-instant { transition: none; }
+/* hero slides: same rule — the active slide shows only once decoded */
+.vq-hero-img[data-sk-img]:not(.is-loaded) { opacity: 0; }
+.cd-thumb, .excl-thumb, .excl-switch-thumb, .pdp-thumb, .order-item-thumb { position: relative; }
+.excl-main > .shimmer-img, .pdp-main-zoom > .shimmer-img { display: block; }
+@media (prefers-reduced-motion: reduce) { .shimmer-img { transition: none; } }
+/* ShimmerImg inside boxes whose photo is absolutely positioned */
+.collection-card .shimmer-img { position: absolute; transition: opacity .18s ease, transform .45s ease; }
 
 /* ============================================================================
    HEADER ICON PILLS
@@ -1151,7 +1192,7 @@ button { font-family: inherit; cursor: pointer; }
 .cd-body.cd-body-checkout { display: block; padding-bottom: 20px; }
 /* Whole-cart shimmer skeleton (shown until coupons + cross-sell + fees settle) */
 .cd-skel { display: flex; flex-direction: column; gap: 16px; padding: 10px 0; }
-.cd-skel-anim { background: linear-gradient(90deg, var(--line-soft) 25%, var(--line) 37%, var(--line-soft) 63%); background-size: 400% 100%; animation: cdSkel 1.4s ease infinite; border-radius: 8px; }
+.cd-skel-anim { border-radius: 8px; } /* shimmer itself comes from the .sk kit */
 .cd-skel-ship { height: 46px; border-radius: 12px; }
 .cd-skel-item { display: flex; gap: 12px; align-items: center; }
 .cd-skel-thumb { width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; }
@@ -1160,8 +1201,6 @@ button { font-family: inherit; cursor: pointer; }
 .cd-skel-line.sm { width: 45%; }
 .cd-skel-chip { height: 50px; border-radius: 12px; }
 .cd-skel-chip.tall { height: 76px; }
-@keyframes cdSkel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { .cd-skel-anim { animation: none; } }
 .cd-co-section { padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .cd-co-section:last-child { border-bottom: 0; }
 .cd-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin-bottom: 12px; }

@@ -31,6 +31,7 @@ import {
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 import '@/styles/CartDrawer.css';
+import { ShimmerImg } from '@/components/ui/ShimmerImg';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(
@@ -1311,10 +1312,11 @@ export function CartDrawer() {
             <div className="cd-single-view">
 
               {coStep === 1 && items.length > 0 && !cartReady && (
-                <div className="cd-skel" aria-hidden="true">
-                  <div className="cd-skel-ship cd-skel-anim" />
-                  {[0, 1].map((n) => (
-                    <div className="cd-skel-item" key={n}>
+                <div className="cd-skel" role="status" aria-busy="true" aria-live="polite">
+                  <span className="sr-only">Loading your cart…</span>
+                  <div className="cd-skel-ship cd-skel-anim" aria-hidden="true" />
+                  {Array.from({ length: Math.min(Math.max(items.length, 1), 4) }, (_, n) => n).map((n) => (
+                    <div className="cd-skel-item" key={n} aria-hidden="true">
                       <div className="cd-skel-thumb cd-skel-anim" />
                       <div className="cd-skel-lines">
                         <span className="cd-skel-line cd-skel-anim" />
@@ -1323,8 +1325,8 @@ export function CartDrawer() {
                       </div>
                     </div>
                   ))}
-                  <div className="cd-skel-chip cd-skel-anim" />
-                  <div className="cd-skel-chip tall cd-skel-anim" />
+                  <div className="cd-skel-chip cd-skel-anim" aria-hidden="true" />
+                  <div className="cd-skel-chip tall cd-skel-anim" aria-hidden="true" />
                 </div>
               )}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
@@ -1361,9 +1363,9 @@ export function CartDrawer() {
                   const color = getAttr(item, 'color');
                   return (
                     <div key={item.id} className="cd-item">
-                      <div className="cd-item-img">
+                      <div className="cd-item-img relative">
                         {img
-                          ? <img src={img} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ? <ShimmerImg src={img} width={200} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={<div className="cd-item-img-placeholder" />} />
                           : <div className="cd-item-img-placeholder" />}
                       </div>
                       <div className="cd-item-info">
@@ -1506,8 +1508,8 @@ export function CartDrawer() {
                       const img = p.colorImages?.[p.colors?.[0]?.name]?.[0]?.url || p.images?.[0]?.url || '';
                       return (
                         <div key={p.id} className="w-[118px] shrink-0 rounded-lg border border-gray-200 bg-white p-2">
-                          <div className="mb-1.5 aspect-square w-full overflow-hidden rounded-md bg-gray-50">
-                            {img ? <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-cover" /> : null}
+                          <div className="relative mb-1.5 aspect-square w-full overflow-hidden rounded-md bg-gray-50">
+                            {img ? <ShimmerImg src={img} width={300} alt={p.name} className="h-full w-full object-cover" /> : null}
                           </div>
                           <p className="line-clamp-1 text-xs font-medium text-brand-black">{p.name}</p>
                           <p className="mt-0.5 text-xs text-gray-600">₹{Number(p.price).toFixed(0)}</p>
@@ -1571,7 +1573,12 @@ export function CartDrawer() {
               {/* Delivery Address */}
               <div className="cd-sv-section" id="cd-section-address">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
-                {addressLoading ? <p className="cd-loading">Loading addresses...</p> : (
+                {addressLoading ? (
+                  <div className="cd-address-section" role="status" aria-busy="true">
+                    <span className="sr-only">Loading your addresses…</span>
+                    <div className="sk h-[54px] w-full rounded-lg" aria-hidden="true" />
+                  </div>
+                ) : (
                   <>
                     {isAuthenticated && addresses.length === 0 && !showAddressForm && (
                       <p className="cd-address-empty-hint">Add a delivery address below to place your order.</p>

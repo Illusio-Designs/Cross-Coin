@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getPublicCoupons } from '@/lib/api/orders';
 import { ik } from '@/lib/imagekit';
+import SkImg from './SkImg';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
@@ -204,7 +205,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
                 <button key={`${o.pid}`} type="button" role="checkbox" aria-checked={on} className={`m-byp ${on ? 'on' : ''}`} onClick={() => togglePick(i)}>
                   {i === 0 ? <span className="m-byp__this">This page</span> : null}
                   <span className="m-byp__box">{check}</span>
-                  <span className="m-byp__img">{o.image ? <img src={ik(o.image, 240)} alt={o.name} loading="lazy" /> : null}</span>
+                  <span className="m-byp__img">{o.image ? <SkImg src={ik(o.image, 240)} alt={o.name} loading="lazy" /> : null}</span>
                   <span className="m-byp__n">{o.name}</span>
                   <span className="m-byp__p">{inr(o.price)}</span>
                 </button>

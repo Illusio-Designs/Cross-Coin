@@ -7,6 +7,8 @@
 // section rhythm (section-y / wrap, a top-hairline header with an eyebrow +
 // h-display title) and hairline-framed ink/paper cards — NOT the ported Morbix
 // CSS. Self-contained; used on both the home page and the product page.
+import GzImage from '../common/GzImage';
+
 const CONDITIONS = [
   { img: '/conditions/cond-1.avif', name: 'Plantar Fasciitis', text: 'Sharp heel pain on your first morning steps? Many wearers find gentle overnight toe stretching eases that heel tension over time.' },
   { img: '/conditions/cond-2.avif', name: 'Neuropathy',        text: 'Tingling, burning or numbness — especially at night? Gentle toe separation can improve comfort for restless feet.' },
@@ -38,7 +40,7 @@ export default function ConditionsSection() {
               className="flex flex-col gap-3 border border-line bg-paper-warm p-5 md:p-6 transition-colors hover:border-ink"
             >
               <div className="w-16 h-16 md:w-20 md:h-20 overflow-hidden border border-line bg-paper">
-                <img src={c.img} alt={c.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                <GzImage src={c.img} alt={c.name} className="w-full h-full object-cover" />
               </div>
               <h3 className="h-display text-base md:text-lg text-ink leading-tight">{c.name}</h3>
               <p className="text-ink-muted text-xs md:text-sm leading-relaxed">{c.text}</p>

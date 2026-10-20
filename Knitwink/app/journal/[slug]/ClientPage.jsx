@@ -12,6 +12,8 @@ import { getPost, getPosts } from '@/lib/api/blog'
 import { BlogCard } from '@/components/home/BlogCard'
 import SeoWrapper from '@/components/SeoWrapper'
 import { richHtml } from '@/lib/sanitizeHtml'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
+import { Skeleton, SkeletonRegion, SkeletonText } from '@/components/ui/Skeleton'
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) }
@@ -37,23 +39,34 @@ export default function JournalDetailClient() {
     }).finally(() => setLoading(false))
   }, [slug])
 
+  // Shaped like the article: full-width cover banner, then the article column
+  // (back link, title, lede, body) beside the sticky author/meta sidebar.
   if (loading) return (
-    <div className="px-6 py-12">
-      <div className="mx-auto max-w-site grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
-          <div className="h-80 w-full animate-pulse rounded-2xl bg-gray-100" />
-          <div className="h-8 w-4/5 animate-pulse rounded bg-gray-100" />
-          <div className="space-y-3 pt-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={`h-3 animate-pulse rounded bg-gray-100 ${i % 3 === 2 ? 'w-2/3' : 'w-full'}`} />
-            ))}
+    <SkeletonRegion label="Loading article…">
+      <section className="relative h-[38vh] max-h-[520px] min-h-[240px] w-full overflow-hidden sm:h-[46vh] md:h-[54vh]" aria-hidden="true">
+        <div className="sk absolute inset-0" />
+      </section>
+      <div className="px-4 py-8 sm:px-5 sm:py-10 md:px-8 lg:px-10" aria-hidden="true">
+        <div className="mx-auto max-w-site grid grid-cols-1 gap-8 lg:grid-cols-[1fr_300px] lg:gap-10">
+          <div>
+            <Link href="/journal" className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 transition-colors hover:text-brand-black" tabIndex={-1}>
+              <ArrowLeft size={13} /> Back to Journal
+            </Link>
+            <Skeleton className="h-7 w-4/5" />
+            <Skeleton className="mt-2 h-7 w-1/2" />
+            <Skeleton className="mt-6 h-16 w-full rounded-lg" />
+            <SkeletonText lines={6} className="mt-8" />
+            <SkeletonText lines={5} className="mt-6" />
           </div>
-        </div>
-        <div className="hidden lg:block">
-          <div className="h-60 animate-pulse rounded-2xl bg-gray-100" />
+          <aside className="hidden lg:block">
+            <div className="flex flex-col gap-6">
+              <Skeleton className="h-[84px] w-full rounded-2xl" />
+              <Skeleton className="h-28 w-full rounded-2xl" />
+            </div>
+          </aside>
         </div>
       </div>
-    </div>
+    </SkeletonRegion>
   )
 
   if (!post) return (
@@ -115,8 +128,7 @@ export default function JournalDetailClient() {
           breakpoint so it reads as a proper banner on phone and desktop. */}
       {post.coverImage && (
         <section className="relative h-[38vh] max-h-[520px] min-h-[240px] w-full overflow-hidden bg-gray-50 sm:h-[46vh] md:h-[54vh]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.coverImage} alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center" />
+          <ShimmerImg src={post.coverImage} width={1400} widths={[800, 1400, 2000]} sizes="100vw" priority alt={post.title} className="absolute inset-0 h-full w-full object-cover object-center" />
         </section>
       )}
 

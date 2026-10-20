@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton, SkeletonRegion, AccountDashboardSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses';
@@ -118,6 +118,8 @@ function Dashboard() {
 
   const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
   const activeCount = orders.filter((o) => isActiveOrder(o.status)).length;
+  // Stat figures shimmer until their list has loaded (instead of showing 0).
+  const statSk = <Skeleton width={34} height={26} radius={4} style={{ margin: '0 auto' }} />;
 
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
@@ -136,10 +138,10 @@ function Dashboard() {
 
       {/* Stats */}
       <div className="acc-stats">
-        <div className="acc-stat"><span className="acc-stat-val">{orders.length}</span><span className="acc-stat-label">Orders</span></div>
-        <div className="acc-stat"><span className="acc-stat-val">{addresses.length}</span><span className="acc-stat-label">Addresses</span></div>
-        <div className="acc-stat"><span className="acc-stat-val">{deliveredCount}</span><span className="acc-stat-label">Delivered</span></div>
-        <div className="acc-stat"><span className="acc-stat-val">{activeCount}</span><span className="acc-stat-label">Active</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{loadingOrders ? statSk : orders.length}</span><span className="acc-stat-label">Orders</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{loadingAddr && !addresses.length ? statSk : addresses.length}</span><span className="acc-stat-label">Addresses</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{loadingOrders ? statSk : deliveredCount}</span><span className="acc-stat-label">Delivered</span></div>
+        <div className="acc-stat"><span className="acc-stat-val">{loadingOrders ? statSk : activeCount}</span><span className="acc-stat-label">Active</span></div>
         {user?.loyalty_points > 0 && (
           <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
             <span className="acc-stat-val acc-stat-points"><Icon name="Star" size={18} /> {user.loyalty_points}</span>
@@ -169,7 +171,17 @@ function Dashboard() {
                 <Link href="/account/orders" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
               </div>
               {loadingOrders ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={64} radius={14} /><Skeleton height={64} radius={14} /></div>
+                <SkeletonRegion label="Loading your orders…" className="acc-order-list">
+                  {[0, 1].map((i) => (
+                    <div className="acc-order-card" key={i} aria-hidden="true">
+                      <div className="acc-order-top">
+                        <div className="acc-order-id"><Skeleton width={120} height={14} radius={4} /><Skeleton width={80} height={11} radius={4} /></div>
+                        <Skeleton width={80} height={22} radius={999} />
+                      </div>
+                      <div className="acc-order-bottom"><Skeleton width={60} height={18} radius={4} /><Skeleton width={84} height={32} radius={999} /></div>
+                    </div>
+                  ))}
+                </SkeletonRegion>
               ) : orders.length === 0 ? (
                 <div className="empty">No orders yet. <Link href="/products" className="btn btn-primary">Start shopping</Link></div>
               ) : (
@@ -234,14 +246,21 @@ function Dashboard() {
                 </form>
               )}
 
-              {loadingAddr ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={90} radius={14} /><Skeleton height={90} radius={14} /></div>
+              {loadingAddr && addresses.length === 0 ? (
+                <SkeletonRegion label="Loading your addresses…" className="addr-grid">
+                  {[0, 1].map((i) => (
+                    <div className="addr-card" key={i} aria-hidden="true">
+                      <div><Skeleton width="45%" height={14} radius={4} /><Skeleton width="85%" height={12} radius={4} /><Skeleton width="35%" height={12} radius={4} /></div>
+                      <div className="addr-actions"><Skeleton width={50} height={28} radius={999} /><Skeleton width={84} height={28} radius={999} /><Skeleton width={60} height={28} radius={999} /></div>
+                    </div>
+                  ))}
+                </SkeletonRegion>
               ) : addrError ? (
                 <div className="empty">Couldn’t load your addresses. <button className="link-more" onClick={loadAddresses}><Icon name="RefreshCw" size={14} /> Retry</button></div>
               ) : addresses.length === 0 && !showForm ? (
                 <div className="empty">No saved addresses yet.</div>
               ) : (
-                <div className="addr-grid">
+                <div className={`addr-grid${loadingAddr ? ' sk-refreshing' : ''}`} aria-busy={loadingAddr || undefined}>
                   {addresses.map((a) => (
                     <div className="addr-card" key={a.id}>
                       <div>
@@ -281,7 +300,7 @@ function Dashboard() {
 
 export default function AccountClient() {
   return (
-    <AccountGate title="Your account">
+    <AccountGate title="Your account" bare skeleton={<AccountDashboardSkeleton />}>
       <Dashboard />
     </AccountGate>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
+import { Skeleton, SkeletonRegion } from '@/components/ui/Skeleton';
 import { trackOrder } from '@/lib/api/orders';
 import { toast } from '@/lib/toast';
 import { orderStatusLabel, orderStatusTone, orderStatusNote, isCancelledStatus, trackingStep, paymentSummary } from '@/utils/orderStatus';
@@ -140,6 +141,34 @@ export default function TrackOrderClient() {
 
         {error && <p className="auth-error" style={{ textAlign: 'center', marginTop: 14 }}>{error}</p>}
 
+        {loading && !order && (
+          <SkeletonRegion label="Finding your order…" className="track-card">
+            <div className="track-head" aria-hidden="true">
+              <div style={{ display: 'grid', gap: 7 }}>
+                <Skeleton width={90} height={11} radius={3} />
+                <Skeleton width={150} height={16} radius={4} />
+                <Skeleton width={190} height={11} radius={3} />
+              </div>
+              <Skeleton width={96} height={26} radius={999} />
+            </div>
+            <div className="track-steps" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div className="track-step" key={i}>
+                  <Skeleton circle height={26} />
+                  <Skeleton width={56} height={10} radius={3} />
+                </div>
+              ))}
+            </div>
+            <div className="track-items" aria-hidden="true">
+              <div className="order-item">
+                <div className="order-item-thumb"><span className="sk sk-fill" /></div>
+                <div className="order-item-info"><Skeleton width="60%" height={14} radius={4} /><Skeleton width="30%" height={11} radius={3} /></div>
+                <Skeleton width={50} height={14} radius={4} />
+              </div>
+            </div>
+          </SkeletonRegion>
+        )}
+
         {order && (
           <div className="track-card">
             <div className="track-head">
@@ -183,7 +212,7 @@ export default function TrackOrderClient() {
                   return (
                     <div className="order-item" key={i}>
                       <div className="order-item-thumb">
-                        {img ? <ShimmerImg src={img} alt={name} /> : <Icon name="Footprints" size={22} color="#c3ccd2" />}
+                        {img ? <ShimmerImg src={img} alt={name} width={200} fallback={<Icon name="Footprints" size={22} color="#c3ccd2" />} /> : <Icon name="Footprints" size={22} color="#c3ccd2" />}
                       </div>
                       <div className="order-item-info">
                         <b>{name}</b>

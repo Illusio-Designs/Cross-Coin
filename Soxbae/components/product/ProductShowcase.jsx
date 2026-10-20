@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
+import { ikSrc } from '@/lib/image';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
@@ -10,13 +12,7 @@ import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 
 // Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
-function ik(src, w) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
+const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
 // strip beneath it (left), a calm serif buy panel (right, sticky), then a
@@ -290,7 +286,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 <button key={src + i} type="button" data-thumb={i}
                   className={`pdx-thumb${i === active ? ' active' : ''}`}
                   onClick={() => setActive(i)} aria-label={`View image ${i + 1}`}>
-                  <img src={ik(src, 160)} alt={`${product.name} view ${i + 1}`} loading="lazy" />
+                  <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} width={200} />
                 </button>
               ))}
             </div>
@@ -299,7 +295,9 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <div className="pdx-main" ref={mainRef}>
             {mainSrc ? (
               <button type="button" className="pdx-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-                <img src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async" />
+                <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]}
+                  sizes="(max-width: 900px) 100vw, 640px" priority
+                  fallback={<span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5, display: 'grid', placeItems: 'center', height: '100%' }}><Icon name="Footprints" size={80} /></span>} />
                 {sku && <span className="pdx-style-badge">Style: #{sku}</span>}
                 <span className="pdx-zoom-hint" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -321,7 +319,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
               <button type="button" className="pdx-lb-nav prev" aria-label="Previous"
                 onClick={() => setActive((a) => (a - 1 + shown.length) % shown.length)}>‹</button>
             )}
-            <img className="pdx-lb-img" src={ik(shown[Math.min(active, shown.length - 1)] || mainSrc, 1200)} alt={product.name} />
+            <img className="pdx-lb-img" src={ik(shown[Math.min(active, shown.length - 1)] || mainSrc, 1600)} alt={product.name} />
             {shown.length > 1 && (
               <button type="button" className="pdx-lb-nav next" aria-label="Next"
                 onClick={() => setActive((a) => (a + 1) % shown.length)}>›</button>
@@ -560,7 +558,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       {/* Sticky buy bar — appears when the main buy buttons scroll out of view */}
       <div className={`pdx-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
         <div className="pdx-sticky-info">
-          {mainSrc && <img src={ik(mainSrc, 120)} alt="" loading="lazy" />}
+          {mainSrc && <span className="pdx-sticky-thumb"><ShimmerImg src={mainSrc} alt="" width={200} /></span>}
           <div>
             <b>{product.name}</b>
             <span>₹{Number(price).toFixed(0)}{selectedColorName ? ` · ${selectedColorName}` : ''}{effectiveSize ? ` · ${effectiveSize}` : ''}</span>

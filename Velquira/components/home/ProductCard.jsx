@@ -18,7 +18,9 @@ export default function ProductCard({ product }) {
     <article className="vqp">
       <div className="vqp-media">
         {image
-          ? <ShimmerImg src={image} alt={name} loading="lazy" />
+          ? <ShimmerImg src={image} alt={name} width={600} widths={[400, 600, 900]}
+              sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 300px"
+              fallback={<span className="vqp-ph" aria-hidden><Icon name="Sparkles" size={40} /></span>} />
           : <span className="vqp-ph" aria-hidden><Icon name="Sparkles" size={40} /></span>}
 
         {/* full-image navigation layer (buttons below sit above this) */}

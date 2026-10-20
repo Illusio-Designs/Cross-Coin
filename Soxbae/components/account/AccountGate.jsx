@@ -3,24 +3,22 @@
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import Icon from '@/components/Icon';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
 
 /**
- * Wraps account pages: shows a shimmer while auth resolves, a sign-in prompt
- * for signed-out visitors, and the children once authenticated.
+ * Wraps account pages: shows a skeleton while auth resolves, a sign-in prompt
+ * for signed-out visitors, and the children once authenticated. Pass
+ * `fallback` (a skeleton shaped like the page) so the wait looks like the page.
  */
-export default function AccountGate({ title = 'Your account', children }) {
+export default function AccountGate({ title = 'Your account', fallback, children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
+    if (fallback) return fallback;
     return (
       <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
         <div className="page-hero"><span className="eyebrow">Account</span><h1>{title}</h1></div>
-        <div style={{ display: 'grid', gap: 14, marginTop: 24, maxWidth: 620 }}>
-          <Skeleton height={70} radius={16} />
-          <Skeleton height={70} radius={16} />
-          <Skeleton height={70} radius={16} />
-        </div>
+        <OrderListSkeleton rows={3} label="Loading your account…" style={{ marginTop: 24 }} />
       </div>
     );
   }

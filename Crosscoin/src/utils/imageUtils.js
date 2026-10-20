@@ -81,6 +81,22 @@ export function ikTransform(url, w, q = 78) {
   return `${url.split("?")[0]}?tr=w-${w},q-${q},f-auto`;
 }
 
+// Mint home hero banner renditions + sizes. Shared by the hero <img> (Thumb in
+// pages/test/index.jsx) and its <link rel=preload> (pages/index.jsx) so the
+// browser picks the same candidate for both and downloads the hero once.
+export const HERO_WIDTHS = [800, 1200, 1600];
+export const HERO_SIZES = "(max-width: 860px) 400px, 560px";
+
+// srcSet of width-only ImageKit renditions, e.g. ikSrcSet(url, [300, 600]) →
+// "…?tr=w-300,q-78,f-auto 300w, …?tr=w-600,q-78,f-auto 600w". Returns
+// undefined for non-ImageKit URLs (they have only one size).
+export function ikSrcSet(url, widths, q = 78) {
+  if (!url || typeof url !== "string" || !url.includes("ik.imagekit.io") || !widths?.length) {
+    return undefined;
+  }
+  return widths.map((w) => `${ikTransform(url, w, q)} ${w}w`).join(", ");
+}
+
 // Build a consistent hero srcSet from a single slide image, at the three
 // breakpoints HeroSlider uses (all 100vw). Used by BOTH the <img srcSet> and
 // the <link rel=preload imageSrcSet> so the browser downloads the hero exactly

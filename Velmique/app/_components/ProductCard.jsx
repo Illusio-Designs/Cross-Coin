@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { ik } from '@/lib/imagekit';
+import { ik, ikSrcSet } from '@/lib/imagekit';
+import SkImg from './SkImg';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
@@ -16,7 +17,8 @@ const Bag = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8h12l-1 12H7L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg>
 );
 
-export default function ProductCard({ product }) {
+// `priority` — the card is the page's LCP image (home hero bestseller).
+export default function ProductCard({ product, priority = false }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
 
@@ -58,7 +60,16 @@ export default function ProductCard({ product }) {
     <article className="m-card">
       <div className="m-card__fig">
         <Link className="m-card__imglink" href={href} aria-label={product.name}>
-          <span className="m-card__tile">{img ? <img src={ik(img, 600)} alt={product.name} loading="lazy" decoding="async" /> : null}</span>
+          <span className="m-card__tile">{img ? (
+            <SkImg
+              src={ik(img, 600)}
+              srcSet={ikSrcSet(img, [300, 450, 600, 900])}
+              sizes="(max-width: 980px) 50vw, 290px"
+              alt={product.name}
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : undefined}
+            />
+          ) : null}</span>
           <span className="m-card__shade" />
         </Link>
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}

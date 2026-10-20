@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
 
 // Ask ImageKit for a sized, format-negotiated hero image instead of the
@@ -20,6 +20,23 @@ function heroSrc(src, w = 1600) {
 export default function Hero({ features = [], slides = [] }) {
   const [current, setCurrent] = useState(0);
   const hasSlides = slides.length > 0;
+  // The arched frame reserves the box and shimmers; each slide photo stays
+  // hidden until it is fully downloaded AND decoded (no top-half-first
+  // painting), then fades in. `data-sk-img` + the pre-hydration script in
+  // app/layout.jsx reveal the first slide even before React has loaded.
+  const [ready, setReady] = useState({});
+  const markReady = (i) => setReady((r) => (r[i] ? r : { ...r, [i]: true }));
+  const sliderRef = useRef(null);
+  useEffect(() => {
+    const imgs = sliderRef.current ? sliderRef.current.querySelectorAll('img') : [];
+    imgs.forEach((img, i) => { if (img.complete && img.naturalWidth > 0) markReady(i); });
+  }, [slides.length]);
+  const onSlideLoad = (i) => (e) => {
+    const img = e.currentTarget;
+    const done = () => markReady(i);
+    if (typeof img.decode === 'function') img.decode().then(done, done); else done();
+  };
+  const firstReady = !!ready[0];
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -48,13 +65,17 @@ export default function Hero({ features = [], slides = [] }) {
 
         <div className="vq-hero-frame">
           {hasSlides ? (
-            <div className="vq-hero-slider">
+            <div className="vq-hero-slider" ref={sliderRef}>
+              {!firstReady && <span className="sk sk-fill" aria-hidden="true" />}
               {slides.map((s, i) => (
                 <picture key={i} style={{ display: 'contents' }}>
                   {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
                   <img src={heroSrc(s.image)} alt={s.title || 'Velquira'}
-                    className={`vq-hero-img${i === current ? ' active' : ''}`}
+                    className={`vq-hero-img${i === current ? ' active' : ''}${ready[i] ? ' is-loaded' : ''}`}
+                    data-sk-img=""
                     loading={i === 0 ? 'eager' : 'lazy'}
+                    onLoad={onSlideLoad(i)}
+                    onError={() => markReady(i)}
                     fetchPriority={i === 0 ? 'high' : 'auto'}
                     decoding="async" />
                 </picture>

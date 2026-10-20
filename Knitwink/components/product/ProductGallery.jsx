@@ -3,9 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 function Lightbox({ images, startIndex, productName, onClose }) {
   const [active, setActive] = useState(startIndex)
+  // Each full-size photo holds a square box until it is decoded.
+  const [lbShown, setLbShown] = useState({})
   const scrollRef = useRef(null)
   const imgRefs = useRef([])
 
@@ -75,11 +78,11 @@ function Lightbox({ images, startIndex, productName, onClose }) {
             <button
               key={i}
               onClick={() => scrollToImage(i)}
-              className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
                 i === active ? 'border-brand-black' : 'border-transparent opacity-40 hover:opacity-70'
               }`}
             >
-              <img src={img.url} alt={`${productName} ${i + 1}`} className="h-full w-full object-cover" />
+              <ShimmerImg src={img.url} width={200} alt={`${productName} ${i + 1}`} className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
@@ -101,12 +104,14 @@ function Lightbox({ images, startIndex, productName, onClose }) {
                 key={i}
                 ref={(el) => { imgRefs.current[i] = el }}
                 data-index={i}
-                className="overflow-hidden rounded-lg bg-white"
+                className={`relative overflow-hidden rounded-lg bg-white${lbShown[i] ? '' : ' aspect-square'}`}
               >
-                <img
+                <ShimmerImg
                   src={img.url}
+                  width={1600}
                   alt={img.alt || `${productName} ${i + 1}`}
                   className="w-full object-contain"
+                  onReveal={() => setLbShown((m) => (m[i] ? m : { ...m, [i]: true }))}
                 />
               </div>
             ))}
@@ -115,35 +120,6 @@ function Lightbox({ images, startIndex, productName, onClose }) {
       </div>
     </div>,
     document.body
-  )
-}
-
-/* Image with a pulsing gray skeleton until it loads.
-   Forces the shimmer to stay visible for at least 400ms — cached
-   images otherwise load in <50ms and the shimmer flashes by too
-   fast to see. */
-function ShimmerImage({ src, alt, className, ...rest }) {
-  const [loaded, setLoaded] = useState(false)
-  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now())
-  const handleLoad = () => {
-    const elapsed = Date.now() - mountedAtRef.current
-    const remaining = Math.max(0, 400 - elapsed)
-    if (remaining === 0) setLoaded(true)
-    else setTimeout(() => setLoaded(true), remaining)
-  }
-  return (
-    <>
-      {!loaded && (
-        <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
-      )}
-      <img
-        src={src}
-        alt={alt}
-        onLoad={handleLoad}
-        className={`${className} ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-        {...rest}
-      />
-    </>
   )
 }
 
@@ -157,6 +133,9 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxStart, setLightboxStart] = useState(0)
   const [mounted, setMounted] = useState(false)
+  // The main photo's box is held square (shimmering) until THIS photo is
+  // decoded, then follows the image — so the page below never jumps.
+  const [shownUrl, setShownUrl] = useState(null)
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { setSelected(0) }, [activeColorName])
@@ -176,17 +155,17 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
       {/* Main large image — custom + cursor */}
       <div
         key={main?.url}
-        className="group relative overflow-hidden rounded-2xl bg-gray-50 min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
+        className={`group relative overflow-hidden rounded-2xl bg-gray-50 min-h-[260px] sm:min-h-[340px] md:min-h-[420px]${shownUrl === main?.url ? '' : ' aspect-square'}`}
         style={{ cursor: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\'%3E%3Ccircle cx=\'24\' cy=\'24\' r=\'22\' fill=\'white\' stroke=\'%230a0a0a\' stroke-width=\'0.8\'/%3E%3Cline x1=\'24\' y1=\'15\' x2=\'24\' y2=\'33\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3Cline x1=\'15\' y1=\'24\' x2=\'33\' y2=\'24\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3C/svg%3E") 24 24, pointer' }}
         onClick={() => openLightbox(selected)}
       >
-        <ShimmerImage
+        <ShimmerImg
           src={main?.url}
+          width={1200}
           alt={main?.alt || productName}
           className="w-full object-contain min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
+          priority
+          onReveal={() => setShownUrl(main?.url)}
         />
       </div>
 
@@ -202,12 +181,11 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
                 style={{ cursor: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\'%3E%3Ccircle cx=\'24\' cy=\'24\' r=\'22\' fill=\'white\' stroke=\'%230a0a0a\' stroke-width=\'0.8\'/%3E%3Cline x1=\'24\' y1=\'15\' x2=\'24\' y2=\'33\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3Cline x1=\'15\' y1=\'24\' x2=\'33\' y2=\'24\' stroke=\'%230a0a0a\' stroke-width=\'0.8\' stroke-linecap=\'round\'/%3E%3C/svg%3E") 24 24, pointer' }}
                 onClick={() => openLightbox(realIndex)}
               >
-                <ShimmerImage
+                <ShimmerImg
                   src={img.url}
+                  width={600}
                   alt={img.alt || `${productName} ${i + 2}`}
                   className="aspect-square w-full object-contain"
-                  loading="lazy"
-                  decoding="async"
                 />
               </div>
             )

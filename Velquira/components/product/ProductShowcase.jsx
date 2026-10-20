@@ -6,15 +6,8 @@ import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
-
-// Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
-function ik(src, w) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
+import ShimmerImg from '@/components/ui/ShimmerImg';
+import { ikUrl } from '@/lib/image';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -70,6 +63,10 @@ export default function ProductShowcase({ product }) {
   // than the photo — extra thumbnails scroll inside it instead.
   const mainRef = useRef(null);
   const thumbsRef = useRef(null);
+  // Hold the main image box at the gallery's 4:5 ratio (shimmering) until the
+  // FIRST photo has loaded, so the buy card and page below never jump. Later
+  // thumbnail swaps are preloaded, so the box just follows the image.
+  const [readySrc, setReadySrc] = useState(null);
   const [railH, setRailH] = useState(0);
   useEffect(() => {
     const el = mainRef.current;
@@ -120,6 +117,8 @@ export default function ProductShowcase({ product }) {
   const gallery = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
+  // Box held at 4:5 with the shimmer until THIS main photo is fully decoded.
+  const mainReady = readySrc === mainSrc;
 
   // Preload the ACTIVE colour's gallery (not every colour's images), and only
   // when the browser is idle — so thumbnail swaps still feel instant without a
@@ -129,7 +128,8 @@ export default function ProductShowcase({ product }) {
     const perColorImgs = product.colorImages?.[color];
     const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
     if (!urls.length) return;
-    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = u; });
+    // Same w-1200 URL the main image requests, so a thumbnail swap hits the cache.
+    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = ikUrl(u, 1200); });
     if (window.requestIdleCallback) {
       const id = window.requestIdleCallback(preload, { timeout: 1500 });
       return () => window.cancelIdleCallback?.(id);
@@ -248,16 +248,22 @@ export default function ProductShowcase({ product }) {
                 onClick={() => setActive(i)}
                 aria-label={`View image ${i + 1}`}
               >
-                <img src={ik(src, 160)} alt={`${product.name} view ${i + 1}`} loading="lazy" />
+                <ShimmerImg src={src} width={200} alt={`${product.name} view ${i + 1}`} />
               </button>
             ))}
           </div>
         )}
 
-        <div className="pdp-main" ref={mainRef}>
+        <div
+          className={`pdp-main${mainSrc && !mainReady ? ' sk-reserve' : ''}`}
+          ref={mainRef}
+          style={mainSrc && !mainReady ? { aspectRatio: '4 / 5' } : undefined}
+        >
+          {mainSrc && !mainReady && <span className="sk sk-fill" aria-hidden="true" />}
           {mainSrc ? (
             <button type="button" className="pdp-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-              <img src={ik(mainSrc, 900)} alt={product.name} loading="eager" fetchPriority="high" decoding="async" />
+              <ShimmerImg src={mainSrc} width={1200} alt={product.name} priority skeleton={false}
+                onReveal={() => setReadySrc(mainSrc)} />
               {sku && <span className="pdp-style-badge">Style: #{sku}</span>}
               <span className="pdp-zoom-hint" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -278,7 +284,7 @@ export default function ProductShowcase({ product }) {
             <button type="button" className="pdp-lb-nav prev" aria-label="Previous"
               onClick={() => setActive((a) => (a - 1 + shown.length) % shown.length)}>‹</button>
           )}
-          <img className="pdp-lb-img" src={ik(shown[Math.min(active, shown.length - 1)] || mainSrc, 1200)} alt={product.name} />
+          <ShimmerImg className="pdp-lb-img" src={shown[Math.min(active, shown.length - 1)] || mainSrc} width={1600} alt={product.name} skeleton={false} />
           {shown.length > 1 && (
             <button type="button" className="pdp-lb-nav next" aria-label="Next"
               onClick={() => setActive((a) => (a + 1) % shown.length)}>›</button>

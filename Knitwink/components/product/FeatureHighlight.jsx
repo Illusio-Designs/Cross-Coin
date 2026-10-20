@@ -1,5 +1,7 @@
 'use client'
 
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
+
 const FEATURES = [
   { title: 'Anti-Microbial', desc: 'StayFresh technology keeps your feet odor-free and hygienic all day.', side: 'left' },
   { title: 'Breathable Knit', desc: 'Airy mesh construction for natural ventilation and all-season comfort.', side: 'right' },
@@ -29,11 +31,14 @@ export function FeatureHighlight({ imageUrl, productName }) {
           <div className="relative shrink-0 flex items-center justify-center w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] lg:w-[400px] lg:h-[400px]">
             <div className="absolute inset-0 rounded-full border border-gray-400" />
             <div className="absolute inset-3.5 rounded-full border border-gray-300" />
-            <img
-              src={imageUrl}
-              alt={productName}
-              className="relative rounded-full object-cover w-[220px] h-[220px] sm:w-[270px] sm:h-[270px] lg:w-[340px] lg:h-[340px]"
-            />
+            <div className="relative overflow-hidden rounded-full w-[220px] h-[220px] sm:w-[270px] sm:h-[270px] lg:w-[340px] lg:h-[340px]">
+              <ShimmerImg
+                src={imageUrl}
+                width={700}
+                alt={productName}
+                className="h-full w-full rounded-full object-cover"
+              />
+            </div>
             {/* 4 dots — only on desktop where positions line up */}
             <span className="hidden lg:block absolute h-3 w-3 rounded-full bg-gray-400" style={{ top: 80, left: '7%' }} />
             <span className="hidden lg:block absolute h-3 w-3 rounded-full bg-gray-400" style={{ bottom: 132, left: '96%' }} />

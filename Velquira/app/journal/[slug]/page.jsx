@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ReservedImage from '@/components/ui/ReservedImage';
 import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
 import { getBlogBySlug, getBlogPosts } from '@/lib/api';
@@ -36,9 +37,7 @@ export default async function JournalArticlePage({ params }) {
         <h1 className="article-title">{post.title}</h1>
 
         {post.image && (
-          <div className="article-hero">
-            <img src={post.image} alt={post.title} />
-          </div>
+          <ReservedImage className="article-hero" src={post.image} alt={post.title} width={1400} priority />
         )}
 
         <div className="article-body">

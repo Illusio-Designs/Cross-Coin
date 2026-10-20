@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getCategories, getAllProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
 
@@ -39,7 +40,8 @@ export default async function CollectionsPage() {
           {enriched.map((c, i) => (
             <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
               {c.image
-                ? <img className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
+                ? <ShimmerImg className="collection-card-img" src={c.image} alt={c.label} width={800} widths={[400, 600, 800]} sizes="(max-width: 760px) 50vw, 400px"
+                    fallback={<span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>} />
                 : <span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>}
               <div className="collection-card-overlay">
                 <div className="collection-card-text">

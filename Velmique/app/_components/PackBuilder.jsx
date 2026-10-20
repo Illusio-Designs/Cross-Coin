@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
+import SkImg from './SkImg';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const check = (
@@ -146,7 +147,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
                 <article key={p.id} className={`m-card m-pkcard ${on ? 'sel' : ''}`}>
                   <button type="button" className="m-card__fig m-pkcard__figbtn" onClick={() => bump(p.id, 1)} aria-label={`Add ${p.name} to pack`}>
                     <span className="m-card__imglink">
-                      <span className="m-card__tile">{img ? <img src={ik(img, 600)} alt={p.name} loading="lazy" decoding="async" /> : null}</span>
+                      <span className="m-card__tile">{img ? <SkImg src={ik(img, 600)} alt={p.name} loading="lazy" /> : null}</span>
                       <span className="m-card__shade" />
                     </span>
                     {p.badge ? <span className="m-card__tag">{p.badge}</span> : null}

@@ -1,0 +1,92 @@
+import Hero from '@/components/home/Hero';
+import Bestsellers from '@/components/home/Bestsellers';
+import ExclusiveSection from '@/components/home/ExclusiveSection';
+import CategoryBanners from '@/components/home/CategoryBanners';
+import ConditionsSection from '@/components/product/ConditionsSection';
+import ReviewsSection from '@/components/home/ReviewsSection';
+import FaqSection from '@/components/home/FaqSection';
+import BlogSection from '@/components/home/BlogSection';
+import Reveal from '@/components/Reveal';
+import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs, getSeoOrg } from '@/lib/api';
+import { buildMetadata } from '@/lib/api/seo';
+
+// Static/ISR — regenerate every 1 min.
+export const revalidate = 60;
+
+export async function generateMetadata() {
+  return buildMetadata('home', {});
+}
+
+
+export default async function HomePage() {
+  const [products, categories, storeReviews, posts, slides, faqs, seoOrg] = await Promise.all([
+    getBestsellers(),
+    getCategories(),
+    getStoreReviews(60),
+    getBlogPosts(),
+    getSliders(),
+    getFaqs('global'),
+    getSeoOrg(),
+  ]);
+  const reviews = storeReviews.reviews;
+
+  // Real store-wide rating for the trust marquee — average from the fetched
+  // reviews, exact total from the API. Null when there are no real reviews.
+  const ratedReviews = (reviews || []).filter((r) => Number(r.rating) > 0);
+  const reviewAvg = ratedReviews.length
+    ? ratedReviews.reduce((a, r) => a + Number(r.rating), 0) / ratedReviews.length
+    : 0;
+  const marqueeRating = reviewAvg > 0 && Number(storeReviews.total) > 0
+    ? { avg: reviewAvg, total: storeReviews.total }
+    : null;
+
+  // Collection cards from live categories — same card as the /collections page.
+  // Use the category image, or fall back to a product photo from that category.
+  const collections = categories.slice(0, 4).map((c) => ({
+    label: c.label,
+    slug: c.slug,
+    image: c.image || products.find((p) => p.categorySlug === c.slug && p.image)?.image || '',
+  }));
+
+
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com').replace(/\/+$/, '');
+  // Prefer the backend's per-brand Organization schema when available; fall
+  // back to the hardcoded one otherwise (best-effort — renders if backend down).
+  const orgLd = seoOrg?.organization ?? {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Morbix',
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+  };
+  const homeJsonLd = [
+    orgLd,
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Morbix',
+      url: SITE_URL,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ];
+
+  return (
+    <>
+      {homeJsonLd.map((obj, i) => (
+        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
+      ))}
+      <Hero features={getHeroFeatures()} slides={slides} products={products} />
+      {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
+      <Reveal as="section"><Bestsellers products={products} /></Reveal>
+      {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
+      <Reveal as="section"><ConditionsSection /></Reveal>
+      <Reveal as="section"><ReviewsSection reviews={reviews} total={storeReviews.total} /></Reveal>
+      {posts.length > 0 && <Reveal as="section"><BlogSection posts={posts} /></Reveal>}
+      {faqs.length > 0 && <Reveal as="section"><FaqSection faqs={faqs} /></Reveal>}
+    </>
+  );
+}

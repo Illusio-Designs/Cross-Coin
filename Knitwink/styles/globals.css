@@ -1374,3 +1374,43 @@ body:has([data-sticky-atc]) .back-to-top { bottom: 184px; }
   .knit-desc-rich .only-desktop { display: none; }
   .knit-desc-rich .only-mobile { display: block; }
 }
+
+/* ─── Skeleton kit (components/ui/Skeleton.jsx) ───────────────────────
+   One shimmer for every waiting state in the store, built on the store's
+   own neutral greys. The cart drawer's .cd-skel-anim and ShimmerImg's
+   placeholder share it, so every loading shape looks the same. */
+:root {
+  --sk-base: var(--color-gray-200, #e5e5e5);
+  --sk-hi: var(--color-gray-100, #f5f5f5);
+}
+@keyframes kw-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.sk,
+.cd-skel-anim {
+  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
+  background-size: 200% 100%;
+  animation: kw-shimmer 1.3s ease-in-out infinite;
+}
+/* on the black page heroes / dark hero stage */
+.sk--dark {
+  --sk-base: rgba(255, 255, 255, 0.08);
+  --sk-hi: rgba(255, 255, 255, 0.18);
+}
+/* Data already on screen and being refreshed: keep it, just dim it. */
+.sk-refreshing { opacity: 0.55; transition: opacity 0.2s ease; }
+
+/* ─── Content images (ShimmerImg / GatedImage) ────────────────────────
+   Never paint a half-downloaded photo: the <img> stays transparent over
+   the shimmer until it has fully loaded AND decoded, then fades in. An
+   image that was already cached appears at once (no fade). Gated with
+   filter: opacity() so an image's own Tailwind opacity-* still applies. */
+.kw-img { filter: opacity(0); transition: filter 0.18s ease, transform 0.5s ease, opacity 0.3s ease; }
+.kw-img.is-loaded { filter: none; }
+.kw-img.is-instant { transition: transform 0.5s ease, opacity 0.3s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk, .cd-skel-anim { animation: none; background: var(--sk-base); }
+  .sk-refreshing, .kw-img { transition: none; }
+}

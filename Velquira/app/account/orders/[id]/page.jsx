@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton, SkeletonRegion, OrderDetailSkeleton } from '@/components/ui/Skeleton';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
@@ -40,6 +40,19 @@ function statusClass(s) {
   return tone === 'ok' || tone === 'bad' ? tone : 'pending';
 }
 
+function OrderDetailHeadSkeleton() {
+  return (
+    <div className="account-head" aria-hidden="true">
+      <div className="page-hero sk-hero" style={{ marginBottom: 18 }}>
+        <span className="eyebrow">Order</span>
+        <Skeleton width={220} height={38} radius={4} />
+        <Skeleton width={110} height={13} radius={4} />
+      </div>
+      <Skeleton width={90} height={24} radius={999} />
+    </div>
+  );
+}
+
 function OrderDetail({ id }) {
   const { isAuthenticated } = useAuth();
   const [order, setOrder] = useState(null);
@@ -65,14 +78,18 @@ function OrderDetail({ id }) {
     catch {} finally { setCancelling(false); }
   };
 
-  if (loading) {
+  // First load only — a reload after "Cancel order" keeps the order on screen.
+  if (loading && !order) {
     return (
       <div className="container" style={{ paddingTop: 34, paddingBottom: 60 }}>
-        <div style={{ display: 'grid', gap: 14, maxWidth: 720 }}>
-          <Skeleton height={30} width="40%" />
-          <Skeleton height={120} radius={16} />
-          <Skeleton height={200} radius={16} />
-        </div>
+        <nav className="crumbs">
+          <Link href="/account">Account</Link> <span>/</span> <Link href="/account/orders">Orders</Link> <span>/</span>
+          <Skeleton width={90} height={12} radius={3} style={{ display: 'inline-block' }} />
+        </nav>
+        <SkeletonRegion label="Loading order…">
+          <OrderDetailHeadSkeleton />
+          <OrderDetailSkeleton />
+        </SkeletonRegion>
       </div>
     );
   }
@@ -129,7 +146,7 @@ function OrderDetail({ id }) {
             return (
               <div className="order-item" key={i}>
                 <div className="order-item-thumb">
-                  {img ? <ShimmerImg src={img} alt="" /> : <Icon name="Sparkles" size={22} color="#c3ccd2" />}
+                  {img ? <ShimmerImg src={img} alt="" width={200} fallback={<Icon name="Sparkles" size={22} color="#c3ccd2" />} /> : <Icon name="Sparkles" size={22} color="#c3ccd2" />}
                 </div>
                 <div className="order-item-info"><b>{name}</b>{sku && <span className="muted">SKU {sku}</span>}{color && <span className="muted">Color: {color}</span>}<span className="muted">Qty {qty}</span></div>
                 <b>₹{(price * qty).toFixed(0)}</b>
@@ -174,5 +191,14 @@ function OrderDetail({ id }) {
 
 export default function OrderDetailPage({ params }) {
   const { id } = use(params);
-  return <AccountGate title="Order details"><OrderDetail id={id} /></AccountGate>;
+  return (
+    <AccountGate
+      title="Order details"
+      bare
+      crumbs={<nav className="crumbs"><Link href="/account">Account</Link> <span>/</span> <Link href="/account/orders">Orders</Link></nav>}
+      skeleton={<><OrderDetailHeadSkeleton /><OrderDetailSkeleton /></>}
+    >
+      <OrderDetail id={id} />
+    </AccountGate>
+  );
 }

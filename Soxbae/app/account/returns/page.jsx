@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
+import { OrderListSkeleton } from '@/components/ui/Skeleton';
+import ReturnsLoading from './loading';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
@@ -33,6 +35,7 @@ function ReturnsInner() {
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false); // first load done → reloads keep the list
   const [form, setForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -48,7 +51,7 @@ function ReturnsInner() {
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
       setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoaded(true); }
   }, []);
   useEffect(() => { if (isAuthenticated) load(); }, [isAuthenticated, load]);
 
@@ -157,10 +160,10 @@ function ReturnsInner() {
         </form>
       )}
 
-      {loading ? (
-        <p className="muted" style={{ marginTop: 20 }}>Loading…</p>
+      {loading && !loaded ? (
+        <OrderListSkeleton rows={3} label="Loading your returns…" style={{ marginTop: 20 }} />
       ) : (
-        <>
+        <div className={loading ? 'sk-dim' : undefined} aria-busy={loading || undefined}>
           {/* existing returns */}
           {returns.length > 0 && (
             <div style={{ marginTop: 10 }}>
@@ -225,7 +228,7 @@ function ReturnsInner() {
             )}
             <p className="muted" style={{ marginTop: 12, fontSize: '.82rem' }}>Returns are accepted within 7 days of delivery.</p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -235,5 +238,5 @@ const lbl = { display: 'block', fontWeight: 600, fontSize: '.85rem', margin: '14
 const inp = { width: '100%', border: '1px solid var(--line, #d7dce4)', borderRadius: 10, padding: '11px 13px', fontFamily: 'inherit', fontSize: '.92rem', background: 'var(--bg, #fff)' };
 
 export default function ReturnsPage() {
-  return <AccountGate><Suspense fallback={null}><ReturnsInner /></Suspense></AccountGate>;
+  return <AccountGate fallback={<ReturnsLoading />}><Suspense fallback={<ReturnsLoading />}><ReturnsInner /></Suspense></AccountGate>;
 }

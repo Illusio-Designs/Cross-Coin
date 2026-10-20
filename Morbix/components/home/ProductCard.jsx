@@ -22,7 +22,8 @@ export default function ProductCard({ product }) {
 
         <Link href={href} className="pcard-imglink" aria-label={name}>
           {image
-            ? <ShimmerImg src={image} alt={name} loading="lazy" />
+            ? <ShimmerImg src={image} alt={name} width={600} widths={[300, 450, 600]} sizes="(max-width: 760px) 50vw, (max-width: 1040px) 33vw, 240px"
+                fallback={<span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>} />
             : <span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>}
         </Link>
 

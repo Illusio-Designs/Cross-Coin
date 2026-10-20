@@ -27,6 +27,8 @@ import {
 } from '../../utils/toast';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '../../utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '../../utils/cartRecovery';
+import GzImage from '../common/GzImage';
+import { Sk, SkBusy } from '../common/Skeleton';
 
 /* Gripzus cart drawer — full in-drawer checkout, same flow & design as
    the Knitwink cart drawer (guest + signed-in). Styled via CartDrawer.css
@@ -1168,7 +1170,7 @@ export default function CartDrawer() {
                     return (
                       <div key={key} className="cd-item">
                         <div className="cd-item-img">
-                          {it.image ? <img src={it.image} alt={it.name} /> : <div className="cd-item-img-placeholder" />}
+                          {it.image ? <GzImage src={it.image} alt={it.name} w={200} /> : <div className="cd-item-img-placeholder" />}
                         </div>
                         <div className="cd-item-info">
                           <p className="cd-item-name">{it.name}</p>
@@ -1388,7 +1390,7 @@ export default function CartDrawer() {
                             <div key={r.key} dir="ltr" style={{ flex: '0 0 auto', width: 232, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--paper, #F4F2EC)', border: '1px solid var(--line, #E2DDD2)', padding: 8 }}>
                               <div style={{ width: 46, height: 46, overflow: 'hidden', background: 'var(--paper-deep, #E3DFD5)', flexShrink: 0, display: 'grid', placeItems: 'center' }}>
                                 {r.image
-                                  ? <img src={r.image} alt={r.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ? <GzImage src={r.image} alt={r.name} w={200} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                   : null}
                               </div>
                               <div style={{ minWidth: 0, flex: 1 }}>
@@ -1435,7 +1437,14 @@ export default function CartDrawer() {
               <div className="cd-sv-section">
                 <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
                 {addressLoading ? (
-                  <p className="cd-loading">Loading addresses…</p>
+                  // Saved-address cards in their real frame while they load.
+                  <SkBusy label="Loading addresses…" className="cd-loading" style={{ display: 'grid', gap: 10 }}>
+                    {[0, 1].map((i) => (
+                      <div key={i} className="cd-address-card" aria-hidden="true">
+                        <div style={{ flex: 1, display: 'grid', gap: 8 }}><Sk className="h-3.5 w-2/5" /><Sk className="h-3 w-11/12" /><Sk className="h-3 w-1/3" /></div>
+                      </div>
+                    ))}
+                  </SkBusy>
                 ) : (
                   <>
                     {selectedAddress && !showAddressForm && (

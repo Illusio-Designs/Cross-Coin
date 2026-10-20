@@ -4,6 +4,7 @@ import PageHero from '../components/common/PageHero';
 import CollectionCard from '../components/products/CollectionCard';
 import SeoWrapper from '../components/SeoWrapper';
 import { getPublicCategories } from '../services/categories';
+import { Sk, SkBusy, CollectionCardSkeletons } from '../components/common/Skeleton';
 
 /* Collections — editorial edition.
    A large featured collection leads the page, then the rest fall into big
@@ -34,17 +35,15 @@ export default function CollectionsPage() {
         <div className="wrap">
           <div className="flex items-baseline justify-between mb-6 md:mb-8">
             <p className="eyebrow text-ink-muted">All collections</p>
-            {!loading && collections.length > 0 && (
+            {loading ? <Sk className="h-3 w-16" /> : collections.length > 0 && (
               <span className="spec">{collections.length} in total</span>
             )}
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-[4/5] rounded-xl bg-paper-deep animate-pulse" />
-              ))}
-            </div>
+            <SkBusy label="Loading collections…" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
+              <CollectionCardSkeletons n={8} />
+            </SkBusy>
           ) : collections.length === 0 ? (
             <div className="text-center py-20 rounded-xl border border-line">
               <p className="h-display text-3xl text-ink mb-3">No collections yet</p>

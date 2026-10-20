@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getBlogImageSrc } from '../../utils/imagekit';
+import GzImage from './GzImage';
 
 /* BlogCard — editorial gallery. Used by the journal list and the home
    BlogStrip. A clean cover image on white with a tiny caption below:
@@ -10,9 +10,10 @@ export default function BlogCard({ post }) {
     <Link href={`/journal/${post.slug}`} className="group flex flex-col">
       {/* Cover — pre-cropped 16:9 server-side for uniform card sizing */}
       <div className="media-zoom overflow-hidden rounded-xl border border-line bg-paper-warm aspect-[16/9]">
-        <img
-          src={getBlogImageSrc(post.thumb || post.image, { w: 800, h: 450, q: 70 })}
+        <GzImage
+          src={post.thumb || post.image}
           alt={post.title}
+          w={600}
           className="w-full h-full object-cover"
         />
       </div>

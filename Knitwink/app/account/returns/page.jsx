@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
+import { Skeleton, SkeletonRegion } from '@/components/ui/Skeleton';
 
 const INK = '#0a0a0a';
 const REASONS = [
@@ -22,7 +23,7 @@ const money = (n) => '₹' + Number(n || 0).toFixed(0);
 // useSearchParams (?order=<id>) needs a Suspense boundary in the app router.
 export default function ReturnsPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>}>
+    <Suspense fallback={<ReturnsShell><ReturnsListSkeleton /></ReturnsShell>}>
       <ReturnsContent />
     </Suspense>
   );
@@ -37,6 +38,7 @@ function ReturnsContent() {
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadedOnce, setLoadedOnce] = useState(false); // skeleton only before the first load
   const [form, setForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -54,7 +56,7 @@ function ReturnsContent() {
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
       setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoadedOnce(true); }
   }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
@@ -93,7 +95,7 @@ function ReturnsContent() {
     finally { setSubmitting(false); }
   };
 
-  if (authLoading || !user) return <div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>;
+  if (authLoading || !user) return <ReturnsShell><ReturnsListSkeleton /></ReturnsShell>;
 
   const isCod = form && form.order?.payment_type === 'cod';
 
@@ -146,8 +148,8 @@ function ReturnsContent() {
           </form>
         )}
 
-        {loading ? <p style={{ color: '#888' }}>Loading…</p> : (
-          <>
+        {loading && !loadedOnce ? <ReturnsListSkeleton /> : (
+          <div className={loading ? 'sk-refreshing' : undefined} aria-busy={loading || undefined}>
             {returns.length > 0 && (
               <>
                 <h3 style={{ margin: '6px 0 12px' }}>Your return requests</h3>
@@ -196,10 +198,41 @@ function ReturnsContent() {
               </div>
             )}
             <p style={{ marginTop: 12, fontSize: '.82rem', color: '#888' }}>Returns are accepted within 7 days of delivery.</p>
-          </>
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+// Page frame (eyebrow + title) — the same one the loaded page draws.
+function ReturnsShell({ children }) {
+  return (
+    <div style={{ background: '#f5f5f5', minHeight: '70vh', color: INK, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: '40px 20px 70px' }}>
+        <div style={{ fontSize: '.72rem', letterSpacing: '.18em', textTransform: 'uppercase', color: '#888' }}>Account</div>
+        <h1 style={{ margin: '6px 0 22px', fontFamily: "'Playfair Display', serif", fontSize: '2.1rem' }}>Returns &amp; refunds</h1>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// "Request a return" heading + eligible-order cards, as the list draws them.
+function ReturnsListSkeleton() {
+  return (
+    <SkeletonRegion label="Loading your returns…">
+      <h3 style={{ margin: '6px 0 12px' }}>Request a return</h3>
+      <div style={{ display: 'grid', gap: 12 }} aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-10 w-36 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </SkeletonRegion>
   );
 }
 

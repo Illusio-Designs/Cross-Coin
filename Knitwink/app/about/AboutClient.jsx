@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 // SeoWrapper removed — metadata is now set server-side in page.jsx.
 
 const STATS = [
@@ -75,7 +76,9 @@ export default function AboutClient() {
     <>
       {/* Hero */}
       <section className="relative min-h-[75vh] md:min-h-screen flex items-end bg-brand-black overflow-hidden">
-        <img
+        <ShimmerImg
+          priority
+          shimmerClassName="sk--dark"
           src="https://ik.imagekit.io/wp2oatzmf/products/variation_0_image-1774363348670-268740372.jpg?tr=w-1600,h-1200,q-85,f-auto"
           alt="Knitwink foot alignment socks"
           className="absolute inset-0 h-full w-full object-cover object-center opacity-45"
@@ -127,8 +130,8 @@ export default function AboutClient() {
               <p className="text-justify">We work directly with manufacturers, control every step of the supply chain, and refuse to cut corners on materials. That is the Knitwink promise.</p>
             </div>
           </div>
-          <div className="overflow-hidden rounded-2xl bg-gray-100">
-            <img
+          <div className="relative overflow-hidden rounded-2xl bg-gray-100">
+            <ShimmerImg
               src="https://ik.imagekit.io/wp2oatzmf/products/variation_1_image-1774363348678-875707193.jpg?tr=w-900,h-900,q-85,f-auto"
               alt="Knitwink socks detail"
               className="h-full w-full object-cover min-h-[220px] sm:min-h-[280px] md:min-h-[360px]"
@@ -169,7 +172,8 @@ export default function AboutClient() {
 
       {/* Quote */}
       <section className="relative overflow-hidden bg-brand-black px-4 py-16 sm:px-6 sm:py-20 md:px-10 lg:px-16 lg:py-28">
-        <img
+        <ShimmerImg
+          shimmerClassName="sk--dark"
           src="https://ik.imagekit.io/wp2oatzmf/products/variation_2_image-1774363348683-14851714.jpg?tr=w-1600,h-800,q-80,f-auto"
           alt="Knitwink"
           className="absolute inset-0 h-full w-full object-cover opacity-20"

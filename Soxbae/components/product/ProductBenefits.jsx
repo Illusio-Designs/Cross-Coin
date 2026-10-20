@@ -1,3 +1,4 @@
+import ShimmerImg from '@/components/ui/ShimmerImg';
 // "The Soxbae Alignment Socks Can Help With" — the comfort-wellness band of the
 // foot conditions people commonly use toe-alignment socks for. Same content and
 // imagery as the Morbix store (both sell the same alignment socks); copy is
@@ -25,7 +26,7 @@ export default function ProductBenefits() {
       <div className="sx-made-grid">
         {CONDITIONS.map((c) => (
           <div className="sx-made-card" key={c.name}>
-            <div className="sx-made-circle"><img src={c.img} alt={c.name} loading="lazy" decoding="async" /></div>
+            <div className="sx-made-circle"><ShimmerImg src={c.img} alt={c.name} /></div>
             <h3>{c.name}</h3>
             <p>{c.text}</p>
           </div>

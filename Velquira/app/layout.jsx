@@ -50,6 +50,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <head>
+        {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
+        <noscript><style>{'.shimmer-img{opacity:1!important}.shimmer-img-skeleton{display:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
@@ -57,6 +59,9 @@ export default function RootLayout({ children }) {
       <body>
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
+        {/* Content images (ShimmerImg, data-sk-img) stay hidden until fully
+            loaded + decoded; this reveals them even before React hydrates. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.hasAttribute('data-sk-img'))return;var r=function(){t.classList.add('is-loaded')};if(t.decode){t.decode().then(r,r)}else{r()}},true)}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
             <CookieBanner />

@@ -3,7 +3,7 @@ import TestHome from './test/index';
 import SeoWrapper from '../console/SeoWrapper';
 import { fetchPageSeo } from '../utils/fetchPageSeo';
 import { getSeoOrg } from '../services/getSeoOrg';
-import { getHeroSrcSet } from '../utils/imageUtils';
+import { ikTransform, ikSrcSet, HERO_WIDTHS, HERO_SIZES } from '../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -78,16 +78,17 @@ export async function getServerSideProps(ctx) {
 
 export default function MainPage({ seoData, organizationLd = null, orgOgImage = null, orgDescription = null, initialData = {} }) {
   // Preload the first hero image (the LCP element). Since the slide markup is
-  // now in the SSR HTML, telling the browser to fetch this image at highest
-  // priority before it parses the body shaves a big chunk off LCP — the same
-  // benefit next/image's `priority` gives, without touching the hero layout.
+  // in the SSR HTML, telling the browser to fetch this image at highest
+  // priority before it parses the body shaves a big chunk off LCP.
   //
-  // Preload the exact same srcSet HeroSlider builds (via the shared
-  // getHeroSrcSet helper) so the preloaded candidate matches what the hero
-  // <img srcSet sizes="…100vw"> resolves to — a mismatch would download the
-  // hero twice. Both use the ImageKit-optimised widths for ImageKit sources.
+  // The preload must name exactly what the Mint hero <img> (Thumb in
+  // pages/test/index.jsx) resolves to — same URL (seedHome reads the slide
+  // image the same way), same ImageKit srcSet and sizes — or the browser would
+  // download the hero twice. The Mint hero uses a single image for every
+  // viewport (no separate mobile banner), so one preload covers all.
   const firstSlide = initialData?.slides?.[0];
-  const heroPreloadSrcSet = firstSlide ? getHeroSrcSet(firstSlide) : undefined;
+  const heroImg = firstSlide ? (firstSlide.image || firstSlide.imageUrl || firstSlide.image_url || '') : '';
+  const heroSrcSet = heroImg ? ikSrcSet(heroImg, HERO_WIDTHS) : undefined;
 
   return (
     <SeoWrapper
@@ -97,24 +98,14 @@ export default function MainPage({ seoData, organizationLd = null, orgOgImage = 
       fallbackOgImage={orgOgImage}
       fallbackDescription={orgDescription}
     >
-      {heroPreloadSrcSet && (
+      {heroImg && (
         <Head>
-          {firstSlide.mobileImage && (
-            <link
-              rel="preload"
-              as="image"
-              href={firstSlide.mobileImage}
-              media="(max-width: 767px)"
-              fetchPriority="high"
-            />
-          )}
           <link
             rel="preload"
             as="image"
-            href={firstSlide.image}
-            imageSrcSet={heroPreloadSrcSet}
-            imageSizes="100vw"
-            media={firstSlide.mobileImage ? '(min-width: 768px)' : undefined}
+            href={ikTransform(heroImg, 1600)}
+            imageSrcSet={heroSrcSet}
+            imageSizes={heroSrcSet ? HERO_SIZES : undefined}
             fetchPriority="high"
           />
         </Head>

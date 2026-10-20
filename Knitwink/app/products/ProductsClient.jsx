@@ -7,6 +7,7 @@ import { getPublicProducts } from '@/lib/api/products'
 import { getPublicCategories } from '@/lib/api/categories'
 import { ProductCard } from '@/components/collection/ProductCard'
 import { ShimmerImg } from '@/components/ui/ShimmerImg'
+import { ProductGridSkeleton } from '@/components/ui/Skeleton'
 
 const SORT_OPTIONS = [
   { value: 'featured',   label: 'Featured' },
@@ -178,7 +179,7 @@ export default function ProductsClient() {
         <ShimmerImg
           src="/collection hero.jpg"
           alt="Products"
-          shimmerClassName="bg-gray-800"
+          shimmerClassName="sk--dark"
           className="absolute inset-0 h-full w-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 to-transparent" />
@@ -322,22 +323,14 @@ export default function ProductsClient() {
 
       {/* Grid */}
       <div className="bg-off-white px-4 py-8 md:px-6">
-        {loading ? (
-          <div className="mx-auto grid max-w-site grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-3">
-                <div className="aspect-square animate-pulse rounded-2xl bg-gray-200" />
-                <div className="mt-3 space-y-2">
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-gray-200" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
+        {/* First load: card skeletons. A category change keeps the current
+            products on screen (dimmed) until the new list arrives. */}
+        {loading && allProducts.length === 0 ? (
+          <ProductGridSkeleton count={8} className="mx-auto grid max-w-site grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" />
+        ) : filtered.length === 0 && !loading ? (
           <p className="py-20 text-center text-sm text-gray-400">No products found.</p>
         ) : (
-          <div className="mx-auto grid max-w-site grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className={`mx-auto grid max-w-site grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4${loading ? ' sk-refreshing' : ''}`} aria-busy={loading || undefined}>
             {filtered.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         )}

@@ -1,69 +1,81 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { ikSrc, ikSrcSet } from '@/lib/image';
 
 /**
- * Drop-in <img> replacement with a shimmer skeleton that sits behind the image
- * while it loads, then fades it in. Handles already-cached images (which never
- * fire onLoad) by checking img.complete on mount, and reveals on error so a
- * broken image never traps the UI behind the shimmer.
+ * The one content-image component for Morbix. Never shows a half-downloaded
+ * picture: the skeleton shimmer covers the box while the image downloads, the
+ * <img> stays invisible until it has fully loaded AND decoded, then fades in
+ * (~180ms). Already-cached images show at once (no fade flash); a failed image
+ * shows `fallback` (the store's icon placeholder) instead of a stuck skeleton.
  *
- * The parent must be `position: relative` with a defined size — the skeleton
- * renders as an absolutely-positioned overlay.
+ *   <ShimmerImg src={url} alt="" width={600} widths={[300, 600]} sizes="…" />
+ *
+ * `width` asks ImageKit for that width (see lib/image.js); `widths` + `sizes`
+ * add a srcSet. `priority` = the LCP image (eager + fetchPriority high);
+ * everything else is lazy + async-decoded.
+ *
+ * The parent must be `position: relative` with a defined size (aspect-ratio or
+ * width/height) — the skeleton is an absolutely-positioned overlay.
  */
-
-// ImageKit URLs are served at origin resolution unless we ask for a transform.
-// Add width + f-auto (WebP/AVIF negotiation) so cards/thumbs don't download the
-// full-size original. Width-only preserves aspect ratio.
-function optimizeSrc(src) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-600,q-78,f-auto`;
-  }
-  return src;
-}
-
 export default function ShimmerImg({
   src,
   alt = '',
+  width = 600,
+  widths,
+  sizes,
+  priority = false,
+  fallback = null,
   className = '',
   onLoad,
-  loading = 'lazy',
+  loading,
+  fetchPriority,
   decoding = 'async',
-  minMs, // accepted for backward-compat, no longer used (was an artificial delay)
+  minMs, // accepted for backward-compat, unused
   ...rest
 }) {
-  const [loaded, setLoaded] = useState(false);
+  const resolved = ikSrc(src, width);
+  const srcSet = ikSrcSet(src, widths);
+  // 'wait' → downloading/decoding · 'fade' → just revealed · 'shown' → cached · 'error'
+  const [phase, setPhase] = useState('wait');
   const imgRef = useRef(null);
-  const optimized = optimizeSrc(src);
-
-  // Reveal immediately — no artificial minimum delay (that delay was adding
-  // ~400ms of shimmer even to cached images, hurting perceived paint / LCP).
-  const reveal = () => setLoaded(true);
 
   useEffect(() => {
-    setLoaded(false);
+    setPhase('wait');
     const img = imgRef.current;
-    if (img && img.complete && img.naturalWidth > 0) reveal();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [optimized]);
+    // Loaded (or failed) before React hydrated, so onLoad/onError never fired.
+    if (img && img.complete) setPhase(img.naturalWidth > 0 ? 'shown' : 'error');
+  }, [resolved, srcSet]);
 
+  const handleLoad = (e) => {
+    const img = e.currentTarget;
+    const reveal = () => setPhase((p) => (p === 'wait' ? 'fade' : p));
+    if (typeof img.decode === 'function') img.decode().then(reveal, reveal);
+    else reveal();
+    onLoad?.(e);
+  };
+
+  if (!resolved || phase === 'error') return fallback;
+
+  const state = phase === 'fade' ? ' is-loaded is-fading' : phase === 'shown' ? ' is-loaded' : '';
   return (
     <>
-      {!loaded && <span className="shimmer shimmer-img-skeleton" aria-hidden="true" />}
-      {optimized && (
-        <img
-          ref={imgRef}
-          src={optimized}
-          alt={alt}
-          loading={loading}
-          decoding={decoding}
-          onLoad={(e) => { reveal(); onLoad?.(e); }}
-          onError={reveal}
-          className={`shimmer-img${loaded ? ' is-loaded' : ''}${className ? ' ' + className : ''}`}
-          {...rest}
-        />
-      )}
+      {phase === 'wait' && <span className="sk shimmer-img-skeleton" aria-hidden="true" />}
+      <img
+        ref={imgRef}
+        src={resolved}
+        srcSet={srcSet}
+        sizes={srcSet ? sizes : undefined}
+        alt={alt}
+        loading={loading || (priority ? 'eager' : 'lazy')}
+        fetchPriority={fetchPriority || (priority ? 'high' : undefined)}
+        decoding={decoding}
+        onLoad={handleLoad}
+        onError={() => setPhase('error')}
+        className={`shimmer-img${state}${className ? ' ' + className : ''}`}
+        {...rest}
+      />
     </>
   );
 }

@@ -1,3 +1,4 @@
+import ShimmerImg from '@/components/ui/ShimmerImg';
 // "The Morbix Alignment Socks Can Help With" — a comfort-wellness band of the
 // foot conditions people commonly use toe-alignment socks for. Copy is framed
 // responsibly ("many wearers / can help / may ease"), with a caveat — no
@@ -24,7 +25,7 @@ export default function ConditionsSection() {
       <div className="cond-grid">
         {CONDITIONS.map((c) => (
           <div className="cond-card" key={c.name}>
-            <div className="cond-circle"><img src={c.img} alt={c.name} loading="lazy" decoding="async" /></div>
+            <div className="cond-circle"><ShimmerImg src={c.img} alt={c.name} /></div>
             <h3>{c.name}</h3>
             <p>{c.text}</p>
           </div>
