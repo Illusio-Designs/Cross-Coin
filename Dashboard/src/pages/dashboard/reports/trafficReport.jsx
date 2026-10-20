@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import Loader from '../../../components/common/Loader';
 import { trafficReportService, brandService } from '../../../services';
-import { DateRangePicker } from '../../../components/ui';
+import { DateRangePicker, Skeleton, SkeletonKpis, SkeletonTableRows } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -187,6 +186,27 @@ export default function TrafficReport() {
   const sourceTotal = channels.reduce((n, c) => n + (c.untracked ? 0 : Number(c.sessions) || 0), 0);
   const splitRevenue = split.reduce((n, r) => n + (Number(r.revenue) || 0), 0);
 
+  // First load (nothing to show yet) → skeletons in place of each section.
+  // A date-range / brand change keeps the old figures on screen, dimmed.
+  const first = isLoading && !data;
+  const refreshing = isFetching && !!data;
+  const dim = refreshing ? { opacity: 0.6, transition: 'opacity .15s' } : undefined;
+  const busy = refreshing || undefined;
+
+  const howCounted = (
+    <div className="rep-panel">
+      <div className="rep-ph"><h3>How this is counted</h3></div>
+      <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
+        <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are visits that started in this period from shoppers who allowed cookies; bots are left out. Page loads count every visitor but can't be tied to orders.</li>
+        <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
+        <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
+        <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
+        <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, Pinterest, blogs and other sites are “Other websites & apps” — click that row to see each site by name.</li>
+        <li>Paid = ads tagged utm_medium paid / cpc. Direct = no source or our own sites. Everything else (search, social posts, email, referral) is Organic.</li>
+      </ul>
+    </div>
+  );
+
   const doExport = () => exportCsv(`traffic-conversion_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
     { label: 'Tracked visits', value: (r) => r.sessions },
@@ -237,13 +257,72 @@ export default function TrafficReport() {
         }
       />
 
-      {isLoading ? (
-        <div className="rep-state"><Loader /></div>
+      {first ? (
+        <>
+          <SkeletonKpis count={4} label="Loading traffic report…" />
+          <div className="rep-panel" aria-hidden="true">
+            <div className="rep-ph"><h3>Where visitors come from</h3></div>
+            <Skeleton w="100%" h={14} r={7} style={{ marginBottom: 16 }} />
+            <div className="rep-tbl-wrap">
+              <table className="rep-table">
+                <thead><tr><th>Source</th><th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                <tbody><SkeletonTableRows rows={5} cols={6} /></tbody>
+              </table>
+            </div>
+          </div>
+          <div className="rep-panel" aria-hidden="true">
+            <div className="rep-ph"><h3>Where visitors left</h3></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 18 }}>
+              {LEFT_STAGES.map((st) => (
+                <div key={st.key} className="rep-tile"><Skeleton w="70%" h={10} /><Skeleton w="40%" h={18} style={{ marginTop: 7 }} /><Skeleton w="55%" h={10} style={{ marginTop: 6 }} /></div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 160px) 1fr 70px', gap: 12, alignItems: 'center' }}>
+                  <Skeleton w="70%" h={12} /><Skeleton w="100%" h={22} r={6} /><Skeleton w="100%" h={10} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rep-masonry" aria-hidden="true">
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Paid vs organic vs direct</h3></div>
+              <Skeleton w="100%" h={12} r={6} style={{ marginBottom: 14 }} />
+              <div className="rep-tiles" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="rep-tile"><Skeleton w="50%" h={10} /><Skeleton w="60%" h={18} style={{ marginTop: 7 }} /><Skeleton w="80%" h={10} style={{ marginTop: 6 }} /></div>
+                ))}
+              </div>
+            </div>
+            {!brandId && (
+              <div className="rep-panel rep-panel--flush">
+                <div className="rep-ph"><h3>By brand</h3></div>
+                <div className="rep-tbl-wrap">
+                  <table className="rep-table">
+                    <thead><tr><th>Brand</th><th className="r">Visits</th><th className="r">Cart</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                    <tbody><SkeletonTableRows rows={4} cols={6} /></tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="rep-panel rep-panel--flush" aria-hidden="true">
+            <div className="rep-ph"><h3>Ad campaigns by platform</h3></div>
+            <div className="rep-tbl-wrap">
+              <table className="rep-table">
+                <thead><tr><th>Platform / campaign</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                <tbody><SkeletonTableRows rows={6} cols={6} /></tbody>
+              </table>
+            </div>
+          </div>
+          {howCounted}
+        </>
       ) : error ? (
         <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Couldn't load the report: {error.message || 'try again'}</div>
       ) : !data ? null : (
         <>
-          <div className="rep-kpis">
+          <div className="rep-kpis" style={dim} aria-busy={busy}>
             <div className="rep-kpi">
               <div className="rep-kl">Visits</div>
               <div className="rep-kv num">{num(t?.sessions)}</div>
@@ -267,7 +346,7 @@ export default function TrafficReport() {
           </div>
 
           {/* ── 1. Where visitors come from ── */}
-          <div className="rep-panel">
+          <div className="rep-panel" style={dim} aria-busy={busy}>
             <div className="rep-ph"><h3>Where visitors come from</h3><span className="hint">share of {num(sourceTotal)} tracked visits</span></div>
             {sourceTotal > 0 && (
               <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 16 }}>
@@ -330,7 +409,7 @@ export default function TrafficReport() {
           </div>
 
           {/* ── 2. Where visitors left ── */}
-          <div className="rep-panel">
+          <div className="rep-panel" style={dim} aria-busy={busy}>
             <div className="rep-ph"><h3>Where visitors left</h3><span className="hint">what each visitor did before leaving</span></div>
             {drop.totals.visits > 0 ? (
               <>
@@ -370,7 +449,7 @@ export default function TrafficReport() {
             ) : <span className="hint">No tracked visits in this period.</span>}
           </div>
 
-          <div className="rep-masonry">
+          <div className="rep-masonry" style={dim} aria-busy={busy}>
             {/* Paid / Organic / Direct */}
             <div className="rep-panel">
               <div className="rep-ph"><h3>Paid vs organic vs direct</h3><span className="hint">share of revenue</span></div>
@@ -420,7 +499,7 @@ export default function TrafficReport() {
           </div>
 
           {/* ── 3. Ad campaigns, grouped by platform ── */}
-          <div className="rep-panel rep-panel--flush">
+          <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
             <div className="rep-ph">
               <h3>Ad campaigns by platform</h3>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -506,17 +585,7 @@ export default function TrafficReport() {
             </div>
           </div>
 
-          <div className="rep-panel">
-            <div className="rep-ph"><h3>How this is counted</h3></div>
-            <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
-              <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are visits that started in this period from shoppers who allowed cookies; bots are left out. Page loads count every visitor but can't be tied to orders.</li>
-              <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
-              <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
-              <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
-              <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, Pinterest, blogs and other sites are “Other websites & apps” — click that row to see each site by name.</li>
-              <li>Paid = ads tagged utm_medium paid / cpc. Direct = no source or our own sites. Everything else (search, social posts, email, referral) is Organic.</li>
-            </ul>
-          </div>
+          {howCounted}
         </>
       )}
     </div>

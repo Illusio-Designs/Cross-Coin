@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { showSuccess } from '../../../utils/toastNotification';
 import ProductEditor from '../../../components/products/ProductEditor';
 import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
+import { Skeleton, SkeletonTableRows } from '../../../components/ui/Skeleton';
 
 /*
  * Products — stock first. Tiles filter the list (same thresholds as Home's
@@ -198,6 +199,22 @@ export default function ProductsPage() {
   const pages = Math.max(1, data?.pages || 1);
   const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = Math.min(total, page * PAGE_SIZE);
+  const firstLoad = loading && !data;
+  const thead = (
+    <thead>
+      <tr>
+        <th className="pst-col-prod">Product</th>
+        <th>Brand</th>
+        <th className="r">Price</th>
+        <th className="r">In stock</th>
+        <th className="r">Sold · 30 d</th>
+        <th className="r">Lasts</th>
+        <th>Badge</th>
+        <th>Shows on site</th>
+        <th />
+      </tr>
+    </thead>
+  );
 
   return (
     <div className="dashboard-page pst">
@@ -220,8 +237,8 @@ export default function ProductsPage() {
         {tiles.map((t) => (
           <button key={t.key} type="button" className={`pst-tile${filter === t.key ? ' is-on' : ''}`} aria-pressed={filter === t.key} onClick={() => setFilter(t.key)}>
             <span className="pst-tile-l">{t.label}</span>
-            <span className={`pst-tile-v ${t.tone ? `tone-${t.tone}` : ''}`}>{t.value == null ? '—' : Number(t.value).toLocaleString('en-IN')}</span>
-            <span className="pst-tile-n">{t.note}</span>
+            <span className={`pst-tile-v ${t.tone ? `tone-${t.tone}` : ''}`}>{t.value == null ? (firstLoad ? <Skeleton w="45%" h={24} /> : '—') : Number(t.value).toLocaleString('en-IN')}</span>
+            <span className="pst-tile-n">{firstLoad && t.value == null ? <Skeleton w="80%" h={10} /> : t.note}</span>
           </button>
         ))}
       </section>
@@ -252,28 +269,22 @@ export default function ProductsPage() {
             <p>{error}</p>
             <button type="button" className="pst-btn" onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
           </div>
-        ) : loading && !data ? (
-          <div className="pst-state">Loading products…</div>
+        ) : firstLoad ? (
+          <div className="pst-scroll" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading products…</span>
+            <table className="pst-table" aria-hidden="true">
+              {thead}
+              <tbody><SkeletonTableRows rows={8} cols={9} /></tbody>
+            </table>
+          </div>
         ) : !data?.items?.length ? (
           <div className="pst-state">
             {search ? `No products match “${search}”.` : filter === 'all' ? 'No products yet. Add your first one with “New product”.' : 'Nothing here — good news.'}
           </div>
         ) : (
-          <div className={`pst-scroll${loading ? ' is-busy' : ''}`}>
+          <div className={`pst-scroll${loading ? ' is-busy' : ''}`} aria-busy={loading || undefined}>
             <table className="pst-table">
-              <thead>
-                <tr>
-                  <th className="pst-col-prod">Product</th>
-                  <th>Brand</th>
-                  <th className="r">Price</th>
-                  <th className="r">In stock</th>
-                  <th className="r">Sold · 30 d</th>
-                  <th className="r">Lasts</th>
-                  <th>Badge</th>
-                  <th>Shows on site</th>
-                  <th />
-                </tr>
-              </thead>
+              {thead}
               <tbody>
                 {data.items.map((p) => (
                   <ProductRow key={p.id} p={p} onPatch={patchRow} onSaved={refreshCounts} onOpen={() => pushMode(`edit=${p.id}`)} />
@@ -392,7 +403,21 @@ function ProductRow({ p, onPatch, onSaved, onOpen }) {
         </td>
       </tr>
       {open && (varsLoading && !vars ? (
-        <tr className="pst-sub"><td colSpan={9} className="pst-sub-msg">Loading sizes…</td></tr>
+        // Size rows load: shimmer rows shaped like the size rows below.
+        Array.from({ length: Math.min(Math.max(p.variationCount || 0, 1), 4) }, (_, i) => (
+          <tr key={`sk${i}`} className="pst-sub" aria-busy="true">
+            <td className="pst-col-prod pst-var">
+              {i === 0 && <span className="ds-sr-only" role="status">Loading sizes…</span>}
+              <Skeleton w={`${45 + (i % 3) * 10}%`} h={12} />
+            </td>
+            <td />
+            <td className="r"><Skeleton w={56} h={12} style={{ marginLeft: 'auto' }} /></td>
+            <td className="r"><Skeleton w={72} h={34} r={8} style={{ marginLeft: 'auto' }} /></td>
+            <td className="r"><Skeleton w={28} h={12} style={{ marginLeft: 'auto' }} /></td>
+            <td className="r"><Skeleton w={48} h={12} style={{ marginLeft: 'auto' }} /></td>
+            <td colSpan={3}><Skeleton w="40%" h={12} /></td>
+          </tr>
+        ))
       ) : varsError ? (
         <tr className="pst-sub"><td colSpan={9} className="pst-sub-msg">{varsError} <button type="button" className="pst-link" onClick={loadVars}>Try again</button></td></tr>
       ) : (vars || []).map((v) => (

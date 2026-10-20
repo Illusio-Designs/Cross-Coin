@@ -18,9 +18,14 @@
  *
  * If you need a per-row click handler, pass onRowClick(row).
  * If you need a custom row key, pass rowKey="id" (default 'id').
+ *
+ * Pass `loading` while data loads: with no rows yet it draws the real header
+ * plus shimmering rows (same columns); with rows on screen it keeps them,
+ * dimmed, instead of flashing a skeleton (same as the shared ui/Table).
  */
 
 import clsx from './_clsx';
+import { SkeletonTableRows } from '../../ui/Skeleton';
 
 export default function ResponsiveTable({
   columns,
@@ -29,7 +34,34 @@ export default function ResponsiveTable({
   onRowClick,
   emptyMessage = 'No data',
   className,
+  loading = false,
+  loadingLabel = 'Loading…',
+  skeletonRows = 6,
 }) {
+  const head = (
+    <thead>
+      <tr>
+        {columns.map((c) => (
+          <th key={c.key} style={c.headerStyle}>{c.label}</th>
+        ))}
+      </tr>
+    </thead>
+  );
+
+  if (loading && (!data || data.length === 0)) {
+    return (
+      <div className="ds-tablewrap" role="status" aria-busy="true">
+        <span className="ds-sr-only">{loadingLabel}</span>
+        <table className={clsx('ds-table', 'ds-table--auto', className)} aria-hidden="true">
+          {head}
+          <tbody>
+            <SkeletonTableRows rows={skeletonRows} cols={columns.length} />
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   if (!data || data.length === 0) {
     return (
       <div className="ds-empty" role="status" aria-live="polite">
@@ -39,15 +71,13 @@ export default function ResponsiveTable({
   }
 
   return (
-    <div className="ds-tablewrap">
+    <div
+      className="ds-tablewrap"
+      aria-busy={loading || undefined}
+      style={loading ? { opacity: 0.6, transition: 'opacity .15s' } : undefined}
+    >
       <table className={clsx('ds-table', 'ds-table--auto', className)} role="table">
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c.key} style={c.headerStyle}>{c.label}</th>
-            ))}
-          </tr>
-        </thead>
+        {head}
         <tbody>
           {data.map((row, i) => (
             <tr

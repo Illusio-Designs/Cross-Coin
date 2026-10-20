@@ -22,6 +22,7 @@ import StatusPill from '../../../components/ui/StatusPill';
 import ConfirmBar from '../../../components/ui/ConfirmBar';
 import EmptyState from '../../../components/ui/EmptyState';
 import ErrorState from '../../../components/ui/ErrorState';
+import { SkeletonPage, SkeletonList } from '../../../components/ui/Skeleton';
 import { WebPanel, WebField, Toggle } from '../../../components/website/webParts';
 import { useLoad, useDebounced, errText, loadBrands, brandLabel } from '../../../components/website/webUtil';
 
@@ -67,7 +68,7 @@ export default function Attributes() {
     catch (e) { showError('saveFailed', errText(e, 'Could not change the order.')); load.reload(true); }
   };
 
-  if (authLoading) return <div className="dashboard-sections web attr"><div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div></div>;
+  if (authLoading) return <div className="dashboard-sections web attr"><SkeletonPage kpis={4} rows={6} cols={3} label="Loading attributes…" /></div>;
   if (!allowed) return <div className="dashboard-sections web attr"><EmptyState title="You don't have access to this" description="Ask an admin to give your account the Product manager or Admin role." /></div>;
 
   const storeName = brandLabel(brand) || 'this store';
@@ -116,7 +117,7 @@ export default function Attributes() {
                 {search && <button type="button" className="web-search-x" aria-label="Clear search" onClick={() => setSearch('')}><HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} /></button>}
               </label>
             </div>
-            {load.loading && !attrs.length ? <div className="web-skel-lines attr-pad" aria-busy="true"><span /><span /><span /></div>
+            {load.loading && !attrs.length ? <SkeletonList rows={6} label="Loading attributes…" />
               : !shown.length ? <EmptyState title={q ? 'Nothing matches' : 'No attributes yet'} description={q ? 'Try another search.' : 'Add Color and Size first — they become the choices on product pages and the menu filters.'} />
                 : (
                   <ul className="attr-list">

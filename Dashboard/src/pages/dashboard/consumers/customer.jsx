@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import Loader from '../../../components/common/Loader';
+import { Skeleton, SkeletonTableRows } from '../../../components/ui';
 import { API_BASE_URL } from '../../../services/api/config';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon, CallIcon, WhatsappIcon, UserMultiple02Icon } from '@hugeicons/core-free-icons';
@@ -152,7 +152,7 @@ export default function CustomerProfile() {
       </div>
     );
   } else if (isLoading) {
-    body = <div className="rep-panel rep-state"><Loader /></div>;
+    body = <ProfileSkeleton />;
   } else if (error || !data?.success) {
     body = (
       <div className="rep-panel cp-empty">
@@ -276,6 +276,51 @@ function Profile({ data, tab, setTab, openOrder, openChat, refreshing }) {
               </ul>
             </div>
           )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* First load of a profile: header card, six tiles, the Orders tab and the
+   side cards — same boxes as the real page, so nothing jumps when it lands. */
+function ProfileSkeleton() {
+  return (
+    <>
+      <span className="ds-sr-only" role="status">Loading customer profile…</span>
+      <div className="rep-panel cp-head" aria-hidden="true">
+        <Skeleton circle h={56} />
+        <div className="cp-who">
+          <Skeleton w={200} h={22} />
+          <Skeleton w="min(320px, 80%)" h={13} style={{ marginTop: 8 }} />
+          <Skeleton w="min(420px, 90%)" h={12} style={{ marginTop: 6 }} />
+        </div>
+        <div className="cp-actions"><Skeleton w={84} h={36} r={10} /><Skeleton w={150} h={36} r={10} /></div>
+      </div>
+      <div className="rep-kpis cp-kpis" aria-hidden="true">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="rep-kpi"><Skeleton w="50%" h={10} /><Skeleton w="45%" h={21} style={{ margin: '9px 0 6px' }} /><Skeleton w="75%" h={10} /></div>
+        ))}
+      </div>
+      <div className="cp-grid" aria-hidden="true">
+        <div className="rep-panel rep-panel--flush cp-main">
+          <div className="cp-tabs">
+            {['Orders', 'Returns & refunds', 'WhatsApp', 'Addresses'].map((t, i) => (
+              <span key={t} className={`cp-tab${i === 0 ? ' is-on' : ''}`}>{t}</span>
+            ))}
+          </div>
+          <div className="cp-tab-body">
+            <div className="rep-tbl-wrap cp-tbl">
+              <table className="rep-table">
+                <thead><tr><th>Order</th><th>Date</th><th>Payment</th><th>Stage</th><th className="r">Total</th></tr></thead>
+                <tbody><SkeletonTableRows rows={5} cols={5} /></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div className="cp-side">
+          <div className="rep-panel"><div className="rep-ph"><h3>Before you call</h3></div><div className="sk-text">{['92%', '78%', '60%'].map((w) => <Skeleton key={w} w={w} h={12} />)}</div></div>
+          <div className="rep-panel"><div className="rep-ph"><h3>Loyalty points</h3></div><Skeleton w={90} h={24} /></div>
         </div>
       </div>
     </>

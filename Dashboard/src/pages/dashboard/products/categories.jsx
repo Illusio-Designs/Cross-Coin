@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button, Input, Modal, Pagination, Select, Switch, Badge } from "../../../components/ui";
 import { PageHeader, Panel, StatGrid, StatTile, FilterBar, ResponsiveTable } from "../../../components/Dashboard/primitives";
-import Loader from "../../../components/common/Loader";
+import { Skeleton, SkeletonForm } from "../../../components/ui/Skeleton";
 import { ConfirmModal } from '../../../components/common/AlertModal';
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import BrandAssignment from "../../../components/Dashboard/BrandAssignment";
@@ -43,9 +43,11 @@ export default function Categories() {
   const [itemsPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Starts true so the first paint is the table skeleton, not "No categories".
+  const [loading, setLoading] = useState(true);
   // Separate from `loading` (which gates the table) so opening the edit panel
-  // doesn't reload the whole table.
+  // doesn't reload the whole table. The panel opens at once with a form
+  // skeleton while the category loads.
   const [editLoading, setEditLoading] = useState(false);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -99,11 +101,17 @@ export default function Categories() {
   const start = (currentPage - 1) * itemsPerPage;
   const currentItems = filteredData.slice(start, start + itemsPerPage).map((item, i) => ({ ...item, serial_number: start + i + 1 }));
 
+  const editReq = useRef(0);
   const handleEdit = async (id) => {
+    const req = ++editReq.current;
+    setFormErrors({});
+    setFormData({ ...EMPTY_FORM, id });
+    setIsModalOpen(true);
     try {
       setEditLoading(true);
       setError(null);
       const data = await categoryService.getCategoryById(id);
+      if (req !== editReq.current) return; // panel closed / another opened
       setFormData({
         id: data.id,
         name: data.name || "",
@@ -120,12 +128,14 @@ export default function Categories() {
         brandIds: data.brands?.map(b => Number(b.id)).filter(Boolean) || [],
         slug: data.slug || "",
       });
-      setIsModalOpen(true);
     } catch (err) {
+      if (req !== editReq.current) return;
       const errorMsg = formatErrorForDisplay(extractErrorMessage(err));
       setError(errorMsg);
+      setIsModalOpen(false);
+      setFormData(EMPTY_FORM);
     }
-    finally { setEditLoading(false); }
+    finally { if (req === editReq.current) setEditLoading(false); }
   };
 
   const handleDelete = (id) => {
@@ -144,7 +154,7 @@ export default function Categories() {
     }});
   };
 
-  const handleModalClose = () => { setIsModalOpen(false); setFormData(EMPTY_FORM); };
+  const handleModalClose = () => { editReq.current += 1; setEditLoading(false); setIsModalOpen(false); setFormData(EMPTY_FORM); };
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target;
@@ -232,6 +242,8 @@ export default function Categories() {
   ];
 
   const activeCount = categories.filter(c => c.status === 'active').length;
+  const firstLoad = loading && categories.length === 0;
+  const tileSkel = <Skeleton w={48} h={22} />;
 
   return (
     <>
@@ -254,8 +266,8 @@ export default function Categories() {
         />
 
         <StatGrid>
-          <StatTile label="Total Categories" value={categories.length} tone="info" />
-          <StatTile label="Active" value={activeCount} tone="good" />
+          <StatTile label="Total Categories" value={firstLoad ? tileSkel : categories.length} tone="info" />
+          <StatTile label="Active" value={firstLoad ? tileSkel : activeCount} tone="good" />
         </StatGrid>
 
         <Panel style={{ marginBottom: 16 }}>
@@ -287,22 +299,19 @@ export default function Categories() {
         </Panel>
 
         <Panel flush>
-          {loading ? (
-            <div className="sl-loader-wrap"><Loader /></div>
-          ) : (
-            <>
-              <ResponsiveTable
-                columns={columns}
-                data={currentItems}
-                rowKey="id"
-                emptyMessage={search ? "No categories match your search" : "No categories yet"}
-              />
-              {filteredData.length > itemsPerPage && (
-                <div className="sl-pagination">
-                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
-              )}
-            </>
+          <ResponsiveTable
+            columns={columns}
+            data={currentItems}
+            rowKey="id"
+            loading={loading}
+            loadingLabel="Loading categories…"
+            skeletonRows={itemsPerPage}
+            emptyMessage={search ? "No categories match your search" : "No categories yet"}
+          />
+          {filteredData.length > itemsPerPage && (
+            <div className="sl-pagination">
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </div>
           )}
         </Panel>
       </div>
@@ -310,11 +319,14 @@ export default function Categories() {
       <Modal isOpen={isModalOpen} onClose={handleModalClose} title={formData.id ? "Edit Category" : "Add Category"} closeOnOverlayClick={false}
         footer={
           <>
-            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading} type="button">Cancel</Button>
-            <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading} type="button">{loading ? "Saving..." : formData.id ? "Update Category" : "Add Category"}</Button>
+            <Button variant="secondary" size="medium" onClick={handleModalClose} disabled={loading && !editLoading} type="button">Cancel</Button>
+            <Button variant="primary" size="medium" onClick={handleSubmit} disabled={loading || editLoading} type="button">{loading ? "Saving..." : formData.id ? "Update Category" : "Add Category"}</Button>
           </>
         }
       >
+        {editLoading ? (
+          <SkeletonForm fields={6} label="Loading category…" />
+        ) : (
         <form onSubmit={handleSubmit} className="seo-form">
           <div className="modal-body">
             <Input
@@ -464,6 +476,7 @@ export default function Categories() {
             </div>
           </div>
         </form>
+        )}
       </Modal>
     </>
   );

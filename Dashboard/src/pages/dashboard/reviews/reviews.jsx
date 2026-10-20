@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Modal, Pagination } from '../../../components/ui';
+import { Modal, Pagination, Skeleton } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
-import Loader from '../../../components/common/Loader';
 import { reviewService, brandService } from '../../../services';
 import { API_BASE_URL } from '../../../services/api/config';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -449,7 +448,7 @@ export default function Reviews() {
     return () => clearTimeout(t);
   }, [notice]);
 
-  const { data, isLoading, isFetching, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = useQuery({
     queryKey: ['reviews-moderation', tab, brandId, debounced, page],
     queryFn: () => reviewService.getModerationList({ tab, brandId, search: debounced, page, limit: PAGE_SIZE }),
     enabled: ready,
@@ -579,7 +578,7 @@ export default function Reviews() {
           {TABS.map((t) => (
             <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
               className={`rvw-tab${tab === t.key ? ' on' : ''}`} onClick={() => setTab(t.key)}>
-              {t.label}<span className="n">{data ? num(counts[t.key]) : '–'}</span>
+              {t.label}<span className="n">{data ? num(counts[t.key]) : <Skeleton w={18} h={11} style={{ display: 'inline-block', verticalAlign: 'middle' }} />}</span>
             </button>
           ))}
         </div>
@@ -620,7 +619,21 @@ export default function Reviews() {
       )}
 
       {!ready || isLoading ? (
-        <div className="rvw-state"><Loader /></div>
+        <section className="rvw-list" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading reviews…</span>
+          {Array.from({ length: 5 }, (_, i) => (
+            <article key={i} className="rvw-card" aria-hidden="true">
+              <Skeleton w={22} h={22} r={6} style={{ marginTop: 2, flex: 'none' }} />
+              <div className="rvw-main">
+                <div className="rvw-line1"><Skeleton w={78} h={14} /><Skeleton w={120 + (i % 3) * 30} h={14} /><Skeleton w={70} h={18} r={9} /></div>
+                <Skeleton w={['92%', '78%', '85%'][i % 3]} h={12} />
+                {i % 2 === 0 && <Skeleton w="55%" h={12} />}
+                <Skeleton w="40%" h={10} />
+              </div>
+              <div className="rvw-actions"><Skeleton w={64} h={22} r={11} /><Skeleton w={88} h={30} r={8} /><Skeleton w={64} h={30} r={8} /></div>
+            </article>
+          ))}
+        </section>
       ) : error && !data ? (
         <div className="rvw-state bad">
           <p>Couldn’t load reviews: {error.message || 'try again'}</p>
@@ -633,7 +646,8 @@ export default function Reviews() {
           <p>{debounced ? `Nothing in ${TABS.find((t) => t.key === tab).label} for “${debounced}”.` : EMPTY_TEXT[tab][1]}</p>
         </div>
       ) : (
-        <section className="rvw-list" aria-label={`${TABS.find((t) => t.key === tab).label} reviews`}>
+        <section className="rvw-list" aria-label={`${TABS.find((t) => t.key === tab).label} reviews`}
+          aria-busy={isPlaceholderData || undefined} style={isPlaceholderData ? { opacity: 0.6, transition: 'opacity .15s' } : undefined}>
           {reviews.map((r) => (
             <ReviewCard key={r.id} r={r} checked={selected.has(r.id)} busy={busyIds.has(r.id)}
               onToggle={toggle} onAct={act} onSaveNote={saveNote} onMoveBack={moveBack} onDelete={deleteReview}

@@ -11,7 +11,7 @@ import {
   WhatsappIcon, FlashIcon,
 } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
-import { Modal } from '../ui';
+import { Modal, Skeleton, SkeletonList, SkeletonText } from '../ui';
 import { useAuth } from '../../context/AuthContext';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { MsgContent, msgPreview, FormattedText, API_BASE } from './InboxMedia';
@@ -134,8 +134,32 @@ const goView = (view) => {
 function Pill({ tone = 'muted', children, title }) {
   return <span className={`wib-pill wib-pill--${tone}`} title={title}>{children}</span>;
 }
-function Dots({ label }) {
-  return <div className="wib-dots" role="status" aria-label={label || 'Loading'}><span /><span /><span /></div>;
+
+// Message-bubble placeholders for the thread while a chat's messages load:
+// [side, bubble width, text lines]. Alternating sides and widths so it reads
+// as a conversation, not a table.
+const SKEL_THREAD = [
+  ['in', '58%', 2], ['in', '34%', 1], ['out', '46%', 1], ['in', '66%', 3],
+  ['out', '52%', 2], ['out', '28%', 1], ['in', '42%', 1], ['out', '60%', 2],
+];
+const SKEL_OLDER = [['in', '44%', 1], ['out', '32%', 1]];
+function ThreadSkeleton({ rows = SKEL_THREAD, day = true, label = 'Loading messages…' }) {
+  return (
+    <div className="wib-msgs-sk" role="status" aria-busy="true" aria-live="polite">
+      <span className="ds-sr-only">{label}</span>
+      {day && <div className="wib-day" aria-hidden="true"><Skeleton w={72} h={20} r={999} /></div>}
+      {rows.map(([side, w, lines], i) => (
+        <div key={i} className={`wib-msg is-${side}`} style={{ width: w }} aria-hidden="true">
+          <div className="wib-bubble wib-bubble--sk">
+            {Array.from({ length: lines }, (_, j) => (
+              <Skeleton key={j} h={10} w={lines > 1 && j === lines - 1 ? '62%' : '100%'} />
+            ))}
+            <Skeleton className="wib-sk-time" w={36} h={8} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -871,6 +895,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
           : filter === 'has_order' ? 'No chats from customers with an order.'
             : status === 'resolved' ? 'No resolved chats yet.' : 'No chats yet. New WhatsApp messages will show up here.';
 
+  const productBusy = productState === 'loading' || productState === 'idle';
   const activeName = activeConv ? (activeConv.customer_name || phoneLabel(activeConv.customer_phone) || 'Customer') : '';
   const winLeft = win?.known && windowOpen && win.closesAt ? windowLeftLabel(win.closesAt, now) : null;
   const winTone = !windowOpen ? 'warn' : winLeft && new Date(win.closesAt).getTime() - now < 3 * 3600000 ? 'warn' : 'success';
@@ -906,7 +931,9 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
             })}
           </div>
           <div className="wib-list-sub">
-            <span>{convLoading ? 'Loading…' : `${total.toLocaleString('en-IN')} chat${total === 1 ? '' : 's'}`}</span>
+            {convLoading && !conversations.length
+              ? <Skeleton w={64} h={10} />
+              : <span>{`${total.toLocaleString('en-IN')} chat${total === 1 ? '' : 's'}`}</span>}
             <label className="wib-status">
               <span className="wib-sr">Which chats</span>
               <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -918,9 +945,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
 
         <div className="wib-list-scroll">
           {convLoading && !conversations.length ? (
-            <div className="wib-list-skel" aria-hidden="true">
-              {Array.from({ length: 7 }).map((_, i) => <div key={i} className="wib-skel-row"><span /><span /></div>)}
-            </div>
+            <SkeletonList rows={8} avatar className="wib-list-skel" label="Loading chats…" />
           ) : convError ? (
             <div className="wib-state wib-state--error" role="alert">
               <p>{convError}</p>
@@ -929,7 +954,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
           ) : conversations.length === 0 ? (
             <div className="wib-state"><p>{emptyText}</p></div>
           ) : (
-            <ul className="wib-rows">
+            <ul className={`wib-rows${convLoading ? ' is-stale' : ''}`} aria-busy={convLoading || undefined}>
               {conversations.map((c) => {
                 const name = c.customer_name || phoneLabel(c.customer_phone) || 'Customer';
                 const on = activeId === c.id;
@@ -966,11 +991,11 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               })}
             </ul>
           )}
-          {!convLoading && !convError && conversations.length > 0 && conversations.length < total && (
+          {loadingMore ? (
+            <SkeletonList rows={3} avatar className="wib-list-skel" label="Loading more chats…" />
+          ) : !convLoading && !convError && conversations.length > 0 && conversations.length < total && (
             <div className="wib-more">
-              <button type="button" className="wib-btn" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? 'Loading…' : 'Load more chats'}
-              </button>
+              <button type="button" className="wib-btn" onClick={loadMore}>Load more chats</button>
             </div>
           )}
         </div>
@@ -990,12 +1015,20 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               <button type="button" className="wib-icon-btn wib-back" onClick={closeChat} aria-label="Back to chats">
                 <HugeiconsIcon icon={ArrowLeft01Icon} size={18} strokeWidth={2.2} aria-hidden="true" />
               </button>
-              <div className="wib-chat-title">
-                <b>{activeName}</b>
-                <span>
-                  {[phoneLabel(activeConv.customer_phone), brandName(activeConv.brand_id)].filter(Boolean).join(' · ')}
-                </span>
-              </div>
+              {msgLoading && !activeConv.customer_phone && !activeConv.customer_name ? (
+                // Opened from a link before we know who it is — placeholder name.
+                <div className="wib-chat-title" aria-hidden="true">
+                  <Skeleton w={140} h={14} />
+                  <Skeleton w={110} h={10} />
+                </div>
+              ) : (
+                <div className="wib-chat-title">
+                  <b>{activeName}</b>
+                  <span>
+                    {[phoneLabel(activeConv.customer_phone), brandName(activeConv.brand_id)].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+              )}
               {win?.known && !isResolved && (
                 <Pill tone={winTone}>{windowOpen ? (winLeft ? `Reply window · ${winLeft}` : 'Reply window open') : 'Window closed'}</Pill>
               )}
@@ -1015,14 +1048,14 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
             </header>
 
             <div className="wib-msgs" ref={messagesBoxRef} onScroll={onMessagesScroll}>
-              {!msgLoading && hasMoreMsgs && (
+              {!msgLoading && hasMoreMsgs && (loadingOlder ? (
+                <ThreadSkeleton rows={SKEL_OLDER} day={false} label="Loading older messages…" />
+              ) : (
                 <div className="wib-older">
-                  <button type="button" className="wib-btn wib-btn--sm" onClick={loadOlder} disabled={loadingOlder}>
-                    {loadingOlder ? 'Loading…' : 'Load older messages'}
-                  </button>
+                  <button type="button" className="wib-btn wib-btn--sm" onClick={loadOlder}>Load older messages</button>
                 </div>
-              )}
-              {msgLoading ? <Dots label="Loading messages" />
+              ))}
+              {msgLoading ? <ThreadSkeleton />
                 : msgError ? (
                   <div className="wib-state wib-state--error" role="alert">
                     <p>{msgError}</p>
@@ -1086,7 +1119,12 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                   {win.lastInboundAt ? `${activeName} last wrote ${whenLabel(win.lastInboundAt, now)}. ` : `${activeName} hasn't written to us yet. `}
                   WhatsApp only delivers typed messages within 24 hours of the customer&rsquo;s last message, so send an approved template instead — when they reply, the window opens again.
                 </p>
-                {tplState === 'loading' || tplState === 'idle' ? <Dots label="Loading templates" />
+                {tplState === 'loading' || tplState === 'idle' ? (
+                  <div className="wib-tpl-grid" role="status" aria-busy="true">
+                    <span className="ds-sr-only">Loading templates…</span>
+                    {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="wib-tpl-sk" h={44} r={10} />)}
+                  </div>
+                )
                   : tplState === 'error' ? (
                     <div className="wib-tpl-msg">
                       Couldn&rsquo;t load the templates. <button type="button" className="wib-link" onClick={() => loadTemplateOptions(activeConv.id)}>Try again</button>
@@ -1239,7 +1277,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
 
           {/* Latest order */}
           {ctxState === 'loading' || ctxState === 'idle' ? (
-            <section className="wib-card"><Dots label="Loading orders" /></section>
+            <section className="wib-card">
+              <span className="wib-eyebrow">Latest order</span>
+              <SkeletonText lines={4} label="Loading orders…" />
+            </section>
           ) : ctxState === 'error' ? (
             <section className="wib-card wib-state--error" role="alert">
               <p className="wib-muted">Couldn&rsquo;t load this customer&rsquo;s orders.</p>
@@ -1311,6 +1352,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                 <button type="button" className="wib-link" onClick={() => openCustomer(chatCtx.customer)}>Full customer profile →</button>
               )}
             </div>
+            {!chatCtx?.stats && (ctxState === 'loading' || ctxState === 'idle') && <Skeleton w="80%" h={11} />}
             {chatCtx?.stats && (
               <span className="wib-history">
                 {chatCtx.stats.orders} order{chatCtx.stats.orders === 1 ? '' : 's'} · {chatCtx.stats.delivered} delivered · {rupees(chatCtx.stats.spent)} spent
@@ -1360,8 +1402,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
             <span>Search</span>
             <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Product name" />
           </label>
-          <div className="wib-product-list">
-            {productState === 'loading' || productState === 'idle' ? <Dots label="Loading products" />
+          <div className={`wib-product-list${productBusy && productList.length ? ' is-stale' : ''}`} aria-busy={productBusy || undefined}>
+            {productBusy && !productList.length ? <SkeletonList rows={5} meta={false} className="wib-product-sk" label="Loading products…" />
               : productState === 'error' ? <div className="wib-state wib-state--error"><p>Couldn&rsquo;t load products.</p></div>
                 : productList.length === 0 ? <div className="wib-state"><p>No products found.</p></div>
                   : productList.map((p) => {

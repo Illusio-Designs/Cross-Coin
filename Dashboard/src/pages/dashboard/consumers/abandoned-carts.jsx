@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { abandonedCartService } from '../../../services';
 import { PageHeader, StatGrid, StatTile, FilterBar, Panel, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge, Select } from '../../../components/ui';
+import { Badge, Select, SkeletonKpis } from '../../../components/ui';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   ShoppingBag01Icon,
@@ -48,6 +48,7 @@ export default function AbandonedCarts() {
   const [carts, setCarts] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, messaged: 0, recovered: 0, recoveredRate: 0 });
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false); // first response in → refreshes keep figures, dimmed
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -59,7 +60,7 @@ export default function AbandonedCarts() {
       if (d?.success) { setCarts(d.carts || []); setStats(d.stats || {}); }
       else setError(d?.message || 'Failed to load abandoned carts');
     } catch (e) { setError(e?.message || 'Failed to load abandoned carts'); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoaded(true); }
   }, [status]);
   useEffect(() => { load(); }, [load]);
 
@@ -94,6 +95,8 @@ export default function AbandonedCarts() {
         }
       />
 
+      {!loaded ? <SkeletonKpis count={5} label="Loading abandoned carts…" /> : (
+      <div style={loading ? { opacity: 0.6, transition: 'opacity .15s' } : undefined} aria-busy={loading || undefined}>
       <StatGrid>
         <StatTile label="Total captured" value={stats.total ?? 0} icon={kpi(ShoppingBag01Icon)} />
         <StatTile label="Pending" value={stats.pending ?? 0} tone="warn" icon={kpi(Clock01Icon)} />
@@ -101,6 +104,8 @@ export default function AbandonedCarts() {
         <StatTile label="Recovered" value={stats.recovered ?? 0} tone="good" icon={kpi(CheckmarkCircle02Icon)} />
         <StatTile label="Recovered rate" value={`${stats.recoveredRate || 0}%`} tone="good" icon={kpi(Analytics01Icon)} />
       </StatGrid>
+      </div>
+      )}
 
       <Panel style={{ marginBottom: 16 }}>
       <FilterBar search={q} onSearchChange={setQ} placeholder="Search name / phone / brand / item">
@@ -115,7 +120,10 @@ export default function AbandonedCarts() {
           columns={columns}
           data={filtered}
           rowKey="id"
-          emptyMessage={loading ? 'Loading abandoned carts…' : 'No abandoned carts captured yet.'}
+          loading={loading && (!loaded || filtered.length > 0)}
+          loadingLabel="Loading abandoned carts…"
+          skeletonRows={8}
+          emptyMessage="No abandoned carts captured yet."
         />
       </Panel>
     </div>
