@@ -412,6 +412,7 @@
 .wib-list-skel .sk-list__row:first-child { border-top: 0; }
 .wib-rows.is-stale, .wib-product-list.is-stale { opacity: .6; transition: opacity 150ms; }
 .wib-chat-title > .sk + .sk { margin-top: 5px; }
+.wib-dl dd > .sk { margin-left: auto; }
 .wib-msgs-sk { display: flex; flex-direction: column; gap: 6px; }
 .wib-bubble--sk { flex: 1; display: flex; flex-direction: column; gap: 7px; padding: 10px 11px 7px; }
 .wib-bubble--sk .wib-sk-time { align-self: flex-end; margin-top: 1px; }

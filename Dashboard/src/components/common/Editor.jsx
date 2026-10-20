@@ -20,6 +20,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { productService, brandService } from '../../services';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
+import { Skeleton, SkeletonText } from '../ui/Skeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const IK_URL = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
@@ -621,7 +622,15 @@ const Editor = ({
   };
 
   if (!editor) {
-    return <div className={`ed ed--loading${className ? ` ${className}` : ''}`} aria-busy="true" {...props} />;
+    // Toolbar + a few text lines in the editor's own box until TipTap is ready.
+    return (
+      <div className={`ed ed--loading${className ? ` ${className}` : ''}`} {...props}>
+        <div className="ed-sk-bar" aria-hidden="true">
+          {[72, 26, 26, 26, 26, 26, 26].map((w, i) => <Skeleton key={i} w={w} h={26} r={6} />)}
+        </div>
+        <SkeletonText lines={4} label="Loading editor…" className="ed-sk-body" />
+      </div>
+    );
   }
 
   /* -------------------------------- toolbar ------------------------------- */
@@ -1042,7 +1051,12 @@ function ImagePanel({ replace, initial, uploading, fileInputRef, uploadFile, onC
       {altOk && source === 'library' && (
         <div className="ed-lib">
           <input className="ed-lib-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by file name" aria-label="Search photos" />
-          {lib.loading && <span className="ed-hint">Loading photos…</span>}
+          {lib.loading && (
+            <div className="ed-lib-grid" role="status" aria-busy="true">
+              <span className="ed-visually-hidden">Loading photos…</span>
+              {Array.from({ length: 12 }, (_, i) => <Skeleton key={i} className="ed-lib-sk" h="auto" r={8} />)}
+            </div>
+          )}
           {lib.error && <span className="ed-hint ed-hint--bad">{lib.error}. <button type="button" className="ed-linkbtn" onClick={() => { libraryCache = null; loadLibrary(); }}>Try again</button></span>}
           {lib.items && !shown.length && <span className="ed-hint">No photos found.</span>}
           {shown.length > 0 && (

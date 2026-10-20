@@ -47,7 +47,7 @@ const load = (importer, loading = PageLoading) => dynamic(importer, { ssr: false
 
 const PAGE_COMPONENTS = {
   inbox:           load(() => import('../../components/whatsapp/InboxPage'), InboxLoading),
-  automations:     load(() => import('../../components/whatsapp/AutomationsPage')),
+  automations:     load(() => import('../../components/whatsapp/AutomationsPage'), KpiPageLoading),
   broadcasts:      load(() => import('../../components/whatsapp/BroadcastsPage'), KpiPageLoading),
   'broadcast-new': load(() => import('../../components/whatsapp/NewBroadcastPage'), FormPageLoading),
   templates:       load(() => import('../../components/whatsapp/TemplatesPage')),

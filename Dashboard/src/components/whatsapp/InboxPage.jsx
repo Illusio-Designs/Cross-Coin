@@ -896,6 +896,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
             : status === 'resolved' ? 'No resolved chats yet.' : 'No chats yet. New WhatsApp messages will show up here.';
 
   const productBusy = productState === 'loading' || productState === 'idle';
+  // Opened by id (deep link) and the chat's details haven't arrived yet.
+  const convPending = !!activeConv && msgLoading && !activeConv.customer_phone && !activeConv.customer_name;
   const activeName = activeConv ? (activeConv.customer_name || phoneLabel(activeConv.customer_phone) || 'Customer') : '';
   const winLeft = win?.known && windowOpen && win.closesAt ? windowLeftLabel(win.closesAt, now) : null;
   const winTone = !windowOpen ? 'warn' : winLeft && new Date(win.closesAt).getTime() - now < 3 * 3600000 ? 'warn' : 'success';
@@ -1015,7 +1017,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               <button type="button" className="wib-icon-btn wib-back" onClick={closeChat} aria-label="Back to chats">
                 <HugeiconsIcon icon={ArrowLeft01Icon} size={18} strokeWidth={2.2} aria-hidden="true" />
               </button>
-              {msgLoading && !activeConv.customer_phone && !activeConv.customer_name ? (
+              {convPending ? (
                 // Opened from a link before we know who it is — placeholder name.
                 <div className="wib-chat-title" aria-hidden="true">
                   <Skeleton w={140} h={14} />
@@ -1360,8 +1362,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               </span>
             )}
             <dl className="wib-dl">
-              <div><dt>Name</dt><dd>{activeConv.customer_name || '—'}</dd></div>
-              <div><dt>Phone</dt><dd>{phoneLabel(activeConv.customer_phone) || '—'}</dd></div>
+              <div><dt>Name</dt><dd>{convPending ? <Skeleton w={110} h={11} /> : activeConv.customer_name || '—'}</dd></div>
+              <div><dt>Phone</dt><dd>{convPending ? <Skeleton w={96} h={11} /> : phoneLabel(activeConv.customer_phone) || '—'}</dd></div>
               <div>
                 <dt><label htmlFor="wib-store">Store</label></dt>
                 <dd>
