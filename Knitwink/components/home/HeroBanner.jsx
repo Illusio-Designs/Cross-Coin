@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 const SLIDE_DURATION = 5000
+const HERO_WIDTHS = [800, 1200, 1600]
 
 // True on phone-width screens (matches the 767px breakpoint used for the
 // dedicated mobile slider image).
@@ -72,9 +73,11 @@ export function HeroBanner({ slides = [] }) {
   }, [next, paused, slides.length])
 
   if (slides.length === 0) {
+    // No slides from the server: keep the hero's real box (same aspect ratio)
+    // so the page below doesn't jump — a plain panel, not a forever-loader.
     return (
       <section className="">
-        <div className="min-h-[88vh] animate-pulse rounded-2xl bg-gray-200" />
+        <div className="aspect-[4/5] w-full rounded-2xl bg-gray-200 md:aspect-[16/9]" aria-hidden="true" />
       </section>
     )
   }
@@ -104,15 +107,30 @@ export function HeroBanner({ slides = [] }) {
           >
             {/* Full-bleed banner — fills the whole (taller) hero at full height
                 and width. */}
-            <ShimmerImg
-              src={(isMobile && slide.mobileImage) || slide.image}
-              alt={slide.title || 'Banner'}
-              shimmerClassName="bg-gray-800"
-              className="absolute inset-0 h-full w-full object-cover object-top sm:object-center"
-              loading={current === 0 ? 'eager' : 'lazy'}
-              fetchPriority={current === 0 ? 'high' : 'auto'}
-              decoding="async"
-            />
+            {/* Sized by ImageKit: dedicated mobile art at w-800, otherwise the
+                desktop art with an 800/1200/1600 srcSet (matches the preload
+                in app/page.jsx). Hidden until fully decoded, never half-drawn. */}
+            {isMobile && slide.mobileImage ? (
+              <ShimmerImg
+                src={slide.mobileImage}
+                width={800}
+                alt={slide.title || 'Banner'}
+                shimmerClassName="sk--dark"
+                className="absolute inset-0 h-full w-full object-cover object-top sm:object-center"
+                priority={current === 0}
+              />
+            ) : (
+              <ShimmerImg
+                src={slide.image}
+                width={1600}
+                widths={HERO_WIDTHS}
+                sizes="100vw"
+                alt={slide.title || 'Banner'}
+                shimmerClassName="sk--dark"
+                className="absolute inset-0 h-full w-full object-cover object-top sm:object-center"
+                priority={current === 0}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
 import AccountGate from '@/components/account/AccountGate';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton, AccOrderCardsSkeleton, AddressGridSkeleton, AccountDashboardSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/lib/api/addresses';
@@ -35,6 +35,11 @@ const TABS = [
   { label: 'Addresses', icon: 'MapPin' },
   { label: 'Account details', icon: 'User' },
 ];
+
+// Placeholder for a stat number while its list loads (keeps the tile's height).
+function StatSk() {
+  return <Skeleton width={34} height={26} radius={6} style={{ display: 'inline-block', verticalAlign: 'middle' }} />;
+}
 
 function Dashboard() {
   const router = useRouter();
@@ -115,6 +120,11 @@ function Dashboard() {
   const makeDefault = async (id) => { try { await setDefaultAddress(id); await loadAddresses(); toast.success('Default address updated'); } catch { toast.error('Could not update default'); } };
   const doLogout = async () => { await logout(); toast.info('You have been logged out'); router.replace('/'); };
 
+  // First load only: skeletons. Reloads (after saving/removing an address) keep
+  // what's on screen, dimmed, instead of flashing placeholders.
+  const statsPending = loadingOrders && orders.length === 0;
+  const addrPending = loadingAddr && addresses.length === 0;
+
   const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'delivered').length;
   const activeCount = orders.filter((o) => isActiveOrder(o.status)).length;
   const points = Number(user?.loyalty_points || 0);
@@ -136,10 +146,10 @@ function Dashboard() {
 
       {/* Stats */}
       <div className="acc-stats">
-        <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
-        <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
-        <div className="acc-stat"><div className="acc-stat-val">{deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
-        <div className="acc-stat"><div className="acc-stat-val">{activeCount}</div><div className="acc-stat-label">Active</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{statsPending ? <StatSk /> : orders.length}</div><div className="acc-stat-label">Orders</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{addrPending ? <StatSk /> : addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{statsPending ? <StatSk /> : deliveredCount}</div><div className="acc-stat-label">Delivered</div></div>
+        <div className="acc-stat"><div className="acc-stat-val">{statsPending ? <StatSk /> : activeCount}</div><div className="acc-stat-label">Active</div></div>
         {points > 0 && (
           <div className="acc-stat acc-stat-points" title="Earn points on every delivery. Redeem on future orders.">
             <div className="acc-stat-val">{points}</div><div className="acc-stat-label">Points</div>
@@ -167,8 +177,8 @@ function Dashboard() {
                 <h2 style={{ fontSize: 20 }}>My orders</h2>
                 <Link href="/account/orders" className="link-more">View all <Icon name="ArrowRight" size={14} /></Link>
               </div>
-              {loadingOrders ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={64} radius={14} /><Skeleton height={64} radius={14} /></div>
+              {statsPending ? (
+                <AccOrderCardsSkeleton count={2} />
               ) : orders.length === 0 ? (
                 <div className="empty">No orders yet. <Link href="/products" className="btn btn-primary">Start shopping</Link></div>
               ) : (
@@ -230,14 +240,14 @@ function Dashboard() {
                 </form>
               )}
 
-              {loadingAddr ? (
-                <div style={{ display: 'grid', gap: 10 }}><Skeleton height={90} radius={14} /><Skeleton height={90} radius={14} /></div>
-              ) : addrError ? (
+              {addrPending && !addrError ? (
+                <AddressGridSkeleton count={2} />
+              ) : addrError && !loadingAddr ? (
                 <div className="empty">Couldn’t load your addresses. <button className="link-more" onClick={loadAddresses}><Icon name="RefreshCw" size={14} /> Retry</button></div>
               ) : addresses.length === 0 && !showForm ? (
                 <div className="empty">No saved addresses yet.</div>
               ) : (
-                <div className="addr-grid">
+                <div className={`addr-grid${loadingAddr ? ' sk-dim' : ''}`} aria-busy={loadingAddr || undefined}>
                   {addresses.map((a) => (
                     <div className="addr-card" key={a.id}>
                       <div>
@@ -277,7 +287,7 @@ function Dashboard() {
 
 export default function AccountClient() {
   return (
-    <AccountGate title="Your account">
+    <AccountGate title="Your account" fallback={<AccountDashboardSkeleton />}>
       <Dashboard />
     </AccountGate>
   );

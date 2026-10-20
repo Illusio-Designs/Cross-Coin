@@ -170,6 +170,12 @@ const MOBILE_CSS = `
 .cc-test-root .sk-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .cc-test-root .sk-stack{ display:flex; flex-direction:column; gap:9px; }
 .cc-test-root .sk-dim{ opacity:.55; transition:opacity .2s var(--ease); pointer-events:none; }
+/* No half-drawn images (ui.jsx → Thumb): the picture stays transparent until it
+   is fully downloaded + decoded, while its (already sized) box shimmers. */
+.cc-test-root img.ccimg{ opacity:0; transition:opacity .18s ease; }
+.cc-test-root img.ccimg.is-on{ opacity:1; }
+.cc-test-root :has(> img.ccimg:not(.is-on)){ background-image:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%) !important; background-size:200% 100% !important; animation:sk-shimmer 1.3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce){ .cc-test-root img.ccimg{ transition:none; } .cc-test-root :has(> img.ccimg:not(.is-on)){ animation:none; } }
 @media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel{ animation:none; background:var(--sk-base); } }
 /* cookie preferences modal */
 .cc-test-root .ckmodal{ position:fixed; left:50%; bottom:-100%; transform:translateX(-50%); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); padding:20px; transition:bottom .3s var(--ease); }
@@ -811,7 +817,7 @@ export default function TestLayout({ children }) {
                     : <>
                         {searchRes.map((r) => (
                           <button key={r.id} className="hsearch__row" onClick={() => { setSearchOpen(false); go(R.product(r.slug || '')); }}>
-                            <span className="hsearch__thumb"><Thumb src={r.img} /></span>
+                            <span className="hsearch__thumb"><Thumb src={r.img} w={200} /></span>
                             <span className="hsearch__meta"><b>{r.name}</b><span>{inr(r.now)}</span></span>
                           </button>
                         ))}
@@ -891,7 +897,7 @@ export default function TestLayout({ children }) {
                 if (g.type === 'pack') {
                   return (
                     <div className="citem citem--pack" key={g.packId}>
-                      <div className="citem__th"><Thumb src={g.img} color={g.lines[0]?.color} /></div>
+                      <div className="citem__th"><Thumb src={g.img} color={g.lines[0]?.color} w={200} /></div>
                       <div className="citem__main">
                         <div className="citem__top">
                           <span className="citem__nm">{g.name}</span>
@@ -914,7 +920,7 @@ export default function TestLayout({ children }) {
                 const off = i.was > i.unit ? Math.round((1 - i.unit / i.was) * 100) : 0;
                 return (
                   <div className="citem" key={i.key}>
-                    <div className="citem__th"><Thumb src={i.img} color={i.color} /></div>
+                    <div className="citem__th"><Thumb src={i.img} color={i.color} w={200} /></div>
                     <div className="citem__main">
                       <div className="citem__top">
                         <span className="citem__nm">{i.name}</span>
@@ -962,7 +968,7 @@ export default function TestLayout({ children }) {
                         return (
                           <div className="bms__card" key={p.id}>
                             <div className="bms__top">
-                              <div className="bms__img">{p.img ? <img src={p.img} alt="" loading="lazy" /> : <Thumb color={p.colors?.[0]?.name} />}</div>
+                              <div className="bms__img"><Thumb src={p.img} color={p.colors?.[0]?.name} w={200} /></div>
                               <div className="bms__info">
                                 <div className="bms__nm">{p.name}</div>
                                 <div className="bms__pr"><b>{inr(p.now)}</b>{p.was > p.now && <s>{inr(p.was)}</s>}</div>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ShoppingBag, Zap, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice, cn } from '@/lib/utils'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 export function ExclusiveSection({ products = [] }) {
   const [active, setActive] = useState(0)
@@ -16,6 +17,8 @@ export function ExclusiveSection({ products = [] }) {
   const [paused, setPaused] = useState(false)
   const [railH, setRailH] = useState(0)          // main-image height → rail height (desktop)
   const [isMobile, setIsMobile] = useState(false)
+  // Hold the main image box square (shimmering) until the first photo is decoded.
+  const [mainShown, setMainShown] = useState(false)
   const mainRef = useRef(null)
   const thumbsRef = useRef(null)
   const { addItem } = useCart()
@@ -81,33 +84,33 @@ export function ExclusiveSection({ products = [] }) {
           <div className="flex gap-3">
             <div className="hidden sm:flex flex-col gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-12 w-12 animate-pulse rounded-xl bg-gray-200 sm:h-14 sm:w-14 md:h-16 md:w-16" />
+                <div key={i} className="h-12 w-12 sk rounded-xl sm:h-14 sm:w-14 md:h-16 md:w-16" />
               ))}
             </div>
-            <div className="flex-1 animate-pulse rounded-2xl bg-gray-200 min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
+            <div className="flex-1 sk rounded-2xl min-h-[220px] sm:min-h-[260px] md:min-h-[300px]" />
           </div>
           {/* Spacer for lg 3-col layout */}
           <div className="hidden lg:block" />
           {/* Info skeleton */}
           <div className="flex flex-col gap-4">
-            <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
-            <div className="h-6 w-3/4 animate-pulse rounded bg-gray-200" />
-            <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
-            <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+            <div className="h-3 w-24 sk rounded" />
+            <div className="h-6 w-3/4 sk rounded" />
+            <div className="h-8 w-32 sk rounded" />
+            <div className="h-3 w-20 sk rounded" />
             <div className="flex gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-7 w-7 animate-pulse rounded-full bg-gray-200" />
+                <div key={i} className="h-7 w-7 sk rounded-full" />
               ))}
             </div>
             <div className="space-y-2">
-              <div className="h-3 w-full animate-pulse rounded bg-gray-200" />
-              <div className="h-3 w-5/6 animate-pulse rounded bg-gray-200" />
-              <div className="h-3 w-2/3 animate-pulse rounded bg-gray-200" />
+              <div className="h-3 w-full sk rounded" />
+              <div className="h-3 w-5/6 sk rounded" />
+              <div className="h-3 w-2/3 sk rounded" />
             </div>
             <div className="flex gap-2">
-              <div className="h-10 w-16 animate-pulse rounded-full bg-gray-200" />
-              <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
-              <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-10 w-16 sk rounded-full" />
+              <div className="h-10 flex-1 sk rounded-full" />
+              <div className="h-10 flex-1 sk rounded-full" />
             </div>
           </div>
         </div>
@@ -194,15 +197,15 @@ export function ExclusiveSection({ products = [] }) {
                   onClick={() => setActiveThumb(i)}
                   aria-label={`View image ${i + 1}`}
                   data-active={i === activeThumb ? 'true' : undefined}
-                  className={`h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-14 sm:w-14 md:h-16 md:w-16 ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                  className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 transition-all sm:h-14 sm:w-14 md:h-16 md:w-16 ${i === activeThumb ? 'border-brand-black' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
                 >
-                  <img src={img.url} alt="" className="h-full w-full object-cover" />
+                  <ShimmerImg src={img.url} width={200} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
           )}
-          <div ref={mainRef} className="relative flex-1 overflow-hidden rounded-2xl">
-            <img src={displayImage} alt={product.name} className="w-full h-auto object-contain sm:h-full sm:object-fill sm:min-h-[260px] md:min-h-[300px]" />
+          <div ref={mainRef} className={`relative flex-1 overflow-hidden rounded-2xl${mainShown ? '' : ' aspect-square'}`}>
+            <ShimmerImg src={displayImage} width={1200} alt={product.name} onReveal={() => setMainShown(true)} className="w-full h-auto object-contain sm:h-full sm:object-fill sm:min-h-[260px] md:min-h-[300px]" />
             {product.badge && (
               <span className="absolute left-3 top-3 rounded-full bg-brand-black px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white">
                 {product.badge}
@@ -220,9 +223,9 @@ export function ExclusiveSection({ products = [] }) {
               <button
                 key={p.id}
                 onClick={() => selectProduct(i)}
-                className={`h-16 w-16 overflow-hidden rounded-xl border-2 transition-all ${i === active ? 'border-brand-black scale-105' : 'border-gray-200 opacity-50 hover:opacity-80'}`}
+                className={`relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-all ${i === active ? 'border-brand-black scale-105' : 'border-gray-200 opacity-50 hover:opacity-80'}`}
               >
-                <img src={p.images?.[0]?.url || ''} alt={p.name} className="h-full w-full object-cover" />
+                <ShimmerImg src={p.images?.[0]?.url || ''} width={200} alt={p.name} className="h-full w-full object-cover" />
               </button>
             ))}
           </div>
@@ -337,9 +340,9 @@ export function ExclusiveSection({ products = [] }) {
           <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
             {products.map((p, i) => (
               <button key={p.id} onClick={() => selectProduct(i)}
-                className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${i === active ? 'border-brand-black' : 'border-gray-200 opacity-50'}`}
+                className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${i === active ? 'border-brand-black' : 'border-gray-200 opacity-50'}`}
               >
-                <img src={p.images?.[0]?.url || ''} alt={p.name} className="h-full w-full object-cover" />
+                <ShimmerImg src={p.images?.[0]?.url || ''} width={200} alt={p.name} className="h-full w-full object-cover" />
               </button>
             ))}
           </div>

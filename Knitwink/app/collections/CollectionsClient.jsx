@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { getPublicCategories } from '@/lib/api/categories'
 import { ShimmerImg } from '@/components/ui/ShimmerImg'
 import SeoWrapper from '@/components/SeoWrapper'
 import { queryKeys } from '@/lib/queryClient'
+import { SkeletonRegion } from '@/components/ui/Skeleton'
 
 function cleanImg(url) {
   if (!url) return ''
@@ -16,33 +16,24 @@ function cleanImg(url) {
   return url
 }
 
-// Per-card shimmer — each card tracks its own image-loaded state so
-// one slow image doesn't gate the others. The "min delay" trick
-// keeps the shimmer visible for at least 400ms even when the image
-// is already in the browser cache and onLoad fires instantly.
+// Collection tile — the photo is sized by ImageKit and only shown once it is
+// fully decoded (ShimmerImg), over the shimmer, so it never half-draws.
+const TILE = 'group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[300px] lg:min-h-[380px]'
 function CollectionCard({ c, img }) {
-  const [loaded, setLoaded] = useState(false)
-  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now())
-  const handleLoad = () => {
-    const elapsed = Date.now() - mountedAtRef.current
-    const remaining = Math.max(0, 400 - elapsed)
-    if (remaining === 0) setLoaded(true)
-    else setTimeout(() => setLoaded(true), remaining)
-  }
   return (
     <Link
       href={`/collections/${c.slug || c.name.trim().toLowerCase().replace(/\s+/g, '-')}`}
-      className="group relative overflow-hidden rounded-2xl aspect-[3/4] md:aspect-auto md:min-h-[300px] lg:min-h-[380px] bg-gray-200"
+      className={`${TILE} bg-gray-200`}
     >
-      {img && !loaded && (
-        <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
-      )}
       {img
-        ? <img
+        ? <ShimmerImg
             src={img}
+            width={600}
+            widths={[400, 600, 900]}
+            sizes="(max-width: 1024px) 50vw, 25vw"
             alt={c.name}
-            onLoad={handleLoad}
-            className={`absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105"
+            fallback={<div className="absolute inset-0 bg-gray-200" />}
           />
         : <div className="absolute inset-0 bg-gray-200" />
       }
@@ -73,7 +64,7 @@ export default function CollectionsClient() {
         <ShimmerImg
           src="/collection hero.jpg"
           alt="Collections"
-          shimmerClassName="bg-gray-800"
+          shimmerClassName="sk--dark"
           className="absolute inset-0 h-full w-full object-cover opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black/60 to-transparent" />
@@ -88,11 +79,11 @@ export default function CollectionsClient() {
       {/* Collections grid */}
       <div className="bg-off-white px-4 py-10 md:px-6">
         {loading ? (
-          <div className="mx-auto grid max-w-site grid-cols-2 gap-4 lg:grid-cols-4">
+          <SkeletonRegion label="Loading collections…" className="mx-auto grid max-w-site grid-cols-2 gap-4 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] animate-pulse rounded-2xl bg-gray-200" />
+              <div key={i} className={`${TILE} sk`} aria-hidden="true" />
             ))}
-          </div>
+          </SkeletonRegion>
         ) : categories.length === 0 ? (
           <p className="py-20 text-center text-sm text-gray-400">No collections yet.</p>
         ) : (

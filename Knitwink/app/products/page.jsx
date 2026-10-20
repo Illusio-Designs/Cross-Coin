@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import ProductsClient from './ProductsClient'
+import { ProductsSkeleton } from './ProductsSkeleton'
 import { buildMetadata } from '@/lib/api/seo'
 
 // Server-rendered, dashboard-driven SEO for the products listing. The
@@ -11,7 +12,7 @@ export async function generateMetadata() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ProductsSkeleton />}>
       <ProductsClient />
     </Suspense>
   )

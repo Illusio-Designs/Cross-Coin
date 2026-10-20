@@ -146,7 +146,7 @@ function OrderDetail({ id }) {
             return (
               <div className="order-item" key={i}>
                 <div className="order-item-thumb">
-                  {img ? <ShimmerImg src={img} alt="" /> : <Icon name="Sparkles" size={22} color="#c3ccd2" />}
+                  {img ? <ShimmerImg src={img} alt="" width={200} fallback={<Icon name="Sparkles" size={22} color="#c3ccd2" />} /> : <Icon name="Sparkles" size={22} color="#c3ccd2" />}
                 </div>
                 <div className="order-item-info"><b>{name}</b>{sku && <span className="muted">SKU {sku}</span>}{color && <span className="muted">Color: {color}</span>}<span className="muted">Qty {qty}</span></div>
                 <b>₹{(price * qty).toFixed(0)}</b>

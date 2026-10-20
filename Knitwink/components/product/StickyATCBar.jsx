@@ -1,5 +1,7 @@
 'use client'
 
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
+
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import { ShoppingBag } from 'lucide-react'
@@ -20,7 +22,9 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
       <div className="mx-auto flex items-center justify-between gap-4 px-4 md:px-6 lg:px-8" style={{ height: 100 }}>
         <div className="flex items-center gap-4 min-w-0">
           {imageUrl && (
-            <img src={imageUrl} alt={productName} className="h-16 w-16 shrink-0 rounded-xl object-contain bg-gray-50" />
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-50">
+              <ShimmerImg src={imageUrl} width={200} alt={productName} className="h-full w-full object-contain" />
+            </div>
           )}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-brand-black">{productName}</p>

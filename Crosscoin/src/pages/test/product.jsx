@@ -210,11 +210,11 @@ export default function TestProduct({ preview = true }) {
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} color={cur.colors?.[0]} />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
+            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200} widths={[600, 1200]} sizes="(max-width: 860px) 100vw, 600px" priority />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
-                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)}><Thumb src={src} /></button>
+                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)}><Thumb src={src} w={200} /></button>
                 ))}
               </div>
             )}
@@ -420,7 +420,7 @@ export default function TestProduct({ preview = true }) {
           <div className="benefitgrid">
             {BENEFITS.map((b, i) => (
               <div className="benefit" key={b.t}>
-                <span className="benefit__img"><Thumb src={benefitImgs.length ? benefitImgs[i % benefitImgs.length] : ''} color={cur.colors?.[0]} /></span>
+                <span className="benefit__img"><Thumb src={benefitImgs.length ? benefitImgs[i % benefitImgs.length] : ''} color={cur.colors?.[0]} w={300} /></span>
                 <b>{b.t}</b>
                 <span className="benefit__d">{b.d}</span>
               </div>
@@ -516,7 +516,7 @@ export default function TestProduct({ preview = true }) {
       <div className={`pdpsticky${sticky ? ' on' : ''}`}>
         <div className="wrap pdpsticky__in">
           <div className="pdpsticky__p">
-            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} /></div>
+            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} w={200} /></div>
             <div className="pdpsticky__meta"><b>{p.name}</b><span>{inr(payable)}</span></div>
           </div>
           <div className="pdpsticky__btns">
@@ -531,7 +531,7 @@ export default function TestProduct({ preview = true }) {
         <div className="lbox" onClick={() => setLightbox(-1)}>
           <button className="lbox__x" aria-label="Close" onClick={() => setLightbox(-1)}>{I.close(24)}</button>
           {thumbs.length > 1 && <button className="lbox__nav lbox__prev" aria-label="Previous" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i - 1 + thumbs.length) % thumbs.length); }}>‹</button>}
-          <div className="lbox__img" onClick={(e) => e.stopPropagation()}><Thumb src={thumbs[lightbox]} /></div>
+          <div className="lbox__img" onClick={(e) => e.stopPropagation()}><Thumb src={thumbs[lightbox]} alt={p.name} w={1200} /></div>
           {thumbs.length > 1 && <button className="lbox__nav lbox__next" aria-label="Next" onClick={(e) => { e.stopPropagation(); setLightbox((i) => (i + 1) % thumbs.length); }}>›</button>}
         </div>
       )}

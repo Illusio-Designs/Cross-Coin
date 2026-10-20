@@ -21,7 +21,7 @@ export default function BlogCard({ post }) {
     <Link href={`/journal/${p.slug}`} className="blog-card">
       <div className="blog-media">
         {(p.thumb || p.image)
-          ? <ShimmerImg src={ik(p.thumb || p.image)} alt={p.title} loading="lazy" />
+          ? <ShimmerImg src={ik(p.thumb || p.image)} alt={p.title} />
           : <span aria-hidden><Icon name="Sparkles" size={40} /></span>}
         <div className="blog-cap">
           <div className="blog-meta">

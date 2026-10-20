@@ -13,6 +13,7 @@ import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
 import WriteReview from '../../_components/WriteReview';
 import TrackEvent from '../../_components/TrackEvent';
+import SkImg from '../../_components/SkImg';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -278,9 +279,9 @@ export default async function MaisonProduct({ params }) {
                       <div className="m-prof" key={a.name + i}>
                         <div
                           className="ring"
-                          style={a.image ? { overflow: 'hidden' } : { background: `radial-gradient(circle at 35% 30%,#ffffffcc,${PROF_TINTS[i % PROF_TINTS.length]})` }}
+                          style={a.image ? { overflow: 'hidden', position: 'relative' } : { background: `radial-gradient(circle at 35% 30%,#ffffffcc,${PROF_TINTS[i % PROF_TINTS.length]})` }}
                         >
-                          {a.image ? <img src={ik(a.image, 200)} alt={a.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                          {a.image ? <SkImg src={ik(a.image, 200)} alt={a.name} loading="lazy" /> : null}
                         </div>
                         <b>{a.name}</b>
                         <div className="dots">{'●'.repeat(v)}{'○'.repeat(5 - v)}</div>
@@ -328,7 +329,7 @@ export default async function MaisonProduct({ params }) {
                         {t.items.map((n, i) => (
                           <Link className="m-pn m-pn--link" key={n.name + i} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                             <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                              {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
+                              {n.image ? <SkImg src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                             </div>
                             <b>{n.name}</b>
                             <span className="m-pn__go">Shop this note →</span>
@@ -341,7 +342,7 @@ export default async function MaisonProduct({ params }) {
                       {(notesWithImg.length ? notesWithImg : noteNames.map((n) => ({ name: n, image: '' }))).map((n, i) => (
                         <Link className="m-pn m-pn--link" key={n.name + i} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                           <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                            {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
+                            {n.image ? <SkImg src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                           </div>
                           <b>{n.name}</b>
                           <span className="m-pn__go">Shop this note →</span>

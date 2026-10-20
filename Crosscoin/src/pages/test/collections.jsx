@@ -38,7 +38,7 @@ export default function TestCollections({ preview = true }) {
             <div className="catgrid" style={{ marginTop: 24 }}>
               {cats.map((c) => (
                 <button className="cattile" key={c.id || c.name} onClick={() => router.push(shopUrl(c.name))}>
-                  <span className="cattile__img"><Thumb src={c.img} /></span>
+                  <span className="cattile__img"><Thumb src={c.img} w={600} /></span>
                   <span className="cattile__bar"><b>{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</b><span className="cattile__ar">{I.arrow(16)}</span></span>
                 </button>
               ))}

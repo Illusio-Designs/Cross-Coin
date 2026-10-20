@@ -1,6 +1,6 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   ArrowRight01Icon, ShoppingCart01Icon, FavouriteIcon, Search01Icon, UserIcon,
@@ -12,6 +12,9 @@ import { toggleWish, isWished } from './wishlist';
 import { inr } from './data';
 import { R } from './routes';
 import { colorToCss } from './real';
+import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
+
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /* ---- icons: Hugeicons (free Stroke-Rounded pack via @hugeicons/react), the
    "huge round" library chosen for the new Mint storefront. Each entry keeps the
@@ -186,10 +189,56 @@ export function TextSkeleton({ paras = 3, lines = 4, heading = true }) {
   );
 }
 
-// A product thumbnail that shows the real image, falling back to a neutral
-// coin-tile (keeps the look intact when a product has no image).
-export function Thumb({ src, color, className, style }) {
-  if (src) return <img className={className} src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }} />;
+// The ONE image component for the Mint store. Shows the real image, falling
+// back to a neutral coin-tile when there is no image (or it fails to load).
+//
+// No half-drawn pictures: the <img> stays transparent (its box shows the
+// skeleton shimmer — see `.ccimg` in TestLayout's CSS) until the file has
+// fully downloaded AND decoded, then fades in. Images already in the cache are
+// shown at once. The parent box must already have its final size.
+//
+// ImageKit URLs are requested at the width they are shown (`w`, plus an
+// optional `widths` srcSet with `sizes`), WebP/AVIF via f-auto. Other URLs are
+// used as-is. `priority` = the LCP image (eager + high fetch priority).
+export function Thumb({ src, color, className, style, alt = '', w, widths, sizes, priority = false }) {
+  const ref = useRef(null);
+  const [shown, setShown] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const url = src ? (w ? ikTransform(src, w) : src) : '';
+  const srcSet = src && widths ? ikSrcSet(src, widths) : undefined;
+
+  // New picture → hide until it is ready (or reveal at once if it is cached,
+  // e.g. already loaded before hydration).
+  useIsoLayoutEffect(() => {
+    setFailed(false);
+    const img = ref.current;
+    setShown(!!(img && img.complete && img.naturalWidth > 0));
+  }, [url, srcSet]);
+
+  const reveal = (e) => {
+    const img = e.currentTarget;
+    const done = () => { if (ref.current === img) setShown(true); };
+    if (img.decode) img.decode().then(done, done); else done();
+  };
+
+  if (url && !failed) {
+    return (
+      <img
+        ref={ref}
+        className={`ccimg${shown ? ' is-on' : ''}${className ? ` ${className}` : ''}`}
+        src={url}
+        srcSet={srcSet}
+        sizes={srcSet ? sizes : undefined}
+        alt={alt}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding={priority ? 'auto' : 'async'}
+        fetchPriority={priority ? 'high' : undefined}
+        onLoad={reveal}
+        onError={() => setFailed(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }}
+      />
+    );
+  }
   const bg = color ? colorToCss(color) : 'var(--paper-2)';
   return <span className={className} style={{ width: '60%', aspectRatio: '1', borderRadius: '50%', background: bg, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08)', ...style }} />;
 }
@@ -245,7 +294,7 @@ export function ProductCard({ p }) {
         )}
         <button className={`cc-card__wish${isWished(p.id) ? ' on' : ''}`} aria-label="Wishlist" onClick={(e) => { e.stopPropagation(); const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(16)}</button>
         {p.img
-          ? <img src={p.img} alt={p.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <Thumb src={p.img} alt={p.name} w={600} widths={[300, 600]} sizes="(max-width: 1000px) 50vw, 300px" />
           : <><span className="mint" style={{ background: 'var(--paper-2)' }} /><span className="ring" /></>}
       </div>
       <div className="cc-card__body">

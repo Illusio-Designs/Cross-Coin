@@ -7,6 +7,7 @@ import { searchProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from '../_components/ProductCard';
+import { ProductGridSkeleton, Sk } from '../_components/Skeleton';
 
 export default function SearchClient() {
   const sp = useSearchParams();
@@ -14,7 +15,8 @@ export default function SearchClient() {
   const query = (sp.get('q') || '').trim();
   const [input, setInput] = useState(query);
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // A ?q= link searches on mount — start loading so "No results" never flashes.
+  const [loading, setLoading] = useState(() => !!query);
   const [cats, setCats] = useState([]);
   const inputRef = useRef(null);
 
@@ -72,14 +74,19 @@ export default function SearchClient() {
           />
           <button type="submit" className="m-btn m-btn--fill">Search</button>
         </form>
-        <p aria-live="polite">{!query ? 'Search by fragrance name, note or collection.' : loading ? 'Searching…' : `${results.length} fragrance${results.length !== 1 ? 's' : ''} found`}</p>
+        <p aria-live="polite">
+          {!query ? 'Search by fragrance name, note or collection.'
+            : loading ? <><Sk w={150} h={14} inline /><span className="sr-only">Searching…</span></>
+            : `${results.length} fragrance${results.length !== 1 ? 's' : ''} found`}
+        </p>
       </section>
 
       <div className="m-wrap m-section" style={{ paddingTop: 0 }}>
-        {loading ? (
-          <div className="m-pgrid">{Array.from({ length: 8 }).map((_, i) => <div className="m-skel" key={i} />)}</div>
+        {loading && !results.length ? (
+          <ProductGridSkeleton label="Searching…" />
         ) : query && results.length ? (
-          <div className="m-pgrid">{results.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+          // A new search keeps the previous results on screen, dimmed, until the new ones land.
+          <div className={`m-pgrid${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>{results.map((p) => <ProductCard key={p.id} product={p} />)}</div>
         ) : query ? (
           <div className="m-empty">
             <h3>No results found</h3>

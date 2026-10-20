@@ -1,4 +1,5 @@
 import Hero from '@/components/home/Hero';
+import { ikSrc, ikSrcSet, HERO_W, HERO_MOBILE_W, HERO_WIDTHS, HERO_SIZES } from '@/lib/image';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
 import CategoryBanners from '@/components/home/CategoryBanners';
@@ -23,16 +24,6 @@ export async function generateMetadata() {
   return buildMetadata('home', { alternates: { canonical: '/' } });
 }
 
-// Mirror of Hero.jsx's heroSrc() so the preloaded URL EXACTLY matches what the
-// hero <img>/<source> will request (same ImageKit tr= params), avoiding a
-// double download.
-function heroSrc(src, w = 1600) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
 
 export default async function HomePage() {
   const [products, categories, storeReviews, posts, slides, faqs, seoOrg] = await Promise.all([
@@ -55,9 +46,9 @@ export default async function HomePage() {
   }));
 
   // Preload the first slide's hero image (the LCP element). Hero renders a
-  // <picture> whose desktop <img> requests heroSrc(image, 1600) and whose
-  // mobile <source media="(max-width:767px)"> requests heroSrc(mobileImage,
-  // 820). imageSrcSet + imageSizes make the browser preload the matching
+  // <picture> whose desktop <img> requests ikSrc(image, HERO_W) (or a srcSet
+  // when there's no mobile art) and whose mobile <source> requests
+  // ikSrc(mobileImage, HERO_MOBILE_W). imageSrcSet + imageSizes preload the matching
   // variant per viewport. Rendering <link rel="preload"> here lets Next hoist
   // it into <head> so the LCP URL is in the initial HTML.
   const heroSlide = slides[0];
@@ -97,14 +88,16 @@ export default async function HomePage() {
         <link
           rel="preload"
           as="image"
-          href={heroSrc(heroSlide.image, 1600)}
+          href={ikSrc(heroSlide.image, HERO_W)}
           fetchPriority="high"
           {...(heroSlide.mobileImage
             ? {
-                imageSrcSet: `${heroSrc(heroSlide.mobileImage, 820)} 820w, ${heroSrc(heroSlide.image, 1600)} 1600w`,
-                imageSizes: '(max-width: 767px) 820px, 1600px',
+                imageSrcSet: `${ikSrc(heroSlide.mobileImage, HERO_MOBILE_W)} ${HERO_MOBILE_W}w, ${ikSrc(heroSlide.image, HERO_W)} ${HERO_W}w`,
+                imageSizes: `(max-width: 767px) ${HERO_MOBILE_W}px, ${HERO_W}px`,
               }
-            : {})}
+            : (ikSrcSet(heroSlide.image, HERO_WIDTHS)
+              ? { imageSrcSet: ikSrcSet(heroSlide.image, HERO_WIDTHS), imageSizes: HERO_SIZES }
+              : {}))}
         />
       )}
       <Hero features={getHeroFeatures()} slides={slides} />

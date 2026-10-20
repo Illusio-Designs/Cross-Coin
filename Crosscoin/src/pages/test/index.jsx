@@ -5,6 +5,7 @@ import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards, Thumb, Sk, SkBusy, CatTileSkeletons, PostCardSkeletons, ReviewCardSkeletons } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
 import { BENEFITS } from '../../components/test/data';
+import { HERO_WIDTHS, HERO_SIZES } from '../../utils/imageUtils';
 import { R, shopUrl } from '../../components/test/routes';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
@@ -99,7 +100,7 @@ export default function TestHome({ preview = true, initialData = null }) {
           {loading
             ? <div className="hero__art hero__art--banner cc-skel" aria-hidden="true" />
             : slide?.img
-            ? <div className="hero__art hero__art--banner"><img src={slide.img} alt={slide.title || 'CrossCoin'} /></div>
+            ? <div className="hero__art hero__art--banner"><Thumb src={slide.img} alt={slide.title || 'CrossCoin'} w={1600} widths={HERO_WIDTHS} sizes={HERO_SIZES} priority /></div>
             : (
               <div className="hero__art">
                 <div className="hero__coin"><span>₹</span></div>
@@ -122,7 +123,7 @@ export default function TestHome({ preview = true, initialData = null }) {
               ? <CatTileSkeletons n={6} />
               : cats.map((c) => (
                 <button className="cattile" key={c.id || c.name} onClick={() => router.push(shopUrl(c.name))}>
-                  <span className="cattile__img"><Thumb src={c.img} /></span>
+                  <span className="cattile__img"><Thumb src={c.img} w={600} /></span>
                   <span className="cattile__bar"><b>{c.name.replace(/^Cross ?Coin®?\s*/i, '')}</b><span className="cattile__ar">{I.arrow(16)}</span></span>
                 </button>
               ))}
@@ -152,7 +153,7 @@ export default function TestHome({ preview = true, initialData = null }) {
           <div className="benefitgrid">
             {BENEFITS.map((b, i) => (
               <div className="benefit" key={b.t}>
-                <span className="benefit__img"><Thumb src={rail[i]?.img} color={rail[i]?.colors?.[0]?.name} /></span>
+                <span className="benefit__img"><Thumb src={rail[i]?.img} color={rail[i]?.colors?.[0]?.name} w={300} /></span>
                 <b>{b.t}</b>
                 <span className="benefit__d">{b.d}</span>
               </div>
@@ -215,7 +216,7 @@ export default function TestHome({ preview = true, initialData = null }) {
             <div className="jgrid">
               {blogs.map((b, i) => (
                 <a className="post" key={b.slug || i} onClick={() => b.slug && router.push(R.blog(b.slug))} style={{ cursor: b.slug ? 'pointer' : 'default' }}>
-                  <div className="post__img" style={{ background: GRADS[i % GRADS.length], overflow: 'hidden' }}>{b.img && <img src={b.img} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</div>
+                  <div className="post__img" style={{ background: GRADS[i % GRADS.length], overflow: 'hidden' }}>{b.img && <Thumb src={b.img} w={600} />}</div>
                   <div className="post__b"><div className="m">{b.tag}</div><h3>{b.title}</h3></div>
                 </a>
               ))}

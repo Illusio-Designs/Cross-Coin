@@ -20,14 +20,23 @@ function heroSrc(src, w = 1600) {
 export default function Hero({ features = [], slides = [] }) {
   const [current, setCurrent] = useState(0);
   const hasSlides = slides.length > 0;
-  // The arched frame already reserves the box; shimmer inside it until the
-  // first slide's photo has painted (the image itself is untouched).
-  const [firstReady, setFirstReady] = useState(false);
+  // The arched frame reserves the box and shimmers; each slide photo stays
+  // hidden until it is fully downloaded AND decoded (no top-half-first
+  // painting), then fades in. `data-sk-img` + the pre-hydration script in
+  // app/layout.jsx reveal the first slide even before React has loaded.
+  const [ready, setReady] = useState({});
+  const markReady = (i) => setReady((r) => (r[i] ? r : { ...r, [i]: true }));
   const sliderRef = useRef(null);
   useEffect(() => {
-    const img = sliderRef.current?.querySelector('img');
-    if (!img || (img.complete && img.naturalWidth > 0)) setFirstReady(true);
-  }, []);
+    const imgs = sliderRef.current ? sliderRef.current.querySelectorAll('img') : [];
+    imgs.forEach((img, i) => { if (img.complete && img.naturalWidth > 0) markReady(i); });
+  }, [slides.length]);
+  const onSlideLoad = (i) => (e) => {
+    const img = e.currentTarget;
+    const done = () => markReady(i);
+    if (typeof img.decode === 'function') img.decode().then(done, done); else done();
+  };
+  const firstReady = !!ready[0];
 
   useEffect(() => {
     if (slides.length <= 1) return;
@@ -62,10 +71,11 @@ export default function Hero({ features = [], slides = [] }) {
                 <picture key={i} style={{ display: 'contents' }}>
                   {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
                   <img src={heroSrc(s.image)} alt={s.title || 'Velquira'}
-                    className={`vq-hero-img${i === current ? ' active' : ''}`}
+                    className={`vq-hero-img${i === current ? ' active' : ''}${ready[i] ? ' is-loaded' : ''}`}
+                    data-sk-img=""
                     loading={i === 0 ? 'eager' : 'lazy'}
-                    onLoad={i === 0 ? () => setFirstReady(true) : undefined}
-                    onError={i === 0 ? () => setFirstReady(true) : undefined}
+                    onLoad={onSlideLoad(i)}
+                    onError={() => markReady(i)}
                     fetchPriority={i === 0 ? 'high' : 'auto'}
                     decoding="async" />
                 </picture>

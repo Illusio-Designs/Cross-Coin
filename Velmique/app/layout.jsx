@@ -70,6 +70,8 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700;800&display=swap"
         />
+        {/* Without JS the no-half-draw images (SkImg) could never reveal. */}
+        <noscript><style>{'.sk-frame>img{opacity:1!important}.sk-img{animation:none!important;background-image:none!important}'}</style></noscript>
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
         <link rel="dns-prefetch" href="https://api.crosscoin.in" />
         {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp for

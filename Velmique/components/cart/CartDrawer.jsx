@@ -27,6 +27,8 @@ import {
   toastAddressAdded, toastAddressUpdated, toastAddressError,
 } from '@/lib/toast';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { ik } from '@/lib/imagekit';
+import SkImg from '@/app/_components/SkImg';
 import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 
@@ -1047,29 +1049,32 @@ export default function CartDrawer() {
                      body while its async loads settle, so content doesn't pop
                      in piece by piece. ── */}
               {coStep === 1 && items.length > 0 && !cartReady && (
-                <div className="animate-pulse" aria-hidden="true">
-                  {/* free-shipping row */}
-                  <div className="px-5 py-3 border-b border-[#D8D3C9]">
-                    <div className="h-3 w-3/4 mx-auto rounded bg-[var(--border)] mb-2" />
-                    <div className="h-1.5 w-full rounded-full bg-[var(--border)]" />
-                  </div>
-                  {/* item rows */}
-                  <div className="px-5 py-4 space-y-4 border-b border-[#D8D3C9]">
-                    {[0, 1].map((n) => (
-                      <div key={n} className="flex gap-3">
-                        <div className="w-20 h-24 shrink-0 rounded bg-[var(--border)]" />
-                        <div className="flex-1 min-w-0 space-y-2 py-1">
-                          <div className="h-4 w-5/6 rounded bg-[var(--border)]" />
-                          <div className="h-3 w-1/3 rounded bg-[var(--border)]" />
-                          <div className="h-6 w-2/3 rounded bg-[var(--border)] mt-3" />
+                <div role="status" aria-busy="true">
+                  <span className="sr-only">Loading your bag…</span>
+                  <div aria-hidden="true">
+                    {/* free-shipping row */}
+                    <div className="px-5 py-3 border-b border-[#D8D3C9]">
+                      <div className="sk h-3 w-3/4 mx-auto mb-2" />
+                      <div className="sk h-1.5 w-full" />
+                    </div>
+                    {/* item rows — one per line in the bag, same 80×96 thumb */}
+                    <div className="px-5 py-4 space-y-4 border-b border-[#D8D3C9]">
+                      {items.slice(0, 4).map((it, n) => (
+                        <div key={`${it.id}-${n}`} className="flex gap-3">
+                          <div className="sk sk--flat w-20 h-24 shrink-0" />
+                          <div className="flex-1 min-w-0 space-y-2 py-1">
+                            <div className="sk h-4 w-5/6" />
+                            <div className="sk h-3 w-1/3" />
+                            <div className="sk h-6 w-2/3 mt-3" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* chips (coupon + offer) */}
-                  <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
-                    <div className="h-10 w-full rounded bg-[var(--border)]" />
-                    <div className="h-14 w-full rounded bg-[var(--border)]" />
+                      ))}
+                    </div>
+                    {/* chips (coupon + offer) */}
+                    <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
+                      <div className="sk h-10 w-full" />
+                      <div className="sk h-14 w-full" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1102,7 +1107,7 @@ export default function CartDrawer() {
                 {items.map((item, i) => (
                   <div key={`${item.id}-${i}`} className="flex gap-3 pb-4 border-b border-[#D8D3C9] last:border-0 last:pb-0">
                     <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} className="shrink-0">
-                      <img src={item.image} alt={item.name} className="w-20 h-24 object-cover" />
+                      <SkImg frameClassName="w-20 h-24" src={ik(item.image, 200)} alt={item.name} loading="lazy" />
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)}>

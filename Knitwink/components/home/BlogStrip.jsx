@@ -5,16 +5,21 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getPosts } from '@/lib/api/blog'
 import { BlogCard } from './BlogCard'
+import { BlogCardSkeleton, SkeletonRegion } from '@/components/ui/Skeleton'
 
 export function BlogStrip({ posts: postsProp = null }) {
   // Server-provided posts are used directly; the client fetch runs only as a
   // fallback when the server didn't supply any.
   const [posts, setPosts] = useState(postsProp?.length ? postsProp.slice(0, 4) : [])
+  const [done, setDone] = useState(!!postsProp?.length)
 
   useEffect(() => {
     if (postsProp?.length) return // server supplied posts — don't refetch
-    getPosts().then((all) => setPosts(all.slice(0, 4))).catch(() => {})
+    getPosts().then((all) => setPosts(all.slice(0, 4))).catch(() => {}).finally(() => setDone(true))
   }, [postsProp])
+
+  // Nothing to show once the fallback fetch has finished empty.
+  if (done && posts.length === 0) return null
 
   return (
     <div className="px-3 py-6">
@@ -27,21 +32,15 @@ export function BlogStrip({ posts: postsProp = null }) {
       </div>
 
       {/* 4 cards — 2 cols mobile, 4 cols desktop */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {posts.length === 0
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                <div className="aspect-[3/4] animate-pulse bg-gray-100" />
-                <div className="flex flex-col gap-2 p-4">
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
-                  <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
-                </div>
-              </div>
-            ))
-          : posts.map((post) => <BlogCard key={post.slug} post={post} />)
-        }
-      </div>
+      {posts.length === 0 ? (
+        <SkeletonRegion label="Loading journal posts…" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => <BlogCardSkeleton key={i} />)}
+        </SkeletonRegion>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {posts.map((post) => <BlogCard key={post.slug} post={post} />)}
+        </div>
+      )}
 
       <div className="mt-4 text-center sm:hidden">
         <Link href="/journal" className="inline-flex items-center gap-1 text-xs font-medium text-brand-black">

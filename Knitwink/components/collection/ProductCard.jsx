@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Heart } from 'lucide-react';
@@ -22,20 +22,17 @@ export function ProductCard({ product }) {
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
-  // Two independent flags — the primary image and the hover image
-  // load on their own schedule. Each one keeps a shimmer overlay
-  // until next/image fires its loading callback AND a minimum
-  // display time has elapsed (otherwise cached images load in <50ms
-  // and the shimmer flashes by too fast to notice).
+  // Two independent flags — the primary image and the hover image load on
+  // their own schedule. Each photo stays invisible over the shimmer until it
+  // has fully loaded AND decoded (so it never paints top-half-first), then
+  // fades in (.kw-img in globals.css).
   const [primaryLoaded, setPrimaryLoaded] = useState(false);
   const [hoverLoaded, setHoverLoaded] = useState(false);
-  const mountedAtRef = useRef(typeof window === 'undefined' ? 0 : Date.now());
-  const SHIMMER_MIN_MS = 400;
-  const flipWithMinDelay = (setter) => {
-    const elapsed = Date.now() - mountedAtRef.current;
-    const remaining = Math.max(0, SHIMMER_MIN_MS - elapsed);
-    if (remaining === 0) setter(true);
-    else setTimeout(() => setter(true), remaining);
+  const revealWhenDecoded = (setter) => (e) => {
+    const img = e.currentTarget;
+    const done = () => setter(true);
+    if (img && typeof img.decode === 'function') img.decode().then(done, done);
+    else done();
   };
   const { addItem } = useCart();
   const wishlisted = useWishlistStore((s) => s.hasItem(product.id));
@@ -107,7 +104,7 @@ export function ProductCard({ product }) {
             is set when next/image fires onLoad, at which point the
             shimmer fades out. */}
         {!(hovered ? hoverLoaded : primaryLoaded) && (
-          <div className="absolute inset-0 animate-pulse bg-gray-200" aria-hidden="true" />
+          <div className="sk absolute inset-0" aria-hidden="true" />
         )}
         <AnimatePresence initial={false}>
           <motion.div
@@ -123,9 +120,10 @@ export function ProductCard({ product }) {
               alt={hovered ? hoverImage.alt : primaryImage.alt}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-contain object-center"
-              onLoad={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)}
-              onError={() => flipWithMinDelay(hovered ? setHoverLoaded : setPrimaryLoaded)} />
+              className={`kw-img object-contain object-center${(hovered ? hoverLoaded : primaryLoaded) ? ' is-loaded' : ''}`}
+              data-sk-img=""
+              onLoad={revealWhenDecoded(hovered ? setHoverLoaded : setPrimaryLoaded)}
+              onError={() => (hovered ? setHoverLoaded : setPrimaryLoaded)(true)} />
 
           </motion.div>
         </AnimatePresence>

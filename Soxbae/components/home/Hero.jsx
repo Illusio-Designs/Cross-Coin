@@ -1,17 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/Icon';
-
-// Ask ImageKit for a sized, format-negotiated hero image instead of the
-// full-resolution original (big LCP win on the largest image on the page).
-function heroSrc(src, w = 1600) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
+import { ikSrc, ikSrcSet, HERO_W, HERO_MOBILE_W, HERO_WIDTHS, HERO_SIZES } from '@/lib/image';
 
 // Soxbae hero — an immersive "cover" stage: a large full-bleed product image
 // with the headline + CTA laid over a warm scrim, bottom-left. Driven by the
@@ -26,6 +17,25 @@ export default function Hero({ features = [], slides = [] }) {
     return () => clearInterval(t);
   }, [slides.length]);
 
+  // Each slide stays invisible until fully downloaded AND decoded (no
+  // top-half-first painting); the stage shows a shimmer until the current one
+  // is ready. 'ok' = decoded, 'fail' = errored (keep the plain stage instead).
+  const [ready, setReady] = useState({});
+  const imgRefs = useRef([]);
+  const mark = (i, v) => setReady((r) => (r[i] ? r : { ...r, [i]: v }));
+  const onSlideLoad = (i) => (e) => {
+    const img = e.currentTarget;
+    const done = () => mark(i, 'ok');
+    if (typeof img.decode === 'function') img.decode().then(done, done);
+    else done();
+  };
+  useEffect(() => {
+    // Loaded (or failed) before hydration, so onLoad never fired.
+    imgRefs.current.forEach((img, i) => {
+      if (img && img.complete) mark(i, img.naturalWidth > 0 ? 'ok' : 'fail');
+    });
+  }, [slides.length]);
+
   const slide = hasSlides ? slides[Math.min(current, slides.length - 1)] : null;
   const title = slide?.title || 'Socks made for how you move.';
   const desc = slide?.description || 'Cushioned, breathable and built to last — considered everyday socks for sport, street and everything between.';
@@ -36,15 +46,22 @@ export default function Hero({ features = [], slides = [] }) {
     <section className="sx-hero">
       <div className="container">
         <div className="sxh-stage">
+          {hasSlides && !ready[Math.min(current, slides.length - 1)] && <span className="sk sk-fill" aria-hidden="true" />}
           {hasSlides ? (
             slides.map((s, i) => (
               <picture key={i} style={{ display: 'contents' }}>
-                {s.mobileImage && <source media="(max-width: 767px)" srcSet={heroSrc(s.mobileImage, 820)} />}
-                <img src={heroSrc(s.image)} alt={s.title || 'Soxbae'}
-                  className={`sxh-img${i === current ? ' active' : ''}`}
+                {s.mobileImage && <source media="(max-width: 767px)" srcSet={ikSrc(s.mobileImage, HERO_MOBILE_W)} />}
+                <img ref={(el) => { imgRefs.current[i] = el; }}
+                  src={ikSrc(s.image, HERO_W)}
+                  srcSet={s.mobileImage ? undefined : ikSrcSet(s.image, HERO_WIDTHS)}
+                  sizes={s.mobileImage ? undefined : HERO_SIZES}
+                  alt={s.title || 'Soxbae'}
+                  className={`sxh-img${i === current ? ' active' : ''}${ready[i] === 'ok' ? '' : ' is-pending'}`}
                   loading={i === 0 ? 'eager' : 'lazy'}
                   fetchPriority={i === 0 ? 'high' : 'auto'}
-                  decoding="async" />
+                  decoding="async"
+                  onLoad={onSlideLoad(i)}
+                  onError={() => mark(i, 'fail')} />
               </picture>
             ))
           ) : (

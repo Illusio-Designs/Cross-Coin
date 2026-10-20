@@ -12,59 +12,25 @@ import { useQuery } from '@tanstack/react-query'
 import { getProduct } from '@/lib/api/products'
 import { fbTrack } from '@/utils/pixel'
 import { ProductPageClient } from '@/components/product/ProductPageClient'
+import { ProductPageSkeleton, SectionSkeleton } from '@/components/product/ProductPageSkeleton'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
 import dynamic from 'next/dynamic'
 // Below-the-fold sections: code-split so the gallery + ATC render
 // first. The skeletons keep the page from jumping when each chunk
 // arrives. ssr:false on CrossSell because it relies on cart state.
 const FeatureHighlight = dynamic(() => import('@/components/product/FeatureHighlight').then(m => m.FeatureHighlight), {
-  loading: () => <div className="h-96 w-full animate-pulse bg-gray-50" />,
+  loading: () => <SectionSkeleton className="h-96" />,
 })
 const ReviewsSection = dynamic(() => import('@/components/product/ReviewsSection').then(m => m.ReviewsSection), {
-  loading: () => <div className="my-12 h-80 w-full animate-pulse rounded-2xl bg-gray-50" />,
+  loading: () => <SectionSkeleton className="h-80" />,
 })
 const CrossSell = dynamic(() => import('@/components/product/CrossSell').then(m => m.CrossSell), {
-  loading: () => <div className="my-12 h-72 w-full animate-pulse rounded-2xl bg-gray-50" />,
+  loading: () => <SectionSkeleton className="h-72" />,
   ssr: false,
 })
 import SeoWrapper from '@/components/SeoWrapper'
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks'
 import { richHtml } from '@/lib/richHtml'
-
-function ProductSkeleton() {
-  return (
-    <div className="bg-white px-5 pt-4 pb-10 lg:px-8">
-      <div className="mx-auto max-w-site grid grid-cols-1 gap-10 lg:grid-cols-2">
-        {/* Gallery skeleton — square hero + thumbnail grid */}
-        <div className="flex flex-col gap-2">
-          <div className="aspect-square w-full animate-pulse rounded-2xl bg-gray-200" />
-          <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="aspect-square w-full animate-pulse rounded-xl bg-gray-200" />
-            ))}
-          </div>
-        </div>
-        {/* Info card skeleton — collection badge, title, rating row,
-            price, color dots, add-to-cart button */}
-        <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="h-4 w-24 animate-pulse rounded-full bg-gray-200" />
-          <div className="h-8 w-3/4 animate-pulse rounded bg-gray-200" />
-          <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-          <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
-          <div className="flex gap-2 pt-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 w-8 animate-pulse rounded-full bg-gray-200" />
-            ))}
-          </div>
-          <div className="h-10 w-28 animate-pulse rounded-full bg-gray-200" />
-          <div className="mt-3 flex gap-2">
-            <div className="h-12 flex-1 animate-pulse rounded-full bg-gray-200" />
-            <div className="h-12 flex-1 animate-pulse rounded-full bg-gray-200" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function ProductDetailClient({ initialHandle, initialProduct, initialBestsellers } = {}) {
   // initialHandle comes from the server shell on first load. On client-
@@ -98,7 +64,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
     })
   }, [product?.id])
 
-  if (loading) return <ProductSkeleton />
+  if (loading) return <ProductPageSkeleton />
   if (!product) return (
     <div className="px-5 py-20 text-center text-gray-500">Product not found.</div>
   )
@@ -191,7 +157,9 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
                 <div className="relative flex items-center justify-center w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] lg:w-[350px] lg:h-[350px]">
                   <div className="absolute inset-0 rounded-full border border-gray-300" />
                   <div className="absolute inset-3 rounded-full border border-gray-200" />
-                  <img src={product.images[1].url} alt={product.name} className="relative h-[210px] w-[210px] rounded-full object-cover sm:h-[250px] sm:w-[250px] lg:h-[300px] lg:w-[300px]" />
+                  <div className="relative h-[210px] w-[210px] overflow-hidden rounded-full sm:h-[250px] sm:w-[250px] lg:h-[300px] lg:w-[300px]">
+                    <ShimmerImg src={product.images[1].url} width={600} alt={product.name} className="h-full w-full rounded-full object-cover" />
+                  </div>
                 </div>
               </div>
             )}

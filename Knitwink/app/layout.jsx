@@ -115,6 +115,9 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
+        {/* Content images (ShimmerImg, data-sk-img) stay hidden until fully
+            loaded + decoded; this reveals them even before React hydrates. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.hasAttribute('data-sk-img'))return;var r=function(){t.classList.add('is-loaded')};if(t.decode){t.decode().then(r,r)}else{r()}},true)}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
             <CookieBanner />

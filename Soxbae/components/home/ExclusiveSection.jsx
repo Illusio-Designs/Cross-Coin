@@ -1,6 +1,7 @@
 'use client';
 
 import ReviewBadge from '@/components/product/ReviewBadge';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
@@ -125,14 +126,15 @@ export default function ExclusiveSection({ products = [] }) {
                 {gallery.map((src, i) => (
                   <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
                     onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
-                    <img src={src} alt={`${product.name} — view ${i + 1}`} loading="lazy" />
+                    <ShimmerImg src={src} alt={`${product.name} — view ${i + 1}`} width={200} />
                   </button>
                 ))}
               </div>
             )}
             <div className="excl-main" ref={mainRef}>
               {mainSrc
-                ? <img src={mainSrc} alt={product.name} />
+                ? <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]} sizes="(max-width: 760px) 100vw, 560px"
+                    fallback={<span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}
               {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
               <ReviewBadge rating={product.rating} count={product.reviews} style={{ left: 12, bottom: 12 }} />
@@ -185,7 +187,7 @@ export default function ExclusiveSection({ products = [] }) {
                 {list.map((p, i) => (
                   <button key={p.uid ?? p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
                     onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                    {p.image ? <img src={p.image} alt={p.name} loading="lazy" /> : <Icon name="Footprints" size={20} />}
+                    {p.image ? <ShimmerImg src={p.image} alt={p.name} width={200} fallback={<Icon name="Footprints" size={20} />} /> : <Icon name="Footprints" size={20} />}
                   </button>
                 ))}
               </div>

@@ -535,12 +535,7 @@
    One loading state for the drawer's step-1 async loads (coupons, cross-sell,
    shipping fees) so they resolve into view together instead of popping in. */
 .cd-skel { display: flex; flex-direction: column; gap: 16px; padding: 10px 0; }
-.cd-skel-anim {
-  background: linear-gradient(90deg, #eeeef2 25%, #e0e0e6 37%, #eeeef2 63%);
-  background-size: 400% 100%;
-  animation: cdSkel 1.4s ease infinite;
-  border-radius: 6px;
-}
+.cd-skel-anim { border-radius: 6px; } /* shimmer itself: the .sk kit in globals.css */
 .cd-skel-ship { height: 46px; border-radius: 8px; }
 .cd-skel-item { display: flex; gap: 12px; align-items: center; }
 .cd-skel-thumb { width: 64px; height: 64px; border-radius: 8px; flex-shrink: 0; }
@@ -549,8 +544,6 @@
 .cd-skel-line.sm { width: 45%; }
 .cd-skel-chip { height: 50px; border-radius: 8px; }
 .cd-skel-chip.tall { height: 76px; }
-@keyframes cdSkel { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) { .cd-skel-anim { animation: none; } }
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {

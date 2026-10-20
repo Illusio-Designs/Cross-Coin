@@ -4,6 +4,7 @@ import ReviewBadge from '@/components/product/ReviewBadge';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 
@@ -116,14 +117,14 @@ export default function ExclusiveSection({ products = [] }) {
                 {gallery.map((src, i) => (
                   <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
                     onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
-                    <img src={src} alt="" loading="lazy" />
+                    <ShimmerImg src={src} alt="" width={200} />
                   </button>
                 ))}
               </div>
             )}
             <div className="excl-main" ref={mainRef}>
               {mainSrc
-                ? <img src={mainSrc} alt={product.name} />
+                ? <ShimmerImg src={mainSrc} alt={product.name} width={1200} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Sparkles" size={64} /></span>}
               {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
               <ReviewBadge rating={product.rating} count={product.reviews} style={{ position: 'absolute', left: 12, bottom: 12 }} />
@@ -174,7 +175,7 @@ export default function ExclusiveSection({ products = [] }) {
               {list.map((p, i) => (
                 <button key={p.id} type="button" className={`excl-switch-thumb${i === active ? ' active' : ''}`}
                   onClick={() => pick(i)} aria-label={p.name} title={p.name}>
-                  {p.image ? <img src={p.image} alt="" loading="lazy" /> : <Icon name="Sparkles" size={20} />}
+                  {p.image ? <ShimmerImg src={p.image} alt="" width={200} fallback={<Icon name="Sparkles" size={20} />} /> : <Icon name="Sparkles" size={20} />}
                 </button>
               ))}
             </div>

@@ -3,6 +3,7 @@
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ProductCard } from '@/components/collection/ProductCard'
+import { ProductCardSkeleton, SkeletonRegion } from '@/components/ui/Skeleton'
 
 export function BestsellerRow({ products = [] }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', dragFree: true })
@@ -23,17 +24,13 @@ export function BestsellerRow({ products = [] }) {
       </div>
 
       {products.length === 0 ? (
-        <div className="flex gap-3 overflow-hidden px-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <SkeletonRegion label="Loading products…" className="flex gap-3 overflow-hidden px-3">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="w-[220px] shrink-0 md:w-[260px]">
-              <div className="aspect-square w-full animate-pulse rounded-2xl bg-gray-100" />
-              <div className="mt-3 space-y-2">
-                <div className="h-3 w-3/4 animate-pulse rounded bg-gray-100" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
-              </div>
+              <ProductCardSkeleton />
             </div>
           ))}
-        </div>
+        </SkeletonRegion>
       ) : (
         <div ref={emblaRef} className="overflow-hidden">
           <div className="flex gap-3 px-3">

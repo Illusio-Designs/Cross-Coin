@@ -6,6 +6,7 @@ import { getPublicProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import ProductCard from './ProductCard';
 import Pager from './Pager';
+import { ChipsSkeleton, ProductGridSkeleton, Sk } from './Skeleton';
 
 const PAGE_SIZE = 24;
 
@@ -49,6 +50,7 @@ const toggleIn = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : 
    pagination. `categoryId` scopes the API query to one collection. */
 export default function ShopGrid({ categoryId = '', note = '' }) {
   const [cats, setCats] = useState([]);
+  const [catsReady, setCatsReady] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -62,7 +64,8 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
 
   useEffect(() => {
     let alive = true;
-    getPublicCategories().then((c) => { if (alive) setCats(c || []); }).catch(() => {});
+    getPublicCategories().then((c) => { if (alive) setCats(c || []); }).catch(() => {})
+      .finally(() => { if (alive) setCatsReady(true); });
     return () => { alive = false; };
   }, []);
 
@@ -112,6 +115,7 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
 
   return (
     <div className="m-wrap m-section" style={{ paddingTop: 0 }} ref={topRef}>
+      {!catsReady ? <ChipsSkeleton /> : null}
       {cats.length > 0 && (
         <nav className="m-filterbar" aria-label="Collections">
           <Link className={`m-fchip ${!categoryId ? 'on' : ''}`} href="/shop" aria-current={!categoryId ? 'page' : undefined}>All</Link>
@@ -130,7 +134,9 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
       ) : null}
 
       <div className="m-toolbar">
-        <span className="count" aria-live="polite">{loading ? 'Loading…' : `${shown.length} fragrance${shown.length !== 1 ? 's' : ''}`}</span>
+        <span className="count" aria-live="polite">
+          {loading ? <><Sk w={104} h={12} inline /><span className="sr-only">Loading fragrances…</span></> : `${shown.length} fragrance${shown.length !== 1 ? 's' : ''}`}
+        </span>
         <div className="m-toolbar__r">
           <button type="button" className={`m-fchip ${showFilters || activeFilters ? 'on' : ''}`} aria-expanded={showFilters} aria-controls="m-shopfilters" onClick={() => setShowFilters((v) => !v)}>
             Filters{activeFilters ? ` (${activeFilters})` : ''}
@@ -175,11 +181,12 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
         </div>
       ) : null}
 
-      {loading ? (
-        <div className="m-pgrid">{Array.from({ length: 8 }).map((_, i) => <div className="m-skel" key={i} />)}</div>
+      {loading && !products.length ? (
+        <ProductGridSkeleton />
       ) : pageItems.length ? (
         <>
-          <div className="m-pgrid">{pageItems.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+          {/* A refetch keeps the current products on screen, dimmed. */}
+          <div className={`m-pgrid${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>{pageItems.map((p) => <ProductCard key={p.id} product={p} />)}</div>
           {pages > 1 ? <Pager page={current} pages={pages} onGo={goPage} /> : null}
         </>
       ) : (

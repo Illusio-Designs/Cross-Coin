@@ -40,7 +40,7 @@ export default async function MaisonJournal({ searchParams }) {
             <div className="m-jgrid">
               {posts.map((p) => (
                 <Link className="m-jcard" href={`/journal/${p.slug}`} key={p.id}>
-                  {p.thumbImage ? <SkImg className="m-jcard__img" src={ik(p.thumbImage, 700)} alt="" loading="lazy" /> : <span className="m-jcard__img" />}
+                  {p.thumbImage ? <SkImg frameClassName="m-jcard__img" src={ik(p.thumbImage, 600)} alt="" loading="lazy" /> : <span className="m-jcard__img" />}
                   <div className="m-jcard__b">
                     {p.category ? <span className="m-jcard__cat">{p.category}</span> : null}
                     <h2 className="m-jcard__t">{p.title}</h2>

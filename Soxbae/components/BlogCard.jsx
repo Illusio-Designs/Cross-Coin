@@ -1,18 +1,9 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 
-// Right-size ImageKit card images to an exact 16:9 (800x450), sharp and light
-// (same approach as the CrossCoin blog gallery). Non-ImageKit URLs pass through.
-function ikBlog(src) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io')) {
-    return `${src.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`;
-  }
-  return src;
-}
 
-// Shared Soxbae journal card — a 16:9 image (pre-cropped server-side, filling
-// the card uniformly) with a category tag tucked over it, a date, serif title
+// Shared Soxbae journal card — a 16:9 image (cropped to the box by CSS) with a category tag tucked over it, a date, serif title
 // and a read link. Used on the home journal strip and the full Journal page.
 export default function BlogCard({ post }) {
   if (!post) return null;
@@ -20,7 +11,8 @@ export default function BlogCard({ post }) {
     <Link href={`/journal/${post.slug}`} className="sx-jr-card">
       <div className="sx-jr-media">
         {(post.thumb || post.image)
-          ? <img src={ikBlog(post.thumb || post.image)} alt={post.title} loading="lazy" />
+          ? <ShimmerImg src={post.thumb || post.image} alt={post.title} width={800} widths={[400, 800]} sizes="(max-width: 560px) 100vw, (max-width: 860px) 50vw, 400px"
+              fallback={<span aria-hidden><Icon name="Sparkles" size={30} /></span>} />
           : <span aria-hidden><Icon name="Sparkles" size={30} /></span>}
         {post.category && <span className="sx-jr-tag">{post.category}</span>}
       </div>

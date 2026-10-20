@@ -1064,7 +1064,7 @@ export default function CartDrawer() {
                 {items.map((i) => (
                   <div className="cd-item" key={i.key}>
                     <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
-                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Footprints" size={26} />}
+                      {i.image ? <ShimmerImg src={i.image} alt="" width={200} fallback={<Icon name="Footprints" size={26} />} /> : <Icon name="Footprints" size={26} />}
                     </Link>
                     <div className="cd-item-main">
                       <div className="cd-item-top">
@@ -1294,7 +1294,7 @@ export default function CartDrawer() {
                             <div key={r.key} dir="ltr" style={{ flex: '0 0 auto', width: 230, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid var(--line-soft)', borderRadius: 12, padding: 8, boxShadow: 'var(--shadow-soft)' }}>
                               <div style={{ position: 'relative', width: 46, height: 46, borderRadius: 9, overflow: 'hidden', background: '#eef1f4', flexShrink: 0, display: 'grid', placeItems: 'center', color: 'var(--ink-soft)' }}>
                                 {r.image
-                                  ? <ShimmerImg src={r.image} alt={r.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ? <ShimmerImg src={r.image} alt={r.name} width={200} fallback={<Icon name="Footprints" size={18} />} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                   : <Icon name="Footprints" size={18} />}
                               </div>
                               <div style={{ minWidth: 0, flex: 1 }}>

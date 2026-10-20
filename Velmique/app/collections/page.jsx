@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getPublicCategories } from '@/lib/api/categories';
 import { absUrl, seoMeta } from '@/lib/site';
-import { ik } from '@/lib/imagekit';
+import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from '../_components/SkImg';
 
 export const revalidate = 300;
@@ -41,7 +41,16 @@ export default async function CollectionsIndex() {
             {collections.map((c, i) => (
               <Link key={c.id} href={`/collections/${c.slug}`} className={`m-colcard ${i === 0 && collections.length > 2 ? 'wide' : ''}`}>
                 <span className="m-colcard__img">
-                  {c.image ? <SkImg src={ik(c.image, i === 0 ? 1400 : 800)} alt="" loading={i < 2 ? 'eager' : 'lazy'} /> : null}
+                  {c.image ? (
+                    <SkImg
+                      src={ik(c.image, i === 0 ? 1600 : 800)}
+                      srcSet={ikSrcSet(c.image, i === 0 ? [800, 1200, 1600] : [600, 800, 1200])}
+                      sizes={i === 0 ? '(max-width: 1180px) 100vw, 1140px' : '(max-width: 860px) 100vw, 570px'}
+                      alt=""
+                      loading={i < 2 ? 'eager' : 'lazy'}
+                      fetchPriority={i === 0 ? 'high' : undefined}
+                    />
+                  ) : null}
                 </span>
                 <span className="m-colcard__shade" />
                 <span className="m-colcard__b">

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getProductBySlug } from '@/lib/api/products';
 import { ik } from '@/lib/imagekit';
+import SkImg from '../_components/SkImg';
+import { ProductGridSkeleton } from '../_components/Skeleton';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 const Heart = (
@@ -47,7 +49,7 @@ export default function WishlistClient() {
       </div>
 
       {wishlistLoading ? (
-        <p style={{ textAlign: 'center', color: 'var(--m-ink-soft)' }}>Loading your wishlist…</p>
+        <ProductGridSkeleton count={4} lines="name" button label="Loading your wishlist…" />
       ) : wishlist.length === 0 ? (
         <div className="m-wlempty">
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg>
@@ -60,7 +62,7 @@ export default function WishlistClient() {
             <article className="m-card" key={w.id}>
               <div className="m-card__fig">
                 <Link className="m-card__imglink" href={`/product/${w.slug}`} aria-label={w.name}>
-                  <span className="m-card__tile">{w.image ? <img src={ik(w.image, 600)} alt={w.name} loading="lazy" /> : null}</span>
+                  <span className="m-card__tile">{w.image ? <SkImg src={ik(w.image, 600)} alt={w.name} loading="lazy" /> : null}</span>
                   <span className="m-card__shade" />
                 </Link>
                 <button className="m-card__wish on" aria-label={`Remove ${w.name} from wishlist`} onClick={() => toggleWishlist(w)}>{Heart}</button>

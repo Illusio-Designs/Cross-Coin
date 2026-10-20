@@ -40,7 +40,7 @@ export default async function CollectionsPage() {
           {enriched.map((c, i) => (
             <Link href={`/collections/${c.slug}`} className="collection-card" key={c.slug}>
               {c.image
-                ? <ShimmerImg className="collection-card-img" src={c.image} alt={c.label} loading="lazy" />
+                ? <ShimmerImg className="collection-card-img" src={c.image} alt={c.label} width={600} widths={[400, 600, 900]} sizes="(max-width: 700px) 50vw, 33vw" />
                 : <span className="collection-card-fallback" aria-hidden><Icon name={c.icon || ICONS[i % ICONS.length]} size={76} /></span>}
               <div className="collection-card-overlay">
                 <div className="collection-card-text">

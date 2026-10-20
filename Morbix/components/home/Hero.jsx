@@ -3,16 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
-
-// Ask ImageKit for a sized, format-negotiated image instead of the full-res
-// original (keeps the hero light).
-function heroSrc(src, w = 1200) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-}
+import ShimmerImg from '@/components/ui/ShimmerImg';
 
 // Hero — "Deal Band + colourways" layout. The left band is driven by the backend
 // sliders (title/description/button cycle every 5s); the right shows shoppable
@@ -70,7 +61,8 @@ export default function Hero({ features = [], slides = [], products = [] }) {
               <Link key={p.uid ?? p.id} href={href} className="heroc-pc">
                 <span className="heroc-ph">
                   {p.image
-                    ? <img src={heroSrc(p.image, 420)} alt={p.name} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'auto'} decoding="async" />
+                    ? <ShimmerImg src={p.image} alt={p.name} width={600} widths={[300, 450, 600]} sizes="(max-width: 820px) 45vw, 260px"
+                        priority={i === 0} fallback={<Icon name="Footprints" size={30} />} />
                     : <Icon name="Footprints" size={30} />}
                   {off > 0 && <span className="heroc-off">{off}% OFF</span>}
                 </span>

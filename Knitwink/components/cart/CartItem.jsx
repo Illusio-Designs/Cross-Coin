@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { GatedImage } from '@/components/ui/GatedImage';
 import Link from 'next/link';
 import { Minus, Plus, X } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
@@ -18,7 +18,7 @@ export function CartItem({ item }) {
   return (
     <li className="flex gap-4 border-b border-gray-200 py-4 last:border-0">
       <Link href={ROUTES.product(item.handle)} className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-        <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+        <GatedImage src={item.imageUrl} alt={item.name} fill sizes="64px" className="object-cover" />
       </Link>
 
       <div className="flex flex-1 flex-col gap-1">

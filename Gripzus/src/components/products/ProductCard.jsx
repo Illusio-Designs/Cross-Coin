@@ -4,6 +4,7 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { resolveVariationId } from '../../services/products';
 import ReviewBadge from './ReviewBadge';
+import GzImage from '../common/GzImage';
 
 /* Gripzus ProductCard — "GROUND INDEX" architectural gallery card.
    A 1px-framed image (no shadow, square corners), square black index/discount
@@ -63,7 +64,7 @@ export default function ProductCard({ product }) {
       {/* ── Image — 1px architectural frame on warm paper ─────────── */}
       <div className="relative border border-line overflow-hidden bg-paper-warm">
         <Link href={href} className="relative block aspect-[4/5] overflow-hidden">
-          <img src={primary} alt={name} loading="lazy"
+          <GzImage src={primary} alt={name} w={600} widths={[300, 600]} sizes="(max-width: 767px) 50vw, (max-width: 1279px) 25vw, 20vw" fallback={FALLBACK_IMG}
                className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]" />
           {!inStock && (
             <div className="absolute inset-0 bg-paper/70 backdrop-blur-[1px] flex items-center justify-center">

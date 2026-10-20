@@ -858,7 +858,7 @@ export default function CartDrawer() {
                 {items.map((i) => (
                   <div className="cd-item" key={i.key}>
                     <Link href={i.slug ? `/products/${i.slug}` : '/products'} className="cd-thumb" onClick={closeCart} aria-hidden>
-                      {i.image ? <ShimmerImg src={i.image} alt="" /> : <Icon name="Sparkles" size={26} />}
+                      {i.image ? <ShimmerImg src={i.image} alt="" width={200} fallback={<Icon name="Sparkles" size={26} />} /> : <Icon name="Sparkles" size={26} />}
                     </Link>
                     <div className="cd-item-main">
                       <div className="cd-item-top">
@@ -1032,8 +1032,8 @@ export default function CartDrawer() {
                         key={p.id}
                         style={{ flex: '0 0 128px', width: 128, border: '1px solid var(--line-soft, #e6e6ee)', borderRadius: 12, overflow: 'hidden', background: 'var(--surface, #fff)', display: 'flex', flexDirection: 'column' }}
                       >
-                        <Link href={p.slug ? `/products/${p.slug}` : '/products'} onClick={closeCart} style={{ display: 'block', aspectRatio: '1 / 1', overflow: 'hidden', background: 'var(--line-soft, #f2f2f7)' }}>
-                          {p.image ? <ShimmerImg src={p.image} alt={p.name} /> : <Icon name="Sparkles" size={24} />}
+                        <Link href={p.slug ? `/products/${p.slug}` : '/products'} onClick={closeCart} style={{ display: 'block', position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', background: 'var(--line-soft, #f2f2f7)' }}>
+                          {p.image ? <ShimmerImg src={p.image} alt={p.name} width={300} style={{ width: '100%', height: '100%', objectFit: 'cover' }} fallback={<Icon name="Sparkles" size={24} />} /> : <Icon name="Sparkles" size={24} />}
                         </Link>
                         <div style={{ padding: '7px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, flex: 1 }}>
                           <Link href={p.slug ? `/products/${p.slug}` : '/products'} onClick={closeCart} style={{ fontSize: 12, lineHeight: 1.25, color: 'var(--ink, #1a1a2e)', textDecoration: 'none', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

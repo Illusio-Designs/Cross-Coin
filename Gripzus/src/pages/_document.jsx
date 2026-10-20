@@ -7,6 +7,11 @@ export default function Document() {
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
+        {/* No half-drawn images: <img class="gzimg"> stays hidden until fully
+            loaded + decoded. This reveals server-rendered images that finish
+            before React hydrates (the hero / product main image); after that
+            components/common/GzImage.jsx takes over. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.classList||!t.classList.contains('gzimg'))return;var d=function(){t.classList.add('is-on')};if(t.decode){t.decode().then(d,d)}else{d()}},true);" }} />
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <link rel="icon" href="/Gripzusfavicon.jpeg" />

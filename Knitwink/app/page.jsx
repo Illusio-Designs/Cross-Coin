@@ -11,6 +11,7 @@ import { getPublicCategories } from '@/lib/api/categories'
 import { getAllReviews } from '@/lib/api/reviews'
 import { getPosts } from '@/lib/api/blog'
 import SeoWrapper from '@/components/SeoWrapper'
+import { ikUrl, ikSrcSet } from '@/lib/image'
 import { buildMetadata, getSeoOrg } from '@/lib/api/seo'
 
 // Regenerate at most every 5 minutes (ISR). Combined with the server-cached
@@ -60,9 +61,9 @@ export default async function HomePage() {
   ])
 
   // Preload the first slide's hero image (the LCP element). HeroBanner renders
-  // it via ShimmerImg as a plain <img src={slide.image}> with NO ImageKit
-  // transform, and its initial (server/desktop) src is always slide.image, so
-  // we preload that exact raw URL. Rendering <link rel="preload"> here lets
+  // it via ShimmerImg with the ImageKit w-1600 transform + an 800/1200/1600
+  // srcSet (initial server/desktop src is always slide.image), so we preload
+  // that exact URL set. Rendering <link rel="preload"> here lets
   // Next hoist it into <head>, giving the browser the LCP URL in the initial
   // HTML instead of waiting for the client hero to hydrate.
   const heroImage = slides[0]?.image
@@ -94,7 +95,8 @@ export default async function HomePage() {
         <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
       ))}
       {heroImage && (
-        <link rel="preload" as="image" href={heroImage} fetchPriority="high" />
+        // Same URL + srcSet HeroBanner requests (ImageKit w-1600 / 800-1600 set).
+        <link rel="preload" as="image" href={ikUrl(heroImage, 1600)} imageSrcSet={ikSrcSet(heroImage, [800, 1200, 1600])} imageSizes="100vw" fetchPriority="high" />
       )}
       {/* Visually-hidden h1 — every page needs exactly one h1 for axe-core
           and screen readers. The hero design has no visible heading, so

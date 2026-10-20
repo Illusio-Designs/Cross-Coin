@@ -6,8 +6,10 @@ import { getSeoOrg } from '@/lib/api/seo-org';
 import { richHtml } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, seoMeta } from '@/lib/site';
 import { ik } from '@/lib/imagekit';
-import ProductCard from './_components/ProductCard';
-import ReviewRow from './_components/ReviewRow';
+import ProductCard from '../_components/ProductCard';
+import ReviewRow from '../_components/ReviewRow';
+import SkImg from '../_components/SkImg';
+import { HeroCopy, FEATURED_HEAD, NOTES_HEAD } from './homeCopy';
 
 // Dashboard-controlled SEO ('home') over the page's own copy; the seo-org
 // description / OG image fill in when the home row is empty.
@@ -98,20 +100,12 @@ export default async function MaisonHome() {
       {/* Hero */}
       <section className="m-hero">
         <div className="m-wrap m-hero__grid">
-          <div>
-            <span className="m-eyebrow">Indian craftsmanship · global soul</span>
-            <h1>Wear Your<br /><em>Presence.</em></h1>
-            <p className="m-hero__lede">Refined, handcrafted fragrances for moments that stay with you — long after you&rsquo;ve left the room.</p>
-            <div className="m-hero__cta">
-              <Link className="m-btn m-btn--fill" href="#m-featured">Discover the collection <span className="m-arrow">→</span></Link>
-              <Link className="m-btn m-btn--on-band" href="#m-about">Our story</Link>
-            </div>
-          </div>
+          <HeroCopy />
           <div className="m-hero__figure m-hero__figure--card">
             {best ? (
               <div className="m-herocard">
                 <span className="m-herocard__no1">★ #1 Bestseller</span>
-                <ProductCard product={best} />
+                <ProductCard product={best} priority />
               </div>
             ) : null}
           </div>
@@ -121,11 +115,7 @@ export default async function MaisonHome() {
 
       {/* Featured */}
       <section className="m-section" id="m-featured"><div className="m-wrap">
-        <div className="m-shead">
-          <span className="m-eyebrow">Featured fragrances</span>
-          <h2>Signature Scents for Every You.</h2>
-          <p>Distinctly crafted. Unmistakably you.</p>
-        </div>
+        {FEATURED_HEAD}
         {featured.length ? (
           <div className="m-pgrid">{featured.map((p) => <ProductCard key={p.id} product={p} />)}</div>
         ) : (
@@ -136,16 +126,12 @@ export default async function MaisonHome() {
       {/* Notes — fragrance note attributes with their images */}
       {homeNotes.length ? (
         <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
-          <div className="m-shead">
-            <span className="m-eyebrow">Inside our fragrances</span>
-            <h2>Notes You&rsquo;ll Fall For.</h2>
-            <p>The real ingredients behind every Velmique scent.</p>
-          </div>
+          {NOTES_HEAD}
           <div className="m-pnotegrid">
             {homeNotes.map((n, i) => (
               <Link className="m-pn m-pn--link" key={n.name} href={`/shop?note=${encodeURIComponent(n.name)}`} aria-label={`Shop fragrances with ${n.name}`}>
                 <div className="orb" style={n.image ? undefined : { background: `radial-gradient(circle at 34% 28%,#ffffffcc,${NOTE_TINTS[i % NOTE_TINTS.length]})` }}>
-                  {n.image ? <img src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
+                  {n.image ? <SkImg src={ik(n.image, 200)} alt={n.name} loading="lazy" /> : null}
                 </div>
                 <b>{n.name}</b>
                 <span className="m-pn__go">Shop this note →</span>

@@ -37,7 +37,7 @@ export default async function JournalArticlePage({ params }) {
         <h1 className="article-title">{post.title}</h1>
 
         {post.image && (
-          <ReservedImage className="article-hero" src={post.image} alt={post.title} />
+          <ReservedImage className="article-hero" src={post.image} alt={post.title} width={1400} priority />
         )}
 
         <div className="article-body">

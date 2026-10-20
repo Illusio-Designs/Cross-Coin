@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
+import SkImg from './SkImg';
+import { BagSkeleton, Sk } from './Skeleton';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 
@@ -13,7 +15,7 @@ const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
    this view lists the bag and opens that drawer on its checkout step.
    `autoCheckout` (the /checkout route) opens it straight away. */
 export default function BagView({ autoCheckout = false }) {
-  const { cart, cartTotal, cartCount, updateQuantity, removeFromCart, openCheckout } = useStore();
+  const { cart, cartHydrated, cartTotal, cartCount, updateQuantity, removeFromCart, openCheckout } = useStore();
   const opened = useRef(false);
 
   // /checkout: open the drawer on delivery & payment once the saved bag has
@@ -31,11 +33,16 @@ export default function BagView({ autoCheckout = false }) {
       <section className="m-wrap m-ph">
         <span className="m-eyebrow">{autoCheckout ? 'Checkout' : 'Your selection'}</span>
         <h1>{autoCheckout ? 'Almost Yours.' : 'The Bag.'}</h1>
-        {cart.length ? <p>{cartCount} item{cartCount === 1 ? '' : 's'} · {inr(cartTotal)}</p> : null}
+        {cart.length ? <p>{cartCount} item{cartCount === 1 ? '' : 's'} · {inr(cartTotal)}</p>
+          : !cartHydrated ? <Sk w={120} h={14} style={{ marginTop: 18 }} /> : null}
       </section>
 
       <div className="m-wrap m-section" style={{ paddingTop: 0 }}>
-        {cart.length === 0 ? (
+        {/* The saved bag is restored from this browser after mount — show its
+            shape until then instead of flashing "Your bag is empty". */}
+        {!cartHydrated && cart.length === 0 ? (
+          <BagSkeleton />
+        ) : cart.length === 0 ? (
           <div className="m-empty">
             <h3>Your bag is empty</h3>
             <p style={{ marginBottom: 20 }}>Discover a scent worth remembering.</p>
@@ -46,7 +53,7 @@ export default function BagView({ autoCheckout = false }) {
             <ul className="m-crows" aria-label="Items in your bag">
               {cart.map((it) => {
                 const href = it.slug ? `/product/${it.slug}` : null;
-                const img = it.image ? <img className="m-crow__img" src={ik(it.image, 200)} alt="" /> : <span className="m-crow__img" />;
+                const img = it.image ? <SkImg frameClassName="m-crow__img" src={ik(it.image, 200)} alt="" loading="lazy" /> : <span className="m-crow__img" />;
                 return (
                   <li className="m-crow" key={`${it.id}-${it.size}`}>
                     <div style={{ gridArea: 'img' }}>{href ? <Link href={href} tabIndex={-1} aria-hidden="true">{img}</Link> : img}</div>

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { seoMeta } from '@/lib/site';
 import TrackClient from './TrackClient';
+import { PageHeadSkeleton, TrackFormSkeleton } from '../_components/Skeleton';
 
 export const revalidate = 300;
 
@@ -14,7 +15,12 @@ export async function generateMetadata() {
 
 export default function TrackOrderPage() {
   return (
-    <Suspense fallback={<div className="m-wrap m-ph"><span className="m-eyebrow">Order status</span><h1>Track Your Order.</h1></div>}>
+    <Suspense fallback={(
+      <>
+        <PageHeadSkeleton eyebrow="Order status" title="Track Your Order." lede="Enter your order number to see live shipment progress." />
+        <div className="m-wrap m-section m-track" style={{ paddingTop: 0 }}><TrackFormSkeleton /></div>
+      </>
+    )}>
       <TrackClient />
     </Suspense>
   );

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getBlogBySlug, getBlogPosts } from '@/lib/api';
 
 export const revalidate = 300;
@@ -36,7 +37,7 @@ export default async function JournalArticlePage({ params }) {
 
         {post.image && (
           <div className="article-hero">
-            <img src={post.image} alt={post.title} />
+            <ShimmerImg src={post.image} alt={post.title} width={1400} priority />
           </div>
         )}
 

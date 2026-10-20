@@ -244,7 +244,7 @@ export function StoreProvider({ children }) {
   // Single memo'd value — emits a new object reference only when one of
   // the underlying inputs changes, instead of on every render.
   const value = useMemo(() => ({
-    cart, wishlist, cartOpen,
+    cart, cartHydrated, wishlist, cartOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,
@@ -252,7 +252,7 @@ export function StoreProvider({ children }) {
     checkoutRequested, openCheckout, consumeCheckoutRequest,
     cartTotal, cartCount, clearCart, restoreCart,
   }), [
-    cart, wishlist, cartOpen,
+    cart, cartHydrated, wishlist, cartOpen,
     wishlistLoading, wishlistSyncing,
     addToCart, removeFromCart, updateQuantity,
     toggleWishlist, isWishlisted, updateWishlistItem, clearWishlist, refreshWishlist,

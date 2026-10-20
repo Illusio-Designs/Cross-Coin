@@ -750,8 +750,9 @@ button { font-family: inherit; cursor: pointer; }
 .blog-card:hover { box-shadow: var(--shadow-soft); transform: translateY(-4px); border-color: var(--line); }
 .blog-media { aspect-ratio: 16 / 9; display: grid; place-items: center; background: #f1f4f6; color: var(--teal-600); overflow: hidden; }
 .blog-media img { width: 100%; height: 100%; object-fit: cover; }
-.article-hero { margin: 22px 0 10px; border-radius: var(--r-lg); overflow: hidden; background: #f1f4f6; }
-.article-hero img { width: 100%; height: auto; object-fit: contain; display: block; }
+/* Fixed 16:9 box so the cover never shifts the article; the whole picture shows (contain). */
+.article-hero { position: relative; aspect-ratio: 16 / 9; margin: 22px 0 10px; border-radius: var(--r-lg); overflow: hidden; background: #f1f4f6; }
+.article-hero img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .blog-card:hover .blog-media { color: var(--navy); }
 .blog-body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 .blog-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
@@ -1012,9 +1013,15 @@ button { font-family: inherit; cursor: pointer; }
 .sk-fill { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }
 .sk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sk-stack { display: grid; gap: 8px; align-content: start; }
-.shimmer-img-skeleton { position: absolute; inset: 0; display: block; border-radius: inherit; z-index: 0; }
-.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .3s ease; }
+/* ShimmerImg: the picture stays hidden until fully downloaded + decoded (no
+   top-half-first painting), then fades in. Cached images skip the fade. */
+.shimmer-img-skeleton { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: inherit; z-index: 0; }
+:where(.shimmer-img) { position: relative; }
+.shimmer-img { z-index: 1; opacity: 0; }
 .shimmer-img.is-loaded { opacity: 1; }
+.shimmer-img.is-fading { transition: opacity .18s ease; }
+/* Image boxes the skeleton overlay positions against */
+.cd-thumb, .pdp-thumb, .excl-thumb, .cond-circle, .pdp-sticky-thumb { position: relative; }
 
 /* Skeleton versions of real cards keep the card's own box, minus hover lift */
 .pcard--sk, .pcard--sk:hover { transform: none; box-shadow: none; border-color: var(--line-soft); }
@@ -1031,11 +1038,6 @@ button { font-family: inherit; cursor: pointer; }
 .review--sk { flex: 0 0 340px; max-width: 100%; }
 .sk-rv-row { display: flex; gap: 16px; overflow: hidden; padding: 4px 0 14px; }
 .order-row--sk > div { gap: 7px; }
-.article-hero--sk { aspect-ratio: 16 / 9; position: relative; }
-.article-hero-img { position: relative; }
-.article-hero-img.is-pending { aspect-ratio: 16 / 9; }
-.article-hero-img.is-pending img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
-.article-hero-img img { transition: opacity .3s ease; }
 
 /* Refreshing with content already on screen: keep it, dimmed, instead of
    flashing skeletons. */
@@ -1043,7 +1045,7 @@ button { font-family: inherit; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .sk, .shimmer { animation: none; background-image: none; }
-  .sk-dim { transition: none; }
+  .sk-dim, .shimmer-img.is-fading { transition: none; }
 }
 
 /* ============================================================================
@@ -1507,6 +1509,7 @@ button { font-family: inherit; cursor: pointer; }
 .pdp-sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 58; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px max(20px, calc((100vw - var(--maxw)) / 2)) calc(10px + env(safe-area-inset-bottom, 0px)); padding-right: max(84px, calc((100vw - var(--maxw)) / 2 + 64px)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -10px 30px -16px rgba(27,35,64,.25); transform: translateY(110%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
 .pdp-sticky.show { transform: none; visibility: visible; }
 .pdp-sticky-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pdp-sticky-thumb { width: 46px; height: 46px; flex-shrink: 0; border-radius: 10px; overflow: hidden; }
 .pdp-sticky-info img { width: 46px; height: 46px; object-fit: contain; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); flex-shrink: 0; }
 .pdp-sticky-info > div { min-width: 0; display: flex; flex-direction: column; }
 .pdp-sticky-info b { font-weight: 800; font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

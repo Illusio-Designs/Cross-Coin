@@ -28,6 +28,7 @@ export function ProductInfo({ product, onColorChange }) {
   const [showChart, setShowChart] = useState(false)
   const hasSizeGuide = SIZE_GUIDE.rows.length > 0
   const [reviewStats, setReviewStats] = useState({ average: 0, count: 0 })
+  const [reviewsLoading, setReviewsLoading] = useState(true)
 
   // Delivery / pincode serviceability check.
   const [pincode, setPincode] = useState('')
@@ -67,6 +68,7 @@ export function ProductInfo({ product, onColorChange }) {
         setReviewStats({ average: Number(average) || 0, count })
       })
       .catch(() => {})
+      .finally(() => { if (active) setReviewsLoading(false) })
     return () => {
       active = false
     }
@@ -231,7 +233,9 @@ export function ProductInfo({ product, onColorChange }) {
 
         {/* Rating + SKU row */}
         <div className="mt-2 flex items-center gap-3">
-          {reviewStats.count > 0 ? (
+          {reviewsLoading && reviewStats.count === 0 ? (
+            <span role="status" aria-busy="true"><span className="sr-only">Loading reviews…</span><span className="sk inline-block h-3 w-28 rounded align-middle" aria-hidden="true" /></span>
+          ) : reviewStats.count > 0 ? (
             <div className="flex items-center gap-1">
               {[1,2,3,4,5].map(i => (
                 <Star

@@ -4,6 +4,7 @@ import ReviewBadge from '@/components/product/ReviewBadge';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 
@@ -123,14 +124,15 @@ export default function ExclusiveSection({ products = [] }) {
                 {gallery.map((src, i) => (
                   <button key={src + i} type="button" data-thumb={i} className={`excl-thumb${i === thumb ? ' active' : ''}`}
                     onClick={() => setThumb(i)} aria-label={`View image ${i + 1}`}>
-                    <img src={src} alt="" loading="lazy" />
+                    <ShimmerImg src={src} alt="" width={200} />
                   </button>
                 ))}
               </div>
             )}
             <div className="excl-main" ref={mainRef}>
               {mainSrc
-                ? <img src={mainSrc} alt={product.name} />
+                ? <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]} sizes="(max-width: 760px) 100vw, 560px"
+                    fallback={<span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>} />
                 : <span aria-hidden style={{ color: '#c3ccd2' }}><Icon name="Footprints" size={64} /></span>}
               {product.badge && <span className={`pcard-badge b-${product.badgeKey || 'default'}`} style={{ position: 'absolute', top: 14, left: 14 }}>{product.badge}</span>}
               <ReviewBadge rating={product.rating} count={product.reviews} style={{ left: 12, bottom: 12 }} />

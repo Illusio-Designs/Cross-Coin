@@ -943,10 +943,18 @@ button { font-family: inherit; cursor: pointer; }
   .sk-refreshing { transition: none; }
 }
 .shimmer-img-skeleton { position: absolute; inset: 0; display: block; border-radius: inherit; z-index: 0; }
-.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .3s ease; }
+/* Never paint a half-downloaded photo: hidden until loaded + decoded, then a
+   short fade (no fade when it was already cached). */
+.shimmer-img { position: relative; z-index: 1; opacity: 0; transition: opacity .18s ease; }
 .shimmer-img.is-loaded { opacity: 1; }
+.shimmer-img.is-instant { transition: none; }
+/* hero slides: same rule — the active slide shows only once decoded */
+.vq-hero-img[data-sk-img]:not(.is-loaded) { opacity: 0; }
+.cd-thumb, .excl-thumb, .excl-switch-thumb, .pdp-thumb, .order-item-thumb { position: relative; }
+.excl-main > .shimmer-img, .pdp-main-zoom > .shimmer-img { display: block; }
+@media (prefers-reduced-motion: reduce) { .shimmer-img { transition: none; } }
 /* ShimmerImg inside boxes whose photo is absolutely positioned */
-.collection-card .shimmer-img { position: absolute; transition: opacity .3s ease, transform .45s ease; }
+.collection-card .shimmer-img { position: absolute; transition: opacity .18s ease, transform .45s ease; }
 
 /* ============================================================================
    HEADER ICON PILLS

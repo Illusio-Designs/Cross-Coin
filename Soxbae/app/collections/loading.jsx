@@ -1,12 +1,14 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import { CollectionGridSkeleton } from '@/components/ui/Skeleton';
 
 export default function CollectionsLoading() {
   return (
     <div className="container" style={{ paddingTop: 34, paddingBottom: 50 }}>
-      <Skeleton width="40%" height={38} />
-      <div className="cat-grid" style={{ marginTop: 26 }}>
-        {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={200} radius={24} />)}
+      <div className="page-hero">
+        <span className="eyebrow">Collections</span>
+        <h1>Shop by collection</h1>
+        <p>Find the right pair for every kind of movement.</p>
       </div>
+      <CollectionGridSkeleton count={8} style={{ marginTop: 26 }} />
     </div>
   );
 }

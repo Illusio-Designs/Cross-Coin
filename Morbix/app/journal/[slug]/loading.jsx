@@ -15,7 +15,7 @@ export default function ArticleLoading() {
           <Skeleton width="70%" height={36} radius={10} />
           <Skeleton width="45%" height={36} radius={10} />
         </div>
-        <div className="article-hero article-hero--sk" aria-hidden="true"><span className="sk sk-fill" /></div>
+        <div className="article-hero" aria-hidden="true"><span className="sk sk-fill" /></div>
         <div className="article-body" aria-hidden="true" style={{ marginTop: 24 }}>
           <TextSkeleton lines={7} label={null} />
         </div>

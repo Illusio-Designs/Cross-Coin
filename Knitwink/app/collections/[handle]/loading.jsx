@@ -1,38 +1,26 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import Link from 'next/link';
+import { ProductGridSkeleton, Skeleton } from '@/components/ui/Skeleton';
 
+// Collection page: the dark hero (crumbs stay real), then the product grid in
+// the page's own columns.
 export default function CollectionLoading() {
   return (
-    <div className="mx-auto max-w-site px-6 md:px-10 lg:px-16">
-      {/* Header skeleton */}
-      <div className="flex flex-col items-center gap-3 pb-8 pt-16">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-5 w-96" />
-        <Skeleton className="h-4 w-20" />
-      </div>
-
-      {/* Controls skeleton */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-6">
-        <div className="hidden gap-2 md:flex">
-          {Array.from({ length: 5 }).map((_, i) =>
-          <Skeleton key={i} className="h-8 w-20 rounded-full" />
-          )}
+    <>
+      <section className="relative overflow-hidden bg-brand-black min-h-[200px] sm:min-h-[260px] md:min-h-[320px]">
+        <div className="relative flex h-full min-h-[200px] sm:min-h-[260px] md:min-h-[320px] flex-col items-start justify-end px-4 pt-32 pb-8 sm:px-6 sm:pt-36 sm:pb-10 md:px-10 md:pt-40">
+          <nav aria-label="Breadcrumb" className="mb-2 text-xs text-white/60">
+            <Link href="/" className="hover:text-white">Home</Link>
+            <span className="mx-2">/</span>
+            <Link href="/collections" className="hover:text-white">Collections</Link>
+          </nav>
+          <Skeleton className="sk--dark h-9 w-56 max-w-[80%]" />
+          <Skeleton className="sk--dark mt-3 h-3.5 w-80 max-w-[90%]" />
+          <Skeleton className="sk--dark mt-3 h-3 w-16" />
         </div>
-        <Skeleton className="h-8 w-28 rounded-full md:hidden" />
-        <Skeleton className="h-5 w-32" />
-      </div>
-
-      {/* Grid skeleton — inlined since components/collection/ProductGrid
-          doesn't exist. Mirrors ProductCard footprint: square image bed +
-          two caption lines. */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-8 py-8 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-3">
-            <Skeleton className="aspect-square w-full rounded-xl" />
-            <Skeleton className="h-3 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        ))}
-      </div>
-    </div>);
-
+      </section>
+      <section className="mx-auto max-w-site px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+        <ProductGridSkeleton count={8} className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4" />
+      </section>
+    </>
+  );
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../../components/test/TestLayout';
 import { fetchBlog } from '../../../components/test/real';
-import { toast, Sk, SkBusy, TextSkeleton } from '../../../components/test/ui';
+import { toast, Sk, SkBusy, TextSkeleton, Thumb } from '../../../components/test/ui';
 import { richHtml } from '../../../utils/sanitizeHtml';
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (_) { return ''; } };
@@ -83,7 +83,7 @@ export default function TestBlog({ preview = true }) {
                   <button className={`artbtn${marked ? ' on' : ''}`} onClick={bookmark}>{marked ? '★' : '☆'} {marked ? 'Saved' : 'Bookmark'}</button>
                 </div>
 
-                {post.img && <div className="arthero"><img src={post.img} alt={post.title} /></div>}
+                {post.img && <div className="arthero"><Thumb src={post.img} alt={post.title} w={1400} priority /></div>}
 
                 {toc.length > 1 && (
                   <nav className="arttoc">

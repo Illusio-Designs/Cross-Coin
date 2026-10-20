@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import GzImage from '../common/GzImage';
+import { Sk, SkBusy } from '../common/Skeleton';
+import { ikw, ikSrcSet } from '../../utils/imagekit';
 
 // Ask ImageKit for a sized, format-negotiated hero image instead of the
 // full-resolution original (big LCP win on the largest image on the page).
-// Only rewrites ImageKit URLs that carry no existing transform, so any crop
-// the backend already applied is left exactly as-is.
-export function heroSrc(src) {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-1600,q-78,f-auto`;
-  }
-  return src;
-}
+// Width-only (whole picture, any existing tr= replaced). Desktop gets a
+// 1200/1600/2000 srcSet at 100vw; a slide's mobile banner gets 800 (1200 @2x).
+// Shared with the <link rel=preload> in pages/index.jsx so the hero is
+// downloaded exactly once.
+export const HERO_WIDTHS = [1200, 1600, 2000];
+export const HERO_MOBILE_WIDTHS = [800, 1200];
+export function heroSrc(src) { return ikw(src, 1600); }
+export function heroSrcSet(src) { return ikSrcSet(src, HERO_WIDTHS); }
+export function heroMobileSrc(src) { return ikw(src, 800); }
+export function heroMobileSrcSet(src) { return ikSrcSet(src, HERO_MOBILE_WIDTHS); }
 
 /* Gripzus hero — a full-bleed image with the content overlaid bottom-left:
    an index kicker, an oversized word-reveal headline, a short line and the
@@ -22,6 +26,7 @@ export function heroSrc(src) {
 
 export default function HeroBanner({ slides = [] }) {
   const [current, setCurrent] = useState(0);
+  const [firstReady, setFirstReady] = useState(false);
   const has = slides.length > 0;
   const total = slides.length || 1;
   const go = (n) => setCurrent((c) => (n + total) % total);
@@ -36,28 +41,19 @@ export default function HeroBanner({ slides = [] }) {
   if (!has) {
     return (
       <section className="relative w-full overflow-hidden bg-paper-warm">
-        <div className="relative aspect-[4/5] md:aspect-[16/9] w-full">
+        <SkBusy label="Loading banner…" className="relative aspect-[4/5] md:aspect-[16/9] w-full">
           <div className="absolute inset-0 flex items-end">
             <div className="wrap w-full pb-14 md:pb-20">
               <div className="max-w-2xl">
-                <div className="gz-sk h-3 w-40 mb-6" />
-                <div className="gz-sk h-14 md:h-[4.5rem] w-4/5 mb-4" />
-                <div className="gz-sk h-14 md:h-[4.5rem] w-3/5 mb-7" />
-                <div className="gz-sk h-4 w-64 mb-8" />
-                <div className="gz-sk h-12 w-48" />
+                <Sk className="h-3 w-40 mb-6" />
+                <Sk className="h-14 md:h-[4.5rem] w-4/5 mb-4" />
+                <Sk className="h-14 md:h-[4.5rem] w-3/5 mb-7" />
+                <Sk className="h-4 w-64 mb-8" />
+                <Sk className="h-12 w-48" />
               </div>
             </div>
           </div>
-        </div>
-        <style jsx>{`
-          .gz-sk {
-            background: linear-gradient(100deg, var(--paper-warm) 20%, var(--paper-deep) 40%, var(--paper-warm) 60%);
-            background-size: 200% 100%;
-            animation: gzShimmer 1.4s ease-in-out infinite;
-          }
-          @keyframes gzShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-          @media (prefers-reduced-motion: reduce) { .gz-sk { animation: none; } }
-        `}</style>
+        </SkBusy>
       </section>
     );
   }
@@ -72,12 +68,16 @@ export default function HeroBanner({ slides = [] }) {
         {/* Crossfading images */}
         {has ? slides.map((sl, i) => (
           <picture key={sl.id ?? i} style={{ display: 'contents' }}>
-            {sl.mobileImage && <source media="(max-width: 767px)" srcSet={sl.mobileImage} />}
-            <img src={heroSrc(sl.image)} alt={sl.title || 'Gripzus'} loading={i === 0 ? 'eager' : 'lazy'}
-              fetchPriority={i === 0 ? 'high' : 'auto'} decoding="async"
+            {sl.mobileImage && <source media="(max-width: 767px)" srcSet={heroMobileSrcSet(sl.mobileImage) || heroMobileSrc(sl.mobileImage)} sizes="100vw" />}
+            <GzImage src={sl.image} w={1600} widths={HERO_WIDTHS} sizes="100vw" alt={sl.title || 'Gripzus'}
+              priority={i === 0} fade={false} onReady={i === 0 ? () => setFirstReady(true) : undefined}
               className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-[cubic-bezier(.22,1,.36,1)] ${i === current ? 'opacity-100' : 'opacity-0'}`} />
           </picture>
-        )) : <div className="absolute inset-0 bg-paper-deep animate-pulse" />}
+        )) : null}
+        {/* Shimmer under the first slide until it has fully loaded + decoded
+            (the <picture> wrappers are display:contents, so the box itself
+            carries it). Never a half-drawn banner. */}
+        {!firstReady && <Sk className="sk-fill" style={{ zIndex: 0 }} />}
 
         {/* Scrim for legible overlay text */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10 pointer-events-none" />

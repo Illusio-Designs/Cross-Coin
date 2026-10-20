@@ -402,9 +402,9 @@ export function AuthCardSkeleton({ fields = 1, check = false }) {
 }
 
 /* ── Policy / long-form prose (.m-prose) ── */
-export function ProseSkeleton({ paragraphs = 4 }) {
+export function ProseSkeleton({ paragraphs = 4, className = 'm-prose' }) {
   return (
-    <SkRegion label="Loading…" className="m-prose">
+    <SkRegion label="Loading…" className={className}>
       <div aria-hidden="true">
         {Array.from({ length: paragraphs }).map((_, p) => (
           <div key={p} style={{ display: 'grid', gap: 12, marginBottom: 30 }}>
@@ -413,6 +413,47 @@ export function ProseSkeleton({ paragraphs = 4 }) {
           </div>
         ))}
       </div>
+    </SkRegion>
+  );
+}
+
+/* ── Returns & refunds: request list body, and the whole page ── */
+export function ReturnsBodySkeleton() {
+  return (
+    <>
+      <h2 className="m-card-h" style={{ margin: '26px 0 14px' }}>Request a return</h2>
+      <OrderRowsSkeleton count={2} label="Loading your returns…" />
+    </>
+  );
+}
+
+export function ReturnsSkeleton() {
+  return (
+    <>
+      <PageHeadSkeleton eyebrow="Account · Returns" title={<>Returns &amp; Refunds.</>} lede="Request a return within 7 days of delivery and follow your refund here." />
+      <div className="m-wrap m-section m-narrow" style={{ paddingTop: 0 }}>
+        <ReturnsBodySkeleton />
+      </div>
+    </>
+  );
+}
+
+/* ── Search box (.m-searchform) for the search page shell ── */
+export function SearchFormSkeleton() {
+  return (
+    <SkRegion label="Loading search…" className="m-searchform">
+      <Sk h={51} r={8} style={{ flex: 1, minWidth: 0 }} />
+      <Sk w={120} h={52} r={8} />
+    </SkRegion>
+  );
+}
+
+/* ── Track form card (.m-trackform) for the track page shell ── */
+export function TrackFormSkeleton() {
+  return (
+    <SkRegion label="Loading order tracking…" className="m-trackform">
+      <Sk h={51} r={8} style={{ flex: 1, minWidth: 200 }} />
+      <Sk w={104} h={52} r={8} />
     </SkRegion>
   );
 }

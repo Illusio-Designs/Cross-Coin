@@ -25,7 +25,8 @@ export default function ProductCard({ product }) {
     <article className="sxp">
       <div className="sxp-media">
         {image
-          ? <ShimmerImg src={image} alt={name} loading="lazy" />
+          ? <ShimmerImg src={image} alt={name} width={600} widths={[300, 450, 600]} sizes="(max-width: 1000px) 50vw, 300px"
+              fallback={<span className="sxp-ph" aria-hidden><Icon name="Footprints" size={40} /></span>} />
           : <span className="sxp-ph" aria-hidden><Icon name="Footprints" size={40} /></span>}
 
         <Link href={href} className="sxp-link" aria-label={name} />
