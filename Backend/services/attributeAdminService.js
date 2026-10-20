@@ -82,7 +82,9 @@ async function overview(brandId) {
         return { id: v.id, value: v.value, hidden: v.status !== 'active', products: vu ? vu.products.size : 0, variations: vu ? vu.variations : 0 };
       });
       return {
-        id: a.id, name: a.name, type: a.type, list: LIST_TYPES.includes(a.type), isRequired: !!a.isRequired,
+        // A list = a list type, or any attribute that already has choices
+        // (product saves auto-create attributes as "text" but record values).
+        id: a.id, name: a.name, type: a.type, list: LIST_TYPES.includes(a.type) || values.length > 0, isRequired: !!a.isRequired,
         displayOrder: a.displayOrder, brandId: a.brand_id, shared: a.brand_id == null,
         products: u ? u.products.size : 0, variations: u ? u.variations : 0, values,
       };
@@ -314,7 +316,9 @@ async function megaMenu(brandId) {
   const out = [];
   for (const a of attrs) {
     if (b && a.brand_id != null && Number(a.brand_id) !== b) continue; // shared + this store's own
-    if (!LIST_TYPES.includes(a.type)) continue; // free text isn't a filter
+    // No type filter: saving a product auto-creates missing attributes as
+    // "text" while still recording their values, and those were always menu
+    // columns. Anything with choices that products use is a filter.
     const u = usage.get(lc(a.name));
     const values = (a.AttributeValues || [])
       .map((v) => ({ id: v.id, value: v.value, product_count: u?.values.get(lc(v.value))?.products.size || 0 }))

@@ -121,16 +121,30 @@ class ProductService {
         }
       }
 
-      if (parsedAttributes && typeof parsedAttributes === 'object') {
-        for (const [attrName, attrValues] of Object.entries(parsedAttributes)) {
-          if (Array.isArray(attrValues) && attrValues.length > 0) {
-            // Build OR conditions for each value of this attribute
-            const valueClauses = attrValues.map(v => {
-              const escaped = v.replace(/'/g, "''");
-              return `JSON_EXTRACT(pv.attributes, '$.${attrName}') = '${escaped}'`;
-            });
-            variationConditions.push(`(${valueClauses.join(' OR ')})`);
+      if (parsedAttributes && typeof parsedAttributes === 'object' && !Array.isArray(parsedAttributes)) {
+        // This comes straight from the shop URL, so nothing from it is pasted
+        // into SQL: names and values are bounded, then passed through
+        // sequelize.escape(). Variations store {"color":["Black"]} (editor:
+        // lower-case keys, lists) or older {"Color":"Black"}, so each name is
+        // tried as typed and lower-cased, and values match case-insensitively
+        // whether the stored value is a list or a single string.
+        const { sequelize } = require('../config/db.js');
+        for (const [rawName, rawValues] of Object.entries(parsedAttributes).slice(0, 10)) {
+          const name = String(rawName || '').replace(/["\\]/g, '').trim().slice(0, 60);
+          const values = (Array.isArray(rawValues) ? rawValues : [rawValues])
+            .map((v) => String(v ?? '').trim().toLowerCase().slice(0, 100))
+            .filter(Boolean)
+            .slice(0, 20);
+          if (!name || !values.length) continue;
+          const keys = [...new Set([name, name.toLowerCase()])];
+          const valueClauses = [];
+          for (const k of keys) {
+            const path = sequelize.escape(`$."${k}"`);
+            for (const v of values) {
+              valueClauses.push(`JSON_CONTAINS(LOWER(JSON_EXTRACT(pv.attributes, ${path})), ${sequelize.escape(JSON.stringify(v))})`);
+            }
           }
+          variationConditions.push(`(${valueClauses.join(' OR ')})`);
         }
       }
 
