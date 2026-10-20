@@ -608,9 +608,52 @@ exports.getRevenueProfit = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
+    // Every order PLACED in the window (all but cancelled — same set as the
+    // traffic report), with its units, split by where it came from: the visit
+    // it was credited to (orders.utm_tracking_id), rolled up to the traffic
+    // report's channels. Orders with no tracked visit are "Direct / untracked".
+    const placed = await sequelize.query(
+      `SELECT o.brand_id,
+              CASE WHEN o.utm_tracking_id IS NULL OR u.id IS NULL THEN 1 ELSE 0 END AS untracked,
+              COALESCE(u.utm_source, 'direct') AS source,
+              COALESCE(u.utm_medium, 'none')   AS medium,
+              COUNT(*) AS orders,
+              COALESCE(SUM(it.units), 0) AS units,
+              COALESCE(SUM(o.final_amount), 0) AS value,
+              SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered,
+              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN o.final_amount - ${REFUND_SQL} ELSE 0 END) AS revenue
+         FROM orders o
+         LEFT JOIN utm_tracking u ON u.id = o.utm_tracking_id
+         LEFT JOIN (SELECT order_id, SUM(quantity) AS units FROM order_items GROUP BY order_id) it ON it.order_id = o.id
+         ${JOINS}
+        WHERE o.created_at BETWEEN :start AND :end
+          AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
+        GROUP BY o.brand_id, untracked, source, medium`,
+      { replacements: repl, type: QueryTypes.SELECT }
+    );
+    const allBrands = await sequelize.query('SELECT domain FROM brands', { type: QueryTypes.SELECT });
+    const selfHosts = new Set(allBrands
+      .map((b) => String(b.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/:?#].*$/, '').replace(/^www\./, ''))
+      .filter(Boolean));
+
     const ordMap = new Map(ord.map((r) => [r.brand_id, r]));
     const cogsMap = new Map(cogs.map((c) => [c.brand_id, c]));
     const n = (v) => Number(v) || 0;
+
+    // Placed orders per brand, and per brand × channel for the source table.
+    const placedByBrand = new Map();
+    const srcAcc = new Map();
+    for (const r of placed) {
+      const channel = Number(r.untracked) ? 'Direct / untracked' : channelOf(r.source, r.medium, selfHosts);
+      const pb = placedByBrand.get(r.brand_id) || { orders: 0, units: 0, value: 0 };
+      pb.orders += n(r.orders); pb.units += n(r.units); pb.value += n(r.value);
+      placedByBrand.set(r.brand_id, pb);
+      const key = `${r.brand_id}\u0001${channel}`;
+      const a = srcAcc.get(key) || { brandId: r.brand_id, channel, orders: 0, units: 0, value: 0, delivered: 0, revenue: 0 };
+      a.orders += n(r.orders); a.units += n(r.units); a.value += n(r.value); a.delivered += n(r.delivered); a.revenue += n(r.revenue);
+      srcAcc.set(key, a);
+    }
+    const sourceRows = [...srcAcc.values()].map((a) => ({ ...a, value: Math.round(a.value), revenue: Math.round(a.revenue) }));
 
     const rows = [];
     for (const b of brands) {
@@ -622,9 +665,13 @@ exports.getRevenueProfit = async (req, res) => {
       const gst = await getBrandGst(b.id);
       const rate = gst.rate || 0;
       const revenueExGst = rate ? revenue / (1 + rate / 100) : revenue;
+      const pb = placedByBrand.get(b.id) || { orders: 0, units: 0, value: 0 };
       const row = {
         brandId: b.id,
         brand: b.display_name,
+        placedOrders: pb.orders,         // every order received in the period (not cancelled)
+        placedUnits: pb.units,
+        placedValue: Math.round(pb.value),
         orders: n(r.delivered),          // delivered orders (the revenue base)
         shippedOrders: n(r.shipped),     // forward shipping was paid on these
         rtoOrders: n(r.rto),             // already inside shippedOrders — not charged again
@@ -639,13 +686,13 @@ exports.getRevenueProfit = async (req, res) => {
         codRevenue: Math.round(n(r.cod_gross)),
         cogs: Math.round(n(c.cogs)),
       };
-      if (row.orders || row.shippedOrders || row.rtoOrders) rows.push(row);
+      if (row.placedOrders || row.orders || row.shippedOrders || row.rtoOrders) rows.push(row);
     }
 
     const totals = rows.reduce((t, r) => {
-      for (const k of ['orders', 'shippedOrders', 'rtoOrders', 'units', 'unitsWithoutCost', 'grossRevenue', 'refunds', 'revenue', 'revenueExGst', 'prepaidRevenue', 'codRevenue', 'cogs']) t[k] += r[k];
+      for (const k of ['placedOrders', 'placedUnits', 'placedValue', 'orders', 'shippedOrders', 'rtoOrders', 'units', 'unitsWithoutCost', 'grossRevenue', 'refunds', 'revenue', 'revenueExGst', 'prepaidRevenue', 'codRevenue', 'cogs']) t[k] += r[k];
       return t;
-    }, { orders: 0, shippedOrders: 0, rtoOrders: 0, units: 0, unitsWithoutCost: 0, grossRevenue: 0, refunds: 0, revenue: 0, revenueExGst: 0, prepaidRevenue: 0, codRevenue: 0, cogs: 0 });
+    }, { placedOrders: 0, placedUnits: 0, placedValue: 0, orders: 0, shippedOrders: 0, rtoOrders: 0, units: 0, unitsWithoutCost: 0, grossRevenue: 0, refunds: 0, revenue: 0, revenueExGst: 0, prepaidRevenue: 0, codRevenue: 0, cogs: 0 });
 
     const ymd = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
     res.json({
@@ -657,6 +704,8 @@ exports.getRevenueProfit = async (req, res) => {
       defaults: { shippingPerOrder: 90, gatewayPct: 2, codPct: 2 }, // shipping rate already covers the RTO return leg
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
+      // Orders received per brand × source (channel names as in the traffic report).
+      sources: sourceRows,
     });
   } catch (error) {
     logger.error('getRevenueProfit report failed: ' + error.message);
