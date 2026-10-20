@@ -89,6 +89,10 @@ const BASKET_LIFT = 1.2;
 const DETAIL_PRODUCTS = 5;
 const DETAIL_ORDERS = 8;
 
+// Production tables carry different text collations, so derived strings that
+// get compared (customer keys, code groups) are pinned to one collation.
+const T = (expr) => `CONVERT(${expr} USING utf8mb4) COLLATE utf8mb4_unicode_ci`;
+
 const q = (sql, replacements) => sequelize.query(sql, { replacements, type: QueryTypes.SELECT });
 const num = (v) => Number(v) || 0;
 const r0 = (v) => Math.round(num(v));
@@ -114,14 +118,14 @@ function identity(alias, hash, keys) {
   const fallback = `CONCAT('u', ${o}.user_id), CONCAT('g', ${o}.guest_user_id), CONCAT('o', ${o}.id)`;
   if (hash) {
     return {
-      key: `COALESCE(CONVERT(${sa}.phone_hash USING utf8mb4)${keys ? `, ${uk}.pkey` : ''}, CONVERT(${g}.phone_hash USING utf8mb4), ${fallback})`,
+      key: T(`COALESCE(CONVERT(${sa}.phone_hash USING utf8mb4)${keys ? `, CONVERT(${uk}.pkey USING utf8mb4)` : ''}, CONVERT(${g}.phone_hash USING utf8mb4), ${fallback})`),
       joins: `LEFT JOIN shipping_addresses ${sa} ON ${sa}.id = ${o}.shipping_address_id
         LEFT JOIN guest_users ${g} ON ${g}.id = ${o}.guest_user_id
         ${keys ? `LEFT JOIN customer_phone_keys ${uk} ON ${uk}.src = 'user' AND ${uk}.src_id = ${o}.user_id` : ''}`,
     };
   }
   return {
-    key: `COALESCE(${plainKey(`${sa}.phone`)}, ${plainKey(`${u}.phone`)}, ${plainKey(`${g}.phone`)}, ${fallback})`,
+    key: T(`COALESCE(${T(plainKey(`${sa}.phone`))}, ${T(plainKey(`${u}.phone`))}, ${T(plainKey(`${g}.phone`))}, ${fallback})`),
     joins: `LEFT JOIN shipping_addresses ${sa} ON ${sa}.id = ${o}.shipping_address_id
       LEFT JOIN users ${u} ON ${u}.id = ${o}.user_id
       LEFT JOIN guest_users ${g} ON ${g}.id = ${o}.guest_user_id`,
@@ -133,11 +137,11 @@ function identity(alias, hash, keys) {
 const PARTNER_SQL = `(o.coupon_id IS NULL AND o.notes LIKE 'Custom checkout order %/ coupon %')`;
 const NOTE_CODE_SQL = `UPPER(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(o.notes, '/ coupon ', -1), ',', 1), ' ', 1)))`;
 // 'C:<CODE>' for a coupon, 'OTHER' for a discount with no code, 'NONE' otherwise.
-const GROUP_SQL = `CASE
-    WHEN o.coupon_id IS NOT NULL THEN CONCAT('C:', COALESCE(NULLIF(UPPER(TRIM(c.code)), ''), CONCAT('#', o.coupon_id)))
-    WHEN ${PARTNER_SQL} AND ${NOTE_CODE_SQL} <> '' THEN CONCAT('C:', ${NOTE_CODE_SQL})
+const GROUP_SQL = T(`CASE
+    WHEN o.coupon_id IS NOT NULL THEN CONCAT('C:', COALESCE(NULLIF(UPPER(TRIM(${T('c.code')})), ''), CONCAT('#', o.coupon_id)))
+    WHEN ${PARTNER_SQL} AND ${NOTE_CODE_SQL} <> '' THEN CONCAT('C:', ${T(NOTE_CODE_SQL)})
     WHEN COALESCE(o.discount_amount, 0) > 0 THEN 'OTHER'
-    ELSE 'NONE' END`;
+    ELSE 'NONE' END`);
 const SOURCE_SQL = `CASE WHEN o.coupon_id IS NOT NULL THEN 'site' WHEN ${PARTNER_SQL} THEN 'partner' ELSE NULL END`;
 
 // ── Coupon wording ───────────────────────────────────────────────────────────
