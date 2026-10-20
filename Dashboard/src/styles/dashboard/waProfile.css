@@ -188,7 +188,9 @@
 .wpp-stores-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-end; padding: 16px 18px 12px; }
 .wpp-banner { margin: 0 18px 12px; }
 .wpp-tbl { min-width: 760px; }
+.wpp-tbl th { position: relative; }
 .wpp-tbl td { vertical-align: top; }
+.wpp-tbl .wpb-cell-sub { display: block; white-space: normal; }
 .wpp-dot {
   flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center;
   font-size: 12px; font-weight: var(--ds-weight-bold); text-transform: uppercase;
