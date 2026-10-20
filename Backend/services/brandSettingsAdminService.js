@@ -90,6 +90,7 @@ const FIELDS = [
   F('FB_ACCESS_TOKEN', 'tracking', 'Meta Conversions API token', { type: 'secret', category: 'analytics', group: 'Meta' }),
   F('FB_TEST_EVENT_CODE', 'tracking', 'Meta test event code', { category: 'analytics', group: 'Meta', hint: 'Only while testing — remove afterwards.' }),
   F('META_AD_ACCOUNT_ID', 'tracking', 'Meta ad account ID', { brandOnly: true, rule: 'adAccount', category: 'analytics', group: 'Meta', hint: 'For reading ad spend into the reports.' }),
+  F('META_ADS_TOKEN', 'tracking', 'Meta ads token (read-only)', { brandOnly: true, type: 'secret', category: 'analytics', group: 'Meta', hint: 'Only if “Check ad account access” fails with the Conversions API token.' }),
   F('GA_MEASUREMENT_ID', 'tracking', 'Google Analytics ID', { brandOnly: true, rule: 'ga', category: 'analytics', group: 'Google' }),
   F('GA_API_SECRET', 'tracking', 'Google Analytics API secret', { brandOnly: true, type: 'secret', category: 'analytics', group: 'Google' }),
   F('GTM_ID', 'tracking', 'Google Tag Manager ID', { brandOnly: true, rule: 'gtm', category: 'analytics', group: 'Google' }),
@@ -133,6 +134,7 @@ const GUIDES = {
   FB_PIXEL_ID: 'Meta Events Manager → Data sources → your pixel (dataset): the 15–16 digit ID under its name.',
   FB_ACCESS_TOKEN: 'Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.',
   FB_TEST_EVENT_CODE: 'Meta Events Manager → your pixel → Test events → the code like TEST12345. Remove it once testing is done.',
+  META_ADS_TOKEN: 'Business Settings → Users → System users → your system user → Generate new token → pick your app → tick ads_read → Generate. The system user also needs the ad account under Assign assets (View performance).',
   META_AD_ACCOUNT_ID: 'Meta Ads Manager → the account switcher (top left): the number under the account name. Or Business Settings → Accounts → Ad accounts. With or without act_.',
   GA_MEASUREMENT_ID: 'Google Analytics → Admin → Data streams → your website stream → Measurement ID (G-…).',
   GA_API_SECRET: 'Google Analytics → Admin → Data streams → your stream → Measurement Protocol API secrets → Create.',
@@ -592,9 +594,12 @@ async function testRazorpay(brandId) {
 // Uses the Conversions API token already saved for the pixel; read-only call.
 async function testMetaAds(brandId) {
   const account = String((await settingsHelper.getSetting(brandId, 'META_AD_ACCOUNT_ID', null, { brandOnly: true })) || '').replace(/^act_/i, '').trim();
-  const token = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  // A dedicated read-only ads token wins; otherwise try the Conversions API token.
+  const adsToken = await settingsHelper.getSetting(brandId, 'META_ADS_TOKEN', null, { brandOnly: true });
+  const token = adsToken || await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  const which = adsToken ? 'Meta ads token' : 'Conversions API token';
   if (!account) return { ok: false, message: 'Save the Meta ad account ID first.' };
-  if (!token) return { ok: false, message: 'Save the Meta Conversions API token first.' };
+  if (!token) return { ok: false, message: 'Save the Meta ads token (or the Conversions API token) first.' };
   try {
     const r = await axios.get(`https://graph.facebook.com/v21.0/act_${account}`, {
       params: { fields: 'name,currency,account_status', access_token: token }, timeout: 10000, validateStatus: () => true,
@@ -605,12 +610,12 @@ async function testMetaAds(brandId) {
       });
       if (ins.status === 200) {
         const spend = Number(ins.data?.data?.[0]?.spend || 0);
-        return { ok: true, message: `This token can read “${r.data.name}” (${r.data.currency}) — last 7 days spend ${spend.toLocaleString('en-IN')} ${r.data.currency}. No new token is needed for ad spend.` };
+        return { ok: true, message: `The ${which} can read “${r.data.name}” (${r.data.currency}) — last 7 days spend ${spend.toLocaleString('en-IN')} ${r.data.currency}. Ad spend can be read with it.` };
       }
       return { ok: false, message: `The token can see “${r.data.name}” but not its spend: ${ins.data?.error?.message || `Meta answered ${ins.status}`}. Give the token’s system user “View performance” on this ad account.` };
     }
     const err = r.data?.error?.message || `Meta answered ${r.status}`;
-    return { ok: false, message: `This token can’t read ad account ${account}: ${err}. In Business Settings → System users, give the token’s user access to this ad account (View performance) and the ads_read permission, or generate a new token with ads_read.` };
+    return { ok: false, message: `The ${which} can’t read ad account ${account}: ${err}. Fix: Business Settings → Users → System users → the user behind this token → Assign assets → Ad accounts → this account → View performance, then check again. If it still fails, generate a token with ads_read for that system user and paste it into “Meta ads token”.` };
   } catch (e) {
     return { ok: false, message: `Couldn’t reach Meta (${e.code || e.message}).` };
   }
