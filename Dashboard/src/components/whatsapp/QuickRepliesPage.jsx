@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Add01Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
+import { SkeletonForm } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Quick replies — saved answers the team types often.
@@ -209,13 +210,13 @@ export default function QuickRepliesPage({ brandId = '', brands = [], isAdmin = 
             {TABS.map((t) => (
               <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
                 className={`wpb-chip${tab === t.key ? ' is-on' : ''}`} onClick={() => setTab(t.key)}>
-                {t.label}{!loading && <span className="wpb-chip-n">{counts[t.key] || 0}</span>}
+                {t.label}{(!loading || rows.length > 0) && <span className="wpb-chip-n">{counts[t.key] || 0}</span>}
               </button>
             ))}
           </div>
 
           <section className="wpb-card wpb-card--flush" aria-busy={loading}>
-            {loading ? (
+            {loading && rows.length === 0 ? (
               <div className="wpb-skel-list" aria-label="Loading quick replies">
                 {[0, 1, 2, 3, 4].map((i) => <div key={i} className="wpb-skel-row"><span /><span /></div>)}
               </div>
@@ -236,7 +237,7 @@ export default function QuickRepliesPage({ brandId = '', brands = [], isAdmin = 
                 </button>
               </div>
             ) : (
-              <ul className="wpb-qr-list">
+              <ul className={`wpb-qr-list${loading ? ' is-stale' : ''}`}>
                 {visible.map((r) => (
                   <li key={r.id}>
                     <button type="button" className={`wpb-qr-row${selId === r.id ? ' is-sel' : ''}`}
@@ -257,6 +258,13 @@ export default function QuickRepliesPage({ brandId = '', brands = [], isAdmin = 
         </div>
 
         <aside className="wpb-split-side" ref={editorRef}>
+          {selId === null ? (
+            // First load: nothing is picked yet — placeholder fields, not an empty form.
+            <div className="wpb-card wpb-form">
+              <span className="wpb-eyebrow">Edit</span>
+              <SkeletonForm fields={4} label="Loading quick reply…" />
+            </div>
+          ) : (
           <form className="wpb-card wpb-form" onSubmit={save}>
             <span className="wpb-eyebrow">{selId === 'new' ? 'New quick reply' : 'Edit'}</span>
 
@@ -329,6 +337,7 @@ export default function QuickRepliesPage({ brandId = '', brands = [], isAdmin = 
               </div>
             )}
           </form>
+          )}
 
           <section className="wpb-card wpb-note">
             <b>Shared by all brands</b>

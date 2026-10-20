@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService } from '../../services';
-import { PageHeader, StatusPill, EmptyState, ErrorState, SkeletonRows, ConfirmBar } from '../../components/ui';
+import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
 
@@ -480,7 +480,25 @@ export function BrandManager() {
       )}
 
       {listQuery.isLoading ? (
-        <SkeletonRows rows={6} label="Loading brands…" />
+        <div className="oss-split" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading brands…</span>
+          <nav className="oss-card oss-brandlist" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className="oss-brand"><Skeleton w={['70%', '55%', '62%', '48%'][i]} h={12} /></span>
+            ))}
+          </nav>
+          <div className="oss-main" aria-hidden="true">
+            <div className="oss-brandhead">
+              <div><Skeleton w={180} h={18} /><Skeleton w={240} h={11} style={{ marginTop: 6 }} /></div>
+              <div className="oss-inline"><Skeleton w={52} h={24} r={12} /><Skeleton w={84} h={30} r={8} /><Skeleton w={60} h={30} r={8} /></div>
+            </div>
+            <div className="oss-tabs">{[64, 84, 72, 90].map((w, i) => <Skeleton key={i} w={w} h={36} r={18} />)}</div>
+            <section className="oss-card oss-section">
+              <div className="oss-section-head"><Skeleton w={90} h={14} /><Skeleton w={220} h={11} /></div>
+              <SkeletonForm fields={6} className="oss-grid" />
+            </section>
+          </div>
+        </div>
       ) : listQuery.error && !brands.length ? (
         <ErrorState message={`Couldn’t load brands — ${listQuery.error?.message || 'the server didn’t answer'}.`} onRetry={listQuery.refetch} retrying={listQuery.isFetching} />
       ) : !brand ? (
@@ -546,7 +564,7 @@ export function BrandManager() {
               </div>
 
               {isAdmin && formQuery.isLoading ? (
-                <SkeletonRows rows={4} label="Loading settings…" />
+                <SkeletonForm fields={6} className="oss-grid" label="Loading settings…" />
               ) : isAdmin && formQuery.error && !form ? (
                 <ErrorState message={`Couldn’t load this brand’s settings — ${formQuery.error?.message || 'the server didn’t answer'}.`} onRetry={formQuery.refetch} retrying={formQuery.isFetching} />
               ) : (

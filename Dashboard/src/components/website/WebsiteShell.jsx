@@ -21,6 +21,7 @@ import SlidersTab from './SlidersTab';
 import BlogTab from './BlogTab';
 import PhotosTab from './PhotosTab';
 import PoliciesTab from './PoliciesTab';
+import { WebGridSkeleton } from './webParts';
 
 const BRAND_KEY = 'obz-website-brand';
 
@@ -80,7 +81,20 @@ export default function WebsiteShell({ tab = 'sliders' }) {
 
   const registerAction = useCallback((a) => setAction(a), []);
 
-  if (authLoading) return <div className="web"><div className="web-skel-grid" aria-busy="true">{[0, 1, 2].map((i) => <span key={i} className="web-skel-card" />)}</div></div>;
+  if (authLoading) {
+    // Signed-in check still running: real heading, card placeholders below.
+    return (
+      <div className="dashboard-sections web">
+        <header className="web-head">
+          <div className="web-head-text">
+            <h1 className="web-title">Website</h1>
+            <p className="web-sub">Sliders, blog, photos and policies in one place: pick the store, see what's live, edit in the side panel.</p>
+          </div>
+        </header>
+        <WebGridSkeleton label="Loading website…" />
+      </div>
+    );
+  }
   if (!canContent || (current.adminOnly && !isAdmin)) {
     return (
       <div className="dashboard-sections web">

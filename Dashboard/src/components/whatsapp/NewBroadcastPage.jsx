@@ -111,7 +111,8 @@ export default function NewBroadcastPage({ brandId = '', brands = [], isAdmin = 
   // ── Audience counts (all five, refreshed when the brand changes) ──
   const loadCounts = useCallback(async () => {
     const id = ++countReq.current;
-    setCounts(Object.fromEntries(AUDIENCES.map((a) => [a.type, { loading: true }])));
+    // Keep the last numbers on screen (dimmed) while the new brand is counted.
+    setCounts((prev) => Object.fromEntries(AUDIENCES.map((a) => [a.type, { ...(prev[a.type] || {}), error: undefined, loading: true }])));
     await Promise.all(AUDIENCES.map(async (a) => {
       try {
         const params = { type: a.type };
@@ -263,9 +264,9 @@ export default function NewBroadcastPage({ brandId = '', brands = [], isAdmin = 
                     <span className="wpa-aud-top">
                       <span className="wpa-aud-title">{a.title}</span>
                       <span className="wpa-aud-count" aria-live="polite">
-                        {c.loading ? <span className="wpa-skel" style={{ width: 36, height: 12 }} aria-label="Counting" />
+                        {c.loading && c.count == null ? <span className="wpa-skel" style={{ width: 36, height: 12 }} aria-label="Counting" />
                           : c.error ? <span className="wpa-faint" title={c.error}>—</span>
-                            : num(c.count)}
+                            : <span className={c.loading ? 'is-stale' : undefined}>{num(c.count)}</span>}
                       </span>
                     </span>
                     <span className="wpa-aud-desc">{a.desc}</span>
@@ -389,8 +390,8 @@ export default function NewBroadcastPage({ brandId = '', brands = [], isAdmin = 
             <div className="wpa-kvs">
               <div className="wpa-kv"><span>Brand</span><b>{brandLabel}</b></div>
               <div className="wpa-kv"><span>Audience</span><b>{audienceTitle}</b></div>
-              <div className="wpa-kv"><span>Recipients</span><b>{picked.loading ? '…' : num(recipients)}</b></div>
-              <div className="wpa-kv"><span>Left out (replied STOP)</span><b>{picked.loading ? '…' : num(picked.opted_out)}</b></div>
+              <div className="wpa-kv"><span>Recipients</span><b>{picked.loading && recipients == null ? <span className="wpa-skel wpa-skel--inline" style={{ width: 44 }} aria-label="Counting" /> : num(recipients)}</b></div>
+              <div className="wpa-kv"><span>Left out (replied STOP)</span><b>{picked.loading && picked.opted_out == null ? <span className="wpa-skel wpa-skel--inline" style={{ width: 32 }} aria-label="Counting" /> : num(picked.opted_out)}</b></div>
               <div className="wpa-kv"><span>When</span><b>{mode === 'now' ? 'Now' : (schedDate && !schedProblem ? fmtIst(schedDate) : '—')}</b></div>
               <div className="wpa-kv"><span>WhatsApp fee</span><b>charged per message</b></div>
             </div>

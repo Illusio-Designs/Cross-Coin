@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Button, Pagination, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, SidePanel,
-  ConfirmBar, EmptyState, ErrorState, SkeletonRows,
+  ConfirmBar, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows,
 } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { couponService, brandService } from '../../../services';
@@ -254,10 +254,11 @@ function Picker({ kind, label, value, onChange, error }) {
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
-  const { data = [], isFetching, error: loadError } = useQuery({
+  const { data = [], isFetching, isPlaceholderData, error: loadError } = useQuery({
     queryKey: ['coupons', 'picker', kind, debounced],
     queryFn: () => couponService.picker({ kind, search: debounced }),
     enabled: open,
+    placeholderData: keepPreviousData, // typing keeps the last matches on screen, dimmed
     staleTime: 60 * 1000,
   });
   const chosen = new Set(value.map((v) => v.id));
@@ -281,9 +282,14 @@ function Picker({ kind, label, value, onChange, error }) {
           onFocus={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setOpen(true); }}
           onKeyDown={(e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); } }} />
         {open && (
-          <ul id={`${id}-list`} className="cpn-pick-list" role="listbox" aria-label={label}>
+          <ul id={`${id}-list`} className="cpn-pick-list" role="listbox" aria-label={label} aria-busy={isFetching || undefined}
+            style={isPlaceholderData ? { opacity: 0.6, transition: 'opacity .15s' } : undefined}>
             {loadError ? <li className="cpn-pick-msg">Couldn’t search — {loadError.message}</li>
-              : isFetching && !data.length ? <li className="cpn-pick-msg">Searching…</li>
+              : isFetching && !data.length ? [0, 1, 2, 3].map((i) => (
+                <li key={`sk-${i}`} className="cpn-pick-msg" aria-hidden="true" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <Skeleton w={16} h={16} r={4} /><Skeleton w={['55%', '42%', '60%', '48%'][i]} h={12} />
+                </li>
+              ))
                 : !data.length ? <li className="cpn-pick-msg">Nothing found{debounced ? ` for “${debounced}”` : ''}.</li>
                   : data.map((it) => {
                     const on = chosen.has(Number(it.id));
@@ -555,6 +561,8 @@ function Warnings({ warnings, isAdmin, busyKey, onFix }) {
   );
 }
 
+const DIM = { opacity: 0.6, transition: 'opacity .15s' };
+
 // ── Page ─────────────────────────────────────────────────────────────
 export default function Coupons() {
   const qc = useQueryClient();
@@ -586,9 +594,11 @@ export default function Coupons() {
     placeholderData: keepPreviousData,
     staleTime: 15 * 1000,
   });
+  // Store / period change keeps the old numbers on screen (dimmed) until the new ones land.
   const summary = useQuery({
     queryKey: ['coupons', 'summary', brandId, days],
     queryFn: () => couponService.summary({ brandId, days }),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
   });
   const deps = useQuery({
@@ -649,6 +659,21 @@ export default function Coupons() {
   };
 
   const s = summary.data;
+  const tableHead = (
+    <thead>
+      <tr>
+        <th scope="col">Code</th>
+        <th scope="col">Gives</th>
+        <th scope="col">Where</th>
+        <th scope="col">Used by</th>
+        <th scope="col" className="r">Used · {days} d</th>
+        <th scope="col" className="r">Discount given</th>
+        <th scope="col" className="r">Sales with it</th>
+        <th scope="col">Ends</th>
+        <th scope="col"><span className="ds-sr-only">Actions</span></th>
+      </tr>
+    </thead>
+  );
   const brandOpts = [{ value: '', label: 'All stores' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))];
   const empty = EMPTY_TEXT[tab];
   const panelBrands = useMemo(() => brands.filter((b) => b.status !== 'inactive'), [brands]);
@@ -670,16 +695,20 @@ export default function Coupons() {
 
       {summary.error && !s ? (
         <ErrorState message={`Couldn’t load the coupon numbers — ${summary.error.message}`} onRetry={() => summary.refetch()} retrying={summary.isFetching} />
+      ) : !s ? (
+        <SkeletonKpis count={4} label="Loading coupon numbers…" className="cpn-kpis" />
       ) : (
-        <KpiGrid className="cpn-kpis">
-          <KpiTile label="Orders with a coupon" value={s ? num(s.couponOrders) : '–'}
-            sub={s ? (s.orders ? `${s.couponShare}% of ${plural(s.orders, 'order')}` : 'no orders yet') : 'loading…'} />
-          <KpiTile label="Discount given" value={s ? inr(s.discount) : '–'} sub="what coupons cost you" />
-          <KpiTile label="Sales with coupons" value={s ? inr(s.sales) : '–'}
-            sub={s ? (s.salesPerRupee ? `₹${s.salesPerRupee} of sales per ₹1 of discount` : 'no coupon orders yet') : ''} />
-          <KpiTile label="Live codes" value={s ? num(s.liveCodes) : '–'}
-            sub={s ? (s.startingSoon ? `${s.startingSoon} start${s.startingSoon === 1 ? 's' : ''} this week` : 'switched on and in date') : ''} />
-        </KpiGrid>
+        <div style={summary.isPlaceholderData ? DIM : undefined} aria-busy={summary.isPlaceholderData || undefined}>
+          <KpiGrid className="cpn-kpis">
+            <KpiTile label="Orders with a coupon" value={num(s.couponOrders)}
+              sub={s.orders ? `${s.couponShare}% of ${plural(s.orders, 'order')}` : 'no orders yet'} />
+            <KpiTile label="Discount given" value={inr(s.discount)} sub="what coupons cost you" />
+            <KpiTile label="Sales with coupons" value={inr(s.sales)}
+              sub={s.salesPerRupee ? `₹${s.salesPerRupee} of sales per ₹1 of discount` : 'no coupon orders yet'} />
+            <KpiTile label="Live codes" value={num(s.liveCodes)}
+              sub={s.startingSoon ? `${s.startingSoon} start${s.startingSoon === 1 ? 's' : ''} this week` : 'switched on and in date'} />
+          </KpiGrid>
+        </div>
       )}
 
       {deps.error ? (
@@ -700,7 +729,13 @@ export default function Coupons() {
 
       <section className="cpn-card" id="cpn-table" aria-busy={list.isFetching || undefined}>
         {list.isLoading ? (
-          <SkeletonRows rows={6} label="Loading coupons…" />
+          <div className="cpn-scroll" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading coupons…</span>
+            <table className="cpn-table" aria-hidden="true">
+              {tableHead}
+              <tbody><SkeletonTableRows rows={8} cols={9} /></tbody>
+            </table>
+          </div>
         ) : list.error && !list.data ? (
           <ErrorState message={`Couldn’t load coupons — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
         ) : coupons.length === 0 ? (
@@ -709,21 +744,9 @@ export default function Coupons() {
             description={debounced ? `Nothing in ${TABS.find((t) => t.value === tab).label} for “${debounced}”.` : empty[1]}
             action={!debounced && (tab === 'all' || tab === 'live') ? <Button onClick={() => openNew()}>+ New coupon</Button> : null} />
         ) : (
-          <div className="cpn-scroll">
+          <div className="cpn-scroll" style={list.isFetching ? DIM : undefined}>
             <table className="cpn-table">
-              <thead>
-                <tr>
-                  <th scope="col">Code</th>
-                  <th scope="col">Gives</th>
-                  <th scope="col">Where</th>
-                  <th scope="col">Used by</th>
-                  <th scope="col" className="r">Used · {days} d</th>
-                  <th scope="col" className="r">Discount given</th>
-                  <th scope="col" className="r">Sales with it</th>
-                  <th scope="col">Ends</th>
-                  <th scope="col"><span className="ds-sr-only">Actions</span></th>
-                </tr>
-              </thead>
+              {tableHead}
               <tbody>
                 {coupons.map((c) => (
                   <tr key={c.id}>

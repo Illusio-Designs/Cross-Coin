@@ -6,7 +6,7 @@ import { sliderService, categoryService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { WebChips, WebBody, WebGridState, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks, Toggle } from './webParts';
+import { WebChips, WebBody, WebGridState, webStale, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks, Toggle } from './webParts';
 import { useLoad, useObjectUrl, errText, fmtDay, dayInputValue, dayStartIso, dayEndIso, siteUrl, brandLabel } from './webUtil';
 
 const LIMIT = 48;
@@ -224,13 +224,13 @@ export default function SlidersTab({ brands, brand, brandId, q, registerAction }
       <WebChips chips={chips} value={state} onChange={setState} />
       <WebBody panel={panel}>
         <WebGridState
-          loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+          loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length} label="Loading slides…"
           empty={<EmptyState title={q || state !== 'all' ? 'No slides match' : 'No slides yet'} description={q || state !== 'all' ? 'Try another search or filter.' : 'Add a slide to show a sale or a new range on the homepage.'} action={!q && state === 'all' ? <button type="button" className="web-btn web-btn--primary" onClick={openNew}>+ New slide</button> : null} />}
         />
-        {!list.loading && !list.error && items.length > 0 && (
+        {!list.error && items.length > 0 && (
           <>
             {!canReorder && items.length > 1 && <p className="web-note">Clear the search and pick “All” to change the order.</p>}
-            <div className="web-grid">
+            <div className={`web-grid${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
               {items.map((s, i) => (
                 <WebCard
                   key={s.id}

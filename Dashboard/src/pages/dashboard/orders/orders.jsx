@@ -8,7 +8,7 @@ import OrderStatusBadge from "../../../components/ui/OrderStatusBadge";
 import ShipmentStatusBadge from "../../../components/ui/ShipmentStatusBadge";
 import LabelStatusBadge from "../../../components/ui/LabelStatusBadge";
 import SafeImage from "../../../components/common/SafeImage";
-import { TableSkeleton } from "../../../components/common/SkeletonLoader";
+import { Skeleton } from "../../../components/ui/Skeleton";
 import BrandTags from "../../../components/Dashboard/BrandTags";
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
@@ -145,7 +145,8 @@ const Orders = ({ initialTab } = {}) => {
     const [refundPrompt, setRefundPrompt] = useState(null);
     // Summary tiles — same numbers as Reports › Overview for the picked range
     // (last 30 days when no range is picked).
-    const [allOrdersStats, setAllOrdersStats] = useState(null);
+    // undefined = not loaded yet (tiles shimmer); null = failed (tiles show 0).
+    const [allOrdersStats, setAllOrdersStats] = useState(undefined);
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [pickupOpen, setPickupOpen] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
@@ -210,8 +211,9 @@ const Orders = ({ initialTab } = {}) => {
         if (statusFilter === 'problems') return; // the Problems desk loads its own queue
         const reqId = ++requestIdRef.current;
         let willRetry = false;
-        // Foreground fetches (page change, filter change, manual refresh) show the
-        // skeleton. We DON'T clear the visible rows anymore — a transient network
+        // Foreground fetches (page change, filter change, manual refresh) set
+        // `loading`: the table shows skeleton rows only when it has no rows yet,
+        // otherwise the current rows stay on screen (dimmed). We DON'T clear the visible rows — a transient network
         // blip on a cold backend would otherwise blank the whole table. The rows
         // are swapped only on a successful response; on failure the last-good rows
         // stay put behind the (dismissible) error. A *silent* fetch (the 30s
@@ -916,6 +918,11 @@ const Orders = ({ initialTab } = {}) => {
         },
     ];
 
+    // KPI tiles shimmer until the first summary arrives; later refreshes keep
+    // the old numbers on screen.
+    const statsPending = allOrdersStats === undefined;
+    const statVal = (v) => (statsPending ? <Skeleton w="60%" h={20} /> : v);
+
     return (
         <>
             <PromptModal
@@ -967,7 +974,7 @@ const Orders = ({ initialTab } = {}) => {
                     {/* ── Page Header: Title + actions (search + sync buttons) ── */}
                     <PageHeader
                         title="Orders"
-                        subtitle={`${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`}
+                        subtitle={loading && orders.length === 0 ? <Skeleton w={110} h={12} style={{ display: 'inline-block' }} /> : `${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`}
                         actions={
                             <>
                                 <div className="sl-search-wrap">
@@ -999,15 +1006,16 @@ const Orders = ({ initialTab } = {}) => {
                     <PickupScheduleModal open={pickupOpen} onClose={() => setPickupOpen(false)} />
 
                     {/* ── KPI Strip — one clean row (prototype style) ── */}
-                    <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}>
-                        <StatTile label={statsStartDate && statsEndDate ? 'Placed' : 'Placed · 30 days'} value={(allOrdersStats?.placed ?? 0).toLocaleString('en-IN')} />
-                        <StatTile label="Booked value" value={Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN')} prefix="₹" />
-                        <StatTile label="Prepaid"   value={allOrdersStats?.prepaid?.orders ?? 0} />
-                        <StatTile label="COD"       value={allOrdersStats?.cod?.orders ?? 0} />
-                        <StatTile label="Delivered" value={allOrdersStats?.delivered ?? 0} />
-                        <StatTile label="Cancelled" value={allOrdersStats?.cancelled ?? 0} />
-                        <StatTile label="Net sales" value={Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN')} prefix="₹" />
-                        <StatTile label="Avg order" value={Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN')} prefix="₹" />
+                    <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}
+                        {...(statsPending ? { role: 'status', 'aria-busy': true, 'aria-label': 'Loading order figures' } : {})}>
+                        <StatTile label={statsStartDate && statsEndDate ? 'Placed' : 'Placed · 30 days'} value={statVal((allOrdersStats?.placed ?? 0).toLocaleString('en-IN'))} />
+                        <StatTile label="Booked value" value={statVal(Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                        <StatTile label="Prepaid"   value={statVal(allOrdersStats?.prepaid?.orders ?? 0)} />
+                        <StatTile label="COD"       value={statVal(allOrdersStats?.cod?.orders ?? 0)} />
+                        <StatTile label="Delivered" value={statVal(allOrdersStats?.delivered ?? 0)} />
+                        <StatTile label="Cancelled" value={statVal(allOrdersStats?.cancelled ?? 0)} />
+                        <StatTile label="Net sales" value={statVal(Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                        <StatTile label="Avg order" value={statVal(Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
                     </StatGrid>
 
                     {/* ── Status tabs (left) + Filter drawer trigger (right), one line ── */}
@@ -1121,11 +1129,11 @@ const Orders = ({ initialTab } = {}) => {
                 ) : (
                 /* Table Section */
                 <section className="sl-table-wrap" aria-label="Orders table">
-                    {loading ? (
-                        <div style={{ padding: '20px' }} role="status" aria-label="Loading orders">
-                            <TableSkeleton rows={itemsPerPage} columns={9} />
-                        </div>
-                    ) : orders.length === 0 ? (
+                    {/* First load (no rows yet): the shared Table draws the real
+                        column headers + shimmer rows. Page / tab / filter changes
+                        keep the current rows on screen, dimmed, until the new
+                        page arrives — no skeleton flash. */}
+                    {!loading && orders.length === 0 ? (
                         <div className="sl-empty" role="status" aria-label="No orders">
                             <div className="sl-empty-icon" aria-hidden="true">
                                 <HugeiconsIcon icon={Package01Icon} size={40} strokeWidth={1.5} />
@@ -1139,10 +1147,12 @@ const Orders = ({ initialTab } = {}) => {
                                 aria-label="Orders data table"
                                 aria-live="polite"
                                 aria-busy={loading}
+                                className={loading && orders.length > 0 ? 'ord-table-busy' : undefined}
                             >
                                 <Table
                                     columns={columns}
                                     data={currentItemsWithSN}
+                                    loading={loading && orders.length === 0}
                                     striped={false}
                                     hoverable={true}
                                     cardOnMobile

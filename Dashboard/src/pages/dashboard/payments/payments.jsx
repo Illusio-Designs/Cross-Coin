@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
-  Button, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, ConfirmBar, EmptyState, ErrorState, SkeletonRows,
+  Button, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, ConfirmBar, EmptyState, ErrorState,
+  Skeleton, SkeletonKpis, SkeletonTableRows,
 } from "../../../components/ui";
 import Dropdown from "../../../components/ui/Dropdown";
 import { paymentService, brandService } from "../../../services";
@@ -83,11 +84,14 @@ function openOrder(orderNumber) {
 const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWidth={2} aria-hidden="true" />;
 
 // ── Tiles ────────────────────────────────────────────────────────
-function Tiles({ s, error, onRetry, retrying }) {
+const DIM = { opacity: 0.6, transition: "opacity .15s" };
+
+function Tiles({ s, error, onRetry, retrying, stale }) {
   if (error && !s) return <ErrorState message={`Couldn’t load the payment totals — ${error.message}`} onRetry={onRetry} retrying={retrying} />;
+  if (!s) return <SkeletonKpis count={5} label="Loading payment totals…" className="pl-kpis" />;
   const pct = gatewayPct();
   const co = s?.collectedOnline;
-  let split = "loading…";
+  let split = "";
   if (co) {
     if (!co.amount) split = "no online payments";
     else if (!co.split.length) split = "UPI / card split not known yet";
@@ -100,6 +104,7 @@ function Tiles({ s, error, onRetry, retrying }) {
   const f = s?.failed;
   const retried = f && f.orders ? Math.round((f.retriedPaid / f.orders) * 100) : 0;
   return (
+    <div style={stale ? DIM : undefined} aria-busy={stale || undefined}>
     <KpiGrid className="pl-kpis">
       <KpiTile label="Collected online" value={co ? inr(co.amount) : "–"} sub={split} />
       <KpiTile label="COD to collect" value={s ? inr(s.codToCollect.amount) : "–"}
@@ -111,6 +116,7 @@ function Tiles({ s, error, onRetry, retrying }) {
       <KpiTile label="Gateway fees" value={co ? inr((co.amount * pct) / 100) : "–"}
         sub={`about ${pct}% of online · from Revenue & Profit`} />
     </KpiGrid>
+    </div>
   );
 }
 
@@ -122,6 +128,7 @@ function Mismatches({ brandId, isAdmin }) {
   const q = useQuery({
     queryKey: ["payments", "mismatches", brandId],
     queryFn: () => paymentService.mismatches({ brandId }),
+    placeholderData: keepPreviousData, // brand change: keep the last check on screen, dimmed
     staleTime: 5 * 60 * 1000,
     retry: 0,
   });
@@ -161,8 +168,16 @@ function Mismatches({ brandId, isAdmin }) {
   };
 
   if (q.isLoading) {
-    return <section className="pl-mm pl-mm--quiet" aria-busy="true"><span className="pl-faint">Checking recent unpaid payments with Razorpay…</span></section>;
+    return (
+      <section className="pl-mm pl-mm--quiet" role="status" aria-busy="true">
+        <span className="ds-sr-only">Checking recent unpaid payments with Razorpay…</span>
+        <Skeleton w="min(360px, 70%)" h={12} />
+        <Skeleton w="min(220px, 45%)" h={10} />
+      </section>
+    );
   }
+  const stale = q.isPlaceholderData;
+  const staleStyle = stale ? { ...DIM, pointerEvents: "none" } : undefined;
   if (q.error && !q.data) {
     return <ErrorState message={`Couldn’t check payments with Razorpay — ${q.error.message}`} onRetry={() => q.refetch()} retrying={q.isFetching} />;
   }
@@ -177,14 +192,14 @@ function Mismatches({ brandId, isAdmin }) {
   );
   if (!items.length) {
     return (
-      <section className="pl-mm pl-mm--quiet">
+      <section className="pl-mm pl-mm--quiet" style={staleStyle} aria-busy={stale || undefined}>
         <span className="pl-small">{d.checked ? `All ${plural(d.checked, "recent unpaid payment")} match Razorpay.` : "No unpaid online payments in the last 3 days to check."}</span>
         {foot}
       </section>
     );
   }
   return (
-    <section className="pl-mm" aria-labelledby="pl-mm-title">
+    <section className="pl-mm" aria-labelledby="pl-mm-title" style={staleStyle} aria-busy={stale || undefined}>
       <div className="pl-mm-head">
         <div className="pl-mm-text">
           <b id="pl-mm-title" className="pl-mm-title">{plural(items.length, "payment")} {items.length === 1 ? "doesn’t" : "don’t"} match Razorpay</b>
@@ -272,9 +287,11 @@ export default function Payments() {
   useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 350); return () => clearTimeout(t); }, [search]);
   useEffect(() => { setPage(1); }, [period, tab, brandId, q]);
 
+  // Period / brand change keeps the old totals on screen (dimmed) until the new ones land.
   const summary = useQuery({
     queryKey: ["payments", "summary", period, brandId],
     queryFn: () => paymentService.summary({ period, brandId: brandId || undefined }),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000,
   });
   const params = { period, tab, page, limit: PAGE_SIZE, ...(q ? { q } : {}), ...(brandId ? { brandId } : {}) };
@@ -308,13 +325,13 @@ export default function Payments() {
         )}
       >
         <p className="pl-faint pl-small pl-nightly">
-          {!s ? " " : nightly
+          {!s ? <Skeleton w="min(420px, 80%)" h={11} style={{ display: "inline-block", verticalAlign: "middle" }} /> : nightly
             ? <>Last Razorpay check ({fullDate(nightly.at)}): {nightly.summary || (nightly.status === "failed" ? "didn’t finish" : "done")}{nightly.status === "failed" && nightly.error ? ` — ${nightly.error.split("\n")[0]}` : ""}.{s.fixedThisWeek ? ` ${plural(s.fixedThisWeek, "order")} fixed from Razorpay this week.` : ""}</>
             : "The nightly Razorpay check hasn’t run yet."}
         </p>
       </PageHeader>
 
-      <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} />
+      <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
       <Mismatches brandId={brandId} isAdmin={!!isAdmin} />
 
@@ -329,7 +346,15 @@ export default function Payments() {
 
       <section id="pl-pay-list" className="pl-card" aria-busy={list.isFetching || undefined}>
         {list.isLoading ? (
-          <SkeletonRows rows={6} label="Loading payments…" />
+          <div className="pl-scroll" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading payments…</span>
+            <table className="pl-table pl-table--pay" aria-hidden="true">
+              <thead>
+                <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th /></tr>
+              </thead>
+              <tbody><SkeletonTableRows rows={8} cols={8} /></tbody>
+            </table>
+          </div>
         ) : list.error && !list.data ? (
           <ErrorState message={`Couldn’t load payments — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
         ) : rows.length === 0 ? (
@@ -337,7 +362,7 @@ export default function Payments() {
             title={q ? "No payments match your search" : "Nothing here"}
             description={q ? "Try the full order number, a Razorpay payment ID (pay_…) or a 10-digit phone number." : EMPTY[tab]} />
         ) : (
-          <div className="pl-scroll">
+          <div className="pl-scroll" style={list.isFetching ? DIM : undefined}>
             <table className="pl-table pl-table--pay">
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th aria-label="Actions" /></tr>

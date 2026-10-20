@@ -15,6 +15,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon } from '@hugeicons/core-free-icons';
 import { useAuth } from '../../context/AuthContext';
 import { searchService } from '../../services/searchService';
+import { SkeletonList } from '../ui/Skeleton';
 import { getViewFromPath } from '../../utils/dashboardRouting';
 
 const AUTO_MIN = 5;      // characters before search fires on its own
@@ -317,7 +318,10 @@ export default function GlobalSearch() {
   const hasResults = !!searchedQ;
 
   let status = '';
-  if (loading) status = 'Searching…';
+  // First search: skeleton rows below (they carry the "Searching…" label).
+  // A refined search keeps the old results + the small spinner in the input.
+  const firstSearch = loading && !hasResults;
+  if (loading) status = hasResults ? 'Searching…' : '';
   else if (error) status = error;
   else if (q.length > 0 && q.length < AUTO_MIN && !hasResults) status = `Type at least ${AUTO_MIN} characters, or press Enter`;
   else if (hasResults && searchedQ === q && total === 0) status = `No matches for “${searchedQ}”`;
@@ -355,7 +359,7 @@ export default function GlobalSearch() {
             aria-describedby={ids.hint}
             aria-activedescendant={flat.length ? `${ids.list}-opt-${active}` : undefined}
           />
-          {loading && <span className="gs-spinner" aria-hidden="true" />}
+          {loading && hasResults && <span className="gs-spinner" aria-hidden="true" />}
           <button type="button" className="gs-esc" onClick={closeDialog} aria-label="Close search">Esc</button>
         </div>
 
@@ -375,6 +379,7 @@ export default function GlobalSearch() {
 
         <div className="gs-body">
           <p id={ids.hint} className={`gs-status${error ? ' is-error' : ''}`} role="status" aria-live="polite">{status}</p>
+          {firstSearch && <SkeletonList rows={4} avatar label="Searching…" />}
           <div id={ids.list} ref={listRef} className="gs-list" role="listbox" aria-label="Search results">
             {hasResults && visibleGroups.map((g) => {
               if (filter !== 'all' && filter !== g.key) return null;

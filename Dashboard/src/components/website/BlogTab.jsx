@@ -10,7 +10,7 @@ import EmptyState from '../ui/EmptyState';
 import { Select } from '../ui';
 import SerpPreview, { brandSiteName } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
-import { WebChips, WebBody, WebGridState, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks } from './webParts';
+import { WebChips, WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks } from './webParts';
 import { useLoad, useObjectUrl, errText, fmtDay, siteUrl, siteBase, brandLabel } from './webUtil';
 
 const Editor = dynamic(() => import('../common/Editor'), {
@@ -214,7 +214,7 @@ function Posts({ brands, brand, brandId, q, registerAction }) {
         </>
       ))}
     >
-      {form && (form.loading || loadingPost) && <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>}
+      {form && (form.loading || loadingPost) && <WebPanelSkeleton fields={6} label="Loading post…" />}
       {form && !form.loading && !loadingPost && (
         <>
           <WebField label="Title" htmlFor="bp-title">
@@ -331,12 +331,12 @@ function Posts({ brands, brand, brandId, q, registerAction }) {
       <WebChips chips={chips} value={filter} onChange={setFilter} />
       <WebBody panel={panel}>
         <WebGridState
-          loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+          loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length} label="Loading posts…"
           empty={<EmptyState title={q || filter !== 'all' ? 'No posts match' : 'No posts yet'} description={q || filter !== 'all' ? 'Try another search or filter.' : 'Write a post to answer what shoppers search for.'} action={!q && filter === 'all' ? <button type="button" className="web-btn web-btn--primary" onClick={openNew}>+ New post</button> : null} />}
         />
-        {!list.loading && !list.error && items.length > 0 && (
+        {!list.error && items.length > 0 && (
           <>
-            <div className="web-grid">
+            <div className={`web-grid${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
               {items.map((p) => (
                 <WebCard
                   key={p.id}
@@ -435,10 +435,11 @@ function Categories({ q, registerAction }) {
     <WebBody panel={panel}>
       <WebGridState
         loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+        media={null} label="Loading categories…"
         empty={<EmptyState title={q ? 'No categories match' : 'No categories yet'} description={q ? 'Try another search.' : 'Add one to group posts, like “Sock care”.'} />}
       />
-      {!list.loading && !list.error && items.length > 0 && (
-        <div className="web-grid">
+      {!list.error && items.length > 0 && (
+        <div className={`web-grid${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
           {items.map((c) => (
             <WebCard
               key={c.id}

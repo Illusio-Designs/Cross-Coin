@@ -7,7 +7,7 @@ import { policyService, websiteService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { WebBody, WebGridState, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
+import { WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
 import { useLoad, errText, fmtDay, siteUrl, siteBase, policyPath, brandLabel } from './webUtil';
 
 const Editor = dynamic(() => import('../common/Editor'), {
@@ -139,7 +139,7 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
         </>
       ))}
     >
-      {form && form.loading && <div className="web-skel-lines" aria-busy="true"><span /><span /><span /></div>}
+      {form && form.loading && <WebPanelSkeleton fields={2} editor label="Loading policy…" />}
       {form && !form.loading && (
         <>
           {row && (
@@ -181,10 +181,11 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
       <WebBody panel={panel}>
         <WebGridState
           loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+          grid="web-grid web-grid--text" media={null} label="Loading policies…"
           empty={<EmptyState title={q ? 'No policies match' : 'No policies yet'} description={q ? 'Try another search.' : 'Add returns, shipping, privacy and terms — every store needs them.'} action={!q ? <button type="button" className="web-btn web-btn--primary" onClick={openNew}>+ New policy</button> : null} />}
         />
-        {!list.loading && !list.error && items.length > 0 && (
-          <div className="web-grid web-grid--text">
+        {!list.error && items.length > 0 && (
+          <div className={`web-grid web-grid--text${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
             {items.map((p) => {
               const check = p.return_check ? returnLine(p.return_check.mentions, p.return_check.window_days) : null;
               return (

@@ -3482,3 +3482,7 @@
 }
 .oa-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
 .oa-hint { font-size: 11px; color: var(--ds-color-text-muted); margin: 2px 0 0; line-height: 1.4; }
+
+/* Orders table refresh (page / tab / filter change): keep the current rows on
+   screen, dimmed, until the new page lands — no skeleton flash. */
+.ord-table-busy { opacity: .6; transition: opacity .15s; }

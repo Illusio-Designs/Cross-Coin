@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
+import { Skeleton, SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Abandoned carts — shoppers who added items and left, and what the
@@ -103,6 +104,12 @@ function openOrder(orderNumber) {
   window.history.pushState({}, '', '/dashboard/orders');
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
+
+const TABLE_HEAD = (
+  <thead>
+    <tr><th>Shopper</th><th>Cart</th><th className="r">Value</th><th>Left</th><th>WhatsApp</th><th>Result</th><th className="r"><span className="wpb-sr">Action</span></th></tr>
+  </thead>
+);
 
 export default function CartsPage({ brandId = '', brands = [], isAdmin = false, goTo }) {
   const [days, setDays] = useState(7);
@@ -239,7 +246,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
         </div>
       </header>
 
-      <section className="wpb-card wpb-flow" aria-label="Recovery flow" aria-busy={loading}>
+      <section className={`wpb-card wpb-flow${loading && data ? ' is-stale' : ''}`} aria-label="Recovery flow" aria-busy={loading}>
         {flowItems.map((f) => (
           <div key={f.label} className="wpb-flow-item">
             <span className="wpb-eyebrow">{f.label}</span>
@@ -271,9 +278,14 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
               <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={2} /> Try again
             </button>
           </div>
-        ) : loading && !data ? (
-          <div className="wpb-skel-list" aria-label="Loading carts">
-            {[0, 1, 2, 3, 4].map((i) => <div key={i} className="wpb-skel-row"><span /><span /></div>)}
+        ) : loading && rows.length === 0 ? (
+          // First load, or a tab with nothing cached yet: header + placeholder rows.
+          <div className="wpb-tbl-wrap" role="status">
+            <span className="wpb-sr">Loading carts…</span>
+            <table className="wpb-tbl wpb-tbl--carts" aria-hidden="true">
+              {TABLE_HEAD}
+              <tbody><SkeletonTableRows rows={6} cols={7} /></tbody>
+            </table>
           </div>
         ) : rows.length === 0 ? (
           <div className="wpb-state">
@@ -283,9 +295,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
         ) : (
           <div className={`wpb-tbl-wrap${loading ? ' is-stale' : ''}`}>
             <table className="wpb-tbl wpb-tbl--carts">
-              <thead>
-                <tr><th>Shopper</th><th>Cart</th><th className="r">Value</th><th>Left</th><th>WhatsApp</th><th>Result</th><th className="r"><span className="wpb-sr">Action</span></th></tr>
-              </thead>
+              {TABLE_HEAD}
               <tbody>
                 {rows.map((r) => {
                   const wa = WA[r.wa] || { label: r.wa || '—', tone: 'muted' };
@@ -323,7 +333,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
                   {Number(rules.minValue) > 0 && <> · skip carts under <b>{inr(rules.minValue)}</b></>}
                 </span>
               ) : (
-                <span>{loading ? 'Loading…' : 'Rules not available.'}</span>
+                loading ? <Skeleton w="min(420px, 70%)" h={12} /> : <span>Rules not available.</span>
               )}
             </div>
             {isAdmin && (

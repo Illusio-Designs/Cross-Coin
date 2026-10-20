@@ -5,7 +5,7 @@ import { websiteService } from '../../services';
 import { showSuccess, showError, showWarning } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { WebChips, WebBody, WebGridState, WebCard, WebPager, WebPanel } from './webParts';
+import { WebChips, WebBody, WebGridState, webStale, WebCard, WebPager, WebPanel } from './webParts';
 import { useLoad, errText, fmtDay, fmtBytes, plural, goToView } from './webUtil';
 
 const LIMIT = 24;
@@ -168,11 +168,12 @@ export default function PhotosTab({ q, registerAction }) {
       <WebBody panel={panel}>
         <WebGridState
           loading={list.loading} error={list.error} onRetry={() => list.reload()} count={items.length}
+          grid="web-grid web-grid--photos" media="1 / 1" label="Loading photos…"
           empty={<EmptyState title={q || usage !== 'all' ? 'No photos match' : 'No photos yet'} description={q || usage !== 'all' ? 'Try another search or filter.' : 'Upload photos here, or add them to products, slides and posts.'} action={!q && usage === 'all' ? <label htmlFor={INPUT_ID} className="web-btn web-btn--primary">Upload photos</label> : null} />}
         />
-        {!list.loading && !list.error && items.length > 0 && (
+        {!list.error && items.length > 0 && (
           <>
-            <div className="web-grid web-grid--photos">
+            <div className={`web-grid web-grid--photos${webStale(list.loading)}`} aria-busy={list.loading || undefined}>
               {items.map((m) => (
                 <WebCard
                   key={m.key}

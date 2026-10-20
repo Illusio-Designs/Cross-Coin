@@ -9,10 +9,10 @@
   box-shadow: var(--ds-shadow-sm, 0 1px 2px rgba(15,23,42,.04));
 }
 .tbl-container-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+  /* Refresh with rows already shown: keep them, dimmed (first load draws
+     skeleton rows under the real header — see components/ui/Table.jsx). */
+  opacity: .6;
+  transition: opacity .15s;
 }
 
 .tbl {

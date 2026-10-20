@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import Loader from '../common/Loader';
+import { Skeleton, SkeletonList, SkeletonTableRows } from '../ui/Skeleton';
 import { useAuth } from '../../context/AuthContext';
 import { PageHeader } from './primitives';
 import { dashboardService, brandService } from '../../services';
@@ -169,7 +169,10 @@ function TodayHome() {
     goToView('orders');
   };
 
-  if (isLoading) return <div className="obz-home"><div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Loader /></div></div>;
+  // First load: the page keeps its layout and every block shimmers in place
+  // (a brand switch or the 60s refresh keeps the old numbers — keepPreviousData).
+  const first = isLoading && !data;
+  const num = (v, w = 56, h = 24) => (first ? <Skeleton w={w} h={h} /> : v);
   if (error && !data) return <div className="obz-home"><div className="panel">Couldn’t load today’s dashboard: {error.message || 'try again'}</div></div>;
 
   const queues = (data?.queues || []).filter((q) => q.count > 0);
@@ -195,7 +198,7 @@ function TodayHome() {
           <h1>{getGreeting()}{user?.username ? `, ${user.username}` : ''}</h1>
           <p>
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' })}
-            {' · '}{totalItems > 0 ? `${plural(totalItems, 'thing')} need you today${urgentItems ? `, ${urgentItems} urgent` : ''}.` : 'Nothing waiting — all clear.'}
+            {first ? '' : ' · '}{first ? '' : totalItems > 0 ? `${plural(totalItems, 'thing')} need you today${urgentItems ? `, ${urgentItems} urgent` : ''}.` : 'Nothing waiting — all clear.'}
             {isFetching && data ? ' Updating…' : ''}
           </p>
         </div>
@@ -223,12 +226,23 @@ function TodayHome() {
           <div className="hm-tabs" role="tablist" aria-label="Filter work">
             {['all', 'urgent', 'today', 'later'].map((t) => (
               <button key={t} type="button" role="tab" aria-selected={tab === t} className={`hm-tab${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'all' ? 'All' : PRIORITY_LABEL[t]}<span className="n">{counts[t]}</span>
+                {t === 'all' ? 'All' : PRIORITY_LABEL[t]}{!first && <span className="n">{counts[t]}</span>}
               </button>
             ))}
           </div>
         </div>
-        {shown.length === 0 ? (
+        {first ? (
+          <div className="hm-cards" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading today’s work…</span>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="hm-card" aria-hidden="true" style={{ borderColor: 'var(--ds-color-border)' }}>
+                <div className="top"><Skeleton w={64} h={18} r={999} /><Skeleton w={40} h={28} /></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}><Skeleton w="70%" h={14} /><Skeleton w="90%" h={11} /></div>
+                <Skeleton w="100%" h={34} r={10} />
+              </div>
+            ))}
+          </div>
+        ) : shown.length === 0 ? (
           <div className="hm-empty">{queues.length === 0 ? 'Nothing waiting. Nice work.' : 'Nothing in this group.'}</div>
         ) : (
           <div className="hm-cards">
@@ -258,31 +272,47 @@ function TodayHome() {
             <div className="step" key={s.l}>
               <button type="button" onClick={() => goToView('orders', s.tab)}>
                 <span className="l">{s.l}</span>
-                <span className="v">{Number(s.v || 0).toLocaleString('en-IN')}</span>
-                {s.sub && <span className="l">{s.sub}</span>}
+                <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
+                {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
               </button>
               {i < arr.length - 1 && <span className="arrow" aria-hidden="true">→</span>}
             </div>
           ))}
         </div>
         <div className="hm-chips">
-          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems')}>Delivery problems · {p.problems || 0}</button>
-          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns')}>Returns open · {p.returnsOpen || 0}</button>
-          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto')}>Cancelled &amp; RTO today · {p.closedToday || 0}</button>
+          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems')}>Delivery problems · {first ? '–' : p.problems || 0}</button>
+          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns')}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
+          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto')}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
         </div>
       </section>
 
+      {first ? (
+        <section className="hm-kpis" aria-label="Numbers" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading figures…</span>
+          {['Orders today', 'Booked today', 'Net sales · this month', 'RTO rate · 30 days'].map((l) => (
+            <div className="hm-kpi" key={l}><span className="kl">{l}</span><Skeleton w="55%" h={26} /><Skeleton w="80%" h={11} /></div>
+          ))}
+        </section>
+      ) : (
       <section className="hm-kpis" aria-label="Numbers">
         <div className="hm-kpi"><span className="kl">Orders today</span><span className="kv">{(k.ordersToday || 0).toLocaleString('en-IN')}</span><span className="kf"><Delta v={k.ordersDelta} /> vs same time yesterday</span></div>
         <div className="hm-kpi"><span className="kl">Booked today</span><span className="kv">{rupee(k.bookedToday)}</span><span className="kf"><Delta v={k.bookedDelta} /> avg order {rupee(k.aovToday)}</span></div>
         <div className="hm-kpi"><span className="kl">Net sales · this month</span><span className="kv">{rupee(k.netSalesMonth)}</span><span className="kf">delivered minus {rupee(k.refundsMonth)} refunds</span></div>
         <div className="hm-kpi"><span className="kl">RTO rate · 30 days</span><span className="kv">{k.rto30 ?? 0}%</span><span className="kf">{rtoDelta != null && <b className={rtoDelta <= 0 ? 'up' : 'down'}>{rtoDelta <= 0 ? '▼' : '▲'} {Math.abs(rtoDelta)} pts </b>}COD {k.codRto30 ?? 0}% · prepaid {k.prepaidRto30 ?? 0}%</span></div>
       </section>
+      )}
 
       <div className="hm-grid3">
         <section className="panel">
-          <div className="panel-h"><h3>Booked value, last 7 days</h3><span className="h-hint">{rupee(weekTotal)}</span></div>
-          <div className="hm-week">
+          <div className="panel-h"><h3>Booked value, last 7 days</h3><span className="h-hint">{first ? <Skeleton w={64} h={11} /> : rupee(weekTotal)}</span></div>
+          <div className="hm-week" aria-busy={first || undefined}>
+            {first && [46, 70, 38, 88, 60, 104, 52].map((h, i) => (
+              <div className="col" key={i} aria-hidden="true">
+                <Skeleton w="70%" h={10} />
+                <Skeleton w="100%" h={h} r="6px 6px 2px 2px" style={{ maxWidth: 44 }} />
+                <Skeleton w="60%" h={10} />
+              </div>
+            ))}
             {week.map((w) => (
               <div className="col" key={w.day} title={`${dayName(w.day)}: ${rupee(w.value)} · ${plural(w.orders, 'order')}`}>
                 <span className="amt">{w.value >= 1000 ? `₹${(w.value / 1000).toFixed(1)}k` : rupee(w.value)}</span>
@@ -296,7 +326,15 @@ function TodayHome() {
         {!brandId && (
           <section className="panel">
             <div className="panel-h"><h3>Today by brand</h3></div>
-            {(data?.brands || []).length === 0 ? <div className="h-hint">No orders yet today.</div> : (
+            {first ? (
+              <div style={{ overflowX: 'auto' }} role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading brands…</span>
+                <table className="hm-table" aria-hidden="true">
+                  <thead><tr><th>Brand</th><th className="r">Orders</th><th className="r">Booked</th><th className="r">To confirm</th></tr></thead>
+                  <tbody><SkeletonTableRows rows={3} cols={4} /></tbody>
+                </table>
+              </div>
+            ) : (data?.brands || []).length === 0 ? <div className="h-hint">No orders yet today.</div> : (
               <div style={{ overflowX: 'auto' }}>
                 <table className="hm-table">
                   <thead><tr><th>Brand</th><th className="r">Orders</th><th className="r">Booked</th><th className="r">To confirm</th></tr></thead>
@@ -313,7 +351,8 @@ function TodayHome() {
 
         <section className="panel">
           <div className="panel-h"><h3>Just happened</h3></div>
-          {(data?.feed || []).length === 0 ? <div className="h-hint">Nothing in the last 3 days.</div> : (
+          {first ? <SkeletonList rows={5} label="Loading recent activity…" />
+            : (data?.feed || []).length === 0 ? <div className="h-hint">Nothing in the last 3 days.</div> : (
             <ol className="hm-feed">
               {data.feed.map((e, i) => (
                 <li key={i}>

@@ -91,6 +91,9 @@ function playSound(type) {
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  // True until the one-time 24h seed below has answered (the bell shows
+  // skeleton rows instead of "No notifications yet" meanwhile).
+  const [seeding, setSeeding] = useState(true);
   const seenIds = useRef({ orders: new Set(), whatsapp: new Set() });
 
   const addNotification = useCallback((type, data) => {
@@ -181,7 +184,7 @@ export function useNotifications() {
     // unread for genuinely new events (deduped via seenIds).
     const seed = async () => {
       const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) return;
+      if (!token) { setSeeding(false); return; }
       try {
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const res = await fetch(
@@ -216,6 +219,7 @@ export function useNotifications() {
           setNotifications(prev => [...items, ...prev].slice(0, MAX_NOTIFICATIONS));
         }
       } catch (_) { /* seeding is best-effort */ }
+      finally { if (alive) setSeeding(false); }
     };
     seed();
 
@@ -256,5 +260,5 @@ export function useNotifications() {
     setUnreadCount(0);
   }, []);
 
-  return { notifications, unreadCount, markAllRead, clearAll };
+  return { notifications, unreadCount, markAllRead, clearAll, seeding };
 }

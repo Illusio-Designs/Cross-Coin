@@ -189,6 +189,7 @@
   animation: wpa-shimmer 1.2s ease-in-out infinite;
 }
 .wpa-skel--sm { height: 10px; margin-top: 4px; }
+.wpa-skel--inline { display: inline-block; height: 12px; vertical-align: middle; }
 .wpa-page .is-stale { opacity: .6; transition: opacity var(--ds-trans); }
 @keyframes wpa-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .wpa-skel { animation: none; } }

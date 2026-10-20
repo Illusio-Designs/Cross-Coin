@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import { useNotifications } from '../../hooks/useNotifications';
+import { SkeletonList } from '../ui/Skeleton';
 import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
 import { showError } from '../../utils/toastNotification';
 
@@ -19,7 +20,7 @@ const ICONS = {
 };
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAllRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, markAllRead, clearAll, seeding } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -127,7 +128,9 @@ export default function NotificationBell() {
             </div>
           )}
 
-          {notifications.length === 0 ? (
+          {notifications.length === 0 && seeding ? (
+            <SkeletonList rows={4} label="Loading notifications…" />
+          ) : notifications.length === 0 ? (
             <div className="notif-empty">No notifications yet</div>
           ) : (
             <div className="notif-list">
