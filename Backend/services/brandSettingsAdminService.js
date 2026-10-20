@@ -31,7 +31,7 @@ const SECTIONS = [
   { key: 'tax', title: 'Tax & invoices', help: 'Printed on every GST invoice for this store.' },
   { key: 'returns', title: 'Returns', help: 'Used by the Problems desk refund presets and return pickups.' },
   { key: 'payments', title: 'Payments', help: 'Razorpay keys and the cash-on-delivery rules for this store.' },
-  { key: 'whatsapp', title: 'WhatsApp', help: 'All stores share one WhatsApp number. Its token and IDs are set once on WhatsApp → Settings; here you only set this store’s name, link and win-back offer.' },
+  { key: 'whatsapp', title: 'WhatsApp', help: 'All stores share one WhatsApp number. Its token and IDs are set once on WhatsApp → Profile; here you only set this store’s name, link and win-back offer.' },
   { key: 'tracking', title: 'Tracking', help: 'Pixels and analytics loaded on the store.' },
 ];
 
@@ -81,7 +81,7 @@ const FIELDS = [
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Custom checkout signing secret', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
 
   // WhatsApp: one shared number for every store. Its token and IDs are set
-  // once on WhatsApp → Settings, so they are not fields here.
+  // once on WhatsApp → Profile, so they are not fields here.
   F('STORE_NAME', 'whatsapp', 'Store name in messages', { hint: 'Empty = the brand name.' }),
   F('STORE_URL', 'whatsapp', 'Website for message links', { rule: 'host', hint: 'Only used when the store has no website address.' }),
   F('WINBACK_COUPON_CODE', 'whatsapp', 'Win-back coupon', { default: 'CART10', rule: 'code', hint: 'Offered in “come back” messages.' }),
@@ -160,7 +160,7 @@ const OTHER_LABELS = {
   ADS_PRODUCT_COST: 'Not used — product cost comes from each variant’s cost price (Products). Safe to remove.',
 };
 
-// The shared WhatsApp number's keys: set once on WhatsApp → Settings (they live
+// The shared WhatsApp number's keys: set once on WhatsApp → Profile (they live
 // on the shared WhatsApp brand). On any other store a saved copy overrides the
 // shared number, so it is listed under "Other settings" with a warning.
 const SHARED_WA_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
@@ -441,7 +441,7 @@ async function save(brandId, body, userId) {
     const field = FIELD_BY_KEY.get(key);
     if (field?.readOnly) continue;
     // A key with no form field: an existing "other" setting, or a new custom one.
-    if (!field && (OWNED_ELSEWHERE(key, row?.category) || WA_KEY.test(key))) { errors[key] = WA_KEY.test(key) ? 'Set on WhatsApp → Settings (shared by all stores).' : 'This setting is edited on its own page.'; continue; }
+    if (!field && (OWNED_ELSEWHERE(key, row?.category) || WA_KEY.test(key))) { errors[key] = WA_KEY.test(key) ? 'Set on WhatsApp → Profile (shared by all stores).' : 'This setting is edited on its own page.'; continue; }
     if (!field && !row && !/^[A-Z][A-Z0-9_]{1,99}$/.test(key)) { errors[key] = 'Use capital letters, numbers and _ for a new key.'; continue; }
     if (isSecret(key, row) && /^•+/.test(str(raw))) continue; // unchanged mask echoed back
     const v = field ? normalise(field, raw) : str(raw).trim();

@@ -64,6 +64,10 @@ api.interceptors.request.use(
     } else if (isWrite) {
       timeout = Math.max(timeout, API_TIMEOUTS.default);
     }
+    // A longer timeout passed on the call itself (e.g. the WhatsApp inbox
+    // long-poll asks for 40s) wins — it used to be overwritten here, so the
+    // poll was cut off mid-wait and reported "Request took too long".
+    if (config.timeout && config.timeout > timeout && config.timeout !== 15000) timeout = config.timeout;
     config.timeout = timeout;
 
     const token = localStorage.getItem("token");
@@ -157,6 +161,10 @@ adminApi.interceptors.request.use(
     } else if (isWrite) {
       timeout = Math.max(timeout, API_TIMEOUTS.default);
     }
+    // A longer timeout passed on the call itself (e.g. the WhatsApp inbox
+    // long-poll asks for 40s) wins — it used to be overwritten here, so the
+    // poll was cut off mid-wait and reported "Request took too long".
+    if (config.timeout && config.timeout > timeout && config.timeout !== 15000) timeout = config.timeout;
     config.timeout = timeout;
 
     const token = localStorage.getItem("token");
@@ -2539,6 +2547,51 @@ export const whatsappService = {
     const response = await adminApi.post('/api/whatsapp/products/sync-catalog', { brandId });
     return response.data;
   },
+};
+
+// ─── WhatsApp → Profile (admins only) ────────────────────────────────────────
+// The shared number's business profile, display name, connection keys and how
+// each store signs its messages. Errors reject with the server's body
+// ({ message, errors?, test? }) so the page can show the plain-language reason.
+const waProfileError = (error) => {
+  const data = error?.response?.data;
+  if (data && typeof data === 'object') return data;
+  if (error?.response) return { message: `The server answered ${error.response.status}. Try again in a minute.` };
+  const msg = error?.message || '';
+  return { message: !msg || /network error/i.test(msg) ? 'Couldn’t reach our server. Check your internet and try again.' : msg };
+};
+const waProfileCall = async (fn) => {
+  try {
+    const response = await fn();
+    return response.data;
+  } catch (error) {
+    throw waProfileError(error);
+  }
+};
+
+export const whatsappProfileService = {
+  // { profile, number, nameRequest, verticals, limits, photoUploadReady, checkedAt, error? }
+  getProfile: ({ refresh = false } = {}) =>
+    waProfileCall(() => adminApi.get('/api/whatsapp/profile', { params: refresh ? { refresh: 1 } : {} })),
+  // Only the fields being changed: { about?, description?, address?, email?, websites?, vertical? }
+  saveProfile: (changes) => waProfileCall(() => adminApi.put('/api/whatsapp/profile', changes)),
+  // One JPG/PNG up to 5 MB.
+  uploadPhoto: (file) => {
+    const form = new FormData();
+    form.append('photo', file);
+    return waProfileCall(() => adminApi.post('/api/whatsapp/profile/photo', form, { timeout: 90000 }));
+  },
+  requestName: (name) => waProfileCall(() => adminApi.post('/api/whatsapp/profile/name', { name })),
+  // { configured, keys: [{ field, key, label, value (token masked), source, updatedAt }], appIdSet, … }
+  getKeys: () => waProfileCall(() => adminApi.get('/api/whatsapp/keys')),
+  // { token?, phoneNumberId?, businessAccountId?, catalogId? } — a new token / phone ID is tested with Meta first.
+  saveKeys: (body) => waProfileCall(() => adminApi.put('/api/whatsapp/keys', body)),
+  getStoresIdentity: () => waProfileCall(() => adminApi.get('/api/whatsapp/stores-identity')),
+  // Existing endpoints the page reuses.
+  getHealth: ({ refresh = false } = {}) =>
+    waProfileCall(() => adminApi.get('/api/whatsapp/settings/health', { params: refresh ? { refresh: 1 } : {} })),
+  getAnalytics: (days = 7) => waProfileCall(() => adminApi.get('/api/whatsapp/analytics', { params: { days } })),
+  getFailed: (hours = 168) => waProfileCall(() => adminApi.get('/api/whatsapp/settings/failed', { params: { hours } })),
 };
 
 // ── Returns & Refunds (admin) ──────────────────────────────────────────────
