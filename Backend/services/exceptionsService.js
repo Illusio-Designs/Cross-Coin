@@ -120,29 +120,34 @@ const REFUND_DUE_ORDER_STATUSES = "'cancelled','order cancelled','returned_rto',
 
 // Every branch yields the same columns. needs_you = staff must act now
 // (1) vs. waiting on the customer / courier (0).
+// Text columns from different tables are normalised to one collation:
+// production tables were created at different times with different default
+// collations, and MariaDB refuses to UNION them ("Illegal mix of collations
+// for operation 'UNION'"). CONVERT first so latin1 columns are safe too.
+const T = (expr) => `CONVERT(${expr} USING utf8mb4) COLLATE utf8mb4_unicode_ci`;
 const UNION_SQL = `
   SELECT 'ndr' AS kind, 'ndr' AS src, c.id AS ref_id, c.order_id, COALESCE(c.brand_id, o.brand_id) AS brand_id,
-         c.status, c.created_at AS opened_at, c.updated_at AS since_at,
+         ${T('c.status')} AS status, c.created_at AS opened_at, c.updated_at AS since_at,
          CASE WHEN c.status IN ('address_updated','cancel_requested','needs_action') THEN 1
               WHEN c.status = 'reattempt_requested' AND c.sent_to_courier_at IS NULL THEN 1
               WHEN c.status = 'awaiting_customer' AND c.updated_at < NOW() - INTERVAL 24 HOUR THEN 1
               ELSE 0 END AS needs_you,
-         o.order_number, CAST(NULL AS CHAR(40)) AS return_number, COALESCE(c.awb, o.shipping_waybill) AS awb, o.shipping_waybill AS order_awb,
-         c.attempts, c.reason, c.customer_action, c.sent_to_courier_at AS sent_at, c.reattempt_date,
-         c.courier_response, CAST(NULL AS DECIMAL(12,2)) AS amount, CAST(NULL AS SIGNED) AS is_cod, CAST(NULL AS CHAR(40)) AS pickup_status
+         ${T('o.order_number')} AS order_number, CAST(NULL AS CHAR(40)) AS return_number, ${T('COALESCE(c.awb, o.shipping_waybill)')} AS awb, ${T('o.shipping_waybill')} AS order_awb,
+         c.attempts, ${T('c.reason')} AS reason, ${T('c.customer_action')} AS customer_action, c.sent_to_courier_at AS sent_at, c.reattempt_date,
+         ${T('c.courier_response')} AS courier_response, CAST(NULL AS DECIMAL(12,2)) AS amount, CAST(NULL AS SIGNED) AS is_cod, CAST(NULL AS CHAR(40)) AS pickup_status
     FROM ndr_cases c JOIN orders o ON o.id = c.order_id
    WHERE c.status <> 'closed'
   UNION ALL
   SELECT IF(r.status = 'received', 'refund', 'return'), 'return', r.id, r.order_id, COALESCE(r.brand_id, o.brand_id),
-         r.status, r.created_at, r.updated_at,
+         ${T('r.status')}, r.created_at, r.updated_at,
          CASE WHEN r.status IN ('requested','under_review','received') THEN 1
               WHEN r.status = 'approved' AND r.pickup_awb IS NULL THEN 1
               WHEN r.status = 'picked_up' AND r.pickup_status = 'delivered_to_warehouse' THEN 1
               WHEN r.status = 'pickup_scheduled' AND r.updated_at < NOW() - INTERVAL 4 DAY THEN 1
               ELSE 0 END,
-         o.order_number, r.return_number, r.pickup_awb, o.shipping_waybill,
-         NULL, r.reason, NULL, NULL, NULL,
-         NULL, COALESCE(r.refund_amount, r.requested_amount), r.is_cod, r.pickup_status
+         ${T('o.order_number')}, ${T('r.return_number')}, ${T('r.pickup_awb')}, ${T('o.shipping_waybill')},
+         NULL, ${T('r.reason')}, NULL, NULL, NULL,
+         NULL, COALESCE(r.refund_amount, r.requested_amount), r.is_cod, ${T('r.pickup_status')}
     FROM returns r JOIN orders o ON o.id = r.order_id
    WHERE r.status IN ('requested','under_review','approved','pickup_scheduled','picked_up','received')
   UNION ALL
@@ -151,7 +156,7 @@ const UNION_SQL = `
          COALESCE(pf.failed_at, (SELECT MAX(h.created_at) FROM order_status_history h
                                   WHERE h.order_id = o.id AND LOWER(h.status) IN (${REFUND_DUE_ORDER_STATUSES})), o.updated_at),
          o.updated_at, 1,
-         o.order_number, NULL, o.shipping_waybill, o.shipping_waybill,
+         ${T('o.order_number')}, NULL, ${T('o.shipping_waybill')}, ${T('o.shipping_waybill')},
          NULL, NULL, NULL, NULL, NULL,
          NULL, COALESCE(-pf.amt / 100, o.final_amount), 0, NULL
     FROM orders o
