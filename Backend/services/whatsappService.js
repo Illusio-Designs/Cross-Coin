@@ -82,36 +82,26 @@ function metaError(err) {
 const _credentialsCache = new Map();
 const CREDENTIALS_TTL = 5 * 60 * 1000; // 5 minutes
 
-// Shared-number mode: all brands use ONE verified WhatsApp account. The account
-// is configured on this brand's settings; any brand that has no creds of its own
-// falls back to it — so every brand sends/receives through the same number.
-// Override the holder brand with env WHATSAPP_SHARED_BRAND_ID.
+// Shared-number mode: WhatsApp is universal — every store sends and receives
+// through ONE verified account, configured on the shared brand (WhatsApp →
+// Profile). Per-store WhatsApp keys are ignored (an old copy saved on one store
+// used to override the shared number for that store). Override the holder
+// brand with env WHATSAPP_SHARED_BRAND_ID.
 const SHARED_WA_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
 
 async function getCredentials(brandId = 1) {
-  const cacheKey = `wa_creds_${brandId}`;
+  // `brandId` is kept for callers; the credentials are the same for every store.
+  const cacheKey = `wa_creds_${SHARED_WA_BRAND_ID}`;
   const cached = _credentialsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CREDENTIALS_TTL) {
     return cached.data;
   }
 
-  let [token, phoneNumberId, businessAccountId] = await Promise.all([
-    settingsHelper.getSetting(brandId, 'WHATSAPP_API_TOKEN'),
-    settingsHelper.getSetting(brandId, 'WHATSAPP_PHONE_NUMBER_ID'),
-    settingsHelper.getSetting(brandId, 'WHATSAPP_BUSINESS_ACCOUNT_ID'),
+  const [token, phoneNumberId, businessAccountId] = await Promise.all([
+    settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_API_TOKEN'),
+    settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_PHONE_NUMBER_ID'),
+    settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_BUSINESS_ACCOUNT_ID'),
   ]);
-
-  // Fall back to the shared verified account when this brand has no full creds.
-  if ((!token || !phoneNumberId || !businessAccountId) && Number(brandId) !== SHARED_WA_BRAND_ID) {
-    const [sToken, sPhone, sBiz] = await Promise.all([
-      settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_API_TOKEN'),
-      settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_PHONE_NUMBER_ID'),
-      settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_BUSINESS_ACCOUNT_ID'),
-    ]);
-    token = token || sToken;
-    phoneNumberId = phoneNumberId || sPhone;
-    businessAccountId = businessAccountId || sBiz;
-  }
 
   if (!token)               throw new Error(`WHATSAPP_API_TOKEN not configured (brand ${brandId} / shared brand ${SHARED_WA_BRAND_ID})`);
   if (!phoneNumberId)       throw new Error(`WHATSAPP_PHONE_NUMBER_ID not configured (brand ${brandId} / shared brand ${SHARED_WA_BRAND_ID})`);
@@ -1628,8 +1618,8 @@ async function sendBroadcast(phones, templateName, paramsArray, brandId = 1, del
 // Returns { synced: number, skipped: number, errors: array }
 async function syncProductsToCatalog(brandId = 1) {
   const { token, businessAccountId } = await getCredentials(brandId);
-  const catalogId = await settingsHelper.getSetting(brandId, 'WHATSAPP_CATALOG_ID');
-  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured for brand ' + brandId);
+  const catalogId = await settingsHelper.getSetting(SHARED_WA_BRAND_ID, 'WHATSAPP_CATALOG_ID');
+  if (!catalogId) throw new Error('WHATSAPP_CATALOG_ID not configured (WhatsApp → Profile → Connection keys)');
   const { domain: storeUrl, key: brandKey } = await _brandInfo(brandId);
   const pdpSeg = SINGULAR_PDP_BRANDS.has(brandKey) ? 'product' : 'products';
 

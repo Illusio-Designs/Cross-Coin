@@ -165,7 +165,6 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
 function SectionTest({ tab, brand, form }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
-  const [phone, setPhone] = useState('');
   useEffect(() => { setResult(null); }, [tab, brand?.id]);
 
   const run = async (fn) => {
@@ -176,24 +175,13 @@ function SectionTest({ tab, brand, form }) {
   let button = null;
   if (tab === 'payments') {
     button = <button type="button" className="oss-btn" disabled={busy} onClick={() => run(() => brandSettingsService.testRazorpay(brand.id))}>{busy ? 'Checking…' : 'Test Razorpay keys'}</button>;
-  } else if (tab === 'store') {
+  } else if (tab === 'shipping') {
     const has = form?.fields?.some((f) => f.key === 'ITHINK_PICKUP_ADDRESS_ID' && f.isSet);
     if (has) button = (
       <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
         const r = await brandSettingsService.listIThinkWarehouses(brand.id);
         return { ok: !!r?.success, message: r?.success ? `iThink found pickup warehouse ${r.warehouse_id} for these keys.` : (r?.message || 'iThink didn’t find the warehouse.') };
       })}>{busy ? 'Checking…' : 'Check pickup warehouse'}</button>
-    );
-  } else if (tab === 'whatsapp') {
-    button = (
-      <span className="oss-inline oss-inline--test">
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your WhatsApp number" inputMode="tel" aria-label="Phone number for the test message" />
-        <button type="button" className="oss-btn" disabled={busy || phone.replace(/\D/g, '').length < 10}
-          onClick={() => run(async () => {
-            const r = await brandSettingsService.sendWhatsAppTest(brand.id, phone);
-            return { ok: !!r?.success, message: r?.success ? `Test sent to ${r.sent_to || phone}.` : (r?.message || 'WhatsApp didn’t accept the test.') };
-          })}>{busy ? 'Sending…' : 'Send me a test'}</button>
-      </span>
     );
   } else if (tab === 'tracking') {
     button = (
@@ -225,12 +213,26 @@ function OtherSettings({ form, draft, setDraft, removed, setRemoved, errors }) {
   const [newKey, setNewKey] = useState('');
   const [newVal, setNewVal] = useState('');
   const [confirmKey, setConfirmKey] = useState(null);
+  const [confirmUnused, setConfirmUnused] = useState(false);
   const other = form?.other || [];
   const added = Object.keys(draft).filter((k) => k.startsWith('new:'));
+  const unused = other.filter((o) => o.unused && !removed.has(o.key));
   return (
-    <details className="oss-card oss-other">
-      <summary><b>Other settings</b> <span className="mut">· {other.length} saved · advanced</span></summary>
+    <details className="oss-card oss-other" open={unused.length > 0 || undefined}>
+      <summary><b>Other settings</b> <span className="mut">· {other.length} saved · advanced{unused.length ? ` · ${unused.length} not used` : ''}</span></summary>
       <p className="mut oss-small">Settings this store has that aren’t in the forms above. SEO, the company GSTIN and the pickup schedule are edited on their own pages.</p>
+      {unused.length > 0 && (
+        <div className="oss-unused">
+          <span><b>{unused.length} saved {unused.length === 1 ? 'setting isn’t' : 'settings aren’t'} used any more</b> (old Fship keys, old pack images…). Removing them changes nothing on the store.</span>
+          {confirmUnused ? (
+            <ConfirmBar message={<>Remove {unused.length} unused {unused.length === 1 ? 'setting' : 'settings'} when you save?</>} confirmLabel="Remove them" cancelLabel="Keep"
+              onCancel={() => setConfirmUnused(false)}
+              onConfirm={() => { setRemoved((s) => { const n = new Set(s); unused.forEach((o) => n.add(o.key)); return n; }); setConfirmUnused(false); }} />
+          ) : (
+            <button type="button" className="oss-btn oss-btn--sm" onClick={() => setConfirmUnused(true)}>Remove unused settings</button>
+          )}
+        </div>
+      )}
       {other.length === 0 && added.length === 0 && <p className="mut oss-small">Nothing else is saved for this store.</p>}
       <div className="oss-grid">
         {other.map((o) => (

@@ -224,3 +224,8 @@
   .oss .oss-inline--test input { width: 100%; }
   .oss .oss-section-foot > .oss-inline { width: 100%; justify-content: flex-end; }
 }
+.oss .oss-unused {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px;
+  background: var(--ds-color-bg); border: 1px dashed var(--ds-color-border); color: var(--ds-color-text);
+}
