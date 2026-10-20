@@ -107,6 +107,71 @@ function orderRows({ start, end, brandId }) {
   );
 }
 
+// Meta ids in the range, so a link tagged with {{campaign.id}} / {{adset.id}} /
+// {{ad.id}} instead of the name still matches.
+function metaIds({ startDay, endDay, brandId }) {
+  return q(
+    `SELECT DISTINCT brand_id, campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name
+       FROM ad_spend_daily
+      WHERE day BETWEEN :startDay AND :endDay AND brand_id IS NOT NULL${brandId ? ' AND brand_id = :brandId' : ''}`,
+    { startDay, endDay, brandId }
+  );
+}
+
+// ── "Why don't orders match?" — the chain per store, each step a count ──
+const FBCLID_SQL = `COALESCE(${T('u.landing_page')} LIKE '%fbclid=%', 0)`;
+const TAGGED_SQL = `COALESCE(NULLIF(TRIM(${T('u.utm_campaign')}), '') IS NOT NULL, 0)`;
+const META_SQL = `COALESCE(${SOURCE_SQL}, 0)`;
+function diagOrders({ start, end, brandId }) {
+  return q(
+    `SELECT o.brand_id,
+            COUNT(*) AS orders,
+            SUM(u.id IS NOT NULL) AS linked,
+            SUM(u.id IS NOT NULL AND (${META_SQL} OR ${FBCLID_SQL})) AS meta,
+            SUM(u.id IS NOT NULL AND ${META_SQL} AND ${TAGGED_SQL}) AS meta_tagged
+       FROM orders o
+       LEFT JOIN utm_tracking u ON u.id = o.utm_tracking_id
+      WHERE o.created_at BETWEEN :start AND :end AND ${PLACED_SQL}${brandId ? ' AND o.brand_id = :brandId' : ''}
+      GROUP BY o.brand_id`,
+    { start, end, brandId, sources: META_SOURCES }
+  );
+}
+function diagVisits({ start, end, brandId }) {
+  return q(
+    `SELECT u.brand_id,
+            SUM(${META_SQL} OR ${FBCLID_SQL}) AS meta,
+            SUM(${META_SQL} AND ${TAGGED_SQL}) AS meta_tagged,
+            SUM(${FBCLID_SQL} AND NOT ${TAGGED_SQL}) AS fbclid_untagged
+       FROM utm_tracking u
+      WHERE u.created_at BETWEEN :start AND :end AND u.brand_id IS NOT NULL${brandId ? ' AND u.brand_id = :brandId' : ''}
+      GROUP BY u.brand_id`,
+    { start, end, brandId, sources: META_SOURCES }
+  );
+}
+
+// First broken link in the chain, in plain words.
+function verdict(d) {
+  if (!d.accountLinked) return { step: 'account', message: 'No ad account is linked to this store — open Manage above, pick its ad account and Save.' };
+  if (d.lastError && (!d.lastSyncedAt || new Date(d.lastErrorAt || 0) >= new Date(d.lastSyncedAt))) return { step: 'sync', message: `The last sync from Meta failed: ${d.lastError}` };
+  if (!d.lastSyncedAt) return { step: 'sync', message: 'Spend hasn’t been synced from Meta yet — press “Sync now”.' };
+  if (!(d.spend > 0)) return { step: 'spend', message: 'Meta shows no spend for this store’s ad account in this period.' };
+  if (!d.orders) return { step: 'orders', message: 'This store has no orders in this period.' };
+  if (!d.ordersLinked) return { step: 'linked', message: 'None of this store’s orders are linked to a visit, so their source is unknown. The store isn’t passing the visit id at checkout — tell us, this needs a code fix.' };
+  if (!d.ordersMeta) {
+    return d.visitsMeta
+      ? { step: 'meta', message: `${d.visitsMeta} visit${d.visitsMeta === 1 ? '' : 's'} came from Meta, but none of them ordered in this period.` }
+      : { step: 'meta', message: 'No visits from Meta were recorded in this period — check the ads link to this store’s website.' };
+  }
+  if (!d.ordersMetaTagged) return { step: 'tags', message: `${d.ordersMeta} order${d.ordersMeta === 1 ? '' : 's'} came from Meta, but the ad links carry no campaign name — add the URL parameters to every ad (below). Orders from before the tags were added can’t be matched.` };
+  if (!d.ordersMatched) return { step: 'names', message: 'Orders carry a campaign name, but it doesn’t match any campaign name in Meta — compare the two lists below and use {{campaign.name}} in the URL parameters, not a typed name.' };
+  const rest = d.ordersMeta - d.ordersMatched;
+  return {
+    step: 'ok',
+    message: `${d.ordersMatched} of ${d.ordersMeta} Meta order${d.ordersMeta === 1 ? '' : 's'} matched to spend.`
+      + (rest > 0 ? ` The other ${rest} ${d.ordersMeta - d.ordersMetaTagged > 0 ? 'include orders with no campaign tag, or ' : ''}carry a campaign name Meta has no spend for — compare the names below.` : ''),
+  };
+}
+
 // Campaign names seen on Meta-tagged visits in the range (any outcome).
 function visitCampaigns({ start, end, brandId }) {
   return q(
@@ -166,12 +231,32 @@ async function handler(req, res) {
 
     await ensureSchema();
     const p = { start, end, startDay, endDay, brandId };
-    const [mRows, mDaily, oRows, vCamps, brands, linked, syncInfo] = await Promise.all([
+    const [mRows, mDaily, oRowsRaw, vCampsRaw, brands, linked, syncInfo, mIds, dOrders, dVisits, syncByBrand] = await Promise.all([
       metaRows(p), metaDaily(p), orderRows(p), visitCampaigns(p),
       q('SELECT id, COALESCE(display_name, name) AS name FROM brands ORDER BY id'),
       q("SELECT brand_id, value FROM brand_settings WHERE `key` = 'META_AD_ACCOUNT_ID' AND value IS NOT NULL AND value <> ''"),
       q('SELECT MAX(last_synced_at) AS last_synced_at, COUNT(*) AS accounts, SUM(last_error IS NOT NULL) AS errors FROM ad_spend_sync WHERE brand_id IS NOT NULL'),
+      metaIds(p),
+      campaign ? [] : diagOrders(p),
+      campaign ? [] : diagVisits(p),
+      campaign ? [] : q('SELECT brand_id, MAX(last_synced_at) AS last_synced_at, MAX(last_error) AS last_error, MAX(last_error_at) AS last_error_at FROM ad_spend_sync WHERE brand_id IS NOT NULL GROUP BY brand_id'),
     ]);
+
+    // Links tagged with Meta ids instead of names: swap the id for the name.
+    const idName = { c: new Map(), a: new Map(), d: new Map() };
+    for (const r of mIds) {
+      if (r.campaign_id) idName.c.set(`${r.brand_id}\u0001${r.campaign_id}`, r.campaign_name);
+      if (r.adset_id) idName.a.set(`${r.brand_id}\u0001${r.adset_id}`, r.adset_name);
+      if (r.ad_id) idName.d.set(`${r.brand_id}\u0001${r.ad_id}`, r.ad_name);
+    }
+    const byId = (m, b, v) => {
+      const t = String(v || '').trim();
+      return /^\d{6,}$/.test(t) && m.has(`${b}\u0001${t}`) ? m.get(`${b}\u0001${t}`) : v;
+    };
+    const oRows = oRowsRaw.map((r) => ({
+      ...r, campaign: byId(idName.c, r.brand_id, r.campaign), adset: byId(idName.a, r.brand_id, r.adset), ad: byId(idName.d, r.brand_id, r.ad),
+    }));
+    const vCamps = vCampsRaw.map((v) => ({ ...v, campaign: byId(idName.c, v.brand_id, v.campaign) }));
     const brandName = new Map(brands.map((b) => [Number(b.id), b.name]));
     const linkedBrands = new Set(linked.map((l) => Number(l.brand_id)));
 
@@ -301,6 +386,50 @@ async function handler(req, res) {
       }))
       .sort((a, b) => b.orders - a.orders);
 
+    // ── Diagnosis (top level only) ──
+    let diagnosis = null;
+    if (!campaign) {
+      const per = new Map();
+      const get = (b) => {
+        const id = Number(b);
+        if (!per.has(id)) per.set(id, { brandId: id, brand: brandName.get(id) || `Store ${id}`, accountLinked: linkedBrands.has(id), lastSyncedAt: null, lastError: null, lastErrorAt: null, spend: 0, orders: 0, ordersLinked: 0, ordersMeta: 0, ordersMetaTagged: 0, ordersMatched: 0, visitsMeta: 0, visitsMetaTagged: 0, visitsFbclidUntagged: 0, ourCampaigns: [], metaCampaigns: [] });
+        return per.get(id);
+      };
+      for (const b of linkedBrands) if (!brandId || Number(brandId) === b) get(b);
+      for (const s0 of syncByBrand) {
+        if (brandId && Number(brandId) !== Number(s0.brand_id)) continue;
+        const d = get(s0.brand_id);
+        d.lastSyncedAt = s0.last_synced_at ? new Date(s0.last_synced_at).toISOString() : null;
+        d.lastError = s0.last_error || null;
+        d.lastErrorAt = s0.last_error_at ? new Date(s0.last_error_at).toISOString() : null;
+      }
+      for (const r of dOrders) {
+        const d = get(r.brand_id);
+        d.orders = num(r.orders); d.ordersLinked = num(r.linked); d.ordersMeta = num(r.meta); d.ordersMetaTagged = num(r.meta_tagged);
+      }
+      for (const r of dVisits) {
+        if (!per.has(Number(r.brand_id)) && !num(r.meta)) continue;
+        const d = get(r.brand_id);
+        d.visitsMeta = num(r.meta); d.visitsMetaTagged = num(r.meta_tagged); d.visitsFbclidUntagged = num(r.fbclid_untagged);
+      }
+      for (const g of metaCamps.values()) get(g.brandId).spend += g.spend;
+      for (const [k2, g] of orderCamps.entries()) {
+        const d = get(g.brandId);
+        if (metaCamps.has(k2)) d.ordersMatched += g.orders;
+        if (g.campaign) d.ourCampaigns.push({ name: g.campaign, orders: g.orders, matched: metaCamps.has(k2) });
+      }
+      for (const [k2, g] of metaCamps.entries()) {
+        if (g.spend > 0) get(g.brandId).metaCampaigns.push({ name: g.campaign, spend: r2(g.spend), matched: orderCamps.has(k2) });
+      }
+      diagnosis = [...per.values()].map((d) => ({
+        ...d,
+        spend: r2(d.spend),
+        ourCampaigns: d.ourCampaigns.sort((a, b) => b.orders - a.orders).slice(0, 8),
+        metaCampaigns: d.metaCampaigns.sort((a, b) => b.spend - a.spend).slice(0, 8),
+        ...verdict(d),
+      })).sort((a, b) => (a.step === 'ok') - (b.step === 'ok') || b.orders - a.orders);
+    }
+
     // ── Daily series: spend vs delivered net sales of matched orders ──
     const spendDaily = new Map();
     for (const r of mDaily) {
@@ -332,6 +461,7 @@ async function handler(req, res) {
       kpis,
       rows,
       gaps: { untagged, noSpend },
+      diagnosis,
       daily,
     });
   } catch (error) {
