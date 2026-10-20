@@ -3,59 +3,96 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const MAX_NOTIFICATIONS = 50;
 
-// The real Shopify "ka-ching" sale sound (served from /public/sounds). Preloaded
-// once and reused so it fires instantly on a new order.
-let orderAudio = null;
-function getOrderAudio() {
-  if (typeof Audio === 'undefined') return null;
-  if (!orderAudio) {
-    orderAudio = new Audio('/sounds/new-order.mp3');
-    orderAudio.preload = 'auto';
-    orderAudio.volume = 0.85;
-  }
-  return orderAudio;
-}
-
-// Browsers block audio that isn't started by a user gesture, so a sound fired
-// by the background poll is silently swallowed until the page has been
-// interacted with. "Unlock" the audio on a click/key/touch: play it muted once
-// (allowed inside a gesture), which permits later programmatic plays.
-// `audioUnlocked` only turns true once that play really succeeded, and goes
-// back to false if a later play is refused — the bell shows "Turn on sound"
-// whenever it's false, so a silent dashboard is never a surprise.
+// ── Sound ───────────────────────────────────────────────────────────────────
+// Browsers keep a page silent until it has been clicked, and Safari (and Chrome
+// on macOS) don't count a MUTED play as permission — so the old "play muted on
+// first click" trick reported sound as on while real plays were still refused.
+//
+// Now one Web Audio engine is used for the whole session. It is started inside
+// a real click/key/tap (plus a 1-sample silent buffer, which Safari needs), and
+// once it is running it can play at any time without another gesture. The
+// new-order sound (the Shopify "ka-ching", /public/sounds) is decoded once and
+// played through it. `audioUnlocked` means "the engine is really running".
+const ORDER_SOUND_URL = '/sounds/new-order.mp3';
+let audioCtx = null;
+let orderBuffer = null;
+let bufferLoading = null;
 let audioUnlocked = false;
 const soundListeners = new Set();
+
 function setUnlocked(v) {
   if (audioUnlocked === v) return;
   audioUnlocked = v;
   soundListeners.forEach((fn) => { try { fn(v); } catch (_) {} });
 }
-function unlockAudio() {
-  if (audioUnlocked) return Promise.resolve(true);
+function getCtx() {
+  if (audioCtx || typeof window === 'undefined') return audioCtx;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
   try {
-    // Warm a (suspended) AudioContext so the synth fallback can play too.
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) { const c = new Ctx(); if (c.state === 'suspended') c.resume(); setTimeout(() => { try { c.close(); } catch (_) {} }, 300); }
-    const a = getOrderAudio();
-    if (!a) return Promise.resolve(false);
-    const prevVol = a.volume;
-    a.muted = true;
-    const p = a.play();
-    const finish = () => { a.pause(); a.currentTime = 0; a.muted = false; a.volume = prevVol; };
-    if (p && p.then) {
-      return p.then(() => { finish(); setUnlocked(true); return true; })
-        .catch(() => { a.muted = false; return false; });
-    }
-    finish(); setUnlocked(true);
-    return Promise.resolve(true);
-  } catch (_) { return Promise.resolve(false); }
+    audioCtx = new Ctx();
+    audioCtx.onstatechange = () => setUnlocked(audioCtx.state === 'running');
+  } catch (_) { audioCtx = null; }
+  return audioCtx;
+}
+const engineRunning = () => !!audioCtx && audioCtx.state === 'running';
+
+function loadOrderSound() {
+  if (orderBuffer) return Promise.resolve(orderBuffer);
+  if (bufferLoading) return bufferLoading;
+  const ctx = getCtx();
+  if (!ctx) return Promise.resolve(null);
+  bufferLoading = fetch(ORDER_SOUND_URL)
+    .then((r) => r.arrayBuffer())
+    // Older Safari only supports the callback form of decodeAudioData.
+    .then((ab) => new Promise((resolve, reject) => {
+      const p = ctx.decodeAudioData(ab, resolve, reject);
+      if (p && p.then) p.then(resolve, reject);
+    }))
+    .then((buf) => { orderBuffer = buf; return buf; })
+    .catch(() => { bufferLoading = null; return null; });
+  return bufferLoading;
 }
 
-// Synth fallback — used only if the mp3 can't play (blocked/unloaded), so a new
-// order is never silent.
-function playSynth(type) {
+// MUST be called synchronously inside a click / key / tap handler.
+function unlockAudio() {
+  const ctx = getCtx();
+  if (!ctx) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Safari only unlocks a context when something starts inside the gesture.
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (_) { /* ignore */ }
+  if (ctx.state !== 'running') {
+    ctx.resume().then(() => setUnlocked(engineRunning())).catch(() => {});
+  } else {
+    setUnlocked(true);
+  }
+  loadOrderSound();
+}
+
+function playOrderBuffer() {
+  if (!engineRunning() || !orderBuffer) return false;
+  try {
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.85;
+    src.buffer = orderBuffer;
+    src.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start(0);
+    return true;
+  } catch (_) { return false; }
+}
+
+// Bell tones, through the same engine — the WhatsApp sound, and the order
+// sound's stand-in while the mp3 is still loading.
+function playSynth(type) {
+  if (!engineRunning()) return false;
+  try {
+    const ctx = audioCtx;
     const now = ctx.currentTime;
     const bell = (freq, start, dur, peak) => {
       const osc = ctx.createOscillator();
@@ -78,25 +115,34 @@ function playSynth(type) {
       bell(880, 0.00, 0.30, 0.30);
       bell(1318.51, 0.06, 0.32, 0.22);
     }
-    setTimeout(() => { try { ctx.close(); } catch (_) {} }, 1000);
-  } catch (_) {}
+    return true;
+  } catch (_) { return false; }
+}
+
+// Last resort when the engine isn't running yet: a plain <audio> play, which
+// some browsers allow for sites you use often. If it's refused, the bell shows
+// "Turn on sound".
+let fallbackAudio = null;
+function playHtmlAudio() {
+  if (typeof Audio === 'undefined') return;
+  if (!fallbackAudio) { fallbackAudio = new Audio(ORDER_SOUND_URL); fallbackAudio.volume = 0.85; }
+  try {
+    fallbackAudio.currentTime = 0;
+    const p = fallbackAudio.play();
+    // It played → this browser allows sound here (as it did before the engine
+    // existed), so don't show "Turn on sound"; refused → show it.
+    if (p && p.then) p.then(() => setUnlocked(true), () => setUnlocked(false));
+  } catch (_) { setUnlocked(false); }
 }
 
 function playSound(type) {
-  if (type === 'order') {
-    const a = getOrderAudio();
-    if (a) {
-      try {
-        a.currentTime = 0;
-        const p = a.play();
-        if (p && p.then) p.then(() => setUnlocked(true), () => { setUnlocked(false); playSynth('order'); });
-        return;
-      } catch (_) { /* fall through to synth */ }
-    }
-    playSynth('order');
+  if (engineRunning()) {
+    if (type === 'order' && playOrderBuffer()) return;
+    playSynth(type);
     return;
   }
-  playSynth(type);
+  if (type === 'order') playHtmlAudio();
+  else setUnlocked(false);
 }
 
 // While the tab is in the background: show "(2) New order" in the tab title and,
@@ -145,12 +191,18 @@ export function useNotifications() {
     flagHidden(type, data);
   }, []);
 
-  // Turn sound on from a button (a click is the gesture browsers require), and
-  // play the chime once so staff hear what a new order sounds like.
-  const enableSound = useCallback(async () => {
-    const ok = await unlockAudio();
-    if (ok) playSound('order');
-    return ok;
+  // "Turn on sound" / "Test": runs inside the click, so the engine starts
+  // right here, then plays the order sound once (the bell tones stand in if
+  // the mp3 is still loading) so staff hear exactly what an order sounds like.
+  const enableSound = useCallback(() => {
+    unlockAudio();
+    const ctx = getCtx();
+    const play = () => { if (!playOrderBuffer()) playSynth('order'); };
+    if (!ctx) { playHtmlAudio(); return; }
+    (ctx.state === 'running' ? Promise.resolve() : ctx.resume())
+      .then(() => (orderBuffer ? null : loadOrderSound()))
+      .then(play)
+      .catch(() => setUnlocked(false));
   }, []);
 
   useEffect(() => {
@@ -287,15 +339,25 @@ export function useNotifications() {
     };
     document.addEventListener('visibilitychange', onVisible);
 
-    // Unlock audio on any interaction (until it works) so the new-order sound
-    // can play; the bell shows "Turn on sound" while it's still blocked.
-    const evts = ['pointerdown', 'keydown', 'touchstart'];
+    // Create the engine and fetch the order sound straight away. Where the
+    // browser already allows sound (as it did before this engine), the engine
+    // starts running by itself and "Turn on sound" never appears.
+    if (getCtx()) {
+      setUnlocked(engineRunning());
+      loadOrderSound();
+    }
+
+    // Start the sound engine on any click / key / tap until it's running; the
+    // bell shows "Turn on sound" while it isn't.
+    const evts = ['pointerdown', 'keydown', 'touchend'];
     const onGesture = () => {
-      unlockAudio().then((ok) => { if (ok) evts.forEach((e) => window.removeEventListener(e, onGesture)); });
+      unlockAudio();
+      if (engineRunning()) evts.forEach((e) => window.removeEventListener(e, onGesture));
     };
     evts.forEach((e) => window.addEventListener(e, onGesture, { passive: true }));
     const onSound = (v) => { if (alive) setSoundOn(v); };
     soundListeners.add(onSound);
+    setSoundOn(audioUnlocked); // pick up the engine's state from just above
 
     return () => {
       alive = false;
