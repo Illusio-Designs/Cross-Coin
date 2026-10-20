@@ -149,7 +149,7 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
   const note = error
     || (f.source === 'server' && !f.secret ? `Using the shared server value${f.hint ? ` · ${f.hint}` : ''}` : null)
     || (f.secret && f.source === 'server' ? 'Using the shared server value (Cross Coin’s)' : null)
-    || (f.readOnly ? 'Managed on WhatsApp → Settings' : null)
+    || (f.readOnly ? 'Managed on WhatsApp → Profile' : null)
     || f.hint;
   return (
     <div className={`oss-field${error ? ' is-bad' : ''}${f.type === 'textarea' ? ' oss-field--wide' : ''}`}>
@@ -344,6 +344,17 @@ export function BrandManager() {
   const brands = listQuery.data || [];
   const brand = brands.find((b) => b.id === selectedId) || brands[0] || null;
   useEffect(() => { if (!selectedId && brands[0]) setSelectedId(brands[0].id); }, [brands, selectedId]);
+  // Deep link from WhatsApp → Profile ("Edit on Brands"): open that store on the given tab.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('obz-brand-open');
+      if (!raw) return;
+      sessionStorage.removeItem('obz-brand-open');
+      const { brandId, tab: openTab } = JSON.parse(raw) || {};
+      if (Number(brandId)) setSelectedId(Number(brandId));
+      if (typeof openTab === 'string' && openTab) setTab(openTab);
+    } catch { /* storage blocked or bad JSON */ }
+  }, []);
 
   const formQuery = useQuery({
     queryKey: ['brandSettingsForm', brand?.id],

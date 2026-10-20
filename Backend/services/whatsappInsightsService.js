@@ -777,6 +777,9 @@ async function _graphHealth() {
   return errors.length ? { ...out, error: errors.join('; ') } : out;
 }
 
+// Drop the cached number health (after the connection keys change).
+function clearHealthCache() { _healthCache = null; }
+
 async function getHealth({ refresh = false } = {}) {
   await ensureSchema();
   let graph;
@@ -1247,6 +1250,7 @@ module.exports = {
   salesFromWhatsApp,
   // settings
   getHealth,
+  clearHealthCache,
   getInboxSettings,
   saveInboxSettings,
   getFailed,

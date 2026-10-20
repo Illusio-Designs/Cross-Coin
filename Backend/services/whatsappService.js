@@ -2781,6 +2781,8 @@ async function broadcastResults(ids) {
 }
 
 module.exports = {
+  // Graph API base (version included) — reused by the profile/keys service.
+  GRAPH_API_URL,
   formatE164,
   metaError,
   getCredentials,
