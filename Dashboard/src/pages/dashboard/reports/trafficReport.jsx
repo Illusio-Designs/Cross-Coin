@@ -12,6 +12,9 @@ import { Download04Icon } from '@hugeicons/core-free-icons';
    → orders, per brand and per marketing channel / ad campaign.
 
    How it counts (GET /api/reports/brand-traffic):
+     · Visitors  counted by each store's server (edge middleware → visit_hits)
+                 on every page load, before the page's JS runs; sessions +
+                 page loads. Can't be tied to orders.
      · Visits    tracked sessions that STARTED in the range (bots excluded)
      · Orders    orders PLACED in the range, not cancelled — the same
                  number as "Orders booked" on the Overview
@@ -48,6 +51,8 @@ const leftSlices = (r) => {
 };
 const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-text-muted)';
 const SPLIT_COLORS = { Paid: '#2f6fed', Organic: '#16a34a', Direct: '#64748b' };
+const DEVICE_COLORS = { mobile: '#2f6fed', desktop: '#0f766e', tablet: '#d97706', unknown: '#94a3b8' };
+const DEVICE_LABEL = { mobile: 'Mobile', desktop: 'Desktop', tablet: 'Tablet', unknown: 'Unknown' };
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
 const inr = (v) => `₹${num(Math.round(Number(v) || 0))}`;
@@ -63,6 +68,10 @@ const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const fmtDay = (s) => {
+  const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z');
+  return Number.isNaN(d.getTime()) ? String(s) : new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+};
 
 function exportCsv(filename, columns, rows) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -92,6 +101,7 @@ export default function TrafficReport() {
   const [showAdsets, setShowAdsets] = useState(false);
   const [openGroups, setOpenGroups] = useState({});
   const [sitesOpen, setSitesOpen] = useState(null); // null = auto (open when few sites)
+  const [geoView, setGeoView] = useState('states'); // 'states' | 'cities'
 
   useEffect(() => {
     let off = false;
@@ -120,6 +130,26 @@ export default function TrafficReport() {
   const channels = data?.channels || [];
   const split = data?.trafficSplit || [];
   const campaigns = data?.campaigns || [];
+  // Server-counted visitors (store edge middleware). `hasVis` only when the
+  // range actually has counts; otherwise the old figures stay the headline.
+  const vis = data?.visitors || null;
+  const hasVis = !!(vis && Number(vis.totals?.landings) > 0);
+  const visitorsByCampaign = useMemo(() => {
+    const m = new Map();
+    for (const r of vis?.campaigns || []) {
+      const k = `${r.channel}\u0001${r.campaign}`;
+      m.set(k, (m.get(k) || 0) + (Number(r.sessions) || 0));
+    }
+    return m;
+  }, [vis]);
+  const visitorsByChannel = new Map((vis?.channels || []).map((c) => [c.channel, Number(c.sessions) || 0]));
+  const campaignVisitors = (channel, name) => {
+    if (name !== 'none') return visitorsByCampaign.get(`${channel}\u0001${name}`) || 0;
+    // Untagged visits = the channel's visitors minus its tagged campaigns.
+    let tagged = 0;
+    for (const [k, n] of visitorsByCampaign) if (k.startsWith(`${channel}\u0001`)) tagged += n;
+    return Math.max(0, (visitorsByChannel.get(channel) || 0) - tagged);
+  };
   const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name) : 'All brands';
 
   // "Other websites & apps" by actual site name (YouTube, Pinterest, a blog…).
@@ -182,7 +212,7 @@ export default function TrafficReport() {
 
   // Source list for "Where visitors come from": channels with revenue added.
   const sources = channels.map((c) => ({ ...c, revenue: revenueByChannel.get(c.channel) || 0 }))
-    .filter((c) => c.sessions > 0 || c.orders > 0);
+    .filter((c) => c.sessions > 0 || c.orders > 0 || c.visitors > 0);
   const sourceTotal = channels.reduce((n, c) => n + (c.untracked ? 0 : Number(c.sessions) || 0), 0);
   const splitRevenue = split.reduce((n, r) => n + (Number(r.revenue) || 0), 0);
 
@@ -197,7 +227,8 @@ export default function TrafficReport() {
     <div className="rep-panel">
       <div className="rep-ph"><h3>How this is counted</h3></div>
       <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
-        <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are visits that started in this period from shoppers who allowed cookies; bots are left out. Page loads count every visitor but can't be tied to orders.</li>
+        <li><b style={{ color: 'var(--ds-color-text)' }}>Visitors</b> are counted by the store's server on every page load, before the page has loaded, so they include people who leave straight away (slow mobile, in-app browsers, accidental ad clicks). A visitor starts a new visit after 30 minutes without a page load. Bots are left out.</li>
+        <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are recorded by the page itself once it has loaded, for every shopper; bots are left out. Only these can be linked to orders, so conversion and the funnel use them.</li>
         <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
         <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
         <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
@@ -209,6 +240,8 @@ export default function TrafficReport() {
 
   const doExport = () => exportCsv(`traffic-conversion_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
+    { label: 'Visitors (counted by the store)', value: (r) => r.visitors ?? '' },
+    { label: 'Page loads (counted by the store)', value: (r) => r.visitorLoads ?? '' },
     { label: 'Tracked visits', value: (r) => r.sessions },
     { label: 'All visits (cookieless)', value: (r) => r.allVisits },
     { label: 'Product views', value: (r) => r.views },
@@ -323,11 +356,19 @@ export default function TrafficReport() {
       ) : !data ? null : (
         <>
           <div className="rep-kpis" style={dim} aria-busy={busy}>
-            <div className="rep-kpi">
-              <div className="rep-kl">Visits</div>
-              <div className="rep-kv num">{num(t?.sessions)}</div>
-              <div className="rep-kf">{t?.allVisits ? `${num(t.allVisits)} page loads incl. no-cookie visitors` : 'tracked visitors who allowed cookies'}</div>
-            </div>
+            {hasVis ? (
+              <div className="rep-kpi">
+                <div className="rep-kl">Visitors (counted by the store)</div>
+                <div className="rep-kv num">{num(t?.visitors)}</div>
+                <div className="rep-kf">{plural(t?.visitorLoads, 'page load')} · {plural(t?.sessions, 'tracked visit')}</div>
+              </div>
+            ) : (
+              <div className="rep-kpi">
+                <div className="rep-kl">Visits</div>
+                <div className="rep-kv num">{num(t?.sessions)}</div>
+                <div className="rep-kf">{vis?.firstDay ? `Store counting started on ${fmtDay(vis.firstDay)}` : 'tracked visits, bots left out'}</div>
+              </div>
+            )}
             <div className="rep-kpi">
               <div className="rep-kl">Orders</div>
               <div className="rep-kv num">{num(t?.orders)}</div>
@@ -344,6 +385,11 @@ export default function TrafficReport() {
               <div className="rep-kf">avg order {inr(t?.aov)}</div>
             </div>
           </div>
+          {hasVis && (
+            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--ds-color-text-muted)' }}>
+              Visitors are counted by the store's server on every page load, so they include people who leave before the page finishes loading; tracked visits are recorded by the page once it loads and are the only ones we can link to orders, so conversion uses them.
+            </p>
+          )}
 
           {/* ── 1. Where visitors come from ── */}
           <div className="rep-panel" style={dim} aria-busy={busy}>
@@ -357,9 +403,9 @@ export default function TrafficReport() {
             )}
             <div className="rep-tbl-wrap">
               <table className="rep-table">
-                <thead><tr><th>Source</th><th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                <thead><tr><th>Source</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                 <tbody>
-                  {sources.length === 0 ? <Empty cols={6} text="No visits in this period" /> : sources.map((c) => {
+                  {sources.length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No visits in this period" /> : sources.map((c) => {
                     const expandable = c.channel === 'Referral' && otherSites.length > 0;
                     return (
                     <React.Fragment key={c.channel}>
@@ -368,6 +414,7 @@ export default function TrafficReport() {
                         <Dot color={chColor(c.channel)} />{chLabel(c.channel)}
                         {expandable && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{showSites ? '▾' : '▸'} {plural(otherSites.length, 'site')}</span>}
                       </td>
+                      {hasVis && <td className="r num">{c.untracked ? <Dash /> : num(c.visitors)}</td>}
                       <td className="r num">{c.untracked ? <Dash /> : num(c.sessions)}</td>
                       <td>
                         {c.untracked ? <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>orders with no tracked visit</span> : (
@@ -386,6 +433,7 @@ export default function TrafficReport() {
                     {expandable && showSites && otherSites.map((x) => (
                       <tr key={x.name}>
                         <td style={{ paddingLeft: 34, color: 'var(--ds-color-text-muted)' }}>↳ {x.name}</td>
+                        {hasVis && <td className="r num"><Dash /></td>}
                         <td className="r num">{num(x.sessions)}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -449,6 +497,70 @@ export default function TrafficReport() {
             ) : <span className="hint">No tracked visits in this period.</span>}
           </div>
 
+          {/* ── Where visitors are + device (server-counted) ── */}
+          {hasVis && (
+            <div className="rep-masonry" style={dim} aria-busy={busy}>
+              <div className="rep-panel rep-panel--flush">
+                <div className="rep-ph">
+                  <h3>Where visitors are</h3>
+                  <span style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className={`order-sync-main-btn${geoView === 'states' ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setGeoView('states')}>States</button>
+                    <button type="button" className={`order-sync-main-btn${geoView === 'cities' ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setGeoView('cities')}>Cities</button>
+                  </span>
+                </div>
+                {(() => {
+                  const list = (geoView === 'cities' ? vis.cities : vis.states) || [];
+                  return (
+                    <div className="rep-tbl-wrap">
+                      <table className="rep-table">
+                        <thead><tr><th>{geoView === 'cities' ? 'City' : 'State'}</th><th className="r">Visitors</th><th style={{ width: '34%' }}>Share of visitors</th><th className="r">Page loads</th></tr></thead>
+                        <tbody>
+                          {list.length === 0 ? <Empty cols={4} text="No visitors from India in this period" /> : list.map((x) => (
+                            <tr key={`${x.city || ''}|${x.state}`}>
+                              <td className="strong">
+                                {geoView === 'cities' ? x.city : x.state}
+                                {geoView === 'cities' && x.state && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{x.state}</span>}
+                              </td>
+                              <td className="r num">{num(x.sessions)}</td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
+                                    <div style={{ width: `${Math.min(100, Number(x.share) || 0)}%`, height: '100%', background: 'var(--ds-color-brand)' }} />
+                                  </div>
+                                  <span className="num" style={{ fontSize: 12, minWidth: 46, textAlign: 'right', color: 'var(--ds-color-text-muted)' }}>{pct(x.share)}</span>
+                                </div>
+                              </td>
+                              <td className="r num">{num(x.landings)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="rep-panel">
+                <div className="rep-ph"><h3>Device</h3><span className="hint">share of {plural(t?.visitors, 'visitor')}</span></div>
+                <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 14 }}>
+                  {(vis.devices || []).filter((d) => d.share > 0).map((d) => (
+                    <div key={d.device} title={`${DEVICE_LABEL[d.device] || d.device}: ${pct(d.share)}`}
+                      style={{ width: `${d.share}%`, background: DEVICE_COLORS[d.device] || DEVICE_COLORS.unknown }} />
+                  ))}
+                </div>
+                <div className="rep-tiles" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+                  {(vis.devices || []).filter((d) => d.sessions > 0 || d.device !== 'unknown').map((d) => (
+                    <div className="rep-tile" key={d.device}>
+                      <div className="rep-tl"><Dot color={DEVICE_COLORS[d.device] || DEVICE_COLORS.unknown} />{DEVICE_LABEL[d.device] || d.device}</div>
+                      <div className="rep-tv num">{pct(d.share)}</div>
+                      <div className="rep-ts">{plural(d.sessions, 'visitor')} · {plural(d.landings, 'page load')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="rep-masonry" style={dim} aria-busy={busy}>
             {/* Paid / Organic / Direct */}
             <div className="rep-panel">
@@ -478,12 +590,13 @@ export default function TrafficReport() {
                 <div className="rep-ph"><h3>By brand</h3></div>
                 <div className="rep-tbl-wrap">
                   <table className="rep-table">
-                    <thead><tr><th>Brand</th><th className="r">Visits</th><th className="r">Cart</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                    <thead><tr><th>Brand</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th className="r">Cart</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                     <tbody>
-                      {brands.filter((b) => b.sessions || b.orders).length === 0 ? <Empty cols={6} text="No visits or orders in this period" />
-                        : brands.filter((b) => b.sessions || b.orders).map((b) => (
+                      {brands.filter((b) => b.sessions || b.orders || b.visitors).length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No visits or orders in this period" />
+                        : brands.filter((b) => b.sessions || b.orders || b.visitors).map((b) => (
                           <tr key={b.brand_id}>
                             <td className="strong">{b.brand}</td>
+                            {hasVis && <td className="r num">{num(b.visitors)}</td>}
                             <td className="r num">{num(b.sessions)}</td>
                             <td className="r num">{num(b.carts)}</td>
                             <td className="r num">{num(b.orders)}</td>
@@ -511,9 +624,9 @@ export default function TrafficReport() {
             </div>
             <div className="rep-tbl-wrap">
               <table className="rep-table">
-                <thead><tr><th>Platform / campaign</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
+                <thead><tr><th>Platform / campaign</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
                 <tbody>
-                  {platforms.length === 0 ? <Empty cols={6} text="No campaign traffic in this period" /> : platforms.map((g) => {
+                  {platforms.length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No campaign traffic in this period" /> : platforms.map((g) => {
                     const isSites = g.channel === 'Referral' && otherSites.length > 0;
                     const rows = isSites ? otherSites : (g.tagged ? g.campaigns : []);
                     const open = openGroups[g.channel] ?? g.campaigns.length <= 3;
@@ -526,6 +639,7 @@ export default function TrafficReport() {
                             <Dot color={chColor(g.channel)} />{chLabel(g.channel)}
                             {(isSites || g.tagged > 0) && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{isSites ? plural(otherSites.length, 'site') : plural(g.tagged, 'campaign')}</span>}
                           </td>
+                          {hasVis && <td className="r strong num">{g.untracked ? <Dash /> : num(visitorsByChannel.get(g.channel) || 0)}</td>}
                           <td className="r strong num">{g.untracked ? <Dash /> : num(g.sessions)}</td>
                           <td className="r num">{g.untracked ? <Dash /> : pct(g.share)}</td>
                           <td className="r strong num">{num(g.orders)}</td>
@@ -544,6 +658,7 @@ export default function TrafficReport() {
                                   </span>
                                 )}
                               </td>
+                              {hasVis && <td className="r num">{isSites ? <Dash /> : num(campaignVisitors(g.channel, c.name))}</td>}
                               <td className="r num">{num(c.sessions)}</td>
                               <td className="r num">{pct(c.share)}</td>
                               <td className="r num">{num(c.orders)}</td>
@@ -554,6 +669,7 @@ export default function TrafficReport() {
                               <React.Fragment key={a.name}>
                                 <tr>
                                   <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ Ad set: {a.name === 'none' ? 'no ad set tag (utm_term)' : a.name}</td>
+                                  {hasVis && <td className="r num" style={{ fontSize: 12 }}><Dash /></td>}
                                   <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
                                   <td className="r num" style={{ fontSize: 12 }}>{pct(a.share)}</td>
                                   <td className="r num" style={{ fontSize: 12 }}>{num(a.orders)}</td>
@@ -566,6 +682,7 @@ export default function TrafficReport() {
                                       ↳ Ad: {d.name === 'none' ? 'no ad tag (utm_content)' : d.name}
                                       {d.creatives.length > 0 && <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 11 }}> · creative {d.creatives.join(', ')}</span>}
                                     </td>
+                                    {hasVis && <td className="r num" style={{ fontSize: 12 }}><Dash /></td>}
                                     <td className="r num" style={{ fontSize: 12 }}>{num(d.sessions)}</td>
                                     <td className="r num" style={{ fontSize: 12 }}>{pct(d.share)}</td>
                                     <td className="r num" style={{ fontSize: 12 }}>{num(d.orders)}</td>

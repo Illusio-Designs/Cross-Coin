@@ -127,10 +127,12 @@ const isProviderWebhook = (req) => {
 
 // The storefront edge visit counter (POST /api/i/v) sends one ping per page
 // load from Vercel's small pool of egress IPs, so per-IP limiting would drop
-// most visits under load. Exempt it when it carries the shared X-Visit-Key
-// (or when no key is configured); a wrong key still goes through the limiter.
+// most visits under load. Exempt it only when VISIT_INGEST_KEY is configured
+// and the request carries it; without a key the endpoint is public, so it
+// stays rate-limited like any other route.
 const { visitKeyOk } = require('./utils/visitKey');
 const isEdgeVisitPing = (req) => {
+  if (!process.env.VISIT_INGEST_KEY) return false;
   if ((req.method || '').toUpperCase() !== 'POST') return false;
   const path = (req.originalUrl || req.url || '').split('?')[0];
   return path.replace(/^\/api(\/v1)?/, '') === '/i/v' && visitKeyOk(req);
