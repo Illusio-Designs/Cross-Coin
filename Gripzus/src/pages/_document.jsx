@@ -4,6 +4,8 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
+        <noscript><style>{'img.gzimg{opacity:1!important}:has(> img.gzimg){animation:none!important;background-image:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />

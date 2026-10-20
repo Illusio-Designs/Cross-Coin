@@ -103,9 +103,12 @@ export default async function HomePage() {
           we use the sr-only utility from globals.css. */}
       <h1 className="sr-only">Knitwink — natural-fibre knitwear, made to last</h1>
       <HeroBanner slides={slides} />
-      <CategoryCards categories={categories} />
-      <ExclusiveSection products={bestsellers.slice(0, 3)} />
-      <BestsellerRow products={bestsellers} />
+      {/* Data comes from the server before the page is sent (route loading.jsx
+          covers the wait), so an empty list means "none" — skip the section
+          instead of shimmering forever. */}
+      {categories.length > 0 && <CategoryCards categories={categories} />}
+      {bestsellers.length > 0 && <ExclusiveSection products={bestsellers.slice(0, 3)} />}
+      {bestsellers.length > 0 && <BestsellerRow products={bestsellers} />}
       <ReviewBand reviews={reviews} />
       <BlogStrip posts={posts} />
       <TrustStrip reviews={reviews} />

@@ -50,6 +50,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <head>
+        {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
+        <noscript><style>{'.shimmer-img{opacity:1!important}.shimmer-img-skeleton{display:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
