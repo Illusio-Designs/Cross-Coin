@@ -3,6 +3,7 @@ import PageHero from '../components/common/PageHero';
 import SeoWrapper from '../components/SeoWrapper';
 import ProductCard from '../components/products/ProductCard';
 import { useWishlist } from '../context/WishlistContext';
+import { Sk, SkBusy, ProductCardSkeletons } from '../components/common/Skeleton';
 
 export default function WishlistPage() {
   const { items, count, hydrated, clear } = useWishlist();
@@ -15,13 +16,21 @@ export default function WishlistPage() {
           eyebrow="Saved for later"
           title="Your"
           accent="wishlist."
-          intro={empty
+          intro={!hydrated ? ' ' : empty
             ? 'Tap the heart on any pair to keep it here for later.'
             : `${count} pair${count === 1 ? '' : 's'} kept aside.`}
         />
 
         <div className="wrap section-y">
-          {!hydrated ? null : empty ? (
+          {!hydrated ? (
+            // Saved pairs are read from this browser after load — hold the grid.
+            <SkBusy label="Loading your wishlist…">
+              <div className="flex items-center justify-between mb-8"><Sk className="h-3 w-20" /><Sk className="h-3 w-28" /></div>
+              <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
+                <ProductCardSkeletons n={4} />
+              </div>
+            </SkBusy>
+          ) : empty ? (
             <div className="text-center py-24 border border-line max-w-xl mx-auto">
               <p className="h-display text-3xl uppercase mb-3">Nothing saved yet</p>
               <p className="prose-body text-sm mb-7">Start with a pair from the catalogue.</p>

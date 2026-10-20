@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import PageHero from '../../components/common/PageHero';
 import SeoWrapper from '../../components/SeoWrapper';
 import { getPolicyByName } from '../../services/policies';
+import { SkBusy, TextSkeleton } from '../../components/common/Skeleton';
 
 /* Presentational chrome only — the legal text itself comes from the API.
    Policies are global (same for every brand), so no brand filter. */
@@ -49,11 +50,7 @@ export default function PolicyPage() {
 
             {/* Loading — grey skeleton */}
             {loading && (
-              <div className="space-y-3.5">
-                {[95, 80, 90, 65, 88, 72, 92, 60].map((w, i) => (
-                  <div key={i} className="h-3.5 rounded bg-paper-deep animate-pulse" style={{ width: `${w}%` }} />
-                ))}
-              </div>
+              <SkBusy label="Loading policy…"><TextSkeleton lines={12} /></SkBusy>
             )}
 
             {/* Not found / error */}

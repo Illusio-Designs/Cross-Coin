@@ -47,9 +47,10 @@ export default function PolicyPage() {
       <section className="bg-white px-6 py-10 md:px-10 md:py-14 lg:px-16">
         <div className="w-full">
           {loading && (
-            <div className="flex flex-col gap-4 py-10">
+            <div className="flex flex-col gap-4 py-10" role="status" aria-busy="true">
+              <span className="sr-only">Loading policy…</span>
               {[90, 70, 95, 60, 80, 50, 85].map((w, i) => (
-                <div key={i} className="h-4 animate-pulse rounded bg-gray-100" style={{ width: `${w}%` }} />
+                <div key={i} className="sk h-4 rounded" style={{ width: `${w}%` }} aria-hidden="true" />
               ))}
             </div>
           )}

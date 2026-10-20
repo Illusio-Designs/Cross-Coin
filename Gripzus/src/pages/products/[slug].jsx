@@ -18,15 +18,11 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
 
-// Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
-const ik = (src, w) => {
-  if (!src || typeof src !== 'string') return src;
-  if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
-  }
-  return src;
-};
+// Right-size ImageKit images per slot (f-auto, width-only): GzImage `w` / ikw().
 import { checkServiceability } from '../../services/serviceability';
+import GzImage from '../../components/common/GzImage';
+import { SkBusy, ProductCardSkeletons } from '../../components/common/Skeleton';
+import { ikw } from '../../utils/imagekit';
 
 // Public site origin — used for canonical / OpenGraph / JSON-LD URLs. Same
 // default as SeoWrapper so the two agree.
@@ -112,6 +108,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   // still mutates these.
   const [product, setProduct] = useState(initialProduct);
   const [related, setRelated] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(true);
   const [loading] = useState(false);
   const [notFound, setNotFound] = useState(!initialProduct);
 
@@ -205,6 +202,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
   useEffect(() => {
     if (!product) return;
     let alive = true;
+    setRelatedLoading(true);
     // Dedupe by slug, drop this product, cap at 4 for the grid.
     const pickOthers = (pool) => {
       const seen = new Set();
@@ -220,6 +218,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
       let rel = pickOthers(sameCat);
       if (rel.length === 0) rel = pickOthers(all);
       setRelated(rel);
+      setRelatedLoading(false);
     });
     return () => { alive = false; };
   }, [product]);
@@ -555,14 +554,15 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                   className="gz-pdp-main relative w-full overflow-hidden aspect-square bg-paper-warm"
                 >
                   <button type="button" onClick={() => setLightbox(true)} aria-label="Zoom image" className="block h-full w-full cursor-zoom-in relative">
-                    <img
+                    <GzImage
                       key={curImg}
-                      src={ik(images[curImg], 900)}
+                      src={images[curImg]}
+                      w={1200}
+                      widths={[600, 1200]}
+                      sizes="(max-width: 767px) 100vw, 50vw"
                       alt={product.name}
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                      className="gz-pdp-img block h-full w-full object-contain"
+                      priority={curImg === 0}
+                      className="block h-full w-full object-contain"
                     />
                     {product.sku && (
                       <span className="absolute left-2.5 bottom-2.5 bg-ink/80 text-[10px] font-semibold px-2 py-1 text-paper z-10">Style: #{product.sku}</span>
@@ -572,15 +572,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     </span>
                   </button>
 
-                  <style jsx>{`
-                    .gz-pdp-img {
-                      animation: gz-pdp-fade 0.6s ease;
-                    }
-                    @keyframes gz-pdp-fade {
-                      from { opacity: 0; }
-                      to   { opacity: 1; }
-                    }
-                  `}</style>
+                  {/* Fade-in now comes from GzImage (only once fully loaded + decoded). */}
                 </div>
 
                 {/* Thumbnail row — horizontal, below the main image (Morbix
@@ -601,7 +593,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                           curImg === i ? 'border-ink' : 'border-line opacity-60 hover:opacity-100 hover:border-ink'
                         }`}
                       >
-                        <img src={ik(img, 160)} alt="" loading="lazy" className="block h-full w-full object-cover" />
+                        <GzImage src={img} w={200} className="block h-full w-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -619,7 +611,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                   <button type="button" aria-label="Previous" onClick={() => setActiveImg((i) => (i - 1 + images.length) % images.length)}
                     className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">‹</button>
                 )}
-                <img src={ik(images[curImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl" />
+                <img src={ikw(images[curImg], 1200)} alt={product.name} className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl" />
                 {images.length > 1 && (
                   <button type="button" aria-label="Next" onClick={() => setActiveImg((i) => (i + 1) % images.length)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white grid place-items-center text-2xl">›</button>
@@ -1024,7 +1016,7 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
         <ReviewsSection reviews={initialReviews} total={initialReviewTotal} productId={product.id} />
 
         {/* ── Editorial band 4 — You may also like ─────────────────────── */}
-        {related.length > 0 && (
+        {(related.length > 0 || relatedLoading) && (
           <>
             <div className="wrap"><div className="hairline" /></div>
             <section className="py-10 md:py-14">
@@ -1036,9 +1028,15 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                   </div>
                   <Link href="/products" className="link-line shrink-0">See all</Link>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
-                  {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
-                </div>
+                {related.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                    {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+                  </div>
+                ) : (
+                  <SkBusy label="Loading related pairs…" className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-10">
+                    <ProductCardSkeletons n={4} />
+                  </SkBusy>
+                )}
               </div>
             </section>
           </>
@@ -1056,11 +1054,9 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
           }`}
         >
           <div className="wrap py-3 flex items-center gap-3 md:gap-5">
-            <img
-              src={images[0]}
-              alt={product.name}
-              className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-md object-cover bg-paper-warm"
-            />
+            <span className="relative block h-12 w-12 md:h-14 md:w-14 shrink-0 overflow-hidden bg-paper-warm">
+              <GzImage src={images[0]} w={200} alt={product.name} className="h-full w-full object-cover" />
+            </span>
             <div className="min-w-0 flex-1">
               <p className="h-display text-ink text-sm md:text-base leading-tight truncate">{product.name}</p>
               <p className="eyebrow mt-0.5 truncate">{colorLabel} · ₹{Number(hasPacks ? packTotal : price).toLocaleString('en-IN')}</p>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import ProductCard from '../components/products/ProductCard';
 import SeoWrapper from '../components/SeoWrapper';
 import { searchProducts } from '../services/products';
+import { SkBusy, ProductCardSkeletons } from '../components/common/Skeleton';
 
 /* Search — live API search (GET /api/products/search): a debounced field in
    the hero that syncs to ?q= and shows the matching pairs below. Nothing is
@@ -69,7 +70,7 @@ export default function SearchPage() {
             </h1>
             <p className="prose-body text-sm md:text-base mt-4">
               {hasQuery
-                ? `${results.length} pair${results.length === 1 ? '' : 's'} found`
+                ? (loading ? 'Searching…' : `${results.length} pair${results.length === 1 ? '' : 's'} found`)
                 : 'Type a name, collection or material — like “merino” or “trail”.'}
             </p>
 
@@ -106,18 +107,13 @@ export default function SearchPage() {
 
             {/* WITH QUERY */}
             {hasQuery && (
-              loading ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i}>
-                      <div className="aspect-[4/5] rounded-xl bg-paper-deep animate-pulse" />
-                      <div className="mt-3.5 h-3 w-1/3 rounded bg-paper-deep animate-pulse" />
-                      <div className="mt-2 h-4 w-2/3 rounded bg-paper-deep animate-pulse" />
-                    </div>
-                  ))}
-                </div>
+              loading && results.length === 0 ? (
+                <SkBusy label="Searching…" className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
+                  <ProductCardSkeletons n={10} />
+                </SkBusy>
               ) : results.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
+                // A new term keeps the previous results (dimmed) until the new ones land.
+                <div className={`grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
                   {results.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
                 </div>
               ) : (
@@ -132,7 +128,7 @@ export default function SearchPage() {
             )}
 
             {/* NO QUERY — a quiet prompt, no products until the shopper types. */}
-            {!hasQuery && (
+            {!hasQuery && router.isReady && !urlQ && (
               <p className="prose-body text-sm text-ink-muted text-center py-16">
                 Start typing to search the archive.
               </p>

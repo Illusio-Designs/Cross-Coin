@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Search, Package, Truck, CheckCircle, MapPin, Phone, Clock } from 'lucide-react'
 import { trackOrder } from '@/lib/api/orders'
 import { trackingStep, orderStatusLabel, orderStatusTone, isCancelledStatus, orderStatusNote, paymentSummary } from '@/utils/orderStatus'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
+import { Skeleton, SkeletonRegion } from '@/components/ui/Skeleton'
 // SeoWrapper removed — metadata is now set server-side in page.jsx.
 
 // Step labels; position comes from trackingStep() (0 Confirmed … 3 Delivered).
@@ -126,6 +128,32 @@ export default function TrackOrderClient() {
 
           {error && <p className="mt-4 text-center text-sm text-red-500">{error}</p>}
 
+          {loading && !order && (
+            <SkeletonRegion label="Finding your order…" className="mt-8 rounded-2xl border border-gray-100 bg-gray-50 p-6">
+              <div className="flex items-center justify-between" aria-hidden="true">
+                <div>
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-1.5 h-4 w-32" />
+                  <Skeleton className="mt-1.5 h-3 w-24" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <div className="mt-6 flex items-center justify-between" aria-hidden="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-2.5 w-12" />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex items-center gap-3 border-t border-gray-200 pt-4" aria-hidden="true">
+                <Skeleton className="h-14 w-14 shrink-0 rounded-lg" />
+                <div className="flex-1"><Skeleton className="h-3.5 w-2/3" /><Skeleton className="mt-1.5 h-3 w-1/3" /></div>
+                <Skeleton className="h-3.5 w-10" />
+              </div>
+            </SkeletonRegion>
+          )}
+
           {order && (
             <div className="mt-8 rounded-2xl border border-gray-100 bg-gray-50 p-6">
               <div className="flex items-center justify-between">
@@ -176,9 +204,9 @@ export default function TrackOrderClient() {
                     const color = pickColor(it)
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
+                        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
                           {img
-                            ? <img src={img} alt={name} className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                            ? <ShimmerImg src={img} width={200} alt={name} className="h-full w-full object-cover" fallback={<Package size={18} className="text-gray-300" />} />
                             : <Package size={18} className="text-gray-300" />}
                         </div>
                         <div className="min-w-0 flex-1">

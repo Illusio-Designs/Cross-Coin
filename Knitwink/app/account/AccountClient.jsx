@@ -10,6 +10,8 @@ import { updateProfile } from '@/lib/api/auth'
 import SeoWrapper from '@/components/SeoWrapper'
 import DeleteAccountSection from '@/components/account/DeleteAccountSection'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ShimmerImg } from '@/components/ui/ShimmerImg'
+import { AccountPageSkeleton, OrderCardsSkeleton, AddressCardsSkeleton } from '@/components/account/AccountSkeletons'
 import { queryKeys } from '@/lib/queryClient'
 import { orderStatusLabel, orderStatusTone, canCancelOrder, canRequestReturn, paymentSummary, orderStatusNote } from '@/utils/orderStatus'
 import { showError, toastProfileUpdated, toastProfileError, toastPasswordUpdated, toastPasswordError, toastAddressAdded, toastAddressUpdated, toastAddressDeleted, toastLogoutSuccess } from '@/lib/toast'
@@ -161,9 +163,7 @@ export default function AccountClient() {
     } catch (err) { setProfileMsg(err.message || 'Update failed') }
   }
 
-  if (loading) return (
-    <div className="pf-fullpage-loader"><div className="pf-spinner" /><p>Loading your profile...</p></div>
-  )
+  if (loading) return <AccountPageSkeleton />
 
   if (!user) return (
     <div className="pf-fullpage-loader">
@@ -197,10 +197,11 @@ export default function AccountClient() {
       {/* Stats */}
       <div className="acc-stats-wrap">
         <div className="acc-stats">
-          <div className="acc-stat"><div className="acc-stat-val">{orders.length}</div><div className="acc-stat-label">Orders</div></div>
-          <div className="acc-stat"><div className="acc-stat-val">{addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
-          <div className="acc-stat"><div className="acc-stat-val">{orders.filter(o => o.status === 'delivered').length}</div><div className="acc-stat-label">Delivered</div></div>
-          <div className="acc-stat"><div className="acc-stat-val">{orders.filter(o => ['pending', 'confirmed', 'processing', 'shipped', 'booked'].includes(o.status)).length}</div><div className="acc-stat-label">Active</div></div>
+          {/* Figures shimmer until their list has loaded (instead of showing 0). */}
+          <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <Skeleton className="mx-auto h-6 w-8" /> : orders.length}</div><div className="acc-stat-label">Orders</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{loadingAddresses ? <Skeleton className="mx-auto h-6 w-8" /> : addresses.length}</div><div className="acc-stat-label">Addresses</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <Skeleton className="mx-auto h-6 w-8" /> : orders.filter(o => o.status === 'delivered').length}</div><div className="acc-stat-label">Delivered</div></div>
+          <div className="acc-stat"><div className="acc-stat-val">{loadingOrders ? <Skeleton className="mx-auto h-6 w-8" /> : orders.filter(o => ['pending', 'confirmed', 'processing', 'shipped', 'booked'].includes(o.status)).length}</div><div className="acc-stat-label">Active</div></div>
           {user?.loyalty_points > 0 && (
             <div className="acc-stat" title="Earn points on every delivery. Redeem on future orders.">
               <div className="acc-stat-val acc-stat-points">⭐ {user.loyalty_points}</div>
@@ -242,7 +243,7 @@ export default function AccountClient() {
           {activeTab === 0 && (
             <div className="pf-section">
               <div className="pf-section-title">My Orders</div>
-              {loadingOrders ? <div className="pf-loading">Loading orders...</div>
+              {loadingOrders ? <OrderCardsSkeleton count={2} />
                 : orders.length === 0 ? (
                   <div className="pf-empty">
                     No orders yet. <Link href="/products" style={{ color: '#0a0a0a', fontWeight: 600 }}>Start shopping →</Link>
@@ -266,9 +267,9 @@ export default function AccountClient() {
                       </div>
                       {order.OrderItems?.map(item => (
                         <div className="pf-order-item" key={item.id}>
-                          <div className="pf-order-img">
+                          <div className="pf-order-img relative">
                             {getOrderImage(item) && (
-                              <img src={getOrderImage(item)} alt={item.Product?.name || item.product_name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <ShimmerImg src={getOrderImage(item)} width={200} alt={item.Product?.name || item.product_name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             )}
                           </div>
                           <div className="pf-order-item-info">
@@ -330,7 +331,7 @@ export default function AccountClient() {
                   Add Address
                 </button>
               </div>
-              {loadingAddresses ? <div className="pf-loading" style={{ display: 'grid', gap: 12 }}>{[0, 1].map((i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}</div>
+              {loadingAddresses ? <AddressCardsSkeleton count={2} />
                 : addresses.length === 0 ? <div className="pf-empty">No addresses saved.</div>
                 : <div className="pf-addr-grid">
                   {addresses.map(addr => (

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { ProductCard } from '@/components/collection/ProductCard';
+import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 
 export function WishlistPageClient() {
   const items = useWishlistStore((s) => s.items);
@@ -31,7 +32,9 @@ export function WishlistPageClient() {
 
       {/* Content */}
       <div className="px-6 py-8 md:px-10">
-        {hydrated && items.length === 0 ? (
+        {!hydrated && items.length === 0 ? (
+          <ProductGridSkeleton count={5} label="Loading your wishlist…" />
+        ) : hydrated && items.length === 0 ? (
           <div className="flex flex-col items-center gap-6 rounded-2xl bg-white py-20 text-center shadow-sm">
             <Heart size={48} className="text-gray-200" />
             <div>

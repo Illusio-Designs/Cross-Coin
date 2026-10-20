@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '../services/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '../utils/orderStatus';
+import { Sk, SkBusy } from '../components/common/Skeleton';
 
 const INK = '#121212';
 const REASONS = [
@@ -23,6 +24,7 @@ export default function ReturnsPage() {
   const [returns, setReturns] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false); // first load done → later reloads dim instead of skeleton
   const [form, setForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -41,7 +43,7 @@ export default function ReturnsPage() {
       const all = oRes?.orders || oRes?.data || (Array.isArray(oRes) ? oRes : []);
       setOrders(all.filter((o) => canRequestReturn(o.status)));
     } catch { /* ignore */ }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoaded(true); }
   }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
@@ -81,7 +83,15 @@ export default function ReturnsPage() {
     finally { setSubmitting(false); }
   };
 
-  if (authLoading || !user) return <div style={{ padding: 80, textAlign: 'center' }}>Loading…</div>;
+  if (authLoading || !user) return (
+    <div style={{ background: '#F4F2EC', minHeight: '70vh' }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: '40px 20px 70px' }}>
+        <div style={{ fontSize: '.72rem', letterSpacing: '.18em', textTransform: 'uppercase', color: '#8a8575' }}>Account</div>
+        <h1 style={{ margin: '6px 0 22px', fontFamily: "'Space Grotesk', sans-serif", fontSize: '2rem', fontWeight: 600 }}>Returns &amp; refunds</h1>
+        <ReturnsSkeleton />
+      </div>
+    </div>
+  );
 
   const isCod = form && form.order?.payment_type === 'cod';
 
@@ -134,7 +144,8 @@ export default function ReturnsPage() {
           </form>
         )}
 
-        {loading ? <p style={{ color: '#8a8575' }}>Loading…</p> : (
+        {loading && !loaded ? <ReturnsSkeleton /> : (
+          <div className={loading ? 'sk-dim' : undefined} aria-busy={loading || undefined}>
           <>
             {returns.length > 0 && (
               <>
@@ -185,9 +196,28 @@ export default function ReturnsPage() {
             )}
             <p style={{ marginTop: 12, fontSize: '.82rem', color: '#8a8575' }}>Returns are accepted within 7 days of delivery.</p>
           </>
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+function ReturnsSkeleton() {
+  // Request cards in the real card frame while orders + returns load.
+  return (
+    <SkBusy label="Loading your orders…">
+      <Sk className="h-5 w-48" style={{ margin: '6px 0 14px' }} />
+      <div style={{ display: 'grid', gap: 12 }} aria-hidden="true">
+        {[0, 1].map((i) => (
+          <div key={i} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Sk className="h-4 w-28" /><Sk className="h-3 w-20" /></div>
+            <Sk className="h-3 w-14" />
+            <Sk w={130} h={38} />
+          </div>
+        ))}
+      </div>
+    </SkBusy>
   );
 }
 

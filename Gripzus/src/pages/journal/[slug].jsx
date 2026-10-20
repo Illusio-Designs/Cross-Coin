@@ -3,6 +3,7 @@ import BlogCard from '../../components/common/BlogCard';
 import SeoWrapper from '../../components/SeoWrapper';
 import { JOURNAL_POSTS, getPost as getLocalPost } from '../../data/journal';
 import { getPosts, getPostBySlug } from '../../services/blog';
+import GzImage from '../../components/common/GzImage';
 
 /* Journal detail — routed by slug (/journal/<slug>). Full-width layout.
    Content comes from the blog API; falls back to the local seed data. */
@@ -40,7 +41,12 @@ export default function JournalPost({ post, related }) {
         </header>
 
         {/* Cover — full image, full viewport width, natural height (never cut) */}
-        <img src={post.image} alt={post.title} className="block w-full h-auto" />
+        {/* Whole picture at its natural height; a 16:9 box (with the shimmer)
+            is held until it has fully loaded, so it never draws in halves. */}
+        <div>
+          <GzImage src={post.image} alt={post.title} w={1400} widths={[800, 1400, 2000]} sizes="100vw" priority
+            className="block w-full h-auto" style={{ aspectRatio: 'auto 16 / 9' }} />
+        </div>
 
         {/* Body — same full-width container as the other pages/sections */}
         <div className="wrap py-12 md:py-16">

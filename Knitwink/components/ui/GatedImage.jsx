@@ -9,7 +9,7 @@ import Image from 'next/image';
  * fades in. Use with `fill` inside a `relative` box of fixed size (same props
  * as next/image; optimisation settings are untouched).
  */
-export function GatedImage({ className = '', onLoad, onError, ...props }) {
+export function GatedImage({ alt = '', className = '', onLoad, onError, ...props }) {
   const [shown, setShown] = useState(false);
   const reveal = (e) => {
     onLoad?.(e);
@@ -23,6 +23,7 @@ export function GatedImage({ className = '', onLoad, onError, ...props }) {
       {!shown && <span className="sk absolute inset-0" aria-hidden="true" />}
       <Image
         {...props}
+        alt={alt}
         data-sk-img=""
         className={`kw-img${shown ? ' is-loaded' : ''}${className ? ' ' + className : ''}`}
         onLoad={reveal}

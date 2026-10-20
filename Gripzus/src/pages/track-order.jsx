@@ -4,6 +4,8 @@ import PageHero from '../components/common/PageHero';
 import SeoWrapper from '../components/SeoWrapper';
 import { trackOrder } from '../services/orders';
 import { trackingStep, orderStatusLabel, isCancelledStatus, orderStatusNote, paymentSummary } from '../utils/orderStatus';
+import { Sk, SkBusy } from '../components/common/Skeleton';
+import GzImage from '../components/common/GzImage';
 
 const STEPS = [
   { key: 'placed',           label: 'Order Placed',         short: 'Placed' },
@@ -199,6 +201,30 @@ export default function TrackOrderPage() {
             {error && <p className="text-clay-deep text-sm mt-4">{error}</p>}
           </form>
 
+          {loading && !data && (
+            // Result cards in their real frames while the order is looked up.
+            <SkBusy label="Looking up your order…" className="space-y-6">
+              <section className="bg-paper-deep border border-line p-6 md:p-7" aria-hidden="true" style={{ '--sk-base': 'var(--line)', '--sk-hi': 'var(--paper-warm)' }}>
+                <div className="flex items-start justify-between flex-wrap gap-4">
+                  <div className="space-y-2.5"><Sk className="h-2.5 w-12" /><Sk className="h-8 w-56" /><Sk className="h-3 w-64" /></div>
+                  <Sk className="h-7 w-24" />
+                </div>
+              </section>
+              <section className="bg-paper-deep border border-line p-5 md:p-8" aria-hidden="true" style={{ '--sk-base': 'var(--line)', '--sk-hi': 'var(--paper-warm)' }}>
+                <Sk className="h-2.5 w-16 mb-2" />
+                <Sk className="h-7 w-32 mb-7" />
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4].map((i) => <div key={i} className="flex flex-col items-center gap-3"><Sk w={32} h={32} /><Sk className="h-2.5 w-3/4" /></div>)}
+                </div>
+              </section>
+              <section className="bg-paper-deep border border-line p-6 md:p-7" aria-hidden="true" style={{ '--sk-base': 'var(--line)', '--sk-hi': 'var(--paper-warm)' }}>
+                <Sk className="h-2.5 w-20 mb-2" />
+                <Sk className="h-7 w-24 mb-4" />
+                {[0, 1].map((i) => <div key={i} className="flex items-center gap-4 py-3"><Sk w={64} h={64} /><div className="flex-1 space-y-2"><Sk className="h-3.5 w-1/2" /><Sk className="h-3 w-1/3" /></div></div>)}
+              </section>
+            </SkBusy>
+          )}
+
           {data && (
             <div className="space-y-6">
 
@@ -297,7 +323,7 @@ export default function TrackOrderPage() {
                       <div key={i} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
                         <div className="w-16 h-16 shrink-0 border border-line bg-paper overflow-hidden flex items-center justify-center">
                           {it.image
-                            ? <img src={it.image} alt={it.name} className="w-full h-full object-cover" />
+                            ? <GzImage src={it.image} alt={it.name} w={200} className="w-full h-full object-cover" />
                             : <span className="text-[10px] uppercase tracking-widest text-ink-muted">GZ</span>}
                         </div>
                         <div className="min-w-0 flex-1">

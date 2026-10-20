@@ -4,6 +4,7 @@ import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import FilterDrawer from '../components/products/FilterDrawer';
 import SeoWrapper from '../components/SeoWrapper';
+import { Sk, SkBusy, ProductCardSkeletons } from '../components/common/Skeleton';
 import { getPublicCategories } from '../services/categories';
 import { getPublicProducts, getProductsByCategory } from '../services/products';
 
@@ -72,6 +73,7 @@ export default function ProductsPage() {
   const collectionParam = router.query.collection || router.query.slug || '';
 
   const [categories, setCategories] = useState([]);   // [{id,name,slug}]
+  const [catsLoaded, setCatsLoaded] = useState(false);
   const [activeCat, setActiveCat]   = useState('all'); // 'all' or category slug
   const [products, setProducts]     = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -83,7 +85,7 @@ export default function ProductsPage() {
 
   // Categories for the chips.
   useEffect(() => {
-    getPublicCategories().then(setCategories).catch(() => setCategories([]));
+    getPublicCategories().then(setCategories).catch(() => setCategories([])).finally(() => setCatsLoaded(true));
   }, []);
 
   // Honour ?collection=<slug> from the URL once categories are known.
@@ -204,6 +206,7 @@ export default function ProductsPage() {
               >
                 All
               </button>
+              {!catsLoaded && [0, 1, 2, 3].map((i) => <Sk key={i} className="h-[34px]" w={[88, 112, 96, 120][i]} />)}
               {categories.map((c) => {
                 const key = c.slug || c.name;
                 return (
@@ -237,24 +240,19 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Grid */}
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i}>
-                  <div className="aspect-[4/5] rounded-lg bg-paper-deep animate-pulse" />
-                  <div className="mt-3.5 h-3 w-1/3 rounded bg-paper-deep animate-pulse" />
-                  <div className="mt-2 h-4 w-2/3 rounded bg-paper-deep animate-pulse" />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
+          {/* Grid — skeleton only on the first load; switching collection
+              keeps the current pairs on screen (dimmed) until the new ones land. */}
+          {loading && products.length === 0 ? (
+            <SkBusy label="Loading pairs…" className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
+              <ProductCardSkeletons n={10} />
+            </SkBusy>
+          ) : filtered.length === 0 && !loading ? (
             <div className="text-center py-24 border border-line rounded-lg">
               <p className="h-display text-3xl mb-3">No pairs found</p>
               <button onClick={() => { selectChip('all'); clearDrawer(); }} className="btn-outline inline-flex">Clear everything</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9">
+            <div className={`grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-9${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
               {filtered.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
             </div>
           )}
