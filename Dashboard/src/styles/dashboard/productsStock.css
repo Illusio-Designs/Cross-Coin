@@ -155,7 +155,6 @@
 .pst-seo span, .pst-danger span { font-size: 12.5px; color: var(--ds-color-text-muted); }
 
 /* ── Editor ── */
-.pst-editor-ph { height: 150px; border: 1px solid var(--ds-color-border); border-radius: 8px; }
 .pst-secnav { display: flex; gap: 6px; overflow-x: auto; position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--ds-color-bg); }
 .pst-secnav button {
   flex: none; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ds-color-border);

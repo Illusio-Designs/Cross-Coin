@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
+import { SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    WhatsApp analytics — replaces the old Dashboard + Analytics tabs.
@@ -258,16 +259,15 @@ export default function AnalyticsPage({ brandId = '', brands = [], isAdmin = fal
           <div className={`wpb-two wpb-two--top${loading && data ? ' is-stale' : ''}`}>
             <section className="wpb-card wpb-card--flush wpb-col-wide">
               <h2 className="wpb-h2 wpb-h2--pad">By brand</h2>
-              {first ? (
-                <div className="wpb-skel-list">{[0, 1, 2].map((i) => <div key={i} className="wpb-skel-row"><span /></div>)}</div>
-              ) : byBrand.length === 0 ? (
+              {!first && byBrand.length === 0 ? (
                 <State title="No brand data yet" text="Chats in this period will be split by store here." />
               ) : (
                 <div className="wpb-tbl-wrap">
                   <table className="wpb-tbl" style={{ minWidth: 640 }}>
                     <thead><tr><th>Brand</th><th className="r">Chats</th><th className="r">First reply</th><th className="r">Unanswered</th><th className="r">Read rate</th><th className="r">Sales from WhatsApp</th></tr></thead>
-                    <tbody>
-                      {byBrand.map((b) => (
+                    <tbody aria-busy={first || undefined}>
+                      {first && <SkeletonTableRows rows={3} cols={6} />}
+                      {!first && byBrand.map((b) => (
                         <tr key={b.brand_id ?? b.name}>
                           <td><b className="wpb-strong">{b.name || `Brand ${b.brand_id}`}</b></td>
                           <td className="r">{num(b.chats)}</td>
@@ -285,16 +285,15 @@ export default function AnalyticsPage({ brandId = '', brands = [], isAdmin = fal
 
             <section className="wpb-card wpb-card--flush wpb-col">
               <h2 className="wpb-h2 wpb-h2--pad">By team member</h2>
-              {first ? (
-                <div className="wpb-skel-list">{[0, 1, 2].map((i) => <div key={i} className="wpb-skel-row"><span /></div>)}</div>
-              ) : byAgent.length === 0 ? (
+              {!first && byAgent.length === 0 ? (
                 <State title="No replies from the team yet" text="Once someone replies from the inbox, they’ll show here." />
               ) : (
                 <div className="wpb-tbl-wrap">
                   <table className="wpb-tbl" style={{ minWidth: 360 }}>
                     <thead><tr><th>Name</th><th className="r">Chats closed</th><th className="r">First reply</th></tr></thead>
-                    <tbody>
-                      {byAgent.map((a) => (
+                    <tbody aria-busy={first || undefined}>
+                      {first && <SkeletonTableRows rows={3} cols={3} />}
+                      {!first && byAgent.map((a) => (
                         <tr key={a.user_id ?? a.name}>
                           <td><b className="wpb-strong">{a.name || 'Team member'}</b></td>
                           <td className="r">{num(a.closed)}</td>

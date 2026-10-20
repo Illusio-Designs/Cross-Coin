@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Modal } from '@/components/ui';
 import { productService } from '@/services';
+import { Skeleton } from '@/components/ui/Skeleton';
+
+const GRID_STYLE = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+  gap: '12px',
+  maxHeight: '400px',
+  overflowY: 'auto',
+  marginBottom: '20px'
+};
 
 const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = null }) => {
   const [existingImages, setExistingImages] = useState([]);
@@ -117,8 +127,6 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
       size="large"
     >
       <div className="existing-image-selector">
-        {loading && <div className="loading">Loading existing images...</div>}
-        
         {error && (
           <div className="error-message" style={{ 
             color: 'var(--ds-color-danger)', 
@@ -151,7 +159,7 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
           </div>
         )}
 
-        {!loading && !error && (
+        {!error && (
           <>
             {/* Image Source Selector */}
             <div className="source-selector" style={{
@@ -233,13 +241,19 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
               </div>
             </div>
 
-            <div className="image-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-              gap: '12px',
-              maxHeight: '400px',
-              overflowY: 'auto',
-              marginBottom: '20px'
+            {/* First load: shimmer tiles in the same grid. Switching source or
+                re-opening keeps the last images (dimmed) until the new ones land. */}
+            {loading && existingImages.length === 0 ? (
+              <div className="image-grid" role="status" aria-busy="true" style={GRID_STYLE}>
+                <span className="ds-sr-only">Loading images…</span>
+                {Array.from({ length: 12 }, (_, i) => <Skeleton key={i} h={120} r={8} />)}
+              </div>
+            ) : (
+            <div className="image-grid" aria-busy={loading || undefined} style={{
+              ...GRID_STYLE,
+              opacity: loading ? 0.6 : 1,
+              pointerEvents: loading ? 'none' : undefined,
+              transition: 'opacity .15s'
             }}>
               {existingImages.map((imagePath, index) => (
                 <div
@@ -300,8 +314,9 @@ const ExistingImageSelector = ({ isOpen, onClose, onSelectImages, productId = nu
                 </div>
               ))}
             </div>
+            )}
 
-            {existingImages.length === 0 && (
+            {!loading && existingImages.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--ds-color-text-muted)', padding: '40px' }}>
                 {imageSource === 'current_product' 
                   ? 'No images found for this product.' 

@@ -3,6 +3,7 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import { productService } from '../../services';
 import { showError } from '../../utils/toastNotification';
+import { Skeleton } from '../ui/Skeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 
@@ -68,7 +69,8 @@ const AttributeSelector = ({
   variationIndex,
   attributes, // All attribute types (e.g., Size, Color) with their values
   selectedAttributes = {}, // default to empty object
-  onChange // Callback to update parent form data
+  onChange, // Callback to update parent form data
+  loading = false, // attribute list still loading in the parent
 }) => {
   // Tracks which value cell is mid-upload, keyed "attrKeyLower::value".
   const [uploading, setUploading] = useState({});
@@ -135,6 +137,22 @@ const AttributeSelector = ({
       });
     }
   };
+
+  // Attribute types not loaded yet: label + select shaped placeholders where
+  // the pickers will appear (instead of an empty gap that then jumps).
+  if (loading && Object.keys(attributes || {}).length === 0) {
+    return (
+      <div className="attribute-selector" role="status" aria-busy="true">
+        <span className="ds-sr-only">Loading attributes…</span>
+        {[0, 1].map((i) => (
+          <div key={i} className="attribute-group" aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skeleton w={i ? 60 : 44} h={10} />
+            <Skeleton w="100%" h={38} r={8} />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="attribute-selector">

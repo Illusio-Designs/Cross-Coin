@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import { Input, Select } from '../ui';
+import { Skeleton, SkeletonForm, SkeletonList, SkeletonTableRows } from '../ui/Skeleton';
 import { ConfirmModal } from '../common/AlertModal';
 import { productService, categoryService, attributeService, brandService } from '../../services';
 import AttributeSelector from './AttributeSelector';
@@ -13,7 +14,7 @@ import { showSuccess, showError } from '../../utils/toastNotification';
 
 const Editor = dynamic(() => import('../common/Editor'), {
   ssr: false,
-  loading: () => <div className="pst-editor-ph" />,
+  loading: () => <Skeleton w="100%" h={150} r={8} />,
 });
 
 /*
@@ -168,6 +169,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
   const [allBrands, setAllBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [attributes, setAttributes] = useState({});
+  const [attrsLoaded, setAttrsLoaded] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -195,7 +197,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
         const list = Array.isArray(r) ? r : (Array.isArray(r?.data) ? r.data : []);
         setAttributes(list.reduce((acc, a) => { acc[a.name] = a.AttributeValues?.map((v) => v.value) || []; return acc; }, {}));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { if (alive) setAttrsLoaded(true); });
     brandService.getAllBrands(false)
       .then((r) => { if (alive) setAllBrands((Array.isArray(r?.data) ? r.data : Array.isArray(r) ? r : []).filter((b) => b.status !== 'inactive')); })
       .catch(() => {});
@@ -532,7 +535,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       <button type="button" className="pst-back" onClick={leave}><HugeiconsIcon icon={ArrowLeft01Icon} size={16} strokeWidth={2} /> All products</button>
       <header className="pst-head">
         <div>
-          <h1 className="pst-title">{title}</h1>
+          <h1 className="pst-title">{loading ? <Skeleton w="min(320px, 70%)" h={26} /> : title}</h1>
           <p className="pst-sub">{isNew ? 'Fill in the details, add at least one size with its price, and pick the brands that sell it.' : 'Changes are saved when you press Save.'}</p>
         </div>
       </header>
@@ -542,7 +545,22 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       </nav>
 
       {loading ? (
-        <div className="pst-panel pst-state">Loading product…</div>
+        // Same sections the form opens with, shimmering until the product loads.
+        <div className="pst-form" role="status" aria-busy="true">
+          <span className="ds-sr-only">Loading product…</span>
+          <section className="pst-panel pst-sec" aria-hidden="true">
+            <h2>Details</h2>
+            <SkeletonForm fields={4} />
+          </section>
+          <section className="pst-panel pst-sec" aria-hidden="true">
+            <h2>Sizes &amp; stock</h2>
+            <SkeletonList rows={3} />
+          </section>
+          <section className="pst-panel pst-sec" aria-hidden="true">
+            <h2>Prices per brand</h2>
+            <SkeletonList rows={2} meta={false} />
+          </section>
+        </div>
       ) : (
         <form className="pst-form" noValidate onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
           {/* ── Details ── */}
@@ -617,7 +635,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                         <Input label="Cost price (₹)" type="number" name={`variations.${index}.cost_price`} value={v.cost_price || ''} onChange={(e) => setVar(index, 'cost_price', e.target.value)} placeholder="Only for your reports" />
                         <Input label="Stock" type="number" name={`variations.${index}.stock`} value={v.stock} onChange={(e) => setVar(index, 'stock', e.target.value)} required />
                       </div>
-                      <AttributeSelector variationIndex={index} attributes={attributes} selectedAttributes={v.attributes || {}} onChange={onAttrChange} />
+                      <AttributeSelector variationIndex={index} attributes={attributes} loading={!attrsLoaded} selectedAttributes={v.attributes || {}} onChange={onAttrChange} />
                       <div className="pst-field">
                         <span className="pst-label">Photos of this size</span>
                         <div className="pst-upload">
@@ -644,7 +662,15 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
           <section id="pst-sec-brands" className="pst-panel pst-sec">
             <h2>Prices per brand</h2>
             <p className="pst-help">Tick the brands whose sites sell this product. “Shows in shop” hides it from that site’s product lists without unlinking it.</p>
-            {brandRows.length === 0 ? <p className="pst-help">Loading brands…</p> : (
+            {brandRows.length === 0 ? (
+              <div className="pst-scroll" role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading brands…</span>
+                <table className="pst-mini" aria-hidden="true">
+                  <thead><tr><th>Sell on</th><th>Shows in shop</th><th className="r">Price on this site</th><th className="r">Stock limit</th></tr></thead>
+                  <tbody><SkeletonTableRows rows={3} cols={4} /></tbody>
+                </table>
+              </div>
+            ) : (
               <div className="pst-scroll">
                 <table className="pst-mini">
                   <thead><tr><th>Sell on</th><th>Shows in shop</th><th className="r">Price on this site</th><th className="r">Stock limit</th></tr></thead>
