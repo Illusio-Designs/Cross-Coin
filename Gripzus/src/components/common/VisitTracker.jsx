@@ -45,9 +45,16 @@ export default function VisitTracker() {
         credentials: 'include',
         body: JSON.stringify(body),
       })
-        .then((res) => {
+        .then((res) => (res.ok ? res.json().catch(() => null) : Promise.resolve(null)).then((json) => {
+          // First-party copy of the server visit id: the api cookie is
+          // third-party here, so orders and funnel events forward this instead.
+          // Stored before the flag, which the funnel relay waits on.
+          try {
+            const sid = json && json.data && json.data.session_id
+            if (sid) localStorage.setItem('utm_session_id', sid)
+          } catch { /* ignore */ }
           if (res.ok) sessionStorage.setItem('visit_tracked', '1')
-        })
+        }))
         .catch(() => {})
     } catch {
       /* sessionStorage unavailable or other error — swallow */

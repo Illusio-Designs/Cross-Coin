@@ -519,7 +519,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v27';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v28';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -681,13 +681,28 @@ const startServer = async () => {
                     session_id VARCHAR(255) NULL,
                     event VARCHAR(32) NOT NULL,
                     value DECIMAL(12,2) NULL,
+                    product_id INT NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     INDEX idx_fe_brand_event_created (brand_id, event, created_at),
-                    INDEX idx_fe_session (session_id)
+                    INDEX idx_fe_session (session_id),
+                    INDEX idx_fe_product_event_created (product_id, event, created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
             );
         } catch (err) {
             logger.error('funnel_events table migration failed: ' + err.message);
+        }
+
+        // ── Idempotent migration: funnel_events.product_id ─────────────────
+        // Product on view_item / add_to_cart events (per-product funnel).
+        // Guarded by information_schema; eventsController also ensures it
+        // lazily on first use in case this boot block was skipped.
+        try {
+            const { ensureProductIdColumn } = require('./controller/eventsController.js');
+            if (!(await ensureProductIdColumn())) {
+                logger.error('funnel_events.product_id migration failed (see warning above)');
+            }
+        } catch (err) {
+            logger.error('funnel_events.product_id migration failed: ' + err.message);
         }
 
         // ── Idempotent migration: consent_logs table (DPDP S6) ─────────────
