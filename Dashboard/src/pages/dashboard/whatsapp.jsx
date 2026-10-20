@@ -16,7 +16,7 @@ import dynamic from 'next/dynamic';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   WhatsappIcon, Message01Icon, RoboticIcon, Megaphone01Icon, File01Icon, FlashIcon,
-  ShoppingCartRemove01Icon, Analytics01Icon, Settings01Icon,
+  ShoppingCartRemove01Icon, Analytics01Icon, Settings01Icon, UserCircleIcon,
 } from '@hugeicons/core-free-icons';
 import { brandService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +55,7 @@ const PAGE_COMPONENTS = {
   carts:           load(() => import('../../components/whatsapp/CartsPage'), KpiPageLoading),
   analytics:       load(() => import('../../components/whatsapp/AnalyticsPage'), KpiPageLoading),
   settings:        load(() => import('../../components/whatsapp/SettingsPage'), FormPageLoading),
+  profile:         load(() => import('../../components/whatsapp/ProfilePage'), FormPageLoading),
 };
 
 const NAV = [
@@ -66,7 +67,9 @@ const NAV = [
   { key: 'carts',         label: 'Abandoned carts',    icon: ShoppingCartRemove01Icon },
   { key: 'analytics',     label: 'Analytics',          icon: Analytics01Icon },
   { key: 'settings',      label: 'Settings',           icon: Settings01Icon, adminOnly: true },
+  { key: 'profile',       label: 'Profile',            icon: UserCircleIcon, adminOnly: true },
 ];
+const ADMIN_PAGES = new Set(NAV.filter((n) => n.adminOnly).map((n) => n.key));
 
 const BRAND_KEY = 'obz-wa-brand';
 
@@ -167,7 +170,7 @@ export function WhatsAppManager() {
   };
 
   const nav = useMemo(() => NAV.filter((n) => !n.adminOnly || isAdmin), [isAdmin]);
-  const current = page === 'settings' && !isAdmin ? 'inbox' : page;
+  const current = ADMIN_PAGES.has(page) && !isAdmin ? 'inbox' : page;
   const Page = PAGE_COMPONENTS[current];
 
   return (

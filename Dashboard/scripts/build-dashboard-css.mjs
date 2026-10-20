@@ -46,6 +46,7 @@ const FILES = [
   'whatsapp.css',
   'waPagesA.css',
   'waPagesB.css',
+  'waProfile.css',
   'globalSearch.css',
   'exceptions.css',
   'reviews.css',
