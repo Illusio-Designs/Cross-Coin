@@ -505,3 +505,16 @@
     font-size: 12px;
   }
 }
+
+/* "Turn on sound" — shown next to the bell while the browser blocks sound */
+.dh-sound-off {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--ds-color-warn-bd, var(--ds-color-border));
+  background: var(--ds-color-warn-bg, var(--ds-color-surface-soft));
+  color: var(--ds-color-warn, var(--ds-color-text));
+  font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap;
+}
+.dh-sound-off:hover { filter: brightness(.97); }
+.dh-sound-off:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
+@media (max-width: 640px) { .dh-sound-off span { display: none; } .dh-sound-off { width: 36px; padding: 0; justify-content: center; } }

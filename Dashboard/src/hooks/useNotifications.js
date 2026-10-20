@@ -18,26 +18,37 @@ function getOrderAudio() {
 
 // Browsers block audio that isn't started by a user gesture, so a sound fired
 // by the background poll is silently swallowed until the page has been
-// interacted with. "Unlock" the audio on the first click/key/touch: play it
-// muted once (allowed inside a gesture), which permits later programmatic plays.
+// interacted with. "Unlock" the audio on a click/key/touch: play it muted once
+// (allowed inside a gesture), which permits later programmatic plays.
+// `audioUnlocked` only turns true once that play really succeeded, and goes
+// back to false if a later play is refused — the bell shows "Turn on sound"
+// whenever it's false, so a silent dashboard is never a surprise.
 let audioUnlocked = false;
+const soundListeners = new Set();
+function setUnlocked(v) {
+  if (audioUnlocked === v) return;
+  audioUnlocked = v;
+  soundListeners.forEach((fn) => { try { fn(v); } catch (_) {} });
+}
 function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
+  if (audioUnlocked) return Promise.resolve(true);
   try {
-    const a = getOrderAudio();
-    if (a) {
-      const prevVol = a.volume;
-      a.muted = true;
-      const p = a.play();
-      const finish = () => { a.pause(); a.currentTime = 0; a.muted = false; a.volume = prevVol; };
-      if (p && p.then) p.then(finish).catch(() => { a.muted = false; });
-      else finish();
-    }
-    // Also warm a (suspended) AudioContext so the synth fallback can play too.
+    // Warm a (suspended) AudioContext so the synth fallback can play too.
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (Ctx) { const c = new Ctx(); if (c.state === 'suspended') c.resume(); setTimeout(() => { try { c.close(); } catch (_) {} }, 300); }
-  } catch (_) { /* ignore */ }
+    const a = getOrderAudio();
+    if (!a) return Promise.resolve(false);
+    const prevVol = a.volume;
+    a.muted = true;
+    const p = a.play();
+    const finish = () => { a.pause(); a.currentTime = 0; a.muted = false; a.volume = prevVol; };
+    if (p && p.then) {
+      return p.then(() => { finish(); setUnlocked(true); return true; })
+        .catch(() => { a.muted = false; return false; });
+    }
+    finish(); setUnlocked(true);
+    return Promise.resolve(true);
+  } catch (_) { return Promise.resolve(false); }
 }
 
 // Synth fallback — used only if the mp3 can't play (blocked/unloaded), so a new
@@ -78,7 +89,7 @@ function playSound(type) {
       try {
         a.currentTime = 0;
         const p = a.play();
-        if (p && p.catch) p.catch(() => playSynth('order'));
+        if (p && p.then) p.then(() => setUnlocked(true), () => { setUnlocked(false); playSynth('order'); });
         return;
       } catch (_) { /* fall through to synth */ }
     }
@@ -88,8 +99,38 @@ function playSound(type) {
   playSynth(type);
 }
 
+// While the tab is in the background: show "(2) New order" in the tab title and,
+// when the browser allows notifications, a desktop pop-up. It uses the same tag
+// as the Web Push alert for that order, so the two never show twice.
+let hiddenCount = 0;
+let baseTitle = null;
+function flagHidden(type, data) {
+  if (typeof document === 'undefined' || !document.hidden) return;
+  if (baseTitle === null) baseTitle = document.title;
+  hiddenCount += 1;
+  document.title = `(${hiddenCount}) ${type === 'order' ? 'New order' : 'New WhatsApp'} · ${baseTitle}`;
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const isOrder = type === 'order';
+      const amount = data.amount != null ? ` · ₹${Math.round(Number(data.amount) || 0).toLocaleString('en-IN')}` : '';
+      const n = new Notification(isOrder ? `New order ${data.orderNumber || ''}`.trim() : 'New WhatsApp message', {
+        body: isOrder ? `${String(data.paymentType || '').toUpperCase()}${amount}`.replace(/^ · /, '') : (data.message || data.phone || ''),
+        tag: isOrder ? `order-${data.orderNumber}` : `wa-${data.id}`,
+        icon: '/favicon.ico',
+      });
+      n.onclick = () => { try { window.focus(); n.close(); } catch (_) {} };
+    }
+  } catch (_) { /* pop-ups are best-effort */ }
+}
+function clearHiddenFlag() {
+  if (baseTitle !== null) { document.title = baseTitle; baseTitle = null; }
+  hiddenCount = 0;
+}
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
+  // Whether the browser lets the dashboard play sound right now.
+  const [soundOn, setSoundOn] = useState(audioUnlocked);
   const [unreadCount, setUnreadCount] = useState(0);
   // True until the one-time 24h seed below has answered (the bell shows
   // skeleton rows instead of "No notifications yet" meanwhile).
@@ -101,6 +142,15 @@ export function useNotifications() {
     setNotifications(prev => [item, ...prev].slice(0, MAX_NOTIFICATIONS));
     setUnreadCount(c => c + 1);
     playSound(type);
+    flagHidden(type, data);
+  }, []);
+
+  // Turn sound on from a button (a click is the gesture browsers require), and
+  // play the chime once so staff hear what a new order sounds like.
+  const enableSound = useCallback(async () => {
+    const ok = await unlockAudio();
+    if (ok) playSound('order');
+    return ok;
   }, []);
 
   useEffect(() => {
@@ -231,22 +281,29 @@ export function useNotifications() {
     // missed while the tab was in the background, so nothing is lost.
     const onVisible = () => {
       if (!alive) return;
+      if (!document.hidden) clearHiddenFlag();
       if (controller) { try { controller.abort(); } catch (_) {} }
       if (!running) schedule(document.hidden ? 60000 : 0);
     };
     document.addEventListener('visibilitychange', onVisible);
 
-    // Unlock audio on the first interaction so the new-order sound can play.
-    const onFirstGesture = () => { unlockAudio(); };
+    // Unlock audio on any interaction (until it works) so the new-order sound
+    // can play; the bell shows "Turn on sound" while it's still blocked.
     const evts = ['pointerdown', 'keydown', 'touchstart'];
-    evts.forEach((e) => window.addEventListener(e, onFirstGesture, { once: true, passive: true }));
+    const onGesture = () => {
+      unlockAudio().then((ok) => { if (ok) evts.forEach((e) => window.removeEventListener(e, onGesture)); });
+    };
+    evts.forEach((e) => window.addEventListener(e, onGesture, { passive: true }));
+    const onSound = (v) => { if (alive) setSoundOn(v); };
+    soundListeners.add(onSound);
 
     return () => {
       alive = false;
       clearTimeout(backoffTimer);
       if (controller) { try { controller.abort(); } catch (_) {} }
       document.removeEventListener('visibilitychange', onVisible);
-      evts.forEach((e) => window.removeEventListener(e, onFirstGesture));
+      evts.forEach((e) => window.removeEventListener(e, onGesture));
+      soundListeners.delete(onSound);
     };
   }, [addNotification]);
 
@@ -260,5 +317,5 @@ export function useNotifications() {
     setUnreadCount(0);
   }, []);
 
-  return { notifications, unreadCount, markAllRead, clearAll, seeding };
+  return { notifications, unreadCount, markAllRead, clearAll, seeding, soundOn, enableSound };
 }

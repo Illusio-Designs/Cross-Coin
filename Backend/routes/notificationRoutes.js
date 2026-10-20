@@ -15,20 +15,33 @@ const { Op } = require('sequelize');
 // the hold (immediate return, for a one-off check). cPanel-safe: it's a normal
 // HTTP request, not a persistent SSE/WebSocket connection.
 const LONG_POLL_MS = 25000;
+// An order is stamped (createdAt) when its row is inserted but only becomes
+// visible when its transaction commits, a moment later. A poll that runs in
+// between would hand back a `serverTime` after the stamp, and the next poll
+// (since = serverTime) would skip that order for good. So every query looks
+// back a little further than `since`; the dashboard ignores ids it has
+// already shown, so the overlap never alerts twice.
+const OVERLAP_MS = 120000;
 
 router.get('/poll', authenticate, isStaff, async (req, res) => {
   try {
     const notificationService = require('../services/notificationService.js');
-    const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 10000);
+    let asked = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 10000);
+    if (Number.isNaN(asked.getTime())) asked = new Date(Date.now() - 10000);
+    const since = new Date(asked.getTime() - OVERLAP_MS);
     const longPoll = req.query.wait !== '0';
+    // The time of the LAST query (taken before it runs), sent back as the
+    // next `since` — never later than what that query could see.
+    let queriedAt = new Date();
 
     const fetchSince = async () => {
+      queriedAt = new Date();
       const [newOrders, newMessages] = await Promise.all([
         Order.findAll({
           where: { createdAt: { [Op.gt]: since } },
           attributes: ['id', 'order_number', 'final_amount', 'payment_type', 'createdAt'],
           order: [['createdAt', 'DESC']],
-          limit: 10,
+          limit: 20,
         }),
         WhatsappConversation.findAll({
           where: { last_message_at: { [Op.gt]: since }, status: 'open' },
@@ -51,9 +64,16 @@ router.get('/poll', authenticate, isStaff, async (req, res) => {
 
     let result = await fetchSince();
 
-    // Nothing yet → park the request until an emit wakes us or it times out,
+    // Only items newer than what the dashboard asked for end the wait early;
+    // items from the look-back overlap ride along on the next return (so a
+    // late-committed order still arrives) without turning the long-poll into
+    // a tight loop.
+    const hasNew = (r) => r.orders.some((o) => new Date(o.createdAt) > asked)
+      || r.whatsapp.some((c) => (c.Messages || []).some((m) => new Date(m.createdAt) > asked));
+
+    // Nothing new → park the request until an emit wakes us or it times out,
     // then re-query once (a small settle delay lets a just-committed row land).
-    if (longPoll && result.orders.length === 0 && result.whatsapp.length === 0) {
+    if (longPoll && !hasNew(result)) {
       let closed = false;
       req.on('close', () => { closed = true; });
       await notificationService.waitForNotification(LONG_POLL_MS);
@@ -66,7 +86,7 @@ router.get('/poll', authenticate, isStaff, async (req, res) => {
       success: true,
       orders: result.orders,
       whatsapp: result.whatsapp,
-      serverTime: new Date(),
+      serverTime: queriedAt,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

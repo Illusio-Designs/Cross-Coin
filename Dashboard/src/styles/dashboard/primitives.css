@@ -460,3 +460,15 @@
 :root[data-theme] .dropdown-item.active { background-color: var(--ds-color-text); color: var(--ds-color-surface); }
 :root[data-theme] .dropdown-empty { color: var(--ds-color-text-faint); }
 :root[data-theme] .dropdown-menu::-webkit-scrollbar-thumb { background: var(--ds-color-text-faint); }
+
+/* Sound status row in the notifications panel */
+.notif-sound {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 10px; border-radius: 10px;
+  font-size: 12px; line-height: 1.4;
+  background: var(--ds-color-warn-bg, var(--ds-color-surface-soft));
+  border: 1px solid var(--ds-color-warn-bd, var(--ds-color-border));
+  color: var(--ds-color-warn, var(--ds-color-text-muted));
+}
+.notif-sound.is-on { background: var(--ds-color-surface-soft); border-color: var(--ds-color-border); color: var(--ds-color-text-muted); }
+.notif-sound span { flex: 1; min-width: 0; }
+.notif-sound button { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; font-weight: 700; color: var(--ds-color-text); white-space: nowrap; }
