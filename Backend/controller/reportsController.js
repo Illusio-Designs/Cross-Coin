@@ -40,6 +40,8 @@ function parseRange(q) {
   return { start, end };
 }
 
+exports.parseRange = parseRange;
+
 // GET /api/reports/brand-traffic?startDate=&endDate=
 // Brand-wise funnel: sessions (first-party visit tracking) → orders → revenue,
 // with conversion rate and a channel (source/medium) breakdown per brand.

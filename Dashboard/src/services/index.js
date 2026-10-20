@@ -336,6 +336,16 @@ export const trafficReportService = {
   },
 };
 
+// Report pages (Location, Products, Customers, Inventory, Coupons) —
+// GET /api/reports/<name>; each page passes its own params.
+export const reportPagesService = {
+  get: async (name, params) => {
+    const { data } = await adminApi.get(`/api/reports/${name}`, { params });
+    if (!data?.success) throw new Error(data?.message || 'Failed to load the report');
+    return data;
+  },
+};
+
 // System health (admin only) — server, job queue, webhooks, errors and the
 // scheduled jobs with their run log; "Run now" for one job.
 export const systemHealthService = {
