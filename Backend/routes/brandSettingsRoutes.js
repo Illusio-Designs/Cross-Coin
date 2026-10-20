@@ -43,6 +43,20 @@ router.put('/brand-settings/form', async (req, res) => {
   } catch (err) { sendErr(res, err); }
 });
 
+// General · all stores: the Meta token, iThink account and Razorpay account
+// every store shares, plus the win-back coupon and WhatsApp status.
+router.get('/brand-settings/general', async (req, res) => {
+  try { res.json({ success: true, ...(await brandSettingsAdmin.general()) }); }
+  catch (err) { sendErr(res, err); }
+});
+router.put('/brand-settings/general', async (req, res) => {
+  try {
+    const result = await brandSettingsAdmin.saveGeneral(req.body || {}, req.user?.id || null);
+    if (result.errors) return res.status(400).json({ success: false, message: 'Some fields need fixing', errors: result.errors });
+    res.json({ success: true, saved: result.saved, ...(await brandSettingsAdmin.general()) });
+  } catch (err) { sendErr(res, err); }
+});
+
 // Check the saved Razorpay keys against Razorpay (secret never leaves the server).
 router.post('/brand-settings/test/razorpay', async (req, res) => {
   try {

@@ -317,10 +317,146 @@ function RecentChanges({ brandId, initial }) {
   );
 }
 
+// ── General · all stores ───────────────────────────────────────────────────
+// One place for what every store shares: Meta token, iThink account, Razorpay
+// account, the win-back coupon, and the shared WhatsApp number's status.
+function GeneralSettings({ onDirty }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['brand-settings', 'general'], queryFn: () => brandSettingsService.getGeneral() });
+  const [draft, setDraft] = useState({});
+  const [secrets, setSecrets] = useState({});
+  const [copyFrom, setCopyFrom] = useState({});
+  const [winback, setWinback] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const data = q.data;
+  const fields = useMemo(() => data?.fields || [], [data]);
+  const winbackChanged = winback !== null && winback.trim().toUpperCase() !== (data?.winbackCoupon || '');
+  const dirtyCount = Object.keys(draft).length + Object.values(secrets).filter((v) => v === 'remove').length
+    + Object.keys(copyFrom).length + (winbackChanged ? 1 : 0);
+  useEffect(() => { onDirty?.(dirtyCount); }, [dirtyCount, onDirty]);
+
+  const reset = () => { setDraft({}); setSecrets({}); setCopyFrom({}); setWinback(null); setErrors({}); };
+  const groups = [];
+  for (const f of fields) {
+    let g = groups.find((x) => x.name === (f.group || ''));
+    if (!g) groups.push(g = { name: f.group || '', fields: [] });
+    g.fields.push(f);
+  }
+  // Razorpay / iThink: copy the store's whole account (key ID + secret go
+  // together). Meta's two tokens are independent, so just the one field.
+  const copyStore = (g, f, brandId) => setCopyFrom((c) => {
+    const n = { ...c };
+    const keys = g.name === 'Meta' ? [f] : g.fields;
+    for (const x of keys) if (!x.isSet && x.stores.some((s) => s.brandId === brandId)) n[x.key] = brandId;
+    return n;
+  });
+  const save = async () => {
+    setSaving(true); setErrors({});
+    try {
+      const remove = Object.entries(secrets).filter(([, v]) => v === 'remove').map(([k]) => k);
+      const r = await brandSettingsService.saveGeneral({ values: draft, remove, copyFrom, ...(winbackChanged ? { winbackCoupon: winback } : {}) });
+      if (r && r.success === false) throw r;
+      reset();
+      qc.setQueryData(['brand-settings', 'general'], r);
+      qc.invalidateQueries({ queryKey: ['brand-settings'] });
+      showSuccess('saved', 'Saved for all stores');
+    } catch (e) {
+      if (e && e.errors) setErrors(e.errors);
+      showError('saveFailed', e?.message || 'Couldn’t save — check the fields marked in orange.');
+    } finally { setSaving(false); }
+  };
+
+  if (q.isLoading) return <section className="oss-card oss-section"><SkeletonForm fields={6} className="oss-grid" label="Loading general settings…" /></section>;
+  if (q.error) return <ErrorState message={`Couldn’t load general settings — ${q.error?.message || 'the server didn’t answer'}.`} onRetry={q.refetch} retrying={q.isFetching} />;
+
+  return (
+    <>
+      <div className="oss-brandhead">
+        <div>
+          <b className="oss-h1">General · all stores</b>
+          <span className="mut oss-small">Set once, used by every store. A store’s own old copy is only used while the value here is empty.</span>
+        </div>
+      </div>
+
+      <section className="oss-card oss-section" aria-label="WhatsApp">
+        <div className="oss-section-head"><b className="oss-h2">WhatsApp</b><span className="mut oss-small">One number for every store.</span></div>
+        <div className="oss-inline oss-general-row">
+          <StatusPill tone={data?.whatsapp?.connected ? 'done' : 'warn'} dot>{data?.whatsapp?.connected ? 'Connected' : 'Not connected'}</StatusPill>
+          <span className="mut oss-small">Number, token, profile and catalogue are managed on WhatsApp → Profile.</span>
+          {/* full load so the WhatsApp page reads #profile on mount */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="oss-btn oss-btn--sm" href="/dashboard/whatsapp#profile">Open WhatsApp → Profile</a>
+        </div>
+        <div className="oss-grid">
+          <FieldInput f={{ key: 'WINBACK', label: 'Win-back coupon', guide: 'Sent 30 days after a customer’s last order, from every store. Each store needs an active coupon with this code in Growth → Coupons; a store without one is skipped.', hint: 'Same code for every store (default CART10).' }}
+            value={winback ?? data?.winbackCoupon ?? ''} onChange={(v) => setWinback(String(v).toUpperCase())} error={errors.winbackCoupon} />
+        </div>
+      </section>
+
+      {groups.map((g) => (
+        <section key={g.name} className="oss-card oss-section" aria-label={g.name}>
+          <div className="oss-section-head"><b className="oss-h2">{g.name}</b><span className="mut oss-small">Used by every store.</span></div>
+          <div className="oss-grid">
+            {g.fields.map((f) => {
+              const fv = { ...f, source: f.isSet ? 'brand' : 'none' };
+              const copying = copyFrom[f.key];
+              const from = copying ? f.stores.find((s) => s.brandId === copying) : null;
+              return (
+                <div key={f.key} className="oss-general-field">
+                  <FieldInput f={fv} value={f.key in draft ? draft[f.key] : (f.isSet && !f.secret ? f.value : '')}
+                    onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
+                    secretState={secrets[f.key]} onSecret={(st) => setSecrets((s) => ({ ...s, [f.key]: st }))}
+                    error={errors[f.key]} disabled={!!copying} />
+                  {from ? (
+                    <small className="oss-general-note is-on">{from.name}’s value will be used for all stores when you save. <button type="button" className="oss-link" onClick={() => setCopyFrom((c) => { const n = { ...c }; delete n[f.key]; return n; })}>Undo</button></small>
+                  ) : !f.isSet && f.stores.length > 0 ? (
+                    <small className="oss-general-note">
+                      Not set for all stores yet — {f.stores.map((s) => `${s.name} (${s.value})`).join(', ')} {f.stores.length === 1 ? 'uses its own' : 'use their own'}.{' '}
+                      {f.stores.map((s) => (
+                        <button key={s.brandId} type="button" className="oss-link" onClick={() => copyStore(g, f, s.brandId)}>Use {s.name}’s {g.name === 'Meta' ? 'value' : g.name.replace(/ \(.*\)$/, '')} for all stores</button>
+                      ))}
+                    </small>
+                  ) : f.isSet && f.stores.length > 0 ? (
+                    <small className="oss-general-note">{f.stores.map((s) => s.name).join(', ')} still {f.stores.length === 1 ? 'has its own old copy' : 'have their own old copies'} — not used any more; remove under that store → Other settings.</small>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      <div className="oss-row-end oss-general-save">
+        {dirtyCount > 0 && <button type="button" className="oss-btn oss-btn--quiet" onClick={reset} disabled={saving}>Discard</button>}
+        <button type="button" className="oss-btn oss-btn--main" onClick={save} disabled={!dirtyCount || saving}>{saving ? 'Saving…' : dirtyCount ? `Save ${dirtyCount} change${dirtyCount === 1 ? '' : 's'}` : 'Saved'}</button>
+      </div>
+
+      {(data?.audit || []).length > 0 && (
+        <section className="oss-card oss-section" aria-label="Recent changes">
+          <b className="oss-h2">Recent changes</b>
+          <ul className="oss-audit">
+            {data.audit.map((a) => (
+              <li key={a.id}>
+                <span className="mut oss-nowrap">{fmtWhen(a.created_at)}</span>
+                <span><b>{a.user_name || 'Someone'}</b> {a.action === 'delete' ? 'removed' : a.action === 'create' ? 'set' : 'changed'} <span className="oss-mono">{a.setting_key}</span>
+                  {a.action !== 'delete' && a.new_value != null && <> to <q>{a.new_value}</q></>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
 export function BrandManager() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
   const [selectedId, setSelectedId] = useState(null);
+  const [showGeneral, setShowGeneral] = useState(false);
+  const [generalDirty, setGeneralDirty] = useState(0);
   const [tab, setTab] = useState('store');
   const [draft, setDraft] = useState({});           // settings KEY -> value (and 'new:KEY' for added "other" keys)
   const [brandDraft, setBrandDraft] = useState({}); // brand record field -> value
@@ -379,9 +515,14 @@ export function BrandManager() {
     + Object.values(secrets).filter((v) => v === 'remove').length + removed.size;
 
   const pickBrand = (id) => {
-    if (id === brand?.id) return;
-    if (dirtyCount) { setConfirm(`discard:${id}`); return; }
-    resetDrafts(); setConfirm(null); setSelectedId(id);
+    if (!showGeneral && id === brand?.id) return;
+    if (dirtyCount || (showGeneral && generalDirty)) { setConfirm(`discard:${id}`); return; }
+    resetDrafts(); setConfirm(null); setShowGeneral(false); setSelectedId(id);
+  };
+  const pickGeneral = () => {
+    if (showGeneral) return;
+    if (dirtyCount) { setConfirm('discard:general'); return; }
+    resetDrafts(); setConfirm(null); setShowGeneral(true);
   };
 
   const fieldValue = (f) => (f.key in draft ? draft[f.key] : (f.source === 'brand' ? f.value : ''));
@@ -539,10 +680,15 @@ export function BrandManager() {
       ) : (
         <div className="oss-split">
           <nav aria-label="Brands" className="oss-card oss-brandlist">
+            {isAdmin && (
+              <button type="button" aria-current={showGeneral ? 'true' : undefined} className={`oss-brand oss-brand--general${showGeneral ? ' is-on' : ''}`} onClick={pickGeneral}>
+                <span className="oss-brand-name">General · all stores</span>
+              </button>
+            )}
             {brands.map((b) => {
               const n = b.warnings?.length || 0;
               return (
-                <button key={b.id} type="button" aria-current={b.id === brand.id ? 'true' : undefined} className={`oss-brand${b.id === brand.id ? ' is-on' : ''}`} onClick={() => pickBrand(b.id)}>
+                <button key={b.id} type="button" aria-current={!showGeneral && b.id === brand.id ? 'true' : undefined} className={`oss-brand${!showGeneral && b.id === brand.id ? ' is-on' : ''}`} onClick={() => pickBrand(b.id)}>
                   <span className="oss-brand-name">{brandLabel(b)}{b.status !== 'active' && <span className="mut"> · hidden</span>}</span>
                   {isAdmin && <span className={`oss-dot ${n ? 'is-warn' : 'is-ok'}`} title={n ? `${n} thing${n === 1 ? '' : 's'} need attention` : 'All set'} aria-label={n ? `${n} warnings` : 'All set'} />}
                 </button>
@@ -553,12 +699,18 @@ export function BrandManager() {
           <div className="oss-main">
             {confirm?.startsWith('discard:') && (
               <ConfirmBar
-                message={<>You have {dirtyCount} unsaved change{dirtyCount === 1 ? '' : 's'} for <b>{brandLabel(brandRecord)}</b>. Switch brand and lose them?</>}
+                message={<>You have unsaved changes for <b>{showGeneral ? 'General · all stores' : brandLabel(brandRecord)}</b>. Switch and lose them?</>}
                 confirmLabel="Discard changes" cancelLabel="Keep editing"
                 onCancel={() => setConfirm(null)}
-                onConfirm={() => { const id = Number(confirm.slice(8)); resetDrafts(); setConfirm(null); setSelectedId(id); }}
+                onConfirm={() => {
+                  const target = confirm.slice(8);
+                  resetDrafts(); setConfirm(null);
+                  if (target === 'general') setShowGeneral(true);
+                  else { setShowGeneral(false); setSelectedId(Number(target)); }
+                }}
               />
             )}
+            {showGeneral ? <GeneralSettings onDirty={setGeneralDirty} /> : (<>
 
             <div className="oss-brandhead">
               <div>
@@ -666,6 +818,7 @@ export function BrandManager() {
                 </section>
               </>
             )}
+            </>)}
             <span className="mut oss-small">Secret keys are never shown again after saving — only the last 4 characters. Changes are logged with who made them.</span>
           </div>
         </div>

@@ -265,7 +265,9 @@ async function buildRestoreLines(row) {
 // cart value. One message per cart; a shopper messaged in the last 7 days is
 // not messaged again.
 const CART_RULES_KEY = 'cart_rules';
-const DEFAULT_CART_RULES = Object.freeze({ waitHours: 1, quietStart: '21:00', quietEnd: '09:00', coupon: 'CART10', minValue: 0 });
+// winbackCoupon: the code offered in win-back messages (30 days after a
+// customer's last order) — one code for every store, like the cart coupon.
+const DEFAULT_CART_RULES = Object.freeze({ waitHours: 1, quietStart: '21:00', quietEnd: '09:00', coupon: 'CART10', minValue: 0, winbackCoupon: 'CART10' });
 const RESEND_AFTER_DAYS = 7;
 const RULES_TTL_MS = 60 * 1000;
 const IST_MS = 330 * 60000;
@@ -285,6 +287,8 @@ function normaliseCartRules(raw) {
   }
   const coupon = String(r.coupon == null ? '' : r.coupon).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32);
   if (coupon) out.coupon = coupon;
+  const wb = String(r.winbackCoupon == null ? '' : r.winbackCoupon).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32);
+  if (wb) out.winbackCoupon = wb;
   const mv = Number(r.minValue);
   if (Number.isFinite(mv) && mv >= 0 && mv <= 1000000) out.minValue = Math.round(mv);
   return out;
@@ -306,6 +310,12 @@ async function getCartRules({ fresh = false } = {}) {
 }
 
 function clearCartRulesCache() { _rulesCache = null; }
+
+// The win-back coupon code (same for every store).
+async function getWinbackCode() {
+  const r = await getCartRules().catch(() => DEFAULT_CART_RULES);
+  return String((r && r.winbackCoupon) || DEFAULT_CART_RULES.winbackCoupon).toUpperCase();
+}
 
 function backstopDelayMin() {
   const n = parseInt(process.env.ABANDONED_CART_DELAY_MIN || '5', 10);
@@ -503,6 +513,7 @@ async function markLinkOpened(rowOrId) {
 }
 
 module.exports = {
+  getWinbackCode,
   CART_RULES_KEY,
   DEFAULT_CART_RULES,
   normaliseCartRules,

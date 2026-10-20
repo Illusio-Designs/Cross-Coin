@@ -148,7 +148,7 @@ async function picker({ kind, search, ids }) {
 // ── Automations that hand out a coupon code ──────────────────────────────────
 // Every place a code is sent or shown without staff typing it:
 //  • Abandoned-cart WhatsApp — cart rules coupon (cartRecoveryService, default CART10)
-//  • Win-back WhatsApp — per-store setting WINBACK_COUPON_CODE (default CART10);
+//  • Win-back WhatsApp — one code for all stores (cart rules winbackCoupon, default CART10);
 //    the cron only sends when a coupon with that code, home store = that store,
 //    is active and in date (config/cronJobs.js winback)
 //  • Website pop-up — POPUP_COUPON_CODE env (default PREPAID10), shown on the site
@@ -166,9 +166,10 @@ async function automationRefs(brands) {
   refs.push({ key: 'abandoned_cart', label: 'Abandoned-cart WhatsApp', code: String(rules.coupon || 'CART10').toUpperCase(), brandId: null, enabled: await on('abandoned_cart') });
 
   const winOn = await on('win_back');
+  const winCode = String(rules.winbackCoupon || 'CART10').toUpperCase();
   for (const b of brands.values()) {
     if (!b.active) continue;
-    const code = String(await settingsHelper.getSetting(b.id, 'WINBACK_COUPON_CODE', 'CART10', { brandOnly: true }) || 'CART10').trim().toUpperCase();
+    const code = winCode;
     refs.push({ key: 'win_back', label: 'Win-back WhatsApp', code, brandId: b.id, enabled: winOn });
   }
 

@@ -436,10 +436,10 @@ async function reviewRequest() {
 // ── Win-back Campaign ─────────────────────────────────────────────────────
 // One message per customer per brand: those whose LAST non-cancelled order
 // with that brand was placed 30–31 days ago (the daily window slides, so each
-// customer is picked up exactly once). The coupon is the brand's
-// WINBACK_COUPON_CODE setting (falls back to CART10) and is only offered when
-// that coupon exists and is active for the brand — otherwise the brand is
-// skipped, so customers never receive a code that fails at checkout.
+// customer is picked up exactly once). The coupon is the one win-back code for
+// all stores (WhatsApp → Abandoned carts → rules, default CART10) and is only
+// offered when that code exists and is active as this store's coupon —
+// otherwise the store is skipped, so customers never get a code that fails.
 async function winback() {
   const { Op } = require('sequelize');
   const { sequelize: db } = require('../config/db.js');
@@ -465,7 +465,7 @@ async function winback() {
   const blockedBrands = new Map(); // brandId -> coupon code that isn't active
   const couponFor = async (brandId) => {
     if (couponByBrand.has(brandId)) return couponByBrand.get(brandId);
-    const code = String(await settingsHelper.getSetting(brandId, 'WINBACK_COUPON_CODE', 'CART10', { brandOnly: true }) || 'CART10').trim();
+    const code = await require('../services/cartRecoveryService.js').getWinbackCode();
     const now = new Date();
     const coupon = await Coupon.findOne({
       where: {
