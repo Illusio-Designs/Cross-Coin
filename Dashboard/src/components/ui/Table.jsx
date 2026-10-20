@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Skeleton } from './Skeleton';
 
 const ChevronUp = ({ className }) => (
   <svg className={className} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -68,13 +69,40 @@ const Table = ({
     className
   ].filter(Boolean).join(' ');
 
-  if (loading) {
+  // First load: the real header stays, shimmering rows sit where the data
+  // will be. A refresh with rows already on screen keeps them (dimmed by
+  // tbl-container-loading) instead of flashing a skeleton.
+  if (loading && data.length === 0) {
+    const widths = ['82%', '64%', '74%', '56%', '70%', '60%'];
     return (
-      <div className={containerCls}>
-        <div className="tbl-loading">
-          <div className="tbl-spinner"></div>
-          <span>Loading...</span>
-        </div>
+      <div className={containerCls} role="status" aria-busy="true">
+        <span className="ds-sr-only">Loading…</span>
+        <table className={tableCls} aria-hidden="true">
+          <thead>
+            <tr>
+              {selectable && <th className="tbl-header-cell tbl-select-col" />}
+              {columns.map((col, i) => (
+                <th key={col.accessor || col.key || i}
+                  className={['tbl-header-cell', col.align && `tbl-align-${col.align}`, col.width && 'tbl-fixed-width'].filter(Boolean).join(' ')}
+                  style={{ width: col.width }}>
+                  <div className="tbl-header-content"><span>{col.header}</span></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 6 }, (_, ri) => (
+              <tr key={ri} className="tbl-row sk-tr">
+                {selectable && <td className="tbl-cell tbl-select-col"><Skeleton w={14} h={14} r={4} /></td>}
+                {columns.map((col, ci) => (
+                  <td key={col.accessor || col.key || ci} className={['tbl-cell', col.align && `tbl-align-${col.align}`].filter(Boolean).join(' ')}>
+                    <Skeleton h={12} w={widths[(ri + ci) % widths.length]} style={col.align === 'right' ? { marginLeft: 'auto' } : col.align === 'center' ? { marginInline: 'auto' } : undefined} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
