@@ -351,17 +351,25 @@ const CONV_FILTERS = new Set(['all', 'unread', 'waiting', 'window_closed', 'has_
 // fails with "Illegal mix of collations". Cast the conversation side to the
 // OTHER column's own collation (read once) so its index is still used.
 let _collations = null;
+// Collation + character set of the phone columns we match conversations
+// against. Older tables can be latin1 while whatsapp_conversations is utf8mb4,
+// and MySQL refuses `utf8mb4_expr COLLATE latin1_swedish_ci` — so match()
+// converts the conversation's value into the column's character set first
+// (phones and hashes are plain ASCII, nothing is lost).
 async function phoneCollations() {
   if (_collations) return _collations;
   const { sequelize } = require('../config/db.js');
   const rows = await sequelize.query(
-    `SELECT TABLE_NAME AS t, COLUMN_NAME AS c, COLLATION_NAME AS coll FROM information_schema.COLUMNS
+    `SELECT TABLE_NAME AS t, COLUMN_NAME AS c, COLLATION_NAME AS coll, CHARACTER_SET_NAME AS cs FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
         AND ((TABLE_NAME = 'users' AND COLUMN_NAME = 'phone')
           OR (TABLE_NAME IN ('shipping_addresses', 'guest_users') AND COLUMN_NAME IN ('phone', 'phone_hash')))`,
     { type: require('sequelize').QueryTypes.SELECT });
-  const safe = (v) => (/^[a-z0-9_]+$/i.test(String(v || '')) ? v : 'utf8mb4_unicode_ci');
-  const get = (t, c) => safe(rows.find((r) => r.t === t && r.c === c)?.coll);
+  const ok = (v) => /^[a-z0-9_]+$/i.test(String(v || ''));
+  const get = (t, c) => {
+    const r = rows.find((x) => x.t === t && x.c === c);
+    return ok(r?.coll) && ok(r?.cs) ? { coll: r.coll, cs: r.cs } : { coll: 'utf8mb4_unicode_ci', cs: 'utf8mb4' };
+  };
   _collations = {
     users_phone: get('users', 'phone'),
     sa_hash: get('shipping_addresses', 'phone_hash'),
@@ -370,6 +378,8 @@ async function phoneCollations() {
   };
   return _collations;
 }
+// `expr` re-encoded and collated like column `c` (from phoneCollations()).
+const asColumn = (expr, c) => `CONVERT(${expr} USING ${c.cs}) COLLATE ${c.coll}`;
 
 async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const { sequelize } = require('../config/db.js');
@@ -404,13 +414,13 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const CLOSED  = '(c.last_inbound_at IS NULL OR c.last_inbound_at < :cut24)';
   const hasKey = !!require('../utils/encryption.js').phoneHash('9999999999');
   const col = await phoneCollations();
-  const p10c = (coll) => `RIGHT(c.customer_phone, 10) COLLATE ${coll}`;
+  const P10 = 'RIGHT(c.customer_phone, 10)';
   const HAS_ORDER = `(EXISTS (SELECT 1 FROM users u JOIN orders o ON o.user_id = u.id
-                        WHERE u.phone IN (${p10c(col.users_phone)}, CONCAT('91', ${p10c(col.users_phone)}) COLLATE ${col.users_phone}, CONCAT('+91', ${p10c(col.users_phone)}) COLLATE ${col.users_phone}))
+                        WHERE u.phone IN (${asColumn(P10, col.users_phone)}, ${asColumn(`CONCAT('91', ${P10})`, col.users_phone)}, ${asColumn(`CONCAT('+91', ${P10})`, col.users_phone)}))
      OR ${hasKey
-    ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = c.phone_hash COLLATE ${col.sa_hash})
-          OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = c.phone_hash COLLATE ${col.gu_hash})))`
-    : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = ${p10c(col.sa_phone)})`})`;
+    ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = ${asColumn('c.phone_hash', col.sa_hash)})
+          OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = ${asColumn('c.phone_hash', col.gu_hash)})))`
+    : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = ${asColumn(P10, col.sa_phone)})`})`;
   const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER }[filter];
 
   const [countRow] = await sequelize.query(
