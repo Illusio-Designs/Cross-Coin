@@ -158,6 +158,62 @@ exports.getBrandTraffic = async (req, res) => {
       hitsByChannel.set(r.channel, (hitsByChannel.get(r.channel) || 0) + h);
     }
 
+    // Server-counted visits (visit_hits), recorded by each storefront's edge
+    // middleware on every real page navigation BEFORE any page JavaScript
+    // runs, so it includes visitors who leave before the page finishes loading.
+    // landings = page loads, sessions = new 30-minute sessions. Aggregate only
+    // (no visitor id), so it can't be tied to orders. Wrapped: the table may
+    // not exist yet before the first ping.
+    let visitors = null;
+    const vByBrand = new Map();
+    const vByChannel = new Map();
+    try {
+      const vRepl = { startDay: dayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) };
+      const vb = hasBrand ? ' AND brand_id = :brandId' : '';
+      const vWhere = `day BETWEEN :startDay AND :endDay${vb}`;
+      const q = (sql) => sequelize.query(sql, { replacements: vRepl, type: QueryTypes.SELECT });
+      const SUMS = 'SUM(landings) AS landings, SUM(sessions) AS sessions';
+      const [vBrand, vChan, vCamp, vState, vCity, vDev, vFirst] = await Promise.all([
+        q(`SELECT brand_id, ${SUMS} FROM visit_hits WHERE ${vWhere} GROUP BY brand_id`),
+        q(`SELECT channel, ${SUMS} FROM visit_hits WHERE ${vWhere} GROUP BY channel`),
+        q(`SELECT channel, source, campaign, ${SUMS} FROM visit_hits
+            WHERE ${vWhere} AND campaign <> ''
+            GROUP BY channel, source, campaign ORDER BY sessions DESC, landings DESC LIMIT 100`),
+        q(`SELECT region AS state, ${SUMS} FROM visit_hits
+            WHERE ${vWhere} AND country = 'IN' AND region <> ''
+            GROUP BY region ORDER BY sessions DESC, landings DESC LIMIT 15`),
+        q(`SELECT city, region AS state, ${SUMS} FROM visit_hits
+            WHERE ${vWhere} AND country = 'IN' AND city <> ''
+            GROUP BY city, region ORDER BY sessions DESC, landings DESC LIMIT 20`),
+        q(`SELECT device, ${SUMS} FROM visit_hits WHERE ${vWhere} GROUP BY device ORDER BY sessions DESC`),
+        sequelize.query(`SELECT MIN(day) AS first_day FROM visit_hits${hasBrand ? ' WHERE brand_id = :brandId' : ''}`,
+          { replacements: vRepl, type: QueryTypes.SELECT }),
+      ]);
+      const n = (v) => Number(v) || 0;
+      const pair = (r) => ({ landings: n(r.landings), sessions: n(r.sessions) });
+      const vTotals = vBrand.reduce((t, r) => ({ landings: t.landings + n(r.landings), sessions: t.sessions + n(r.sessions) }), { landings: 0, sessions: 0 });
+      const shareOf = (s) => (vTotals.sessions > 0 ? Number(((s / vTotals.sessions) * 100).toFixed(2)) : 0);
+      for (const r of vBrand) vByBrand.set(r.brand_id, pair(r));
+      for (const r of vChan) vByChannel.set(r.channel, pair(r));
+      const brandName = new Map(brands.map((b) => [b.id, b.display_name]));
+      const firstDay = vFirst[0] && vFirst[0].first_day
+        ? (vFirst[0].first_day instanceof Date ? vFirst[0].first_day.toISOString().slice(0, 10) : String(vFirst[0].first_day).slice(0, 10))
+        : null;
+      visitors = {
+        firstDay,
+        totals: vTotals,
+        brands: vBrand.map((r) => ({ brand_id: r.brand_id, brand: brandName.get(r.brand_id) || `Brand ${r.brand_id}`, ...pair(r) }))
+          .sort((a, b) => b.sessions - a.sessions),
+        channels: CHANNEL_ORDER.filter((c) => vByChannel.has(c)).map((c) => ({ channel: c, ...vByChannel.get(c) })),
+        campaigns: vCamp.map((r) => ({ channel: r.channel, source: r.source, campaign: r.campaign, ...pair(r) })),
+        states: vState.map((r) => ({ state: r.state, ...pair(r), share: shareOf(n(r.sessions)) })),
+        cities: vCity.map((r) => ({ city: r.city, state: r.state, ...pair(r), share: shareOf(n(r.sessions)) })),
+        devices: vDev.map((r) => ({ device: r.device || 'unknown', ...pair(r), share: shareOf(n(r.sessions)) })),
+      };
+    } catch (e) {
+      logger.warn && logger.warn('visit_hits query skipped: ' + e.message);
+    }
+
     // Visits and orders per source/campaign. Visits = tracked sessions that
     // STARTED in the window; orders = orders PLACED in the window, credited to
     // the visit that led to them (orders.utm_tracking_id) even when that ad
@@ -316,6 +372,9 @@ exports.getBrandTraffic = async (req, res) => {
         brand: b.display_name,
         sessions: s,
         allVisits: hitsByBrand.get(b.id) || 0, // anonymous (cookieless) real visits
+        // Server-counted (storefront edge): new sessions + page loads.
+        visitors: (vByBrand.get(b.id) || {}).sessions || 0,
+        visitorLoads: (vByBrand.get(b.id) || {}).landings || 0,
         views,
         carts,
         checkouts,
@@ -342,6 +401,8 @@ exports.getBrandTraffic = async (req, res) => {
       { sessions: 0, views: 0, carts: 0, checkouts: 0, orders: 0, delivered: 0, revenue: 0 }
     );
     totals.allVisits = totalHits; // anonymous real visits across the shown brands
+    totals.visitors = visitors ? visitors.totals.sessions : 0;       // server-counted sessions
+    totals.visitorLoads = visitors ? visitors.totals.landings : 0;   // server-counted page loads
     totals.conversion_rate = totals.sessions > 0 ? Number(((totals.orders / totals.sessions) * 100).toFixed(2)) : null;
     totals.aov = totals.orders > 0 ? Math.round(totals.revenue / totals.orders) : 0;
     totals.stages = [
@@ -374,6 +435,8 @@ exports.getBrandTraffic = async (req, res) => {
         channel: name,
         sessions: g.sessions,
         allVisits: hitsByChannel.get(name) || 0, // anonymous real visits in this channel
+        visitors: (vByChannel.get(name) || {}).sessions || 0,       // server-counted sessions
+        visitorLoads: (vByChannel.get(name) || {}).landings || 0,   // server-counted page loads
         share: Number(((g.sessions / totalSrcSessions) * 100).toFixed(2)),
         orders: g.orders,
         conversion_rate: g.sessions > 0 ? Number(((g.orders / g.sessions) * 100).toFixed(2)) : null,
@@ -381,7 +444,7 @@ exports.getBrandTraffic = async (req, res) => {
     })
       // Show only channels that actually have data in the window (Shopify hides
       // empty channels) — but always keep Direct as the anchor row.
-      .filter((c) => c.channel === 'Direct' || c.sessions > 0 || c.orders > 0 || c.allVisits > 0);
+      .filter((c) => c.channel === 'Direct' || c.sessions > 0 || c.orders > 0 || c.allVisits > 0 || c.visitors > 0);
 
     // Reconciling row: the per-channel orders above only count orders matched to
     // a tracked visit (orders.utm_tracking_id). Real orders with no tracked
@@ -548,6 +611,7 @@ exports.getBrandTraffic = async (req, res) => {
       campaigns,
       dropOff: { channels: dropOff, totals: dropTotals },
       otherSites,
+      visitors, // server-counted visits (null until the visit_hits table exists)
     });
   } catch (error) {
     logger.error('getBrandTraffic report failed: ' + error.message);

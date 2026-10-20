@@ -89,6 +89,10 @@ router.use('/', require('./seoAdminRoutes.js'));
 router.post('/i/s', optionalBrand, require('../controller/utmController.js').trackUTM);
 router.post('/i/pv', optionalBrand, require('../controller/pageviewController.js').recordPageview);
 router.post('/i/e', optionalBrand, require('../controller/eventsController.js').trackEvent);
+// /i/v is the server-side visit counter: posted by each storefront's edge
+// middleware on every real page navigation (before the page's JS runs), so it
+// also counts visitors who leave before hydration. Aggregate only.
+router.post('/i/v', optionalBrand, require('../controller/visitController.js').recordVisit);
 
 // ── Public tracking config ────────────────────────────────────────────────
 // Returns the non-sensitive analytics IDs configured in Brand Settings so the

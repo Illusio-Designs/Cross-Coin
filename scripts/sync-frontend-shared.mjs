@@ -36,7 +36,15 @@ const BRANDS = {
   Velquira:  { slug: 'velquira',  base: '' },
 };
 
-// Shared file → { source, dest(base), brands? }  (brands omitted = all 7)
+// Edge request-hook file name per brand, by installed Next.js major version:
+// Knitwink is on Next 16 (`proxy`), the rest on 14/15 (`middleware`).
+const EDGE_FILE = {
+  Crosscoin: 'middleware', Gripzus: 'middleware', Morbix: 'middleware', Soxbae: 'middleware',
+  Velmique: 'middleware', Velquira: 'middleware', Knitwink: 'proxy',
+};
+
+// Shared file → { source, dest(base, brand), brands?, vars?(brand) }
+// (brands omitted = all 7; vars = extra placeholder → value replacements)
 const FILES = [
   {
     source: 'shared/frontend/GoogleTagManager.jsx',
@@ -69,6 +77,14 @@ const FILES = [
     source: 'shared/frontend/cartRecovery.js',
     dest: (base) => `${base}utils/cartRecovery.js`,
   },
+  {
+    // Edge visit counter (POST /api/i/v on every real page load), placed next
+    // to app/ or pages/. Next 16 renamed the middleware file convention to
+    // `proxy` (export `proxy`); Next 14/15 use `middleware`.
+    source: 'shared/frontend/visitCounter.js',
+    dest: (base, brand) => `${base}${EDGE_FILE[brand]}.js`,
+    vars: (brand) => ({ __HANDLER__: EDGE_FILE[brand] }),
+  },
 ];
 
 const banner = (source) =>
@@ -83,17 +99,20 @@ for (const file of FILES) {
   const brands = file.brands || Object.keys(BRANDS);
   for (const brand of brands) {
     const { slug, base } = BRANDS[brand];
-    const out = banner(file.source) + template.replaceAll('__BRAND__', slug);
-    const destPath = join(ROOT, brand, file.dest(base));
+    let body = template.replaceAll('__BRAND__', slug);
+    for (const [k, v] of Object.entries(file.vars ? file.vars(brand) : {})) body = body.replaceAll(k, v);
+    const out = banner(file.source) + body;
+    const rel = file.dest(base, brand);
+    const destPath = join(ROOT, brand, rel);
     let current = null;
     try { current = readFileSync(destPath, 'utf8'); } catch (_) {}
     if (current === out) continue;
     if (check) {
-      console.error(`DRIFT: ${brand}/${file.dest(base)} is out of sync with ${file.source}`);
+      console.error(`DRIFT: ${brand}/${rel} is out of sync with ${file.source}`);
       drift++;
     } else {
       writeFileSync(destPath, out);
-      console.log(`wrote ${brand}/${file.dest(base)}`);
+      console.log(`wrote ${brand}/${rel}`);
       wrote++;
     }
   }
