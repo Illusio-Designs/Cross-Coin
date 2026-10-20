@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon, VolumeOffIcon, VolumeHighIcon } from '@hugeicons/core-free-icons';
 import { useNotifications } from '../../hooks/useNotifications';
 import { SkeletonList } from '../ui/Skeleton';
 import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
@@ -20,7 +20,7 @@ const ICONS = {
 };
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAllRead, clearAll, seeding } = useNotifications();
+  const { notifications, unreadCount, markAllRead, clearAll, seeding, soundOn, enableSound } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -80,7 +80,15 @@ export default function NotificationBell() {
     && !pushSupported();
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      {/* Browsers keep a page silent until it has been clicked. Until sound
+          really works, say so — one click here (or anywhere) turns it on. */}
+      {!soundOn && (
+        <button type="button" className="dh-sound-off" onClick={enableSound} title="New-order sound is off until you click the page">
+          <HugeiconsIcon icon={VolumeOffIcon} size={15} strokeWidth={2} aria-hidden="true" />
+          <span>Turn on sound</span>
+        </button>
+      )}
       <button
         type="button"
         className="dh-action dh-bell"
@@ -116,6 +124,12 @@ export default function NotificationBell() {
                 <button className="notif-clear" onClick={clearAll}>Clear all</button>
               )}
             </div>
+          </div>
+
+          <div className={`notif-sound${soundOn ? ' is-on' : ''}`}>
+            <HugeiconsIcon icon={soundOn ? VolumeHighIcon : VolumeOffIcon} size={14} strokeWidth={2} aria-hidden="true" />
+            <span>{soundOn ? 'Sound on: new orders play a chime.' : 'Sound is off: your browser blocks it until you click the page.'}</span>
+            <button type="button" onClick={enableSound}>{soundOn ? 'Test' : 'Turn on'}</button>
           </div>
 
           {iosNeedsInstall && (
