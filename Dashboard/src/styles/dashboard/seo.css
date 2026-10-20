@@ -11,3 +11,147 @@
   border-color: var(--ds-color-text);
   box-shadow: 0 0 0 2px var(--ds-color-surface-soft);
 }
+
+/* ── SEO page (components/website/SeoPage.jsx) — sits on top of website.css (.web-*) ── */
+.seo .seo-head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Score strip */
+.seo .seo-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.seo .seo-kpi {
+  all: unset; box-sizing: border-box; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; padding: 16px;
+  background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: 16px;
+}
+.seo .seo-kpi:hover { border-color: var(--ds-color-text-faint); }
+.seo .seo-kpi:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
+.seo .seo-kpi--score { cursor: default; flex-direction: row; align-items: center; gap: 14px; }
+.seo .seo-kpi--score:hover { border-color: var(--ds-color-border); }
+.seo .seo-kpi--skel { min-height: 112px; cursor: default; background: var(--ds-color-surface-soft); animation: seo-pulse 1.4s ease-in-out infinite; }
+@keyframes seo-pulse { 50% { opacity: .55; } }
+.seo .seo-kpi-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.seo .seo-kpi-label { font-family: var(--ds-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-color-text-muted); }
+.seo .seo-kpi-big { font-size: 15px; color: var(--ds-color-text); }
+.seo .seo-kpi-value { font-size: 20px; color: var(--ds-color-text); font-variant-numeric: tabular-nums; }
+.seo .seo-kpi-note { font-size: 12px; color: var(--ds-color-text-muted); }
+.seo .seo-kpi-note.is-warn { color: var(--ds-color-warn); }
+.seo .seo-bar { display: block; height: 6px; border-radius: 999px; background: var(--ds-color-surface-soft); overflow: hidden; }
+.seo .seo-bar > span { display: block; height: 100%; background: var(--ds-color-success); border-radius: inherit; }
+.seo .seo-bar > span.is-info { background: var(--ds-color-link); }
+.seo .seo-ring {
+  --p: 0%; --c: var(--ds-color-success);
+  width: 64px; height: 64px; flex: none; border-radius: 50%;
+  background: conic-gradient(var(--c) 0 var(--p), var(--ds-color-surface-soft) var(--p) 100%);
+  display: grid; place-items: center;
+}
+.seo .seo-ring--ok { --c: var(--ds-color-warn); }
+.seo .seo-ring--low { --c: var(--ds-color-danger); }
+.seo .seo-ring--none { --c: var(--ds-color-text-faint); }
+.seo .seo-ring b {
+  width: 50px; height: 50px; border-radius: 50%; background: var(--ds-color-surface);
+  display: grid; place-items: center; font-size: 17px; color: var(--ds-color-text); font-variant-numeric: tabular-nums;
+}
+.seo .seo-tab-count { margin-left: 6px; opacity: .7; font-variant-numeric: tabular-nums; }
+
+/* Cards and the "To fix" table */
+.seo .seo-card { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: 16px; overflow: hidden; min-width: 0; }
+.seo .seo-card--pad { padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow: visible; }
+.seo .seo-card-head {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--ds-color-border);
+}
+.seo .seo-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 280px; }
+.seo .seo-card-title b { font-size: 14.5px; color: var(--ds-color-text); }
+.seo .seo-card-title span { font-size: 12.5px; color: var(--ds-color-text-muted); }
+.seo .seo-table-wrap { overflow-x: auto; }
+.seo .seo-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: 13px; color: var(--ds-color-text); }
+.seo .seo-table th {
+  text-align: left; padding: 10px 8px; font-family: var(--ds-font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--ds-color-text-muted);
+}
+.seo .seo-table td { padding: 12px 8px; border-top: 1px solid var(--ds-color-border-soft); vertical-align: middle; }
+.seo .seo-table th:first-child, .seo .seo-table td:first-child { padding-left: 18px; }
+.seo .seo-table th:last-child, .seo .seo-table td:last-child { padding-right: 18px; }
+.seo .seo-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.seo .seo-table .act { text-align: right; }
+.seo .seo-path { display: block; font-size: 12px; color: var(--ds-color-text-faint); }
+.seo .seo-gaps { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* Pages list */
+.seo .seo-quick { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--ds-color-border); font-size: 12.5px; color: var(--ds-color-text-muted); }
+.seo .seo-quick > span { margin-right: 4px; }
+.seo .seo-chip-add {
+  min-height: 30px; padding: 0 10px; border-radius: 999px; cursor: pointer;
+  border: 1px dashed var(--ds-color-text-faint); background: transparent; color: var(--ds-color-text);
+  font: inherit; font-size: 12px; font-weight: 600;
+}
+.seo .seo-chip-add:hover { border-style: solid; }
+.seo .seo-chip-add--wide { align-self: flex-start; min-height: 36px; padding: 0 14px; }
+.seo .seo-row {
+  all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 16px; border-top: 1px solid var(--ds-color-border-soft);
+}
+.seo .seo-quick + .seo-row { border-top: 0; }
+.seo .seo-row:hover { background: var(--ds-color-surface-soft); }
+.seo .seo-row.is-on { background: var(--ds-color-surface-soft); box-shadow: inset 3px 0 0 var(--ds-color-text); }
+.seo .seo-row:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: -2px; }
+.seo .seo-row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.seo .seo-row-main b { font-size: 13.5px; color: var(--ds-color-text); }
+.seo .seo-row-main span { font-size: 12px; color: var(--ds-color-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seo .seo-row-side { display: flex; gap: 10px; align-items: center; flex: none; }
+.seo .seo-len { font-family: var(--ds-font-mono); font-size: 11px; color: var(--ds-color-text-muted); }
+.seo .seo-serp-cap { display: block; margin-top: 6px; font-size: 11.5px; color: var(--ds-color-text-faint); }
+.seo .seo-switch-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px; background: var(--ds-color-surface-soft); border: 1px solid var(--ds-color-border);
+}
+.seo .seo-switch-row > span { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--ds-color-text); }
+.seo .seo-switch-row > span span { font-size: 12px; color: var(--ds-color-text-muted); }
+.seo .seo-switch-row .web-toggle { flex: none; }
+.seo .seo-note { margin: 0; font-size: 12px; color: var(--ds-color-text-muted); padding: 10px 12px; border-radius: 10px; background: var(--ds-color-surface-soft); }
+
+/* FAQs */
+.seo .seo-faqs { list-style: none; margin: 0; padding: 0; }
+.seo .seo-faq { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--ds-color-border-soft); }
+.seo .seo-faq:first-child { border-top: 0; }
+.seo .seo-faq.is-on { background: var(--ds-color-surface-soft); }
+.seo .seo-faq.is-drop { box-shadow: inset 0 2px 0 var(--ds-color-brand); }
+.seo .seo-faq[draggable="true"] { cursor: grab; }
+.seo .seo-grip { color: var(--ds-color-text-faint); display: inline-flex; flex: none; }
+.seo .seo-faq-main { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.seo .seo-faq-main b { font-size: 13.5px; color: var(--ds-color-text); }
+.seo .seo-faq-main .web-clamp { font-size: 12px; color: var(--ds-color-text-faint); -webkit-line-clamp: 1; }
+.seo .seo-faq-main:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; border-radius: 6px; }
+
+/* Store details */
+.seo .seo-store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-content: start; }
+.seo .seo-sec-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--ds-color-text); }
+.seo .seo-sec-why { font-size: 12px; color: var(--ds-color-text-muted); margin-top: -4px; }
+.seo .seo-store-side { flex: 1 1 320px; max-width: 400px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.seo .seo-save-card { font-size: 12.5px; color: var(--ds-color-text-muted); }
+.seo .seo-save-card b { color: var(--ds-color-text); font-size: 13.5px; }
+/* A Google listing look-alike: always light, like Google itself. */
+.seo .seo-gcard {
+  background: #fff; color: #202124; border-radius: 16px; padding: 16px;
+  display: flex; flex-direction: column; gap: 8px; font-family: Arial, sans-serif; font-size: 13px;
+  border: 1px solid var(--ds-color-border);
+}
+.seo .seo-gcard-cap { font-size: 11px; color: #70757a; letter-spacing: .04em; text-transform: uppercase; }
+.seo .seo-gcard-id { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.seo .seo-gcard-id img, .seo .seo-gcard-logo { width: 40px; height: 40px; border-radius: 10px; flex: none; object-fit: contain; }
+.seo .seo-gcard-logo { background: #202124; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.seo .seo-gcard-id > span { display: flex; flex-direction: column; min-width: 0; }
+.seo .seo-gcard-id b { font-size: 17px; overflow-wrap: anywhere; }
+.seo .seo-gcard-id > span > span { font-size: 12.5px; color: #70757a; }
+.seo .seo-gcard > span { color: #4d5156; }
+.seo .seo-gcard .is-missing { color: #9aa0a6; font-style: italic; }
+.seo .seo-gcard-socials { display: flex; gap: 6px; flex-wrap: wrap; }
+.seo .seo-gcard-socials > span { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid #dadce0; color: #202124; font-style: normal; }
+.seo .seo-gcard-socials > span.is-missing { border-style: dashed; color: #70757a; }
+
+@media (max-width: 640px) {
+  .seo .seo-kpis { grid-template-columns: 1fr 1fr; }
+  .seo .seo-kpi--score { grid-column: 1 / -1; }
+  .seo .seo-row-side .seo-len { display: none; }
+  .seo .seo-store-side { max-width: none; }
+}

@@ -112,9 +112,9 @@ export function WebField({ label, hint, error, children, htmlFor }) {
 }
 
 // "View on site ↗" — disabled with a reason when there is no web address yet.
-export function ViewOnSite({ url, reason = 'Add this store’s web address in Brands to open it.' }) {
-  if (!url) return <button type="button" className="web-btn" disabled title={reason}>View on site ↗</button>;
-  return <a className="web-btn" href={url} target="_blank" rel="noopener noreferrer">View on site ↗</a>;
+export function ViewOnSite({ url, label = 'View on site ↗', reason = 'Add this store’s web address in Brands to open it.' }) {
+  if (!url) return <button type="button" className="web-btn" disabled title={reason}>{label}</button>;
+  return <a className="web-btn" href={url} target="_blank" rel="noopener noreferrer">{label}</a>;
 }
 
 export function StoreChecks({ brands, value, onChange, disabled }) {

@@ -213,13 +213,11 @@ function Dashboard() {
       case 'webhook-events':  return <ShippingFees focus="log" />;
       case 'coupons':         return <Coupons />;
       case 'reviews':         return <Reviews />;
-      // The new unified SEO hub. Legacy seo-* views still work as
-      // direct routes (each renders the same component the hub uses
-      // for its tab content) so old admin bookmarks don't break.
+      // SEO page. Older seo-* views open the matching tab so bookmarks work.
       case 'seo':             return <SeoHub />;
       case 'seo-global':      return <SeoHub initialTab="settings" />;
       case 'seo-health':      return <SeoHub initialTab="overview" />;
-      case 'seo-bulk':        return <SeoHub initialTab="pages" />;
+      case 'seo-bulk':        return <SeoHub initialTab="overview" />;
       case 'seo-pages':       return <SeoHub initialTab="pages" />;
       case 'faqs':            return <SeoHub initialTab="faqs" />;
       case 'policies':        return <Policies />;

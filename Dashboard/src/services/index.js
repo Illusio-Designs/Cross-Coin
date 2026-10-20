@@ -1874,6 +1874,32 @@ export const policyService = {
 
 // SEO admin services — health summary, bulk product SEO editor.
 export const seoAdminService = {
+  // SEO page: score, tiles and the "To fix" list for one store.
+  overview: async (brandId) => {
+    try {
+      const response = await adminApi.get("/api/admin/seo/overview", { params: { brandId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  // Store details (SEO_* settings) — open to product managers.
+  storeDetails: async (brandId) => {
+    try {
+      const response = await adminApi.get("/api/admin/seo/store-details", { params: { brandId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  saveStoreDetails: async (brandId, values) => {
+    try {
+      const response = await adminApi.put("/api/admin/seo/store-details", { brandId, values });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
   health: async (params = {}) => {
     try {
       const response = await adminApi.get("/api/admin/seo/health", { params });

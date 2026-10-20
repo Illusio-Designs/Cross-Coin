@@ -43,10 +43,9 @@ export const ROLE_VIEWS = {
   product_manager: [
     'main', 'products', 'categories', 'attributes', 'media-gallery',
     'slider', 'blogs',
-    // Product managers can use every SEO tab except global brand-wide
-    // settings (which lives behind admin in the hub but is the one tab
-    // the legacy permission system wants to gate separately).
-    'seo', 'seo-health', 'seo-bulk', 'seo-pages', 'faqs',
+    // Every SEO tab, store details included (the server only lets them
+    // change the SEO_* settings, not the rest of the store settings).
+    'seo', 'seo-health', 'seo-bulk', 'seo-pages', 'faqs', 'seo-global',
   ],
   order_manager: [
     'main', 'orders', 'ndr', 'returns', 'payments', 'reports', 'coupons',

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { trafficReportService } from '../../../services';
 import { Button, DateRangePicker, Input, Table } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
+import Dropdown from '../../../components/ui/Dropdown';
 
 /**
  * Revenue & Gross Profit — per brand, on orders that were DELIVERED in the
@@ -15,6 +16,10 @@ import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashb
  *                  + service charge × delivered orders
  *                  + gateway % of prepaid revenue + COD fee % of COD revenue
  *   Profit before ads = revenue ex-GST − costs;  after ads = − ad spend/unit × units
+ *
+ * Orders received / units ordered count every order PLACED in the period
+ * (all but cancelled), whatever happened to it later — and "Orders by source"
+ * splits them by the channel the order came from (same channels as Traffic).
  *
  * Every cost knob and each brand's ad spend is remembered in this browser.
  */
@@ -127,18 +132,39 @@ export default function RevenueProfitReport() {
   const totals = useMemo(() => {
     if (!brands.length) return null;
     const t = brands.reduce((a, r) => {
+      a.placedOrders += Number(r.placedOrders) || 0; a.placedUnits += Number(r.placedUnits) || 0;
       a.orders += r.orders; a.units += r.units; a.revenue += r.revenue; a.revenueExGst += r.revenueExGst; a.cogs += r.cogs;
       a.refunds += r.refunds; a.rtoOrders += r.rtoOrders;
       a.shipTotal += r.shipTotal; a.svcTotal += r.svcTotal; a.feeTotal += r.feeTotal;
       a.beforeAds += r.beforeAds; a.adSpend += r.adSpend; a.afterAds += r.afterAds;
       return a;
-    }, { orders: 0, units: 0, revenue: 0, revenueExGst: 0, refunds: 0, rtoOrders: 0, cogs: 0, shipTotal: 0, svcTotal: 0, feeTotal: 0, beforeAds: 0, adSpend: 0, afterAds: 0 });
+    }, { placedOrders: 0, placedUnits: 0, orders: 0, units: 0, revenue: 0, revenueExGst: 0, refunds: 0, rtoOrders: 0, cogs: 0, shipTotal: 0, svcTotal: 0, feeTotal: 0, beforeAds: 0, adSpend: 0, afterAds: 0 });
     t.adPerUnit = t.units > 0 ? t.adSpend / t.units : 0; // blended ad spend / unit
     t.marginAfter = t.revenueExGst > 0 ? (t.afterAds / t.revenueExGst) * 100 : 0;
     return t;
   }, [brands]);
 
   const unitsWithoutCost = Number(data?.totals?.unitsWithoutCost || 0);
+  const placed = data?.totals || null;
+
+  // Orders by source — all stores, or the one picked.
+  const [sourceBrand, setSourceBrand] = useState('');
+  const sourceTable = useMemo(() => {
+    const acc = new Map();
+    for (const r of data?.sources || []) {
+      if (sourceBrand && String(r.brandId) !== String(sourceBrand)) continue;
+      const a = acc.get(r.channel) || { channel: r.channel, orders: 0, units: 0, value: 0, delivered: 0, revenue: 0 };
+      a.orders += Number(r.orders) || 0; a.units += Number(r.units) || 0; a.value += Number(r.value) || 0;
+      a.delivered += Number(r.delivered) || 0; a.revenue += Number(r.revenue) || 0;
+      acc.set(r.channel, a);
+    }
+    const rows = [...acc.values()].sort((a, b) => b.orders - a.orders || b.value - a.value);
+    const total = rows.reduce((t, r) => ({ orders: t.orders + r.orders, units: t.units + r.units, value: t.value + r.value, delivered: t.delivered + r.delivered, revenue: t.revenue + r.revenue }), { orders: 0, units: 0, value: 0, delivered: 0, revenue: 0 });
+    const out = rows.map((r) => ({ ...r, _id: r.channel, share: total.orders ? (r.orders / total.orders) * 100 : 0 }));
+    if (out.length > 1) out.push({ ...total, channel: 'Total', _id: '__total__', _isTotal: true, share: 100 });
+    return out;
+  }, [data, sourceBrand]);
+  const sourceBrandOptions = [{ value: '', label: 'All stores' }, ...(data?.brands || []).map((b) => ({ value: String(b.brandId), label: b.brand }))];
 
   // Per-brand rows + a pinned totals row at the bottom.
   const tableData = useMemo(() => {
@@ -151,6 +177,8 @@ export default function RevenueProfitReport() {
 
   const columns = useMemo(() => [
     { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand },
+    { header: 'Orders received', accessor: 'placedOrders', align: 'right', cell: ({ value }) => num(value) },
+    { header: 'Units ordered', accessor: 'placedUnits', align: 'right', cell: ({ value }) => num(value) },
     { header: 'Delivered', accessor: 'orders', align: 'right', cell: ({ value }) => num(value) },
     { header: 'RTO', accessor: 'rtoOrders', align: 'right', cell: ({ value }) => num(value) },
     { header: 'Units kept', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
@@ -179,6 +207,9 @@ export default function RevenueProfitReport() {
 
   const doExport = () => exportCsv(`revenue-profit_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
+    { label: 'Orders received', value: (r) => r.placedOrders },
+    { label: 'Units ordered', value: (r) => r.placedUnits },
+    { label: 'Order value (received)', value: (r) => r.placedValue },
     { label: 'Delivered orders', value: (r) => r.orders },
     { label: 'RTO orders', value: (r) => r.rtoOrders },
     { label: 'Units kept', value: (r) => r.units },
@@ -200,7 +231,7 @@ export default function RevenueProfitReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
+        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Your cost numbers and each brand's ad spend are remembered on this browser."
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -235,6 +266,8 @@ export default function RevenueProfitReport() {
       {/* ── KPI tiles ── */}
       {totals ? (
         <StatGrid>
+          <StatTile label="Orders received" value={num(placed?.placedOrders)} sub={`${inr(placed?.placedValue)} ordered`} />
+          <StatTile label="Units ordered" value={num(placed?.placedUnits)} sub={placed?.placedOrders ? `${(placed.placedUnits / placed.placedOrders).toFixed(1)} per order` : undefined} />
           <StatTile label="Revenue (after refunds)" value={inr(totals.revenue)} />
           <StatTile label="Revenue ex-GST" value={inr(totals.revenueExGst)} />
           <StatTile label="COGS (cost price)" value={inr(totals.cogs)} />
@@ -255,6 +288,30 @@ export default function RevenueProfitReport() {
           sortable={false}
           loading={loading}
           emptyMessage="No sales in this period."
+          getRowStyle={(row) => (row._isTotal ? { fontWeight: 800, background: 'var(--ds-color-surface-soft, rgba(0,0,0,0.03))' } : {})}
+        />
+      </Panel>
+
+      {/* ── Orders by source ── */}
+      <Panel
+        title="Orders by source"
+        subtitle="Every order received in this period (cancelled ones left out), by where the shopper came from — the same channels as the Traffic report. Delivered and revenue show how many of those orders turned into money."
+        actions={sourceBrandOptions.length > 2 ? <div style={{ minWidth: 180 }}><Dropdown value={sourceBrand} onChange={(v) => setSourceBrand(String(v))} options={sourceBrandOptions} /></div> : null}
+      >
+        <Table
+          columns={[
+            { header: 'Source', accessor: 'channel', align: 'left', cell: ({ channel, _isTotal }) => (_isTotal ? channel : <strong>{channel}</strong>) },
+            { header: 'Orders', accessor: 'orders', align: 'right', cell: ({ value }) => num(value) },
+            { header: 'Share', accessor: 'share', align: 'right', cell: ({ value }) => `${(Number(value) || 0).toFixed(1)}%` },
+            { header: 'Units', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
+            { header: 'Order value', accessor: 'value', align: 'right', cell: ({ value }) => inr(value) },
+            { header: 'Delivered', accessor: 'delivered', align: 'right', cell: ({ value }) => num(value) },
+            { header: 'Revenue (after refunds)', accessor: 'revenue', align: 'right', cell: ({ value }) => inr(value) },
+          ]}
+          data={sourceTable}
+          sortable={false}
+          loading={loading}
+          emptyMessage="No orders in this period."
           getRowStyle={(row) => (row._isTotal ? { fontWeight: 800, background: 'var(--ds-color-surface-soft, rgba(0,0,0,0.03))' } : {})}
         />
       </Panel>
