@@ -248,6 +248,89 @@ function DailyBars({ daily }) {
   );
 }
 
+// ── "Why don't orders match?" — per store, each link of the chain counted ──
+const STEP_TONE = { ok: 'done', account: 'needs', sync: 'problem', spend: 'needs', orders: 'needs', linked: 'problem', meta: 'needs', tags: 'needs', names: 'needs' };
+function Chain({ d }) {
+  const steps = [
+    { label: 'Ad account', value: d.accountLinked ? 'linked' : 'not linked', ok: d.accountLinked },
+    { label: 'Synced', value: d.lastSyncedAt ? when(d.lastSyncedAt) : 'never', ok: !!d.lastSyncedAt && !d.lastError },
+    { label: 'Meta spend', value: inr(d.spend), ok: d.spend > 0 },
+    { label: 'Orders', value: num(d.orders), ok: d.orders > 0 },
+    { label: 'Linked to a visit', value: num(d.ordersLinked), ok: d.ordersLinked > 0 },
+    { label: 'From Meta', value: num(d.ordersMeta), ok: d.ordersMeta > 0 },
+    { label: 'With campaign tag', value: num(d.ordersMetaTagged), ok: d.ordersMetaTagged > 0 },
+    { label: 'Matched to spend', value: num(d.ordersMatched), ok: d.ordersMatched > 0 },
+  ];
+  return (
+    <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {steps.map((st, i) => (
+        <li key={st.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {i ? <span aria-hidden="true" style={faint}>→</span> : null}
+          <span style={{ display: 'inline-flex', flexDirection: 'column', padding: '5px 9px', borderRadius: 8, border: '1px solid var(--ds-color-border)', background: st.ok ? 'transparent' : 'var(--ds-color-surface-soft)' }}>
+            <span style={{ fontSize: 10.5, letterSpacing: '.04em', textTransform: 'uppercase', ...faint }}>{st.label}</span>
+            <b style={{ fontSize: 13, color: st.ok ? 'var(--ds-color-text)' : 'var(--ds-color-warn-text, #b54708)' }}>{st.value}</b>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+function NameList({ title, items, render }) {
+  return (
+    <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+      <b style={{ fontSize: 12.5 }}>{title}</b>
+      {items.length ? (
+        <ul style={{ margin: '4px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12.5 }}>
+          {items.map((it) => <li key={it.name} style={{ overflowWrap: 'anywhere' }}>{render(it)}</li>)}
+        </ul>
+      ) : <span style={{ display: 'block', fontSize: 12.5, ...faint }}>None in this period.</span>}
+    </div>
+  );
+}
+function DiagnosisPanel({ diagnosis }) {
+  const [open, setOpen] = useState(null);
+  if (!diagnosis || !diagnosis.length) return null;
+  const allOk = diagnosis.every((d) => d.step === 'ok');
+  return (
+    <Panel title={allOk ? 'Orders match their ads' : 'Why orders don’t match'} subtitle="For each store: every step an order needs to be matched to Meta spend, counted on this period. The first step that shows 0 is what to fix.">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {diagnosis.map((d) => (
+          <div key={d.brandId} style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 12, borderBottom: '1px solid var(--ds-color-border)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <b style={{ fontSize: 14 }}>{d.brand}</b>
+              <StatusPill tone={STEP_TONE[d.step] || 'needs'} size="sm">{d.step === 'ok' ? 'Matching' : 'Needs a fix'}</StatusPill>
+            </div>
+            <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{d.message}</span>
+            <Chain d={d} />
+            {d.orders >= 10 && d.ordersLinked / d.orders < 0.5 ? (
+              <span style={{ fontSize: 12.5, color: 'var(--ds-color-warn-text, #b54708)' }}>Only {num(d.ordersLinked)} of {num(d.orders)} orders are linked to the visit they came from — the rest have no known source and can’t be matched to any ad.</span>
+            ) : null}
+            {d.visitsFbclidUntagged > 0 ? (
+              <span style={{ fontSize: 12.5, ...muted }}>{num(d.visitsFbclidUntagged)} visit{d.visitsFbclidUntagged === 1 ? '' : 's'} in this period came from a Meta ad click with no campaign tag — those ads still need the URL parameters.</span>
+            ) : null}
+            {(d.ourCampaigns.length || d.metaCampaigns.length) ? (
+              <div>
+                <button type="button" onClick={() => setOpen(open === d.brandId ? null : d.brandId)} aria-expanded={open === d.brandId}
+                  style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', font: 'inherit', fontSize: 12.5, color: 'var(--ds-color-text-muted)', textDecoration: 'underline' }}>
+                  {open === d.brandId ? 'Hide campaign names' : 'Compare campaign names'}
+                </button>
+                {open === d.brandId ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 8 }}>
+                    <NameList title="In your order links (utm_campaign)" items={d.ourCampaigns}
+                      render={(it) => <><b>{it.name}</b> <span style={muted}>· {num(it.orders)} order{it.orders === 1 ? '' : 's'}{it.matched ? ' · matched' : ' · no match'}</span></>} />
+                    <NameList title="In Meta (campaigns with spend)" items={d.metaCampaigns}
+                      render={(it) => <><b>{it.name}</b> <span style={muted}>· {inr(it.spend)}{it.matched ? ' · matched' : ' · no orders'}</span></>} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 export default function AdsReport() {
   const qc = useQueryClient();
   const [from, setFrom] = useState(shiftDay(istDate(), -29));
@@ -402,6 +485,8 @@ export default function AdsReport() {
           </StatGrid>
         </div>
       ) : null}
+
+      {!path.length && data?.diagnosis ? <div style={dim}><DiagnosisPanel diagnosis={data.diagnosis} /></div> : null}
 
       <div style={dim}>
         <Panel
