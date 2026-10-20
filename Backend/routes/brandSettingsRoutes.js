@@ -52,6 +52,15 @@ router.post('/brand-settings/test/razorpay', async (req, res) => {
   } catch (err) { sendErr(res, err); }
 });
 
+// Can the saved Meta token read the store's ad account (for ad spend)?
+router.post('/brand-settings/test/meta-ads', async (req, res) => {
+  try {
+    const brandId = parseInt(req.body?.brandId, 10);
+    if (!brandId) return res.status(400).json({ success: false, message: 'Brand ID is required' });
+    res.json({ success: true, ...(await brandSettingsAdmin.testMetaAds(brandId)) });
+  } catch (err) { sendErr(res, err); }
+});
+
 // Who changed what (newest first).
 router.get('/brand-settings/audit', async (req, res) => {
   try {

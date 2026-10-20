@@ -31,7 +31,7 @@ const SECTIONS = [
   { key: 'tax', title: 'Tax & invoices', help: 'Printed on every GST invoice for this store.' },
   { key: 'returns', title: 'Returns', help: 'Used by the Problems desk refund presets and return pickups.' },
   { key: 'payments', title: 'Payments', help: 'Razorpay keys and the cash-on-delivery rules for this store.' },
-  { key: 'whatsapp', title: 'WhatsApp', help: 'All stores share one WhatsApp number — only names, links and offers differ per store.' },
+  { key: 'whatsapp', title: 'WhatsApp', help: 'All stores share one WhatsApp number. Its token and IDs are set once on WhatsApp → Settings; here you only set this store’s name, link and win-back offer.' },
   { key: 'tracking', title: 'Tracking', help: 'Pixels and analytics loaded on the store.' },
 ];
 
@@ -80,19 +80,17 @@ const FIELDS = [
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Custom checkout API key', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Custom checkout signing secret', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
 
-  // WhatsApp (credentials themselves live on WhatsApp → Settings)
+  // WhatsApp: one shared number for every store. Its token and IDs are set
+  // once on WhatsApp → Settings, so they are not fields here.
   F('STORE_NAME', 'whatsapp', 'Store name in messages', { hint: 'Empty = the brand name.' }),
   F('STORE_URL', 'whatsapp', 'Website for message links', { rule: 'host', hint: 'Only used when the store has no website address.' }),
   F('WINBACK_COUPON_CODE', 'whatsapp', 'Win-back coupon', { default: 'CART10', rule: 'code', hint: 'Offered in “come back” messages.' }),
-  F('WHATSAPP_API_TOKEN', 'whatsapp', 'WhatsApp access token', { type: 'secret', readOnly: true, group: 'Shared WhatsApp number' }),
-  F('WHATSAPP_PHONE_NUMBER_ID', 'whatsapp', 'WhatsApp phone number ID', { readOnly: true, group: 'Shared WhatsApp number' }),
-  F('WHATSAPP_BUSINESS_ACCOUNT_ID', 'whatsapp', 'WhatsApp business account ID', { readOnly: true, group: 'Shared WhatsApp number' }),
-  F('WHATSAPP_CATALOG_ID', 'whatsapp', 'WhatsApp catalogue ID', { readOnly: true, group: 'Shared WhatsApp number' }),
 
   // Tracking (trackingConfigController + integrations read these brand-only)
   F('FB_PIXEL_ID', 'tracking', 'Meta pixel ID', { rule: 'digits', category: 'analytics', group: 'Meta' }),
   F('FB_ACCESS_TOKEN', 'tracking', 'Meta Conversions API token', { type: 'secret', category: 'analytics', group: 'Meta' }),
   F('FB_TEST_EVENT_CODE', 'tracking', 'Meta test event code', { category: 'analytics', group: 'Meta', hint: 'Only while testing — remove afterwards.' }),
+  F('META_AD_ACCOUNT_ID', 'tracking', 'Meta ad account ID', { brandOnly: true, rule: 'adAccount', category: 'analytics', group: 'Meta', hint: 'For reading ad spend into the reports.' }),
   F('GA_MEASUREMENT_ID', 'tracking', 'Google Analytics ID', { brandOnly: true, rule: 'ga', category: 'analytics', group: 'Google' }),
   F('GA_API_SECRET', 'tracking', 'Google Analytics API secret', { brandOnly: true, type: 'secret', category: 'analytics', group: 'Google' }),
   F('GTM_ID', 'tracking', 'Google Tag Manager ID', { brandOnly: true, rule: 'gtm', category: 'analytics', group: 'Google' }),
@@ -101,6 +99,53 @@ const FIELDS = [
   ...ADS_EVENTS.map(([ev, what]) => F(`GOOGLE_ADS_LABEL_${ev}`, 'tracking', `Conversion label — ${what}`, { brandOnly: true, category: 'analytics', group: 'Google Ads' })),
   F('CLARITY_ID', 'tracking', 'Microsoft Clarity ID', { brandOnly: true, category: 'analytics', group: 'Other' }),
 ];
+// "Where do I find this?" — shown behind the ⓘ next to each field.
+const GOOGLE_ADS_LABEL_GUIDE = 'Google Ads → Goals → Conversions → open the conversion → Tag setup → “Use Google tag”. The label is the part after the slash in AW-123456789/AbC-dEfGh.';
+const GUIDES = {
+  ITHINK_ACCESS_TOKEN: 'iThink Logistics dashboard → Settings → API settings (or ask your iThink account manager). Copy the access token.',
+  ITHINK_SECRET_KEY: 'Same place as the access token: iThink → Settings → API settings → secret key.',
+  ITHINK_PICKUP_ADDRESS_ID: 'iThink dashboard → Warehouses (pickup addresses): the warehouse ID shown next to your pickup address.',
+  ITHINK_RETURN_ADDRESS_ID: 'iThink → Warehouses: the ID of the address returns should come back to. Leave empty to use the pickup warehouse.',
+  ITHINK_WAREHOUSE_PINCODE: 'The 6-digit PIN code of the warehouse your parcels leave from.',
+  DEFAULT_WAREHOUSE_PINCODE: 'A second warehouse PIN code, only used when the one above is empty.',
+  ITHINK_ENVIRONMENT: 'Live for real orders. Choose Test only with an iThink staging (test) account.',
+  COURIER_PRIORITY: 'Courier names as iThink spells them, e.g. delhivery, xpressbees, dtdc, ekart. Ask iThink which couriers are active on your account.',
+  COURIER_EXCLUDE: 'Courier names (as iThink spells them) you never want orders booked with.',
+  GST_LEGAL_NAME: 'Exactly as on your GST registration certificate: “Legal name of business”.',
+  GSTIN: 'On your GST registration certificate, or search your business on gst.gov.in → Search taxpayer.',
+  GST_PERCENTAGE: 'The GST rate charged on your products. Ask your CA if you are not sure.',
+  GST_STATE: 'The state on your GST certificate — the state you ship from.',
+  GST_ADDRESS: 'Your principal place of business, as printed on the GST certificate.',
+  RETURN_CHARGE_SHIPPING: 'Your own return policy: the amount kept from a refund to pay for the return pickup.',
+  RETURN_CHARGE_GATEWAY_PERCENT: 'Your own return policy: Razorpay keeps its fee on refunds, so you can keep the same % from prepaid refunds.',
+  RETURN_CHARGE_RESTOCK: 'Your own return policy: a fixed fee kept for checking and repacking returned items.',
+  RETURN_AUTO_PICKUP: 'On: approving a return books the pickup with the courier straight away. Off: staff book it by hand.',
+  ITHINK_REVERSE_LOGISTICS: 'The courier iThink uses for return pickups on your account, e.g. delhivery. Ask iThink which couriers do reverse pickups for you.',
+  RAZORPAY_KEY_ID: 'Razorpay Dashboard → Account & Settings → API keys → Generate key. Starts with rzp_live_ (rzp_test_ for test mode).',
+  RAZORPAY_KEY_SECRET: 'Shown only once, when you generate the key in Razorpay → API keys. If it is lost, regenerate the key and update both values here.',
+  RAZORPAY_WEBHOOK_SECRET: 'Razorpay → Account & Settings → Webhooks → the webhook pointing to api.crosscoin.in → the secret you typed when you created it.',
+  PREPAID_INSTANT_DISCOUNT: 'Your own rule: the ₹ off shoppers get for paying online instead of cash on delivery.',
+  COD_MAX_ORDER_VALUE: 'Your own rule: orders above this amount must be paid online.',
+  COD_MIN_ADDRESS_QUALITY: 'Your own rule: addresses scoring below this (incomplete or messy) can’t use cash on delivery. 0 turns it off.',
+  FREE_SHIPPING_THRESHOLD: 'Your own rule: orders above this amount ship free. 0 turns it off.',
+  CUSTOM_CHECKOUT_API_KEY: 'Shared with your custom-checkout partner. Both sides must use exactly the same value.',
+  CUSTOM_CHECKOUT_HMAC_SECRET: 'Shared with your custom-checkout partner to sign messages. Both sides must use exactly the same value.',
+  STORE_NAME: 'The store name customers see in WhatsApp messages. Leave empty to use the brand name.',
+  STORE_URL: 'The store’s web address without https://, e.g. morbix.in.',
+  WINBACK_COUPON_CODE: 'Any active code from Growth → Coupons.',
+  FB_PIXEL_ID: 'Meta Events Manager → Data sources → your pixel (dataset): the 15–16 digit ID under its name.',
+  FB_ACCESS_TOKEN: 'Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.',
+  FB_TEST_EVENT_CODE: 'Meta Events Manager → your pixel → Test events → the code like TEST12345. Remove it once testing is done.',
+  META_AD_ACCOUNT_ID: 'Meta Ads Manager → the account switcher (top left): the number under the account name. Or Business Settings → Accounts → Ad accounts. With or without act_.',
+  GA_MEASUREMENT_ID: 'Google Analytics → Admin → Data streams → your website stream → Measurement ID (G-…).',
+  GA_API_SECRET: 'Google Analytics → Admin → Data streams → your stream → Measurement Protocol API secrets → Create.',
+  GTM_ID: 'tagmanager.google.com → your container: the ID at the top of the page (GTM-…).',
+  GOOGLE_ADS_ID: 'Google Ads → Goals → Conversions → open any conversion → Tag setup → “Use Google tag”: the AW-… number.',
+  GOOGLE_ADS_CONVERSION_LABEL: GOOGLE_ADS_LABEL_GUIDE,
+  CLARITY_ID: 'clarity.microsoft.com → your project → Settings → Overview → Project ID (about 10 letters and numbers).',
+};
+for (const f of FIELDS) f.guide = GUIDES[f.key] || (f.key.startsWith('GOOGLE_ADS_LABEL_') ? GOOGLE_ADS_LABEL_GUIDE : null);
+
 const FIELD_BY_KEY = new Map(FIELDS.map((f) => [f.key, f]));
 for (const f of FIELDS) if (f.type === 'secret') f.secret = true;
 
@@ -112,7 +157,15 @@ const OTHER_LABELS = {
   LOYALTY_POINTS_EXPIRY_DAYS: 'Loyalty — points expire after (days)',
   GOOGLE_ADS_CONVERSION_LABELS: 'Google Ads labels (JSON, advanced)',
   SHIPPING_PROVIDER: 'Shipping provider (always iThink)',
+  ADS_PRODUCT_COST: 'Not used — product cost comes from each variant’s cost price (Products). Safe to remove.',
 };
+
+// The shared WhatsApp number's keys: set once on WhatsApp → Settings (they live
+// on the shared WhatsApp brand). On any other store a saved copy overrides the
+// shared number, so it is listed under "Other settings" with a warning.
+const SHARED_WA_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
+const WA_KEY = /^WHATSAPP_(API_TOKEN|PHONE_NUMBER_ID|BUSINESS_ACCOUNT_ID|CATALOG_ID)$/i;
+const WA_OVERRIDE_LABEL = 'Old per-store WhatsApp key — this store’s messages use it instead of the shared number. Remove it to use the shared number.';
 
 // Owned by other pages — never shown or touched here.
 const OWNED_ELSEWHERE = (key, category) =>
@@ -147,6 +200,7 @@ const RULES = {
   gtm: (v) => (/^GTM-[A-Z0-9]{4,}$/i.test(v) ? null : 'Tag Manager IDs look like GTM-XXXXXX.'),
   aw: (v) => (/^AW-\d{6,}$/i.test(v) ? null : 'Google Ads IDs look like AW-123456789.'),
   code: (v) => (/^[A-Z0-9_-]{2,40}$/i.test(v) ? null : 'Letters and numbers only, no spaces.'),
+  adAccount: (v) => (/^\d{5,20}$/.test(v) ? null : 'Ad account IDs are numbers, like 805062759008052 (act_ is optional).'),
   host: (v) => (/^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/.*)?$/i.test(v) ? null : 'Enter a website address like mystore.in.'),
   url: (v) => (/^https?:\/\/\S+$/i.test(v) ? null : 'Enter a full link starting with https://'),
   email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? null : 'Enter a valid email address.'),
@@ -158,6 +212,7 @@ function normalise(field, raw) {
   let v = str(raw).trim();
   if (field.rule === 'gstin' || field.rule === 'code') v = v.toUpperCase();
   if (field.rule === 'host' && v) v = v.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  if (field.rule === 'adAccount') v = v.replace(/^act_/i, '');
   if (field.type === 'toggle') v = ['true', '1', 'yes', 'on'].includes(v.toLowerCase()) ? 'true' : 'false';
   return v;
 }
@@ -181,7 +236,13 @@ async function loadRows(brandIds) {
   const byBrand = new Map();
   for (const r of rows) {
     if (!byBrand.has(r.brand_id)) byBrand.set(r.brand_id, new Map());
-    byBrand.get(r.brand_id).set(r.key, r);
+    // The key column compares case-insensitively, so "clarity_id" IS the
+    // CLARITY_ID row as far as the database is concerned (a second row can't
+    // be created). File such rows under the field's key; an exact match wins.
+    const m = byBrand.get(r.brand_id);
+    const canon = String(r.key).trim().toUpperCase();
+    const key = FIELD_BY_KEY.has(canon) ? canon : r.key;
+    if (!m.has(key) || r.key === key) m.set(key, r);
   }
   return byBrand;
 }
@@ -313,7 +374,7 @@ async function form(brandId, { checkSite = true } = {}) {
     return {
       key: f.key, tab: f.tab, group: f.group || null, label: f.label, type: f.type, hint: f.hint || null,
       options: f.options || null, min: f.min, max: f.max, rule: f.rule || null, readOnly: !!f.readOnly,
-      secret: !!f.secret, default: f.default ?? null,
+      secret: !!f.secret, default: f.default ?? null, guide: f.guide || null,
       value: eff.source === 'none' ? '' : publicValue(f.key, eff.value, row),
       isSet: eff.value !== '', source: eff.source, updated_at: row ? row.updatedAt || row.updated_at : null,
     };
@@ -322,9 +383,11 @@ async function form(brandId, { checkSite = true } = {}) {
   const other = [];
   for (const [key, row] of rows) {
     if (FIELD_BY_KEY.has(key) || OWNED_ELSEWHERE(key, row.category)) continue;
+    const wa = WA_KEY.test(key);
+    if (wa && brand.id === SHARED_WA_BRAND_ID) continue; // the shared number itself
     const secret = isSecret(key, row);
     other.push({
-      key, label: OTHER_LABELS[key] || (/fship/i.test(key) ? `${key} (old Fship setting — not used)` : null),
+      key, label: wa ? WA_OVERRIDE_LABEL : (OTHER_LABELS[key] || (/fship/i.test(key) ? `${key} (old Fship setting — not used)` : null)),
       value: secret ? audit.maskValue(rowValue(row)) : rowValue(row), secret, isSet: rowValue(row) !== '',
       category: row.category, description: row.description || null, updated_at: row.updatedAt || row.updated_at || null,
     });
@@ -378,7 +441,7 @@ async function save(brandId, body, userId) {
     const field = FIELD_BY_KEY.get(key);
     if (field?.readOnly) continue;
     // A key with no form field: an existing "other" setting, or a new custom one.
-    if (!field && OWNED_ELSEWHERE(key, row?.category)) { errors[key] = 'This setting is edited on its own page.'; continue; }
+    if (!field && (OWNED_ELSEWHERE(key, row?.category) || WA_KEY.test(key))) { errors[key] = WA_KEY.test(key) ? 'Set on WhatsApp → Settings (shared by all stores).' : 'This setting is edited on its own page.'; continue; }
     if (!field && !row && !/^[A-Z][A-Z0-9_]{1,99}$/.test(key)) { errors[key] = 'Use capital letters, numbers and _ for a new key.'; continue; }
     if (isSecret(key, row) && /^•+/.test(str(raw))) continue; // unchanged mask echoed back
     const v = field ? normalise(field, raw) : str(raw).trim();
@@ -391,6 +454,7 @@ async function save(brandId, body, userId) {
     const row = rows.get(key);
     const field = FIELD_BY_KEY.get(key);
     if (!row || field?.readOnly || (!field && OWNED_ELSEWHERE(key, row.category))) continue;
+    if (WA_KEY.test(key) && brand.id === SHARED_WA_BRAND_ID) continue;
     writes.push({ key, field, row, remove: true });
   }
 
@@ -413,21 +477,28 @@ async function save(brandId, body, userId) {
   for (const w of writes) {
     const secret = isSecret(w.key, w.row);
     if (w.remove) {
-      await settingsService.deleteBrandSetting(brand.id, w.key);
+      await settingsService.deleteBrandSetting(brand.id, w.row.key);
       await audit.record({ brandId: brand.id, key: w.key, action: 'delete', oldValue: rowValue(w.row), userId, secret });
       continue;
     }
     if (w.row) {
-      await settingsService.updateSetting(brand.id, w.key, {
+      await settingsService.updateSetting(brand.id, w.row.key, {
         value: w.value,
         is_encrypted: secret ? (w.row.is_encrypted || encOk) : w.row.is_encrypted,
         updated_by: userId,
       });
+      // Saved under an old spelling (e.g. clarity_id): store it under the real key.
+      if (w.row.key !== w.key) await BrandSetting.update({ key: w.key }, { where: { id: w.row.id } });
     } else {
-      await settingsService.createSetting({
-        brand_id: brand.id, key: w.key, value: w.value, category: w.field?.category || 'general',
-        description: w.field?.label || null, is_encrypted: secret && encOk, updated_by: userId,
-      });
+      try {
+        await settingsService.createSetting({
+          brand_id: brand.id, key: w.key, value: w.value, category: w.field?.category || 'general',
+          description: w.field?.label || null, is_encrypted: secret && encOk, updated_by: userId,
+        });
+      } catch (e) {
+        if (e.name === 'SequelizeUniqueConstraintError') return { errors: { [w.key]: 'This setting is already saved under a slightly different name — reload the page and try again.' } };
+        throw e;
+      }
     }
     await audit.record({ brandId: brand.id, key: w.key, action: w.row ? 'update' : 'create', oldValue: rowValue(w.row), newValue: w.value, userId, secret });
   }
@@ -472,8 +543,36 @@ async function testRazorpay(brandId) {
   }
 }
 
+// Can this store's Meta token read its ad account (needed to pull ad spend)?
+// Uses the Conversions API token already saved for the pixel; read-only call.
+async function testMetaAds(brandId) {
+  const account = String((await settingsHelper.getSetting(brandId, 'META_AD_ACCOUNT_ID', null, { brandOnly: true })) || '').replace(/^act_/i, '').trim();
+  const token = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
+  if (!account) return { ok: false, message: 'Save the Meta ad account ID first.' };
+  if (!token) return { ok: false, message: 'Save the Meta Conversions API token first.' };
+  try {
+    const r = await axios.get(`https://graph.facebook.com/v21.0/act_${account}`, {
+      params: { fields: 'name,currency,account_status', access_token: token }, timeout: 10000, validateStatus: () => true,
+    });
+    if (r.status === 200 && r.data && r.data.id) {
+      const ins = await axios.get(`https://graph.facebook.com/v21.0/act_${account}/insights`, {
+        params: { date_preset: 'last_7d', fields: 'spend', access_token: token }, timeout: 10000, validateStatus: () => true,
+      });
+      if (ins.status === 200) {
+        const spend = Number(ins.data?.data?.[0]?.spend || 0);
+        return { ok: true, message: `This token can read “${r.data.name}” (${r.data.currency}) — last 7 days spend ${spend.toLocaleString('en-IN')} ${r.data.currency}. No new token is needed for ad spend.` };
+      }
+      return { ok: false, message: `The token can see “${r.data.name}” but not its spend: ${ins.data?.error?.message || `Meta answered ${ins.status}`}. Give the token’s system user “View performance” on this ad account.` };
+    }
+    const err = r.data?.error?.message || `Meta answered ${r.status}`;
+    return { ok: false, message: `This token can’t read ad account ${account}: ${err}. In Business Settings → System users, give the token’s user access to this ad account (View performance) and the ads_read permission, or generate a new token with ads_read.` };
+  } catch (e) {
+    return { ok: false, message: `Couldn’t reach Meta (${e.code || e.message}).` };
+  }
+}
+
 module.exports = {
-  SECTIONS, FIELDS, overview, form, save, testRazorpay, isSecret, publicValue,
+  SECTIONS, FIELDS, overview, form, save, testRazorpay, testMetaAds, isSecret, publicValue,
   // exported for the legacy controller's masking
   maskRow(row) {
     const plain = typeof row?.toJSON === 'function' ? row.toJSON() : { ...row };

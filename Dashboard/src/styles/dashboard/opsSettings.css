@@ -61,6 +61,18 @@
 .oss .oss-field--wide { grid-column: 1 / -1; }
 .oss .oss-field label { color: var(--ds-color-text-muted); font-weight: 600; }
 .oss .oss-field small { font-size: 11.5px; color: var(--ds-color-text-faint); line-height: 1.4; }
+.oss .oss-label-row { display: flex; align-items: center; gap: 6px; }
+.oss .oss-info {
+  display: inline-grid; place-items: center; width: 17px; height: 17px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--ds-color-border); background: var(--ds-color-surface); color: var(--ds-color-text-muted);
+  font: 700 10.5px/1 Georgia, 'Times New Roman', serif; font-style: italic; cursor: pointer; flex: none;
+}
+.oss .oss-info:hover, .oss .oss-info.is-open { border-color: var(--ds-color-text-muted); color: var(--ds-color-text); }
+.oss .oss-info:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 1px; }
+.oss .oss-guide {
+  margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.45;
+  background: var(--ds-color-bg); border: 1px solid var(--ds-color-border); color: var(--ds-color-text);
+}
 .oss .oss-field.is-bad small, .oss .oss-field.is-bad label { color: var(--ds-color-warn); }
 .oss .oss-field input, .oss .oss-field select, .oss .oss-field textarea,
 .oss .oss-inline input, .oss .oss-search input {
