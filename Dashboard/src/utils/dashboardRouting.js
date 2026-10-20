@@ -19,14 +19,12 @@ export const getPageTitle = (view) => {
     'coupons': 'Coupons',
     'reviews': 'Reviews',
     'seo': 'SEO',
-    // Legacy deep-link views — all open the unified SEO hub on the
-    // matching tab. Titles describe the tab so the header stays accurate
-    // when an admin arrives from a bookmark.
-    'seo-global': 'SEO — Settings',
-    'seo-health': 'SEO — Overview',
-    'seo-bulk':   'SEO — Products',
-    'seo-pages':  'SEO — Pages',
-    'faqs':       'SEO — FAQs',
+    // Older SEO views open a tab of the SEO page.
+    'seo-global': 'SEO',
+    'seo-health': 'SEO',
+    'seo-bulk':   'SEO',
+    'seo-pages':  'SEO',
+    'faqs':       'SEO',
     'policies': 'Policies',
     'blogs': 'Blog',
     'whatsapp': 'WhatsApp',

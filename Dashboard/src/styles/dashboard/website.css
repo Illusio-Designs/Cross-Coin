@@ -69,11 +69,9 @@
 }
 
 /* Secondary segmented control (Blog posts/categories, SEO pages/FAQs/settings) */
-.web .web-seo-top { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 .web .web-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--ds-color-surface-soft); border: 1px solid var(--ds-color-border); align-self: flex-start; max-width: 100%; overflow-x: auto; }
 .web .web-seg-btn { border: 0; background: transparent; color: var(--ds-color-text-muted); font: inherit; font-size: 13px; font-weight: 600; min-height: 32px; padding: 0 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
 .web .web-seg-btn.is-on { background: var(--ds-color-surface); color: var(--ds-color-text); box-shadow: var(--ds-shadow-sm); }
-.web .web-score { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ds-color-text-muted); }
 
 /* Cards + panel layout */
 .web .web-body { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
@@ -230,11 +228,5 @@
 .web .web-use-group ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
 .web .web-bulk { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--ds-color-surface-soft); font-size: 13px; color: var(--ds-color-text); }
 
-/* SEO settings, policies GSTIN */
-.web .web-settings { display: flex; flex-direction: column; gap: 12px; }
-.web .web-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-@media (max-width: 420px) { .web .web-settings-grid { grid-template-columns: 1fr; } }
-.web .web-settings-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); min-width: 0; }
-.web .web-settings-card .web-h3 { margin: 0; }
-.web .web-settings-foot { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; bottom: 0; padding: 10px 0; background: var(--ds-color-bg); }
+/* Policies GSTIN */
 .web .web-gstin { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); max-width: 560px; }

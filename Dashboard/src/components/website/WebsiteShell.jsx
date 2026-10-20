@@ -1,11 +1,10 @@
 /*
- * Website — one layout for Sliders, Blog, Photos, SEO and Policies:
+ * Website — one layout for Sliders, Blog, Photos and Policies:
  * pick the store, search, see what's live as cards, edit in a side panel.
  *
  * Each dashboard view keeps working and opens its tab here:
  *   slider → Sliders · blogs → Blog · media-gallery → Photos ·
- *   seo / seo-pages / seo-health / seo-bulk → SEO (pages) · faqs → SEO (FAQs) ·
- *   seo-global → SEO (settings) · policies → Policies
+ *   policies → Policies. SEO has its own page (SeoPage.jsx).
  *
  * Styles: styles/dashboard/website.css (.web-*). Shared look: components/ui
  * (StatusPill, ConfirmBar, EmptyState, ErrorState).
@@ -21,7 +20,6 @@ import { goToView, loadBrands, useDebounced, brandLabel } from './webUtil';
 import SlidersTab from './SlidersTab';
 import BlogTab from './BlogTab';
 import PhotosTab from './PhotosTab';
-import SeoTab from './SeoTab';
 import PoliciesTab from './PoliciesTab';
 
 const BRAND_KEY = 'obz-website-brand';
@@ -30,7 +28,6 @@ const TABS = [
   { id: 'sliders', label: 'Sliders', view: 'slider', Comp: SlidersTab, stores: 'all' },
   { id: 'blog', label: 'Blog', view: 'blogs', Comp: BlogTab, stores: 'all' },
   { id: 'photos', label: 'Photos', view: 'media-gallery', Comp: PhotosTab, stores: null },
-  { id: 'seo', label: 'SEO', view: 'seo', Comp: SeoTab, stores: 'one' },
   { id: 'policies', label: 'Policies', view: 'policies', Comp: PoliciesTab, stores: 'shared', adminOnly: true },
 ];
 
@@ -38,7 +35,7 @@ function readBrand() {
   try { return localStorage.getItem(BRAND_KEY) || ''; } catch { return ''; }
 }
 
-export default function WebsiteShell({ tab = 'sliders', seoView = 'pages' }) {
+export default function WebsiteShell({ tab = 'sliders' }) {
   const { user, loading: authLoading, hasAnyRole } = useAuth();
   const canContent = !!user && hasAnyRole(['admin', 'product_manager']);
   const isAdmin = !!user && hasAnyRole(['admin']);
@@ -98,7 +95,7 @@ export default function WebsiteShell({ tab = 'sliders', seoView = 'pages' }) {
       <header className="web-head">
         <div className="web-head-text">
           <h1 className="web-title">Website</h1>
-          <p className="web-sub">Sliders, blog, photos, SEO and policies in one place: pick the store, see what's live, edit in the side panel.</p>
+          <p className="web-sub">Sliders, blog, photos and policies in one place: pick the store, see what's live, edit in the side panel.</p>
         </div>
         {action && (action.htmlFor
           ? <label htmlFor={action.htmlFor} className={`web-btn web-btn--primary${action.busy ? ' is-busy' : ''}`} aria-disabled={action.busy || undefined}>{action.label}</label>
@@ -140,7 +137,6 @@ export default function WebsiteShell({ tab = 'sliders', seoView = 'pages' }) {
         brandId={brandId}
         q={q}
         isAdmin={isAdmin}
-        seoView={seoView}
         registerAction={registerAction}
       />
     </div>
