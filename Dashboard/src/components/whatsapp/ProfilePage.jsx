@@ -185,7 +185,7 @@ function Avatar({ src, name, size = 56, className = '' }) {
 }
 
 function goToBrands(brandId) {
-  try { sessionStorage.setItem('obz-brand-open', JSON.stringify({ brandId, tab: 'whatsapp' })); } catch { /* storage blocked */ }
+  try { sessionStorage.setItem('obz-brand-open', JSON.stringify({ brandId, tab: 'store' })); } catch { /* storage blocked */ }
   window.history.pushState({}, '', '/dashboard/brand-settings');
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
@@ -744,7 +744,7 @@ export default function ProfilePage({ isAdmin = false, goTo, brands = [] }) {
           </div>
           <span className="wpp-note">
             Used by {storesWord}. Each store’s name, links and win-back offer are set on{' '}
-            <button type="button" className="wpb-link" onClick={() => goToBrands(stores.data?.stores?.[0]?.brandId || null)}>Brands → WhatsApp</button>.
+            <button type="button" className="wpb-link" onClick={() => goToBrands(stores.data?.stores?.[0]?.brandId || null)}>Brands → Store</button>.
           </span>
           {keys.data && keys.data.canEncrypt === false && (
             <span className="wpp-small t-warn">The server has no DATA_ENCRYPTION_KEY, so a new token is stored without encryption.</span>

@@ -27,11 +27,11 @@ const audit = require('./settingsAuditService.js');
 
 // ── Sections (tabs) ──────────────────────────────────────────────────────────
 const SECTIONS = [
-  { key: 'store', title: 'Store', help: 'How the store appears to shoppers, and the courier account that ships its orders.' },
+  { key: 'store', title: 'Store', help: 'How the store appears to shoppers: name, website, contact details and colours.' },
+  { key: 'shipping', title: 'Shipping', help: 'The iThink courier account that ships this store’s orders, its warehouse and delivery rules. Delivery charges are on Shipping & courier.' },
   { key: 'tax', title: 'Tax & invoices', help: 'Printed on every GST invoice for this store.' },
   { key: 'returns', title: 'Returns', help: 'Used by the Problems desk refund presets and return pickups.' },
   { key: 'payments', title: 'Payments', help: 'Razorpay keys and the cash-on-delivery rules for this store.' },
-  { key: 'whatsapp', title: 'WhatsApp', help: 'All stores share one WhatsApp number. Its token and IDs are set once on WhatsApp → Profile; here you only set this store’s name, link and win-back offer.' },
   { key: 'tracking', title: 'Tracking', help: 'Pixels and analytics loaded on the store.' },
 ];
 
@@ -45,15 +45,15 @@ const ADS_EVENTS = [
 const F = (key, tab, label, extra = {}) => ({ key, tab, label, type: 'text', category: 'general', ...extra });
 const FIELDS = [
   // Store → courier (brand record fields are edited alongside, see BRAND_FIELDS)
-  F('ITHINK_ACCESS_TOKEN', 'store', 'iThink access token', { group: 'Courier account (iThink)', type: 'secret', category: 'shipping' }),
-  F('ITHINK_SECRET_KEY', 'store', 'iThink secret key', { group: 'Courier account (iThink)', type: 'secret', category: 'shipping' }),
-  F('ITHINK_PICKUP_ADDRESS_ID', 'store', 'Pickup warehouse ID', { group: 'Courier account (iThink)', rule: 'digits', category: 'shipping', hint: 'From iThink → Warehouses. Orders can’t be booked without it.' }),
-  F('ITHINK_RETURN_ADDRESS_ID', 'store', 'Return warehouse ID', { group: 'Courier account (iThink)', rule: 'digits', category: 'shipping', hint: 'Empty = returns go to the pickup warehouse.' }),
-  F('ITHINK_WAREHOUSE_PINCODE', 'store', 'Warehouse PIN code', { group: 'Courier account (iThink)', rule: 'pincode', category: 'shipping', hint: 'Used to check if a shopper’s PIN code can be delivered to.' }),
-  F('DEFAULT_WAREHOUSE_PINCODE', 'store', 'Backup warehouse PIN code', { group: 'Courier account (iThink)', rule: 'pincode', category: 'shipping', hint: 'Only used when the PIN code above is empty.' }),
-  F('ITHINK_ENVIRONMENT', 'store', 'iThink account type', { group: 'Courier account (iThink)', type: 'select', category: 'shipping', options: [['production', 'Live'], ['staging', 'Test (no real pickups)']], default: 'production' }),
-  F('COURIER_PRIORITY', 'store', 'Couriers to share orders between', { group: 'Courier account (iThink)', rule: 'list', category: 'shipping', default: 'delhivery, amazon, xpressbees, dtdc', hint: 'Comma-separated courier names.' }),
-  F('COURIER_EXCLUDE', 'store', 'Couriers never to use', { group: 'Courier account (iThink)', rule: 'list', category: 'shipping', hint: 'Comma-separated. Empty = none blocked.' }),
+  F('ITHINK_ACCESS_TOKEN', 'shipping', 'iThink access token', { group: 'Courier account (iThink)', type: 'secret', category: 'shipping' }),
+  F('ITHINK_SECRET_KEY', 'shipping', 'iThink secret key', { group: 'Courier account (iThink)', type: 'secret', category: 'shipping' }),
+  F('ITHINK_PICKUP_ADDRESS_ID', 'shipping', 'Pickup warehouse ID', { group: 'Courier account (iThink)', rule: 'digits', category: 'shipping', hint: 'From iThink → Warehouses. Orders can’t be booked without it.' }),
+  F('ITHINK_RETURN_ADDRESS_ID', 'shipping', 'Return warehouse ID', { group: 'Courier account (iThink)', rule: 'digits', category: 'shipping', hint: 'Empty = returns go to the pickup warehouse.' }),
+  F('ITHINK_WAREHOUSE_PINCODE', 'shipping', 'Warehouse PIN code', { group: 'Courier account (iThink)', rule: 'pincode', category: 'shipping', hint: 'Used to check if a shopper’s PIN code can be delivered to.' }),
+  F('DEFAULT_WAREHOUSE_PINCODE', 'shipping', 'Backup warehouse PIN code', { group: 'Courier account (iThink)', rule: 'pincode', category: 'shipping', hint: 'Only used when the PIN code above is empty.' }),
+  F('ITHINK_ENVIRONMENT', 'shipping', 'iThink account type', { group: 'Courier account (iThink)', type: 'select', category: 'shipping', options: [['production', 'Live'], ['staging', 'Test (no real pickups)']], default: 'production' }),
+  F('COURIER_PRIORITY', 'shipping', 'Couriers to share orders between', { group: 'Courier account (iThink)', rule: 'list', category: 'shipping', default: 'delhivery, amazon, xpressbees, dtdc', hint: 'Comma-separated courier names.' }),
+  F('COURIER_EXCLUDE', 'shipping', 'Couriers never to use', { group: 'Courier account (iThink)', rule: 'list', category: 'shipping', hint: 'Comma-separated. Empty = none blocked.' }),
 
   // Tax & invoices (invoiceService reads these brand-only)
   F('GST_LEGAL_NAME', 'tax', 'Legal name', { brandOnly: true, hint: 'Empty = the store name.' }),
@@ -76,15 +76,14 @@ const FIELDS = [
   F('PREPAID_INSTANT_DISCOUNT', 'payments', 'Instant discount for paying online (₹)', { type: 'number', min: 0, max: 10000, default: '50', category: 'payment', group: 'Checkout rules', hint: 'Largest discount the server accepts without a coupon.' }),
   F('COD_MAX_ORDER_VALUE', 'payments', 'Cash on delivery allowed up to (₹)', { type: 'number', min: 0, max: 1000000, default: '1500', category: 'payment', group: 'Checkout rules', hint: 'Same value as on Shipping & courier.' }),
   F('COD_MIN_ADDRESS_QUALITY', 'payments', 'Lowest address score allowed for COD (0–100)', { type: 'number', min: 0, max: 100, default: '60', category: 'payment', group: 'Checkout rules', hint: '0 = never block COD for a messy address.' }),
-  F('FREE_SHIPPING_THRESHOLD', 'payments', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Checkout rules', hint: '0 = off. Same value as on Shipping & courier.' }),
+  F('FREE_SHIPPING_THRESHOLD', 'shipping', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Delivery rules', hint: '0 = off. Same value as on Shipping & courier.' }),
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Custom checkout API key', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Custom checkout signing secret', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
 
-  // WhatsApp: one shared number for every store. Its token and IDs are set
-  // once on WhatsApp → Profile, so they are not fields here.
-  F('STORE_NAME', 'whatsapp', 'Store name in messages', { hint: 'Empty = the brand name.' }),
-  F('STORE_URL', 'whatsapp', 'Website for message links', { rule: 'host', hint: 'Only used when the store has no website address.' }),
-  F('WINBACK_COUPON_CODE', 'whatsapp', 'Win-back coupon', { default: 'CART10', rule: 'code', hint: 'Offered in “come back” messages.' }),
+  // WhatsApp is universal (one shared number, set on WhatsApp → Profile). The
+  // store's name and link in messages come from the Store tab; only the
+  // win-back offer is per store.
+  F('WINBACK_COUPON_CODE', 'store', 'Win-back coupon (WhatsApp)', { default: 'CART10', rule: 'code', group: 'Messages', hint: 'Offered in “come back” WhatsApp messages for this store.' }),
 
   // Tracking (trackingConfigController + integrations read these brand-only)
   F('FB_PIXEL_ID', 'tracking', 'Meta pixel ID', { rule: 'digits', category: 'analytics', group: 'Meta' }),
@@ -130,9 +129,7 @@ const GUIDES = {
   FREE_SHIPPING_THRESHOLD: 'Your own rule: orders above this amount ship free. 0 turns it off.',
   CUSTOM_CHECKOUT_API_KEY: 'Shared with your custom-checkout partner. Both sides must use exactly the same value.',
   CUSTOM_CHECKOUT_HMAC_SECRET: 'Shared with your custom-checkout partner to sign messages. Both sides must use exactly the same value.',
-  STORE_NAME: 'The store name customers see in WhatsApp messages. Leave empty to use the brand name.',
-  STORE_URL: 'The store’s web address without https://, e.g. morbix.in.',
-  WINBACK_COUPON_CODE: 'Any active code from Growth → Coupons.',
+  WINBACK_COUPON_CODE: 'Any active code for this store from Growth → Coupons (default CART10).',
   FB_PIXEL_ID: 'Meta Events Manager → Data sources → your pixel (dataset): the 15–16 digit ID under its name.',
   FB_ACCESS_TOKEN: 'Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.',
   FB_TEST_EVENT_CODE: 'Meta Events Manager → your pixel → Test events → the code like TEST12345. Remove it once testing is done.',
@@ -163,9 +160,57 @@ const OTHER_LABELS = {
 // The shared WhatsApp number's keys: set once on WhatsApp → Profile (they live
 // on the shared WhatsApp brand). On any other store a saved copy overrides the
 // shared number, so it is listed under "Other settings" with a warning.
+// Which setting keys does the backend code actually read? Every upper-case
+// string literal in the backend source (plus `PREFIX_${…}` templates), read
+// once per process. A saved key that appears nowhere in the code is not used.
+let _codeKeys = null;
+function codeKeys() {
+  if (_codeKeys) return _codeKeys;
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..');
+  const exact = new Set();
+  const prefixes = [];
+  const walk = (dir) => {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of entries) {
+      if (['node_modules', 'tests', '__tests__', 'uploads', 'logs', 'tmp', '.git'].includes(e.name)) continue;
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(p); continue; }
+      if (!e.name.endsWith('.js') || p === __filename) continue;
+      let src = '';
+      try { src = fs.readFileSync(p, 'utf8'); } catch (_) { continue; }
+      for (const m of src.matchAll(/['"`]([A-Z][A-Z0-9_]{2,99})['"`]/g)) exact.add(m[1]);
+      for (const m of src.matchAll(/`([A-Z][A-Z0-9_]*_)\$\{/g)) prefixes.push(m[1]);
+    }
+  };
+  walk(root);
+  _codeKeys = { exact, prefixes };
+  return _codeKeys;
+}
+const readByCode = (key) => {
+  const k = String(key).trim().toUpperCase();
+  const { exact, prefixes } = codeKeys();
+  return exact.has(k) || prefixes.some((p) => k.startsWith(p));
+};
+
+// Saved keys nothing reads any more: shown with a "not used" label and offered
+// in one "Remove unused settings" step (the admin removes them on Save).
+function unusedLabel(key, brandId) {
+  if (/^FSHIP_/i.test(key)) return 'Old Fship setting — not used (orders ship with iThink). Safe to remove.';
+  if (/^BUNDLE_TIER_IMAGE_/i.test(key)) return 'Old pack banner image — that feature was removed, nothing uses it. Safe to remove.';
+  if (key === 'ADS_PRODUCT_COST') return 'Not used — product cost comes from each variant’s cost price (Products). Safe to remove.';
+  if (key === 'SHIPPING_PROVIDER') return 'Not needed — orders always ship with iThink. Safe to remove.';
+  if (key === 'STORE_NAME') return 'Not needed — messages use the Store name above. Safe to remove.';
+  if (key === 'STORE_URL') return 'Not needed — messages use the Website address above. Safe to remove.';
+  if (WA_KEY.test(key) && brandId !== SHARED_WA_BRAND_ID) return 'Old per-store WhatsApp key — not used: WhatsApp is the same for every store (WhatsApp → Profile). Safe to remove.';
+  if (!readByCode(key)) return 'Not used anywhere in the system. Safe to remove.';
+  return null;
+}
+
 const SHARED_WA_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
 const WA_KEY = /^WHATSAPP_(API_TOKEN|PHONE_NUMBER_ID|BUSINESS_ACCOUNT_ID|CATALOG_ID)$/i;
-const WA_OVERRIDE_LABEL = 'Old per-store WhatsApp key — this store’s messages use it instead of the shared number. Remove it to use the shared number.';
 
 // Owned by other pages — never shown or touched here.
 const OWNED_ELSEWHERE = (key, category) =>
@@ -300,7 +345,7 @@ async function winBackWarnings() {
     for (const w of warnings || []) {
       if (w.automation !== 'win_back' || !w.brandId) continue;
       if (!byBrand.has(w.brandId)) byBrand.set(w.brandId, []);
-      byBrand.get(w.brandId).push({ tab: 'whatsapp', field: 'WINBACK_COUPON_CODE', text: w.message });
+      byBrand.get(w.brandId).push({ tab: 'store', field: 'WINBACK_COUPON_CODE', text: w.message });
     }
     return byBrand;
   } catch (_) {
@@ -312,8 +357,8 @@ async function winBackWarnings() {
 async function brandWarnings(brand, rows, winBack = new Map()) {
   const get = (key) => effective(FIELD_BY_KEY.get(key) || { key }, rows.get(key), brand.id).value;
   const out = [...domainWarnings(brand)];
-  if (!get('ITHINK_ACCESS_TOKEN') || !get('ITHINK_SECRET_KEY')) out.push({ tab: 'store', field: 'ITHINK_ACCESS_TOKEN', text: 'Courier account not connected — orders for this store can’t be booked with iThink.' });
-  else if (!get('ITHINK_PICKUP_ADDRESS_ID')) out.push({ tab: 'store', field: 'ITHINK_PICKUP_ADDRESS_ID', text: 'No pickup warehouse ID — orders can’t be booked until it’s set.' });
+  if (!get('ITHINK_ACCESS_TOKEN') || !get('ITHINK_SECRET_KEY')) out.push({ tab: 'shipping', field: 'ITHINK_ACCESS_TOKEN', text: 'Courier account not connected — orders for this store can’t be booked with iThink.' });
+  else if (!get('ITHINK_PICKUP_ADDRESS_ID')) out.push({ tab: 'shipping', field: 'ITHINK_PICKUP_ADDRESS_ID', text: 'No pickup warehouse ID — orders can’t be booked until it’s set.' });
 
   const gstin = get('GSTIN');
   if (!gstin) out.push({ tab: 'tax', field: 'GSTIN', text: 'GSTIN missing — invoices print without it.' });
@@ -383,11 +428,11 @@ async function form(brandId, { checkSite = true } = {}) {
   const other = [];
   for (const [key, row] of rows) {
     if (FIELD_BY_KEY.has(key) || OWNED_ELSEWHERE(key, row.category)) continue;
-    const wa = WA_KEY.test(key);
-    if (wa && brand.id === SHARED_WA_BRAND_ID) continue; // the shared number itself
+    if (WA_KEY.test(key) && brand.id === SHARED_WA_BRAND_ID) continue; // the shared number itself
     const secret = isSecret(key, row);
+    const unused = unusedLabel(key, brand.id);
     other.push({
-      key, label: wa ? WA_OVERRIDE_LABEL : (OTHER_LABELS[key] || (/fship/i.test(key) ? `${key} (old Fship setting — not used)` : null)),
+      key, label: unused || OTHER_LABELS[key] || null, unused: !!unused,
       value: secret ? audit.maskValue(rowValue(row)) : rowValue(row), secret, isSet: rowValue(row) !== '',
       category: row.category, description: row.description || null, updated_at: row.updatedAt || row.updated_at || null,
     });
