@@ -137,7 +137,7 @@ export default function NotificationBell() {
           <div className={`notif-sound${soundOn ? ' is-on' : ''}`}>
             <HugeiconsIcon icon={soundOn ? VolumeHighIcon : VolumeOffIcon} size={14} strokeWidth={2} aria-hidden="true" />
             <span>{soundOn ? 'Sound on: new orders play a chime.' : 'Sound is off: your browser blocks it until you click the page.'}</span>
-            <button type="button" onPointerDown={soundPress} onClick={soundClick}>{soundOn ? 'Test' : 'Turn on'}</button>
+            {!soundOn && <button type="button" onPointerDown={soundPress} onClick={soundClick}>Turn on</button>}
           </div>
 
           {iosNeedsInstall && (
