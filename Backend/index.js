@@ -532,7 +532,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v29';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v30';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1604,6 +1604,18 @@ const startServer = async () => {
             logger.info('✓ rto_stock_restoration ledger ensured');
         } catch (err) {
             logger.error('rto_stock_restoration ensure failed: ' + err.message);
+        }
+
+        // ── Meta ad spend (v30): ad_spend_daily (one row per ad per day) and
+        // ad_spend_sync (per ad account: last sync / last error). Same DDL as
+        // services/metaAdsService.js, which also creates them lazily.
+        try {
+            const { AD_SPEND_DDL, AD_SYNC_DDL } = require('./services/metaAdsService.js');
+            await sequelize.query(AD_SPEND_DDL);
+            await sequelize.query(AD_SYNC_DDL);
+            logger.info('✓ ad_spend_daily / ad_spend_sync ensured');
+        } catch (err) {
+            logger.error('ad_spend tables ensure failed: ' + err.message);
         }
 
         // Ensure performance indexes exist (idempotent). Production never runs
