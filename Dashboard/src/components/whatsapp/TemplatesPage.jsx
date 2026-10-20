@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Add01Icon, Search01Icon, Alert02Icon, Delete02Icon, Copy01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
-import { Skeleton, SkeletonList, SkeletonText } from '../ui';
+import { Select, Skeleton, SkeletonList, SkeletonText } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Templates — the pre-approved messages WhatsApp lets a store use to
@@ -225,18 +225,18 @@ function NewTemplateForm({ initial, brandId, onCancel, onCreated }) {
           </div>
           <div className="wpa-field">
             <label htmlFor="wpa-nt-cat">Type</label>
-            <select id="wpa-nt-cat" className="wpa-select" value={f.category} onChange={(e) => set('category', e.target.value)}>
-              <option value="MARKETING">Marketing — offers, sales, news</option>
-              <option value="UTILITY">Utility — order and account updates</option>
-            </select>
+            <Select value={f.category} onChange={(v) => set('category', v)} options={[
+              { value: 'MARKETING', label: 'Marketing — offers, sales, news' },
+              { value: 'UTILITY', label: 'Utility — order and account updates' },
+            ]} />
           </div>
           <div className="wpa-field" style={{ flex: '0 1 160px' }}>
             <label htmlFor="wpa-nt-lang">Language</label>
-            <select id="wpa-nt-lang" className="wpa-select" value={f.language} onChange={(e) => set('language', e.target.value)}>
-              <option value="en">English</option>
-              <option value="en_US">English (US)</option>
-              <option value="hi">Hindi</option>
-            </select>
+            <Select value={f.language} onChange={(v) => set('language', v)} options={[
+              { value: 'en', label: 'English' },
+              { value: 'en_US', label: 'English (US)' },
+              { value: 'hi', label: 'Hindi' },
+            ]} />
           </div>
         </div>
 
@@ -285,11 +285,11 @@ function NewTemplateForm({ initial, brandId, onCancel, onCreated }) {
           {f.buttons.map((b, i) => (
             <div key={i}>
               <div className="wpa-btn-def">
-                <select className="wpa-select" aria-label={`Button ${i + 1} type`} value={b.type} onChange={(e) => setBtn(i, 'type', e.target.value)}>
-                  <option value="QUICK_REPLY">Quick reply</option>
-                  <option value="URL">Open a link</option>
-                  <option value="PHONE_NUMBER">Call a number</option>
-                </select>
+                <Select value={b.type} onChange={(v) => setBtn(i, 'type', v)} options={[
+                  { value: 'QUICK_REPLY', label: 'Quick reply' },
+                  { value: 'URL', label: 'Open a link' },
+                  { value: 'PHONE_NUMBER', label: 'Call a number' },
+                ]} />
                 <input className="wpa-input" aria-label={`Button ${i + 1} text`} placeholder="Button text" maxLength={25}
                   value={b.text} onChange={(e) => setBtn(i, 'text', e.target.value)} />
                 {b.type === 'QUICK_REPLY' ? <span className="wpa-hint">Sends this text back as the reply.</span> : (

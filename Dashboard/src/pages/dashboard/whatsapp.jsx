@@ -20,7 +20,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { brandService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
-import { Skeleton, SkeletonList, SkeletonPage, SkeletonForm } from '../../components/ui';
+import { Select, Skeleton, SkeletonList, SkeletonPage, SkeletonForm } from '../../components/ui';
 
 // While a page's code downloads, draw its shape where it will appear.
 function InboxLoading() {
@@ -185,10 +185,8 @@ export function WhatsAppManager() {
 
         <label className="wst-store">
           <span className="wst-store-label">Store</span>
-          <select value={brandId || ''} onChange={(e) => changeBrand(e.target.value)} aria-label="Show which store">
-            <option value="">All brands</option>
-            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+          <Select value={brandId ? String(brandId) : ''} placeholder="All brands" onChange={(v) => changeBrand(v ?? '')}
+            options={[{ value: '', label: 'All brands' }, ...brands.map((b) => ({ value: String(b.id), label: b.name }))]} />
         </label>
 
         <nav className="wst-nav">
