@@ -54,7 +54,9 @@ const nextConfig = {
   compress: true,
   
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Strip console.log noise in production, but keep errors, warnings and
+    // console.info (the "[sound]" diagnostics in hooks/useNotifications.js).
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn', 'info'] } : false,
   },
   
   async headers() {
