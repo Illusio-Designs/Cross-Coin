@@ -11,7 +11,8 @@ import {
   WhatsappIcon, FlashIcon,
 } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
-import { Modal, Skeleton, SkeletonList, SkeletonText } from '../ui';
+import { Modal, Select, Skeleton, SkeletonList, SkeletonText } from '../ui';
+import Dropdown from '../ui/Dropdown';
 import { useAuth } from '../../context/AuthContext';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { MsgContent, msgPreview, FormattedText, API_BASE } from './InboxMedia';
@@ -938,9 +939,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               : <span>{`${total.toLocaleString('en-IN')} chat${total === 1 ? '' : 's'}`}</span>}
             <label className="wib-status">
               <span className="wib-sr">Which chats</span>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <Dropdown value={status} onChange={setStatus} options={STATUS_OPTIONS} />
             </label>
           </div>
         </div>
@@ -1367,10 +1366,9 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               <div>
                 <dt><label htmlFor="wib-store">Store</label></dt>
                 <dd>
-                  <select id="wib-store" value={activeConv.brand_id || ''} onChange={(e) => changeConvBrand(activeConv.id, e.target.value)}>
-                    {!activeConv.brand_id && <option value="">Choose a store…</option>}
-                    {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
+                  <Select value={activeConv.brand_id ? String(activeConv.brand_id) : ''} placeholder="Choose a store…"
+                    onChange={(v) => { if (v) changeConvBrand(activeConv.id, v); }}
+                    options={brands.map((b) => ({ value: String(b.id), label: b.name }))} />
                 </dd>
               </div>
               <div><dt>Messages</dt><dd>{activeConv.opted_out ? <Pill tone="danger">Opted out (replied STOP)</Pill> : 'Allowed'}</dd></div>
@@ -1395,9 +1393,9 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
           {brands.length > 0 && (
             <label className="wib-field">
               <span>Store</span>
-              <select value={productBrand || ''} onChange={(e) => { setProductBrand(Number(e.target.value)); setSelectedProducts([]); }}>
-                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
+              <Select value={productBrand ? String(productBrand) : ''} placeholder="Pick a store"
+                onChange={(v) => { if (!v) return; setProductBrand(Number(v)); setSelectedProducts([]); }}
+                options={brands.map((b) => ({ value: String(b.id), label: b.name }))} />
             </label>
           )}
           <label className="wib-field">
