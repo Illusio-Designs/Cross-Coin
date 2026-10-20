@@ -14,6 +14,13 @@ const MAX_NOTIFICATIONS = 50;
 // new-order sound (the Shopify "ka-ching", /public/sounds) is decoded once and
 // played through it. `audioUnlocked` means "the engine is really running".
 const ORDER_SOUND_URL = '/sounds/new-order.mp3';
+// Every step logs to the browser console with a "[sound]" prefix, so a silent
+// dashboard can be diagnosed from DevTools → Console.
+const SOUND_BUILD = 'sound-engine v3';
+const slog = (...a) => { try { console.info('[sound]', ...a); } catch (_) {} };
+const swarn = (...a) => { try { console.warn('[sound]', ...a); } catch (_) {} };
+if (typeof window !== 'undefined') slog(`${SOUND_BUILD} loaded`, { userAgent: navigator.userAgent });
+
 let audioCtx = null;
 let orderBuffer = null;
 let bufferLoading = null;
@@ -23,6 +30,7 @@ const soundListeners = new Set();
 function setUnlocked(v) {
   if (audioUnlocked === v) return;
   audioUnlocked = v;
+  slog(v ? 'sound is ON' : 'sound is OFF (browser is blocking it)');
   soundListeners.forEach((fn) => { try { fn(v); } catch (_) {} });
 }
 function getCtx() {
@@ -30,9 +38,14 @@ function getCtx() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
   try {
-    audioCtx = new Ctx();
-    audioCtx.onstatechange = () => setUnlocked(audioCtx.state === 'running');
-  } catch (_) { audioCtx = null; }
+    const ctx = new Ctx();
+    audioCtx = ctx;
+    ctx.onstatechange = () => {
+      slog('engine state →', ctx.state);
+      if (ctx === audioCtx) setUnlocked(ctx.state === 'running');
+    };
+    slog('engine created', { state: ctx.state, sampleRate: ctx.sampleRate });
+  } catch (e) { audioCtx = null; swarn('could not create the audio engine', e); }
   return audioCtx;
 }
 const engineRunning = () => !!audioCtx && audioCtx.state === 'running';
@@ -42,31 +55,47 @@ function loadOrderSound() {
   if (bufferLoading) return bufferLoading;
   const ctx = getCtx();
   if (!ctx) return Promise.resolve(null);
+  slog('loading', ORDER_SOUND_URL);
   bufferLoading = fetch(ORDER_SOUND_URL)
-    .then((r) => r.arrayBuffer())
+    .then((r) => {
+      slog('sound file response', r.status, r.headers.get('content-type'));
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.arrayBuffer();
+    })
     // Older Safari only supports the callback form of decodeAudioData.
     .then((ab) => new Promise((resolve, reject) => {
       const p = ctx.decodeAudioData(ab, resolve, reject);
       if (p && p.then) p.then(resolve, reject);
     }))
-    .then((buf) => { orderBuffer = buf; return buf; })
-    .catch(() => { bufferLoading = null; return null; });
+    .then((buf) => { orderBuffer = buf; slog('sound decoded', { seconds: buf.duration.toFixed(2) }); return buf; })
+    .catch((e) => { bufferLoading = null; swarn('could not load/decode the sound file', e); return null; });
   return bufferLoading;
 }
 
 // MUST be called synchronously inside a click / key / tap handler.
 function unlockAudio() {
+  // Some Safari versions never let an engine created before any click start,
+  // even when resumed inside a click — so if it isn't running yet, start a
+  // fresh one right here inside the gesture (the decoded sound is reused).
+  if (audioCtx && audioCtx.state !== 'running') {
+    slog('engine not running at click (' + audioCtx.state + ') → creating a new one inside the click');
+    const old = audioCtx;
+    audioCtx = null;
+    try { old.onstatechange = null; old.close(); } catch (_) {}
+  }
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) { swarn('no Web Audio support in this browser'); return; }
   try {
     // Safari only unlocks a context when something starts inside the gesture.
     const src = ctx.createBufferSource();
     src.buffer = ctx.createBuffer(1, 1, 22050);
     src.connect(ctx.destination);
     src.start(0);
-  } catch (_) { /* ignore */ }
+  } catch (e) { swarn('silent unlock buffer failed', e); }
   if (ctx.state !== 'running') {
-    ctx.resume().then(() => setUnlocked(engineRunning())).catch(() => {});
+    ctx.resume()
+      .then(() => { slog('engine resumed →', ctx.state); setUnlocked(engineRunning()); })
+      .catch((e) => swarn('engine resume refused', e));
   } else {
     setUnlocked(true);
   }
@@ -74,7 +103,10 @@ function unlockAudio() {
 }
 
 function playOrderBuffer() {
-  if (!engineRunning() || !orderBuffer) return false;
+  if (!engineRunning() || !orderBuffer) {
+    slog('order sound not ready', { engine: audioCtx ? audioCtx.state : 'none', decoded: !!orderBuffer });
+    return false;
+  }
   try {
     const src = audioCtx.createBufferSource();
     const gain = audioCtx.createGain();
@@ -83,8 +115,9 @@ function playOrderBuffer() {
     src.connect(gain);
     gain.connect(audioCtx.destination);
     src.start(0);
+    slog('▶ playing order sound', { engine: audioCtx.state, at: audioCtx.currentTime.toFixed(2) });
     return true;
-  } catch (_) { return false; }
+  } catch (e) { swarn('playing the order sound failed', e); return false; }
 }
 
 // Bell tones, through the same engine — the WhatsApp sound, and the order
@@ -115,8 +148,9 @@ function playSynth(type) {
       bell(880, 0.00, 0.30, 0.30);
       bell(1318.51, 0.06, 0.32, 0.22);
     }
+    slog('▶ playing bell tones', type);
     return true;
-  } catch (_) { return false; }
+  } catch (e) { swarn('bell tones failed', e); return false; }
 }
 
 // Last resort when the engine isn't running yet: a plain <audio> play, which
@@ -131,11 +165,15 @@ function playHtmlAudio() {
     const p = fallbackAudio.play();
     // It played → this browser allows sound here (as it did before the engine
     // existed), so don't show "Turn on sound"; refused → show it.
-    if (p && p.then) p.then(() => setUnlocked(true), () => setUnlocked(false));
-  } catch (_) { setUnlocked(false); }
+    if (p && p.then) {
+      p.then(() => { slog('▶ <audio> fallback played'); setUnlocked(true); },
+        (e) => { swarn('<audio> fallback refused by the browser', e && e.name); setUnlocked(false); });
+    }
+  } catch (e) { swarn('<audio> fallback failed', e); setUnlocked(false); }
 }
 
 function playSound(type) {
+  slog('new alert → play', type, { engine: audioCtx ? audioCtx.state : 'none', decoded: !!orderBuffer });
   if (engineRunning()) {
     if (type === 'order' && playOrderBuffer()) return;
     playSynth(type);
@@ -195,14 +233,18 @@ export function useNotifications() {
   // right here, then plays the order sound once (the bell tones stand in if
   // the mp3 is still loading) so staff hear exactly what an order sounds like.
   const enableSound = useCallback(() => {
+    slog('Turn on sound / Test pressed');
     unlockAudio();
     const ctx = getCtx();
-    const play = () => { if (!playOrderBuffer()) playSynth('order'); };
+    const play = () => {
+      slog('test: engine', ctx ? ctx.state : 'none', '| decoded', !!orderBuffer);
+      if (!playOrderBuffer() && !playSynth('order')) { slog('test: engine not running → trying <audio>'); playHtmlAudio(); }
+    };
     if (!ctx) { playHtmlAudio(); return; }
     (ctx.state === 'running' ? Promise.resolve() : ctx.resume())
       .then(() => (orderBuffer ? null : loadOrderSound()))
       .then(play)
-      .catch(() => setUnlocked(false));
+      .catch((e) => { swarn('test: could not start the engine', e); setUnlocked(false); playHtmlAudio(); });
   }, []);
 
   useEffect(() => {
