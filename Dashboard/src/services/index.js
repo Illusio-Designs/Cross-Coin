@@ -2157,6 +2157,16 @@ export const brandSettingsService = {
     }
   },
 
+  // Can the saved Meta token read this store's ad account (for ad spend)?
+  testMetaAds: async (brandId) => {
+    try {
+      const response = await adminApi.post("/api/admin/brand-settings/test/meta-ads", { brandId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Existing WhatsApp test send (shared number, this brand's name in the text).
   sendWhatsAppTest: async (brandId, phone) => {
     try {

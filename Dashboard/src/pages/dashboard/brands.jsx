@@ -77,16 +77,29 @@ const cleanHost = (d) => String(d || '').trim().replace(/^https?:\/\//i, '').rep
 const fmtWhen = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const brandLabel = (b) => b.display_name || b.name;
 
+// ⓘ next to a field label: "where do I find this?" (text from the backend).
+function GuideButton({ f, open, onToggle }) {
+  if (!f.guide) return null;
+  return (
+    <button type="button" className={`oss-info${open ? ' is-open' : ''}`} aria-expanded={open} aria-controls={`bf-${f.key}-guide`}
+      aria-label={`Where to find ${f.label}`} title="Where to find this" onClick={onToggle}>i</button>
+  );
+}
+const GuideText = ({ f, open }) => (f.guide && open ? <p id={`bf-${f.key}-guide`} className="oss-guide">{f.guide}</p> : null);
+
 // ── One input, by field type ───────────────────────────────────────────────
 function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled }) {
   const id = `bf-${f.key}`;
+  const [guideOpen, setGuideOpen] = useState(false);
+  const toggleGuide = () => setGuideOpen((v) => !v);
   if (f.type === 'toggle') {
     const on = String(value) === 'true';
     return (
       <div className="oss-field oss-field--toggle">
-        <span id={`${id}-l`}>{f.label}</span>
+        <span id={`${id}-l`}>{f.label} <GuideButton f={f} open={guideOpen} onToggle={toggleGuide} /></span>
         <button type="button" role="switch" aria-checked={on} aria-labelledby={`${id}-l`} className={`oss-switch${on ? ' is-on' : ''}`}
           disabled={disabled} onClick={() => onChange(on ? 'false' : 'true')}><span /></button>
+        <GuideText f={f} open={guideOpen} />
         {f.hint && <small>{f.hint}</small>}
       </div>
     );
@@ -140,7 +153,8 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
     || f.hint;
   return (
     <div className={`oss-field${error ? ' is-bad' : ''}${f.type === 'textarea' ? ' oss-field--wide' : ''}`}>
-      <label htmlFor={id}>{f.label}</label>
+      <span className="oss-label-row"><label htmlFor={id}>{f.label}</label><GuideButton f={f} open={guideOpen} onToggle={toggleGuide} /></span>
+      <GuideText f={f} open={guideOpen} />
       {control}
       {note && <small>{note}</small>}
     </div>
@@ -183,11 +197,17 @@ function SectionTest({ tab, brand, form }) {
     );
   } else if (tab === 'tracking') {
     button = (
-      <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
-        const r = await facebookCapiService.runTest(brand.slug);
-        const got = r?.result?.events_received;
-        return { ok: !!got, message: got ? `Meta received the test event — the pixel and token work.` : (r?.error || r?.message || 'Meta didn’t confirm the test event — check the pixel ID and token.') };
-      })}>{busy ? 'Checking…' : 'Check Meta pixel'}</button>
+      <span className="oss-inline oss-inline--test">
+        <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
+          const r = await facebookCapiService.runTest(brand.slug);
+          const got = r?.result?.events_received;
+          return { ok: !!got, message: got ? `Meta received the test event — the pixel and token work.` : (r?.error || r?.message || 'Meta didn’t confirm the test event — check the pixel ID and token.') };
+        })}>{busy ? 'Checking…' : 'Check Meta pixel'}</button>
+        <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
+          const r = await brandSettingsService.testMetaAds(brand.id);
+          return { ok: !!r?.ok, message: r?.message || 'Meta didn’t answer — try again in a minute.' };
+        })}>{busy ? 'Checking…' : 'Check ad account access'}</button>
+      </span>
     );
   }
   if (!button) return null;
