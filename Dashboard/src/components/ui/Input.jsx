@@ -1,4 +1,5 @@
 import React, { useState, forwardRef } from 'react';
+import Select from './Select';
 
 const Input = forwardRef(({
   label,
@@ -102,23 +103,17 @@ const Input = forwardRef(({
         {label && <label className="input-label" htmlFor={fieldId}>{label}{required && <span className="input-required" aria-label="required">*</span>}</label>}
         <div className="input-wrapper">
           {leftIcon && <span className="input-left-icon" aria-hidden="true">{leftIcon}</span>}
-          <select
+          {/* The admin's own picker; onChange still receives { target: { name, value } }
+              so existing `(e) => set(e.target.value)` handlers keep working. */}
+          <Select
             ref={ref}
-            id={fieldId}
             value={value}
-            onChange={onChange}
+            onChange={(v) => onChange?.({ target: { name, value: v ?? '' }, currentTarget: { name, value: v ?? '' } })}
             required={required}
             disabled={disabled}
-            className={fieldCls}
-            name={name}
-            aria-label={ariaLabel || label}
-            aria-invalid={!!error}
-            aria-describedby={describedById}
-            aria-required={required}
-            {...props}
-          >
-            {options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+            error={!!error}
+            options={options || []}
+          />
           {rightIcon && <span className="input-right-icon" aria-hidden="true">{rightIcon}</span>}
         </div>
         {error && <div id={errorId} className="input-error-text" role="alert">{error}</div>}

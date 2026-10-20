@@ -723,12 +723,12 @@ const Editor = ({
       {mode === 'write' && (
         <div className="ed-head">
           <div className="ed-toolbar" role="toolbar" aria-label="Formatting" onKeyDown={onToolbarKey}>
-            <select className="ed-style" aria-label="Text style" value={textStyle} onChange={(e) => setTextStyle(e.target.value)}>
-              <option value="p">Paragraph</option>
-              <option value="h2">Heading</option>
-              <option value="h3">Small heading</option>
-              <option value="quote">Quote</option>
-            </select>
+            <span role="group" aria-label="Text style" className="ed-styles">
+              {[['p', 'Text', 'Paragraph'], ['h2', 'H2', 'Heading'], ['h3', 'H3', 'Small heading'], ['quote', '“ ”', 'Quote']].map(([v, short, long]) => (
+                <button key={v} type="button" className={`ed-tool ed-tool--text${textStyle === v ? ' is-on' : ''}`} aria-pressed={textStyle === v}
+                  aria-label={long} title={long} onMouseDown={(e) => e.preventDefault()} onClick={() => setTextStyle(v)}>{short}</button>
+              ))}
+            </span>
             <span className="ed-sep" aria-hidden="true" />
             {tools.map((t, i) => (t.sep ? <span key={`s${i}`} className="ed-sep" aria-hidden="true" /> : (
               <button

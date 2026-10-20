@@ -7,6 +7,7 @@ import { showSuccess } from '../../../utils/toastNotification';
 import ProductEditor from '../../../components/products/ProductEditor';
 import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
 import { Skeleton, SkeletonTableRows } from '../../../components/ui/Skeleton';
+import Dropdown from '../../../components/ui/Dropdown';
 
 /*
  * Products — stock first. Tiles filter the list (same thresholds as Home's
@@ -248,9 +249,7 @@ export default function ProductsPage() {
           <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
           <input type="search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search name, SKU or colour" aria-label="Search products" />
         </label>
-        <select className="pst-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
-          {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
+        <Dropdown value={sort} onChange={setSort} options={SORTS} className="pst-sort" />
       </div>
       {brands.length > 1 && (
         <div className="pst-chips" role="group" aria-label="Brand">

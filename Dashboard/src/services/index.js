@@ -64,6 +64,10 @@ api.interceptors.request.use(
     } else if (isWrite) {
       timeout = Math.max(timeout, API_TIMEOUTS.default);
     }
+    // A longer timeout passed on the call itself (e.g. the WhatsApp inbox
+    // long-poll asks for 40s) wins — it used to be overwritten here, so the
+    // poll was cut off mid-wait and reported "Request took too long".
+    if (config.timeout && config.timeout > timeout && config.timeout !== 15000) timeout = config.timeout;
     config.timeout = timeout;
 
     const token = localStorage.getItem("token");
@@ -157,6 +161,10 @@ adminApi.interceptors.request.use(
     } else if (isWrite) {
       timeout = Math.max(timeout, API_TIMEOUTS.default);
     }
+    // A longer timeout passed on the call itself (e.g. the WhatsApp inbox
+    // long-poll asks for 40s) wins — it used to be overwritten here, so the
+    // poll was cut off mid-wait and reported "Request took too long".
+    if (config.timeout && config.timeout > timeout && config.timeout !== 15000) timeout = config.timeout;
     config.timeout = timeout;
 
     const token = localStorage.getItem("token");

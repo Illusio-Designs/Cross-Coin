@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService } from '../../services';
-import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar } from '../../components/ui';
+import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar, Select } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
 
@@ -125,10 +125,10 @@ function FieldInput({ f, value, onChange, secretState, onSecret, error, disabled
     control = <input id={id} readOnly value={f.isSet ? f.value : 'Not set'} className="oss-masked" />;
   } else if (f.type === 'select') {
     control = (
-      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-        {!f.options.some(([o]) => o === value) && <option value="">{f.default ? `Default (${f.default})` : 'Not set'}</option>}
-        {f.options.map(([o, l]) => <option key={o} value={o}>{l}</option>)}
-      </select>
+      <Select value={value ?? ''} onChange={(v) => onChange(v ?? '')} disabled={disabled} placeholder={f.default ? `Default (${f.default})` : 'Not set'} options={[
+        ...(!f.options.some(([o]) => o === value) ? [{ value: '', label: f.default ? `Default (${f.default})` : 'Not set' }] : []),
+        ...f.options.map(([o, l]) => ({ value: o, label: l })),
+      ]} />
     );
   } else if (f.type === 'textarea') {
     control = <textarea id={id} rows={3} value={value ?? ''} onChange={(e) => onChange(e.target.value)} aria-invalid={!!error} disabled={disabled} />;

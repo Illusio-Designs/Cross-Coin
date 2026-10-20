@@ -7,6 +7,7 @@ import { policyService, websiteService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
+import { Select } from '../ui';
 import { Skeleton } from '../ui/Skeleton';
 import { WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPanel, WebField, ViewOnSite } from './webParts';
 import { useLoad, errText, fmtDay, siteUrl, siteBase, policyPath, brandLabel } from './webUtil';
@@ -155,10 +156,8 @@ export default function PoliciesTab({ brands, brand, brandId, q, registerAction 
           </WebField>
           {!form.id && (
             <WebField label="For" htmlFor="po-scope">
-              <select id="po-scope" className="web-input" value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })}>
-                <option value="global">All stores (shared)</option>
-                {brands.map((b) => <option key={b.id} value={String(b.id)}>{brandLabel(b)} only</option>)}
-              </select>
+              <Select value={form.scope} onChange={(v) => setForm({ ...form, scope: v })}
+                options={[{ value: 'global', label: 'All stores (shared)' }, ...brands.map((b) => ({ value: String(b.id), label: `${brandLabel(b)} only` }))]} />
             </WebField>
           )}
           {liveCheck && <p className={liveCheck.ok ? 'web-ok' : 'web-warn'} role="status">{liveCheck.text}.</p>}
