@@ -9,9 +9,9 @@ export const metadata = pageMeta({ title: 'Order Confirmed — Velmique Maison d
    - our own bag checkout → ?order=<order number> (Purchase already tracked
      when the order was placed);
    - the custom-checkout provider's redirect → ?oid=<platform order>&ost=<status>.
-     On SUCCESS, CheckoutReturn empties the bag (the Purchase is sent
-     server-side by the backend with our own order number); any other status
-     means the payment didn't complete.
+     On SUCCESS, CheckoutReturn empties the bag and confirms the order with
+     the backend, then tracks the Purchase under our own order number; any
+     other status means the payment didn't complete.
    A bare hit has no order to show, so it goes to the account's order list. */
 export default function OrderConfirmation({ searchParams }) {
   const ost = (searchParams?.ost || '').toString().toUpperCase();
