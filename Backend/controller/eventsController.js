@@ -4,9 +4,11 @@ const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
 
 // Funnel + engagement events we record. view/cart/checkout are the ordered
-// funnel stages; wishlist/search are extra intent signals. Purchase/delivered
+// funnel stages; wishlist/search are extra intent signals; view_cart is the
+// cart drawer opening (counted as a page); add_shipping_info /
+// add_payment_info are Place order pressed (COD or prepaid). Purchase/delivered
 // come from the orders table, not here.
-const ALLOWED = new Set(['view_item', 'add_to_cart', 'begin_checkout', 'add_to_wishlist', 'search']);
+const ALLOWED = new Set(['view_item', 'add_to_cart', 'begin_checkout', 'add_to_wishlist', 'search', 'view_cart', 'add_shipping_info', 'add_payment_info']);
 
 // Server visit ids are uuids; anything else in the body is ignored.
 const SESSION_RE = /^[A-Za-z0-9-]+$/;

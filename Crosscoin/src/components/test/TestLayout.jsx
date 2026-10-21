@@ -15,7 +15,7 @@ import { inr } from './data';
 import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
-import { fbqTrack } from '@/utils/fbqTrack';
+import { fbqTrack, trackCartPageView, trackShippingInfoFp } from '@/utils/fbqTrack';
 import { gtagTrack } from '@/utils/gtagTrack';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
@@ -680,11 +680,12 @@ export default function TestLayout({ children }) {
     try { fbqTrack('InitiateCheckout', metaCheckoutParams()); } catch (_) { /* never blocks */ }
   };
   // The cart drawer counts as a page: one page view per open, at a virtual
-  // /cart address (GA4 page_view; Meta PageView with marketing consent).
+  // /cart address (GA4 page_view; Meta PageView + CAPI copy with marketing
+  // consent; view_cart in our own funnel events).
   useEffect(() => {
     if (!drawer) return;
     try { if (window.gtag) window.gtag('event', 'page_view', { page_location: window.location.origin + '/cart', page_path: '/cart', page_title: 'Cart' }); } catch (_) { /* never throw */ }
-    try { if (getConsent().marketing && window.fbq) window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+    trackCartPageView();
   }, [drawer]);
   // GA4 view_cart — once per drawer open, when it shows the cart with items.
   useEffect(() => {
@@ -751,12 +752,14 @@ export default function TestLayout({ children }) {
       pin: (fd.get('pin') || '').toString().trim(),
     };
     // Shipping + payment step completed → GA4 add_shipping_info /
-    // add_payment_info and Meta AddPaymentInfo (pixel + CAPI relay).
+    // add_payment_info, Meta AddPaymentInfo (pixel + CAPI relay) and both steps
+    // in our own funnel events.
     try {
       const payType = pay === 'prepaid' ? 'prepaid' : 'cod';
       const items = ga4CartItems();
       const base = { currency: 'INR', value: total, items, ...(coupon?.code ? { coupon: coupon.code } : {}) };
       gtagTrack('add_shipping_info', { ...base, shipping_tier: payType === 'prepaid' ? 'Prepaid' : 'COD' });
+      trackShippingInfoFp(total);
       gtagTrack('add_payment_info', { ...base, payment_type: payType });
       fbqTrack('AddPaymentInfo', metaCheckoutParams());
     } catch (_) { /* analytics never blocks the order */ }

@@ -55,9 +55,8 @@ export default function Analytics() {
     if (cfg?.gaId && router.isReady) trackPageView(router.asPath);
   }, [cfg?.gaId, router.isReady, router.asPath]);
 
-  // Meta PageView on in-store navigation only. Runs for the landing path too
-  // so metaPageView records it (the pixel snippet already sent that PageView)
-  // and then sends one PageView per later path.
+  // Meta PageView for every page, first load included (browser + CAPI copy,
+  // one event id); the pixel snippet itself no longer sends one.
   useEffect(() => {
     if (consent.marketing && cfg?.fbId && router.isReady) metaPageView(router.asPath);
   }, [consent.marketing, cfg?.fbId, router.isReady, router.asPath]);
@@ -81,7 +80,6 @@ export default function Analytics() {
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               window._fbqId='${fbId}';fbq('init', '${fbId}');
-              fbq('track', 'PageView');
               window.dispatchEvent(new Event('brand-fbq-ready'));
             ` }}
           />

@@ -46,8 +46,8 @@ export default function Analytics() {
   useEffect(() => {
     if (!cfg || typeof window === 'undefined') return;
     if (cfg.gaId) trackPageView(pathname);
-    // Meta PageView on in-store navigation only: the pixel snippet sends the
-    // first-load PageView, and metaPageView skips that first path.
+    // Meta PageView for every page, first load included (browser + CAPI copy,
+    // one event id); the pixel snippet itself no longer sends one.
     if (consent.marketing && cfg.fbId) metaPageView(pathname);
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
@@ -70,7 +70,6 @@ export default function Analytics() {
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               window._fbqId='${fbId}';fbq('init', '${fbId}');
-              fbq('track', 'PageView');
               window.dispatchEvent(new Event('brand-fbq-ready'));
             ` }}
           />

@@ -139,9 +139,10 @@ export default function Document({ tracking }) {
                 (adsId ? `window.__gAdsId='${adsId}';` : "") +
                 (adsId && adsLabel ? `window.__gAdsPurchaseLabel='${adsLabel}';` : "") +
                 (adsId && adsLabels ? `window.__gAdsLabels=${JSON.stringify(adsLabels)};` : "") +
-                // Facebook pixel stub (queues) + PageView
+                // Facebook pixel stub (queues) + PageView, with an event id the
+                // Analytics component relays to the Conversions API (consent-gated)
                 (fbId ? "!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);" : "") +
-                (fbId ? `if(MK){window._fbqId='${fbId}';fbq('init','${fbId}');fbq('track','PageView');}` : "") +
+                (fbId ? `if(MK){window._fbqId='${fbId}';fbq('init','${fbId}');window.__fbPv0='PageView_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);fbq('track','PageView',{},{eventID:window.__fbPv0});}` : "") +
                 // Clarity stub (queues)
                 (clarityId ? "window.clarity=window.clarity||function(){(clarity.q=clarity.q||[]).push(arguments)};" : "") +
                 // Deferred loader for the heavy external scripts

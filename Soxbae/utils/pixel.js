@@ -13,7 +13,8 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
-const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist']);
+// PageView: every page (metaPageView) and the cart drawer (cartPageView).
+const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist', 'PageView']);
 
 // Meta event names map to Google ecommerce events. Purchase is sent separately
 // with the order number as transaction_id for reconciliation.
@@ -49,7 +50,7 @@ function ga4Items(params) {
 // sends it, else to the first-party copy of the visit id (utm_session_id, saved
 // by VisitTracker) — the api cookie is third-party on brand domains, so Safari
 // and other cookie-blocking browsers never send it. Brand via header.
-const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search' };
+const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search', ViewCart: 'view_cart', AddShippingInfo: 'add_shipping_info', AddPaymentInfo: 'add_payment_info' };
 function fpSessionId() {
   try { return localStorage.getItem('utm_session_id') || undefined; } catch (_) { return undefined; }
 }
@@ -223,6 +224,7 @@ export function addShippingInfo(params = {}) {
       items: ga4Items(params),
     });
   } catch (_) { /* never throw */ }
+  fpTrack('AddShippingInfo', params); // our own funnel events
 }
 
 // GA4 add_payment_info — fired when the payment method is chosen (cod/prepaid),
@@ -238,6 +240,7 @@ export function addPaymentInfo(params = {}) {
       items: ga4Items(params),
     });
   } catch (_) { /* never throw */ }
+  fpTrack('AddPaymentInfo', params); // our own funnel events
   // Meta AddPaymentInfo (pixel + CAPI, one event id) for COD and prepaid —
   // as Shopify's Meta app sends it when payment details are submitted.
   try {
@@ -248,22 +251,21 @@ export function addPaymentInfo(params = {}) {
   } catch (_) { /* never throw */ }
 }
 
-// Meta PageView on in-store navigation. The pixel snippet already sends the
-// PageView for the page it loads on (first load, or when consent is given), so
-// the first path seen here is skipped and each path is sent once.
+// Meta PageView for every page, first load included: browser pixel + its
+// Conversions API copy under one event id, like Shopify's Meta app. Held
+// until the pixel loads (which needs marketing consent); each path once.
 let lastMetaPath = null;
 export function metaPageView(path) {
-  if (typeof window === 'undefined' || !path) return;
-  if (lastMetaPath === null || !window.fbq) { lastMetaPath = path; return; }
-  if (path === lastMetaPath) return;
+  if (typeof window === 'undefined' || !path || path === lastMetaPath) return;
   lastMetaPath = path;
-  try { window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+  try { metaTrack('PageView', {}); } catch (_) { /* never throw */ }
 }
 
 // The cart drawer counts as a page: one page view each time it opens, at a
-// virtual /cart address (GA4 page_view, Meta PageView), even with an empty
-// bag. Meta only with marketing consent: fbq exists only once the pixel was
-// allowed to load.
+// virtual /cart address, even with an empty bag. GA4 page_view; Meta PageView
+// in the browser + its Conversions API copy (one event id, only with marketing
+// consent: held until the pixel loads, which needs consent); and a view_cart
+// row in our own funnel events.
 export function cartPageView() {
   if (typeof window === 'undefined') return;
   try {
@@ -273,7 +275,8 @@ export function cartPageView() {
       page_title: 'Cart',
     });
   } catch (_) { /* never throw */ }
-  try { if (window.fbq) window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+  try { metaTrack('PageView', {}); } catch (_) { /* never throw */ }
+  try { fpTrack('ViewCart', {}); } catch (_) { /* never throw */ }
 }
 
 // Search results shown for a query (Meta Search + CAPI, GA4 search with the

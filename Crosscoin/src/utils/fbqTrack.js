@@ -20,7 +20,9 @@ const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
 // server-side). Purchase is intentionally excluded — the server sends it
 // authoritatively at order time (deduped via `Purchase_<order>`), so relaying
 // it again would add a redundant server event.
-const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist']);
+// PageView: every page (first load via relayFirstPageView, navigation via
+// fbqTrack) and the cart drawer (trackCartPageView).
+const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist', 'PageView']);
 
 const BLOCKED_EVENTS = ['SubscribedButtonClick'];
 
@@ -52,7 +54,7 @@ function ga4Items(params) {
 // ad blockers). Keyed to the session_id cookie when the browser sends it, else
 // to the first-party copy of the visit id (utm_session_id, saved by
 // utmTracker) — cookie-blocking browsers never send the api cookie. Brand via header.
-const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search' };
+const FP_EVENT = { ViewContent: 'view_item', AddToCart: 'add_to_cart', InitiateCheckout: 'begin_checkout', AddToWishlist: 'add_to_wishlist', Search: 'search', ViewCart: 'view_cart', AddShippingInfo: 'add_shipping_info', AddPaymentInfo: 'add_payment_info' };
 function fpSessionId() {
   try { return localStorage.getItem('utm_session_id') || undefined; } catch (_) { return undefined; }
 }
@@ -189,4 +191,29 @@ export function fbqTrack(event, params = {}, options = {}) {
 
   if (RELAY_EVENTS.has(event)) relayToCapi(event, eventID, params);
   return true;
+}
+
+// The cart drawer counts as a page: Meta PageView in the browser + its
+// Conversions API copy (one event id; the relay needs marketing consent) and
+// a view_cart row in our own funnel events. The GA4 page_view is sent by the
+// caller with the virtual /cart address.
+export function trackCartPageView() {
+  if (typeof window === 'undefined') return;
+  try { fpTrack('ViewCart', {}); } catch (_) { /* never throw */ }
+  try { if (hasMarketingConsent()) fbqTrack('PageView', {}, { ga4: false }); } catch (_) { /* never throw */ }
+}
+
+// Shipping step done (Place order pressed): add_shipping_info in our own
+// funnel events. AddPaymentInfo reaches them through fbqTrack.
+export function trackShippingInfoFp(value) {
+  try { fpTrack('AddShippingInfo', { value }); } catch (_) { /* never throw */ }
+}
+
+// The first-load PageView is sent by the pixel snippet in _document with the
+// event id window.__fbPv0; send its Conversions API copy (consent-gated).
+export function relayFirstPageView() {
+  if (typeof window === 'undefined' || !window.__fbPv0) return;
+  const id = window.__fbPv0;
+  window.__fbPv0 = null; // once
+  try { relayToCapi('PageView', id, {}); } catch (_) { /* never throw */ }
 }
