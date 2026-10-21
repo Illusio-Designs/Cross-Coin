@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
   const ogImage = post.coverImage || `${SITE_URL}/knitwinklogo.webp`;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {

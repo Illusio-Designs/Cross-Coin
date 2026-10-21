@@ -76,6 +76,8 @@ module.exports.getSEOData = async (req, res) => {
         // whichever of the many success branches below fires also populates the
         // cache — no restructuring of the resolution logic, so behaviour is
         // identical. Only successful payloads are cached.
+        // Defaults are named after the store asking (not always Cross Coin).
+        const storeName = req.brand?.display_name || req.brand?.name || 'CrossCoin';
         const cacheKey = seoCacheKey(req.brandId, page_name);
         const cachedSeo = await cacheManager.get(cacheKey);
         if (cachedSeo) {
@@ -113,21 +115,19 @@ module.exports.getSEOData = async (req, res) => {
             return res.json({
                 success: true,
                 data: {
-                    meta_title: product ? `${product.name} - CrossCoin` : 'Product Details - CrossCoin',
-                    meta_description: product ? (product.description || `Buy ${product.name} online at CrossCoin`) : 'View product details and shop online',
+                    meta_title: product ? `${product.name} - ${storeName}` : `Product Details - ${storeName}`,
+                    meta_description: product ? (product.description || `Buy ${product.name} online at ${storeName}`) : 'View product details and shop online',
                     meta_keywords: product ? `${product.name}, buy online, crosscoin, shopping` : 'products, shopping, online store',
                     canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ProductDetails${product?.slug ? '?slug=' + product.slug : ''}`
                 }
             });
         }
         
-        // First try to find existing SEO data using exact page_name (with brand, then without)
+        // This store's row, else a shared (brand_id NULL) row. Never another
+        // store's row — that put Cross Coin's titles on the other stores.
         let seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: req.brandId || 1 } });
         if (!seoData) {
             seoData = await SeoMetadata.findOne({ where: { page_name, brand_id: null } });
-        }
-        if (!seoData) {
-            seoData = await SeoMetadata.findOne({ where: { page_name } });
         }
         logger.info('[SEO] SeoMetadata lookup result:', seoData);
         if (!seoData) {
@@ -163,8 +163,8 @@ module.exports.getSEOData = async (req, res) => {
                 return res.json({
                     success: true,
                     data: {
-                        meta_title: `${product.name} - CrossCoin`,
-                        meta_description: product.description || `Buy ${product.name} online at CrossCoin`,
+                        meta_title: `${product.name} - ${storeName}`,
+                        meta_description: product.description || `Buy ${product.name} online at ${storeName}`,
                         meta_keywords: `${product.name}, buy online, crosscoin, shopping`,
                         canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/ProductDetails?slug=${product.slug}`
                     }
@@ -189,8 +189,8 @@ module.exports.getSEOData = async (req, res) => {
                 return res.json({
                     success: true,
                     data: {
-                        meta_title: `${blogPost.title} - CrossCoin Journal`,
-                        meta_description: `Read "${blogPost.title}" on the CrossCoin journal.`,
+                        meta_title: `${blogPost.title} - ${storeName} Journal`,
+                        meta_description: `Read "${blogPost.title}" on the ${storeName} journal.`,
                         meta_keywords: `${blogPost.title}, blog, journal, crosscoin`,
                         canonical_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/journal/${blogPost.slug}`
                     }
@@ -198,13 +198,13 @@ module.exports.getSEOData = async (req, res) => {
             }
         }
         if (!seoData) {
-            // Return sensible defaults instead of 404
+            // Sensible defaults (named after this store) instead of 404
             return res.json({
                 success: true,
                 data: {
-                    meta_title: `${page_name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - CrossCoin`,
-                    meta_description: 'Shop premium quality socks online at CrossCoin. Free shipping on prepaid orders.',
-                    meta_keywords: 'crosscoin, socks, buy online, premium socks',
+                    meta_title: `${page_name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - ${storeName}`,
+                    meta_description: `Shop ${storeName} online. Free shipping on prepaid orders.`,
+                    meta_keywords: `${storeName.toLowerCase()}, buy online`,
                 }
             });
         }

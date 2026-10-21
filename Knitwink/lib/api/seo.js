@@ -79,8 +79,10 @@ export async function buildMetadata(pageName, fallback = {}) {
 
   const metadata = {};
 
-  const title = firstNonEmpty(seo.meta_title, fallback.title);
-  if (title !== undefined) metadata.title = title;
+  // A title from the SEO page is written in full (store name included), so it
+  // skips the layout's "%s | Knitwink" template; the page's own fallback uses it.
+  if (firstNonEmpty(seo.meta_title) !== undefined) metadata.title = { absolute: seo.meta_title };
+  else if (fallback.title !== undefined) metadata.title = fallback.title;
 
   const description = firstNonEmpty(seo.meta_description, fallback.description);
   if (description !== undefined) metadata.description = description;

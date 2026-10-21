@@ -6,7 +6,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
 
 export async function generateMetadata() {
   return buildMetadata('contact', {
-    title: `Contact — ${SITE_NAME}`,
+    title: { absolute: `Contact — ${SITE_NAME}` },
     description: `Get in touch with ${SITE_NAME}. We answer every email within one business day.`,
     alternates: { canonical: `${SITE_URL}/contact` },
     openGraph: {

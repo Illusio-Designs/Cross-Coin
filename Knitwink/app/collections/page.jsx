@@ -6,7 +6,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
 
 export async function generateMetadata() {
   return buildMetadata('categories', {
-    title: `Collections — ${SITE_NAME}`,
+    title: { absolute: `Collections — ${SITE_NAME}` },
     description: `Browse every ${SITE_NAME} collection — knitwear made from natural fibres, designed to last.`,
     alternates: { canonical: `${SITE_URL}/collections` },
     openGraph: {

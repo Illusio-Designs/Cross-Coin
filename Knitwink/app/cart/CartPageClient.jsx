@@ -17,7 +17,7 @@ const noopSubscribe = () => () => {};
 
 function CartPageSkeleton() {
   return (
-    <section className="bg-white px-6 py-12 md:px-10 lg:px-16">
+    <section className="bg-white px-6 pt-28 pb-12 md:px-10 lg:px-16">
       <div className="mx-auto max-w-site">
         <h1 className="mb-8 font-display text-3xl font-normal text-brand-black">Your Cart</h1>
         <SkeletonRegion label="Loading your cart…" className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_380px]">
@@ -86,7 +86,7 @@ export function CartPageClient({ upsellProducts }) {
   }
 
   return (
-    <section className="bg-white px-6 py-12 md:px-10 lg:px-16">
+    <section className="bg-white px-6 pt-28 pb-12 md:px-10 lg:px-16">
       <div className="mx-auto max-w-site">
         <h1 className="mb-8 font-display text-3xl font-normal text-brand-black">Your Cart</h1>
 
