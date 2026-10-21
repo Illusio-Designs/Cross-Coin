@@ -357,8 +357,6 @@ async function dependencies() {
     `SELECT DISTINCT brand_id FROM orders WHERE user_id IS NOT NULL AND created_at >= :from AND status NOT IN (:cancelled)`,
     { from: new Date(now.getTime() - 90 * DAY_MS), cancelled: CANCELLED });
   const winBrands = new Set(winRows.map((r) => Number(r.brand_id)));
-  // Win-back code of each store (to know whether a code is "taken" by its home store).
-  const winCodeOf = new Map(refs.filter((r) => r.key === 'win_back').map((r) => [r.brandId, r.code]));
 
   const warnings = [];
   const push = (ref, brandId, problem, message, fix, c) => warnings.push({
@@ -369,7 +367,12 @@ async function dependencies() {
 
   for (const ref of refs) {
     if (ref.key === 'win_back' && !winBrands.has(ref.brandId)) continue;
-    const c = pick(ref.code, ref.key === 'win_back' ? ref.brandId : null);
+    let c = pick(ref.code, null);
+    if (ref.key === 'win_back') {
+      // Same rule as the win-back cron: a coupon with this code that works on this store.
+      const found = await couponForStore(ref.code, ref.brandId, now);
+      if (found.coupon) c = found.coupon;
+    }
     const B = ref.brandId ? bName(ref.brandId) : '';
     const lead = ref.key === 'win_back' ? `Win-back is skipping ${B}` : ref.key === 'abandoned_cart' ? 'Abandoned-cart messages' : 'Website pop-up';
     const subject = ref.key === 'win_back' ? `its offer code ${ref.code}` : ref.key === 'abandoned_cart' ? `the code they send, ${ref.code},` : `the code it gives visitors, ${ref.code},`;
@@ -378,7 +381,7 @@ async function dependencies() {
 
     if (!c) {
       push(ref, ref.brandId, 'missing', say("doesn't exist yet"),
-        { action: 'create', label: `Create ${ref.code}`, code: ref.code, brandIds: ref.brandId ? [ref.brandId] : [] }, null);
+        { action: 'create', label: `Create ${ref.code}`, code: ref.code, brandIds: [] }, null);
       continue;
     }
     const st = statusOf(c, now);
@@ -391,19 +394,12 @@ async function dependencies() {
     }
 
     if (ref.key === 'win_back') {
-      const home = Number(c.brand_id);
-      const wrongHome = home !== ref.brandId;
-      if (wrongHome && brands.get(home)?.active && winCodeOf.get(home) === ref.code) {
-        push(ref, ref.brandId, 'wrong_brand',
-          `${lead}: its offer code ${ref.code} is ${bName(home)}'s win-back code, and each store needs its own. Set a code for ${B} in Brand settings.`,
-          { action: 'settings', label: 'Open Brand settings' }, c);
-        continue;
-      }
+      // One win-back code for every store: it only has to work on this store.
       const notHere = allowed && !allowed.includes(ref.brandId);
-      if (st === 'off' || wrongHome || notHere) {
+      if (st === 'off' || notHere) {
         push(ref, ref.brandId, st === 'off' ? 'off' : 'wrong_brand',
-          say(st === 'off' ? 'is switched off' : wrongHome ? `is set up for ${bName(home)}` : `doesn't work on ${B}`),
-          { action: 'switch_on', label: st === 'off' ? 'Switch it back on' : `Use it for ${B}`, couponId: c.id, brandId: ref.brandId, owner: wrongHome }, c);
+          say(st === 'off' ? 'is switched off' : `doesn't work on ${B}`),
+          { action: 'switch_on', label: st === 'off' ? 'Switch it back on' : 'Let it work on every store', couponId: c.id, allBrands: !!notHere }, c);
         continue;
       }
     } else {
@@ -422,6 +418,23 @@ async function dependencies() {
     }
   }
   return { warnings, checkedAt: now };
+}
+
+// The coupon called `code` that customers of `brandId` can actually use — the
+// same rule as checkout: its store list (coupon_brands) is empty (every store)
+// or includes the store. Prefers a live one. Returns { coupon, status } where
+// status is live | off | scheduled | ended | not_here | missing.
+async function couponForStore(code, brandId, now = new Date()) {
+  const { Coupon } = require('../model/couponModel.js');
+  await ensureSchema();
+  const rows = await Coupon.findAll({ where: { code } });
+  if (!rows.length) return { coupon: null, status: 'missing' };
+  const allowed = await brandIdsFor(rows.map((c) => c.id));
+  const usable = rows.filter((c) => { const a = allowed.get(c.id); return !a || a.includes(Number(brandId)); });
+  if (!usable.length) return { coupon: rows[0], status: 'not_here' };
+  const rank = { live: 0, scheduled: 1, off: 2, ended: 3 };
+  usable.sort((a, b) => (rank[statusOf(a, now)] ?? 9) - (rank[statusOf(b, now)] ?? 9));
+  return { coupon: usable[0], status: statusOf(usable[0], now) };
 }
 
 // One-click fix from the warnings banner: switch the coupon on and, when asked,
@@ -565,6 +578,7 @@ module.exports = {
   summary,
   dependencies,
   switchOn,
+  couponForStore,
   normaliseInput,
   setCouponBrands,
   brandIdsFor,

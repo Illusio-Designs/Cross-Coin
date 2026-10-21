@@ -565,7 +565,6 @@ function clearAllCaches() {
 // ─── How each store signs its messages ───────────────────────────────────────
 async function storesIdentity() {
   const Brand = require('../model/brandModel.js');
-  const { Coupon } = require('../model/couponModel.js');
   const { statusOf } = require('./couponAdminService.js');
   const brands = await Brand.findAll({ order: [['id', 'ASC']] });
   const ids = brands.map((b) => b.id);
@@ -578,14 +577,6 @@ async function storesIdentity() {
   const winCode = await require('./cartRecoveryService.js').getWinbackCode();
   const codes = new Map();
   for (const b of brands) codes.set(b.id, winCode);
-  const coupons = codes.size ? await Coupon.findAll({ where: { code: [...new Set(codes.values())] } }) : [];
-  const byCode = new Map();
-  for (const c of coupons) {
-    const k = str(c.code).toUpperCase();
-    if (!byCode.has(k)) byCode.set(k, []);
-    byCode.get(k).push(c);
-  }
-  const nameOf = new Map(brands.map((b) => [Number(b.id), b.display_name || b.name]));
   const now = new Date();
   const fmtDay = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 
@@ -598,14 +589,14 @@ async function storesIdentity() {
     try { domain = await ws().getBrandDomain(b.id); } catch (_) { domain = str(b.domain); }
 
     const code = codes.get(b.id);
-    const rows = byCode.get(code) || [];
-    // Like the win-back cron: the coupon must be this store's own, on and in date.
-    const mine = rows.find((c) => Number(c.brand_id) === Number(b.id)) || null;
+    // Same rule as the win-back cron and checkout: a coupon with this code
+    // that works on this store (every-store coupons included).
+    const found = await require('./couponAdminService.js').couponForStore(code, b.id, now);
+    const mine = found.status === 'missing' || found.status === 'not_here' ? null : found.coupon;
     let status; let note;
     if (!mine) {
-      const other = rows[0];
-      status = other ? 'other_store' : 'missing';
-      note = other ? `${code} belongs to ${nameOf.get(Number(other.brand_id)) || 'another store'}, so win-back skips this store` : `No coupon called ${code} yet, so win-back skips this store`;
+      status = found.status === 'not_here' ? 'other_store' : 'missing';
+      note = found.status === 'not_here' ? `${code} isn't allowed on this store, so win-back skips it — open the coupon and add this store (or make it work on every store)` : `No coupon called ${code} yet, so win-back skips this store`;
     } else {
       status = statusOf(mine, now);
       note = status === 'live' ? null
