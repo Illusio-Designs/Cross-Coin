@@ -691,7 +691,15 @@ exports.getRevenueProfit = async (req, res) => {
     // the order is PLACED (not when it is delivered), so revenue lines up with
     // the period's shipping, fees and ad spend. Cancelled and RTO orders are
     // not sales; customer returns come off through their refunds.
-    const SOLD = `${STAGE_SQL} NOT IN ('cancelled','rto')`;
+    // ?basis=delivered switches to cash-in-hand: only orders delivered (or
+    // delivered then returned) count, COGS on the units delivered.
+    const basis = req.query.basis === 'delivered' ? 'delivered' : 'placed';
+    const SOLD = basis === 'delivered'
+      ? `${STAGE_SQL} IN ('delivered','returned')`
+      : `${STAGE_SQL} NOT IN ('cancelled','rto')`;
+    const KEPT = basis === 'delivered'
+      ? `${STAGE_SQL} = 'delivered'`
+      : `${STAGE_SQL} NOT IN ('cancelled','rto','returned')`;
     const ord = await sequelize.query(
       `SELECT o.brand_id,
               SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered,
@@ -720,7 +728,7 @@ exports.getRevenueProfit = async (req, res) => {
          JOIN order_items oi ON oi.order_id = o.id
          LEFT JOIN product_variations pv ON pv.id = oi.variation_id
          ${JOINS}
-        WHERE o.created_at BETWEEN :start AND :end AND ${STAGE_SQL} NOT IN ('cancelled','rto','returned')
+        WHERE o.created_at BETWEEN :start AND :end AND ${KEPT}
         GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -837,6 +845,7 @@ exports.getRevenueProfit = async (req, res) => {
     res.json({
       success: true,
       range: { startDate: ymd(start), endDate: ymd(end) },
+      basis,
       // Cost assumptions the UI applies live (editable there):
       // shipping per shipped order, return shipping per RTO order, payment
       // gateway % on prepaid revenue, COD handling % on COD revenue.

@@ -85,6 +85,12 @@ export default function RevenueProfitReport() {
   });
   useEffect(() => { try { localStorage.setItem('rp_knobs', JSON.stringify(knobs)); } catch { /* private mode */ } }, [knobs]);
   useEffect(() => { try { localStorage.setItem('rp_cpp', JSON.stringify(cppByBrand)); } catch { /* private mode */ } }, [cppByBrand]);
+  // Revenue basis: 'placed' (Shopify — sale counts when ordered) or
+  // 'delivered' (cash in hand — only orders that reached the customer).
+  const [basis, setBasis] = useState(() => {
+    try { return localStorage.getItem('rp_basis') === 'delivered' ? 'delivered' : 'placed'; } catch { return 'placed'; }
+  });
+  useEffect(() => { try { localStorage.setItem('rp_basis', basis); } catch { /* private mode */ } }, [basis]);
 
   // "Missing cost price" finder (loaded on demand).
   const [missing, setMissing] = useState(null);
@@ -104,17 +110,17 @@ export default function RevenueProfitReport() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const res = await trafficReportService.getRevenueProfit(from, to);
+      const res = await trafficReportService.getRevenueProfit(from, to, basis);
       if (res?.success) {
         setData(res);
       } else setError(res?.message || 'Failed to load report');
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Failed to load report');
     } finally { setLoading(false); }
-  }, [from, to]);
+  }, [from, to, basis]);
 
-  // Reload as soon as a complete range is picked — no Apply button.
-  useEffect(() => { if (from && to) load(); /* eslint-disable-next-line */ }, [from, to]);
+  // Reload as soon as a complete range is picked (or the basis changes) — no Apply button.
+  useEffect(() => { if (from && to) load(); /* eslint-disable-next-line */ }, [from, to, basis]);
 
   const k = (name) => Number(knobs[name]) || 0;
   const cppPerUnit = (brandId) => Number(cppByBrand[brandId] ?? '') || 0;
@@ -257,9 +263,18 @@ export default function RevenueProfitReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders placed in this period (as Shopify does), less cancelled and RTO orders and refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser."
+        subtitle={`Orders received and units ordered count every order placed in this period. ${basis === 'delivered'
+          ? 'Revenue counts only the orders from this period that were delivered (cash in hand), minus refunds, GST taken out.'
+          : 'Revenue counts orders placed in this period (as Shopify does), less cancelled and RTO orders and refunds, GST taken out.'} Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser.`}
         actions={
           <>
+            <div style={{ minWidth: 190 }}>
+              <Dropdown value={basis} onChange={(v) => setBasis(String(v) === 'delivered' ? 'delivered' : 'placed')}
+                options={[
+                  { value: 'placed', label: 'Basis: orders placed' },
+                  { value: 'delivered', label: 'Basis: delivered only' },
+                ]} />
+            </div>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
               onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
             <Button variant="secondary" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
@@ -297,7 +312,7 @@ export default function RevenueProfitReport() {
         <StatGrid>
           <StatTile label="Orders received" value={num(placed?.placedOrders)} sub={`${inr(placed?.placedValue)} ordered`} />
           <StatTile label="Units ordered" value={num(placed?.placedUnits)} sub={placed?.placedOrders ? `${(placed.placedUnits / placed.placedOrders).toFixed(1)} per order` : undefined} />
-          <StatTile label="Revenue (after refunds)" value={inr(totals.revenue)} />
+          <StatTile label="Revenue (after refunds)" value={inr(totals.revenue)} sub={basis === 'delivered' ? 'delivered orders only' : 'orders placed, less RTO'} />
           <StatTile label="Revenue ex-GST" value={inr(totals.revenueExGst)} />
           <StatTile label="COGS (cost price)" value={inr(totals.cogs)} />
           <StatTile label="Shipping + fees" value={inr(totals.shipTotal + totals.feeTotal + totals.svcTotal)} />
