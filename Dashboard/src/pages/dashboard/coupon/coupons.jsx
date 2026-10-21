@@ -487,7 +487,7 @@ function CouponPanel({ open, initial, brands, onClose, onSaved }) {
                 );
               })}
             </div>
-            <span className="cpn-hint">A store’s win-back message only uses a code made for that store (pick just that store).</span>
+            <span className="cpn-hint">The win-back code (CART10 by default) is one code for all stores — keep it on “Every store” so every store’s customers get it.</span>
           </fieldset>
 
           <div className="cpn-field">
