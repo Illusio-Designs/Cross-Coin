@@ -76,11 +76,37 @@ const strictLimiter = rateLimit({
 });
 
 // Medium: order creation, address creation (30 req / 15 min)
+// Who signed this request, from its Bearer token (signature checked, so it
+// can't be faked). Only used to pick a rate-limit budget — the routes still
+// run their own auth checks. Cached on the request.
+const jwt = require('jsonwebtoken');
+const signedUser = (req) => {
+  if (req._rlUser !== undefined) return req._rlUser;
+  let user = null;
+  const h = req.headers.authorization || '';
+  if (h.startsWith('Bearer ') && process.env.JWT_SECRET) {
+    try {
+      const d = jwt.verify(h.slice(7), process.env.JWT_SECRET);
+      if (d && d.id) user = d;
+    } catch (_) { user = null; }
+  }
+  req._rlUser = user;
+  return user;
+};
+const isStaffRequest = (req) => {
+  const u = signedUser(req);
+  return !!u && require('./middleware/authMiddleware').STAFF_ROLES.includes(u.role);
+};
+
+// Orders: guards checkout / tracking against abuse. Staff working the Orders
+// pages, and signed-in customers reading their own orders, aren't limited
+// here — a whole office shares one IP and used to hit 30 in minutes.
 const mediumLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => isStaffRequest(req) || ((req.method || 'GET').toUpperCase() === 'GET' && !!signedUser(req)),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
@@ -144,7 +170,20 @@ const generalLimiter = rateLimit({
   max: 120,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req) || isEdgeVisitPing(req),
+  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req) || isEdgeVisitPing(req) || isStaffRequest(req),
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
+});
+
+// Staff (admin dashboard): their own budget per person instead of sharing the
+// office IP's 120/min — the dashboard loads many panels at once. Still a cap,
+// so a runaway loop can't flood the server.
+const staffLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 1500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `staff:${signedUser(req).id}`,
+  skip: (req) => !isStaffRequest(req) || isNotificationPoll(req),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
@@ -172,6 +211,7 @@ app.use('/api/shipping-addresses', mediumLimiter);
 
 // General
 app.use('/api/', generalLimiter);
+app.use('/api/', staffLimiter);
 
 // Body parsing middleware. Image files never travel as JSON (they go through
 // multipart upload endpoints), so 1mb is normally plenty — but blog posts save
