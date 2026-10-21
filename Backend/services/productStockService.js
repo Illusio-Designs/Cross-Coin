@@ -129,7 +129,8 @@ const SORTS = {
 };
 
 function baseSql({ brandId, search }, R) {
-  const where = [];
+  // Archived = deleted but kept for past orders: never in the stock list.
+  const where = [`(p.status IS NULL OR p.status <> 'archived')`];
   if (brandId) where.push(`EXISTS (SELECT 1 FROM product_brands pbx WHERE pbx.product_id = p.id AND pbx.brand_id = :brandId)`);
   if (search) {
     R.q = `%${escLike(search.toLowerCase())}%`;
