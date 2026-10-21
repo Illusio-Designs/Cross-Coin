@@ -20,7 +20,9 @@ const DISALLOW = [
 ];
 // AI crawlers we explicitly allow. Each needs its own rule repeating the
 // private-path disallows, because a crawler obeys only its most-specific group.
-const AI_BOTS = ['GPTBot', 'PerplexityBot', 'ClaudeBot', 'Google-Extended'];
+// OpenAI uses three: GPTBot (training), OAI-SearchBot (ChatGPT search) and
+// ChatGPT-User (pages a ChatGPT user asks it to open).
+const AI_BOTS = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'ClaudeBot', 'Google-Extended'];
 
 export default function robots() {
   return {
@@ -34,6 +36,6 @@ export default function robots() {
       ...AI_BOTS.map((userAgent) => ({ userAgent, allow: '/', disallow: DISALLOW })),
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    host: SITE_URL.replace(/^https?:\/\//, '').replace(/\/.*$/, ''), // Host: takes the domain only
   };
 }

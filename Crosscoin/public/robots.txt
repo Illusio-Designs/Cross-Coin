@@ -67,6 +67,38 @@ Disallow: /auth/
 Disallow: /api/
 Disallow: /test
 
+# OpenAI ChatGPT search
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /test
+
+# OpenAI ChatGPT (pages a user asks it to open)
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /account
+Disallow: /cart
+Disallow: /checkout
+Disallow: /OrderTracking
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /test
+
 # Perplexity AI
 User-agent: PerplexityBot
 Allow: /
