@@ -15,6 +15,7 @@
  *   - Coupons:         POST /api/coupons/validate
  */
 import { API_URL, BRAND, authHeaders, getToken, setToken } from './client';
+import { trackingIds } from '@/utils/pixel';
 
 // ── Order history ──────────────────────────────────────────────────────────
 export async function getUserOrders(params = {}) {
@@ -45,8 +46,8 @@ function readCookie(name) {
 // Attach first-party tracking ids to an order/checkout payload so the backend
 // can (a) link the order to the visit's traffic source via utm_session_id and
 // (b) improve Meta match quality with the Facebook browser id (_fbp) and click
-// id (_fbc). _fbc is reconstructed from a stored fbclid when the cookie is
-// absent. All best-effort — never blocks checkout.
+// id (_fbc), plus the GA4 client id (ga_client_id). _fbc is reconstructed from
+// a stored fbclid when the cookie is absent. All best-effort — never blocks checkout.
 function withTracking(data) {
   const out = { ...(data || {}) };
   try {
@@ -61,6 +62,9 @@ function withTracking(data) {
         if (clid) fbc = 'fb.1.' + Date.now() + '.' + clid;
       }
       if (fbc && !out.fbc) out.fbc = fbc;
+      // Also the cookie ids the pixel helper reads (adds the GA4 client id).
+      const ids = trackingIds();
+      for (const k of Object.keys(ids)) if (ids[k] && !out[k]) out[k] = ids[k];
     }
   } catch { /* ignore */ }
   return out;

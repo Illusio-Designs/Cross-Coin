@@ -10,6 +10,7 @@ import {
   toastAddedToWishlist,
   toastRemovedFromWishlist,
 } from '@/lib/toast';
+import { trackWishlist } from '@/utils/pixel';
 
 /* Wishlist store — backend-synced.
 
@@ -88,6 +89,7 @@ export const useWishlistStore = create()(
         try {
           await apiAddToWishlist(id);
           toastAddedToWishlist(product.name);
+          trackWishlist({ id, name: product.name, price: product.price });
         } catch {
           // Roll back on failure.
           set({ items: prev });

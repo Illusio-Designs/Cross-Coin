@@ -1,5 +1,7 @@
 /* Gripzus — orders API. Same endpoints as Knitwink, gripzus brand. */
 
+import { trackingIds } from '../utils/pixel';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'gripzus';
 
@@ -52,11 +54,23 @@ export const getOrders = getUserOrders;
 
 /* ── Order creation ──────────────────────────────────────────────── */
 
+// Add the browser tracking ids (Meta _fbp/_fbc, GA4 client id) to an
+// order/checkout payload so the server-side Purchase matches this shopper.
+// Best-effort — never blocks checkout.
+function withTracking(data) {
+  const out = { ...(data || {}) };
+  try {
+    const ids = trackingIds();
+    for (const k of Object.keys(ids)) if (ids[k] && !out[k]) out[k] = ids[k];
+  } catch { /* ignore */ }
+  return out;
+}
+
 export async function createOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: headers(getToken()),
-    body: JSON.stringify(orderData),
+    body: JSON.stringify(withTracking(orderData)),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
@@ -67,7 +81,7 @@ export async function createGuestOrder(orderData) {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify(orderData),
+    body: JSON.stringify(withTracking(orderData)),
   });
   const data = await res.json();
   // Backend auto-creates an account for the guest — capture the token.
@@ -86,7 +100,7 @@ export async function initiateCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/initiate`, {
     method: 'POST',
     headers: headers(getToken()),
-    body: JSON.stringify(checkoutData),
+    body: JSON.stringify(withTracking(checkoutData)),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Checkout failed');
@@ -97,7 +111,7 @@ export async function initiateGuestCheckout(checkoutData) {
   const res = await fetch(`${API_URL}/api/checkout/guest/initiate`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify(checkoutData),
+    body: JSON.stringify(withTracking(checkoutData)),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Checkout failed');

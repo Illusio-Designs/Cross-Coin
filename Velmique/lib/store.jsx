@@ -10,7 +10,7 @@ import {
   toastAddedToCart, toastRemovedFromCart, toastCartCleared,
   toastAddedToWishlist, toastRemovedFromWishlist,
 } from '@/lib/toast';
-import { fbTrack } from '@/utils/pixel';
+import { fbTrack, trackWishlist } from '@/utils/pixel';
 
 /**
  * Velmique global store.
@@ -154,6 +154,7 @@ export function StoreProvider({ children }) {
       } else {
         await apiAddToWishlist(id);
         toastAddedToWishlist(item.name);
+        trackWishlist({ id, name: item.name, price: item.price });
       }
     } catch (err) {
       setWishlist(previous);

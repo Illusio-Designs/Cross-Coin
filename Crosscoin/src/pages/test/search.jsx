@@ -1,10 +1,11 @@
 import Head from 'next/head';
 import { R } from '@/components/test/routes';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, SkeletonCards, SkBusy, Sk } from '../../components/test/ui';
 import { fetchSearch } from '../../components/test/real';
+import { fbqTrack } from '@/utils/fbqTrack';
 
 export default function TestSearch() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function TestSearch() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ran, setRan] = useState(false);
+  const lastTracked = useRef('');
 
   const q = typeof router.query.q === 'string' ? router.query.q : '';
 
@@ -19,6 +21,13 @@ export default function TestSearch() {
   useEffect(() => {
     setTerm(q);
     if (!q.trim()) { setResults([]); setRan(false); return; }
+    // Meta Search (pixel + CAPI) + GA4 `search` — once per settled ?q= (the URL
+    // only changes on submit, never per keystroke).
+    const termKey = q.trim();
+    if (lastTracked.current !== termKey) {
+      lastTracked.current = termKey;
+      try { fbqTrack('Search', { search_string: termKey, content_type: 'product' }); } catch (_) { /* never throw */ }
+    }
     let off = false;
     setLoading(true);
     fetchSearch(q)

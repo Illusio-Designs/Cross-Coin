@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { addToWishlist, removeFromWishlist } from '@/lib/api/wishlist';
 import { toast } from '@/lib/toast';
+import { trackWishlist } from '@/utils/pixel';
 
 // Heart that FILLS red when active (not just an outline).
 function HeartIcon({ filled }) {
@@ -63,6 +64,7 @@ export default function WishlistButton({ productId, product, className = 'pcard-
     if (next) {
       write([...new Set([...keys, key])], [...items.filter((i) => String(i.key) !== key), snapshot(key, product, productId)]);
       toast.wishlist('Added to wishlist');
+      trackWishlist({ id: productId, name: product?.name, price: product?.price });
       try { await addToWishlist(productId); } catch {}
     } else {
       write(keys.filter((x) => x !== key), items.filter((i) => String(i.key) !== key));

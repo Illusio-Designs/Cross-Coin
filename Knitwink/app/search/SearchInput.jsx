@@ -3,11 +3,13 @@
 import { useRef, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X } from 'lucide-react'
+import { trackSearch } from '@/utils/pixel'
 
 export function SearchInput({ initialQuery }) {
   const router = useRouter()
   const [value, setValue] = useState(initialQuery || '')
   const debounceRef = useRef(null)
+  const lastTracked = useRef('')
 
   useEffect(() => {
     clearTimeout(debounceRef.current)
@@ -18,6 +20,17 @@ export function SearchInput({ initialQuery }) {
     }, 350)
     return () => clearTimeout(debounceRef.current)
   }, [value, router])
+
+  // Search event once the shopper stops typing (not per keystroke), once per term.
+  useEffect(() => {
+    const q = value.trim()
+    if (!q || q === lastTracked.current) return undefined
+    const t = setTimeout(() => {
+      lastTracked.current = q
+      trackSearch(q)
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [value])
 
   const handleClear = () => {
     setValue('')

@@ -16,6 +16,7 @@ import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
 import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { fbqTrack } from '@/utils/fbqTrack';
+import { gtagTrack } from '@/utils/gtagTrack';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
 
@@ -528,13 +529,22 @@ export default function TestLayout({ children }) {
   const promoRef = useRef(null);
 
   const openDrawer = () => { setStep('cart'); setDrawer(true); };
+  const buyNowIC = useRef(false);
+  const [buyNowTick, setBuyNowTick] = useState(0);
+  const viewCartSent = useRef(false);
 
   // Inject the Mint design system CSS only while a /test page is mounted.
   useEffect(() => {
     const onToast = (e) => { setToastMsg(e.detail || ''); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
     // "Buy it now" (PDP) opens the real drawer straight to checkout; the plain
     // add-to-cart / cart icon opens it at the cart step.
-    const onOpen = (e) => { setStep(e?.detail === 'checkout' ? 'checkout' : 'cart'); setDrawer(true); };
+    const onOpen = (e) => {
+      const toCheckout = e?.detail === 'checkout';
+      // Buy-now skips the cart's "Proceed to checkout" button, so flag it and
+      // fire the same InitiateCheckout once the drawer shows the checkout step.
+      if (toCheckout) { buyNowIC.current = true; setBuyNowTick((n) => n + 1); }
+      setStep(toCheckout ? 'checkout' : 'cart'); setDrawer(true);
+    };
     window.addEventListener('cc-test-toast', onToast);
     window.addEventListener('cc-test-opencart', onOpen);
     return () => {
@@ -654,6 +664,35 @@ export default function TestLayout({ children }) {
   const mrp = cart.reduce((s, i) => s + (i.was > i.unit ? i.was : i.unit) * i.qty, 0);
   const youSave = Math.max(0, mrp - sub) + disc + prepaidDisc;
 
+  // ── Funnel analytics (parity with Shopify's Meta & Google apps) ──────────
+  // Every call is wrapped: analytics must never throw into the shopping flow.
+  const metaCheckoutParams = () => ({
+    content_ids: cart.map((i) => String(i.id)), content_type: 'product',
+    contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })),
+    num_items: count, value: total, currency: 'INR',
+  });
+  const ga4CartItems = () => cart.map((i) => ({
+    item_id: String(i.id), ...(i.name ? { item_name: String(i.name) } : {}),
+    ...(i.color ? { item_variant: String(i.color) } : {}),
+    price: Number(i.unit) || 0, quantity: i.qty,
+  }));
+  const trackInitiateCheckout = () => {
+    try { fbqTrack('InitiateCheckout', metaCheckoutParams()); } catch (_) { /* never blocks */ }
+  };
+  // GA4 view_cart — once per drawer open, when it shows the cart with items.
+  useEffect(() => {
+    if (!drawer) { viewCartSent.current = false; return; }
+    if (viewCartSent.current || step !== 'cart' || !cart.length) return;
+    viewCartSent.current = true;
+    try { gtagTrack('view_cart', { currency: 'INR', value: Math.max(0, sub - disc), items: ga4CartItems() }); } catch (_) { /* never throw */ }
+  }, [drawer, step, cart.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Buy-now → checkout: the same InitiateCheckout "Proceed to checkout" fires, exactly once.
+  useEffect(() => {
+    if (!buyNowIC.current || !drawer || step !== 'checkout' || !cart.length) return;
+    buyNowIC.current = false;
+    trackInitiateCheckout();
+  }, [buyNowTick, drawer, step, cart.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
     setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
@@ -704,6 +743,16 @@ export default function TestLayout({ children }) {
       state: (fd.get('state') || '').toString().trim(),
       pin: (fd.get('pin') || '').toString().trim(),
     };
+    // Shipping + payment step completed → GA4 add_shipping_info /
+    // add_payment_info and Meta AddPaymentInfo (pixel + CAPI relay).
+    try {
+      const payType = pay === 'prepaid' ? 'prepaid' : 'cod';
+      const items = ga4CartItems();
+      const base = { currency: 'INR', value: total, items, ...(coupon?.code ? { coupon: coupon.code } : {}) };
+      gtagTrack('add_shipping_info', { ...base, shipping_tier: payType === 'prepaid' ? 'Prepaid' : 'COD' });
+      gtagTrack('add_payment_info', { ...base, payment_type: payType });
+      fbqTrack('AddPaymentInfo', metaCheckoutParams());
+    } catch (_) { /* analytics never blocks the order */ }
     setOrderErr(''); setPlacing(true);
     const done = (no) => {
       // Meta Pixel + CAPI Purchase (deduped by Purchase_<order>) + GA4 + first-
@@ -1013,7 +1062,7 @@ export default function TestLayout({ children }) {
             {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { try { fbqTrack('InitiateCheckout', { content_ids: cart.map((i) => String(i.id)), content_type: 'product', contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })), num_items: count, value: total, currency: 'INR' }); } catch (_) { /* never blocks */ } setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
+            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { trackInitiateCheckout(); setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
             <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}
