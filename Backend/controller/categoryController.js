@@ -273,12 +273,24 @@ const deleteCategory = async (req, res) => {
             return res.status(404).json({ message: 'Category not found' });
         }
 
-        // Delete associated image
-        if (category.image) {
-            await imageHandler.deleteImage(category.image);
-        }
+        // Unlink everything that points at this category first (products,
+        // sliders, sub-categories keep existing, just without it; store links
+        // are removed). Done explicitly so it works whatever ON DELETE rule the
+        // live tables carry. Orders don't reference categories.
+        const { sequelize } = require('../config/db.js');
+        await sequelize.transaction(async (transaction) => {
+            const run = (sql) => sequelize.query(sql, { replacements: { id: category.id }, transaction });
+            await run('UPDATE products SET categoryId = NULL WHERE categoryId = :id');
+            await run('UPDATE sliders SET categoryId = NULL WHERE categoryId = :id');
+            await run('UPDATE categories SET parentId = NULL WHERE parentId = :id');
+            await run('DELETE FROM category_brands WHERE category_id = :id');
+            await category.destroy({ transaction });
+        });
 
-        await category.destroy();
+        // Only remove the picture once the category is really gone.
+        if (category.image) {
+            await imageHandler.deleteImage(category.image).catch((e) => logger.warn('Category image delete failed: ' + e.message));
+        }
 
         // Invalidate category cache (Requirement 2.2)
         await CategoryService.invalidateCache(id);

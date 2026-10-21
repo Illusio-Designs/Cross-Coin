@@ -20,7 +20,9 @@ const Product = sequelize.define('Product', {
         allowNull: true
     },
     status: {
-        type: DataTypes.ENUM('active', 'inactive', 'draft'),
+        // archived = "deleted" but kept because past orders point at it:
+        // hidden from every store and from the admin product list.
+        type: DataTypes.ENUM('active', 'inactive', 'draft', 'archived'),
         defaultValue: 'draft'
     },
     categoryId: {

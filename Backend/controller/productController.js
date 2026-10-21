@@ -647,8 +647,11 @@ module.exports.getAllProducts = async (req, res) => {
 
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-    // Build filter options
-    const whereOptions = {};
+    // Build filter options. Archived products (deleted, but kept for their
+    // past orders) never show here unless asked for with ?status=archived.
+    const whereOptions = {
+      status: req.query.status === 'archived' ? 'archived' : { [Op.or]: [{ [Op.ne]: 'archived' }, { [Op.is]: null }] },
+    };
     
     // ✅ Only filter by brand if X-Brand-Name header is present (public frontend)
     // Admin requests without header will see ALL products from ALL brands
@@ -1681,6 +1684,30 @@ module.exports.deleteProduct = async (req, res) => {
     if (!product) {
       await transaction.rollback();
       return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Past orders point at this product (order_items.product_id), and order
+    // history must stay intact for invoices, GST, returns and reports. So it
+    // is archived instead: hidden from every store and the product list,
+    // removed from carts/wishlists, and its link name freed for a new product.
+    const [[{ n: orderLines }]] = await sequelize.query(
+      'SELECT COUNT(*) AS n FROM order_items WHERE product_id = :id',
+      { replacements: { id }, transaction }
+    );
+    if (Number(orderLines) > 0) {
+      const freedSlug = String(product.slug || '').startsWith('archived-')
+        ? product.slug
+        : `archived-${product.id}-${product.slug || 'product'}`.slice(0, 255);
+      await product.update({ status: 'archived', slug: freedSlug }, { transaction });
+      await sequelize.query('DELETE FROM cart_items WHERE product_id = :id', { replacements: { id }, transaction });
+      await sequelize.query('DELETE FROM wishlists WHERE productId = :id', { replacements: { id }, transaction });
+      await transaction.commit();
+      await cacheManager.invalidate('products:*');
+      return res.json({
+        success: true,
+        archived: true,
+        message: `This product is in ${orderLines} past order line${Number(orderLines) === 1 ? '' : 's'}, so it was archived instead of deleted: it is hidden from every store and from the product list, and those orders keep their details.`,
+      });
     }
 
     // Delete all product images from storage and database

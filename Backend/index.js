@@ -572,7 +572,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v30';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v31';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1656,6 +1656,19 @@ const startServer = async () => {
             logger.info('✓ ad_spend_daily / ad_spend_sync ensured');
         } catch (err) {
             logger.error('ad_spend tables ensure failed: ' + err.message);
+        }
+
+        // ── products.status 'archived' (v31): deleting a product that past
+        // orders point at archives it instead (order_items keeps its FK).
+        // Additive: existing values are unchanged.
+        try {
+            const [[col]] = await sequelize.query(`SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'status'`);
+            if (col && !String(col.t).includes("'archived'")) {
+                await sequelize.query(`ALTER TABLE products MODIFY COLUMN status ENUM('active','inactive','draft','archived') NULL DEFAULT 'draft'`);
+            }
+            logger.info('✓ products.status allows archived');
+        } catch (err) {
+            logger.error('products.status archived migration failed: ' + err.message);
         }
 
         // Ensure performance indexes exist (idempotent). Production never runs
