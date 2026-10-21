@@ -599,10 +599,56 @@ exports.getBrandTraffic = async (req, res) => {
       };
     });
 
+    // Per India day: visits (server-counted visit_hits; tracked sessions as the
+    // fallback before it existed) and orders placed (cancelled left out), so
+    // the page can draw visits and conversion rate over time. Plus the pages
+    // visitors landed on first (utm_tracking.landing_page, path only).
+    const istDayCol = `DATE(CONVERT_TZ(created_at, '+00:00', '+05:30'))`;
+    const T = { type: QueryTypes.SELECT };
+    const dRepl = { startDay: dayOf(start), endDay: dayOf(end), start, end, ...(hasBrand ? { brandId: brandIdNum } : {}) };
+    const [vDays, sDays, oDays, lpRows] = await Promise.all([
+      sequelize.query(`SELECT day, SUM(landings) AS landings, SUM(sessions) AS sessions FROM visit_hits
+                        WHERE day BETWEEN :startDay AND :endDay${bFilt} GROUP BY day`, { ...T, replacements: dRepl }).catch(() => []),
+      sequelize.query(`SELECT ${istDayCol} AS day, COUNT(DISTINCT session_id) AS sessions FROM utm_tracking
+                        WHERE created_at BETWEEN :start AND :end${bFilt} GROUP BY day`, { ...T, replacements: dRepl }),
+      sequelize.query(`SELECT ${istDayCol} AS day, COUNT(*) AS orders, SUM(final_amount) AS value FROM orders
+                        WHERE created_at BETWEEN :start AND :end AND status NOT IN ('cancelled','order cancelled')${bFilt}
+                        GROUP BY day`, { ...T, replacements: dRepl }),
+      sequelize.query(`SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(landing_page, '?', 1), '#', 1) AS url, COUNT(DISTINCT session_id) AS sessions
+                         FROM utm_tracking
+                        WHERE created_at BETWEEN :start AND :end AND landing_page IS NOT NULL AND landing_page <> ''${bFilt}
+                        GROUP BY url ORDER BY sessions DESC LIMIT 200`, { ...T, replacements: dRepl }),
+    ]);
+    const dKey = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+    const dayMap = new Map();
+    const at = (d) => { const k = dKey(d); if (!dayMap.has(k)) dayMap.set(k, { day: k, visits: 0, landings: 0, trackedSessions: 0, orders: 0, value: 0 }); return dayMap.get(k); };
+    for (const r of vDays) { const x = at(r.day); x.visits = Number(r.sessions) || 0; x.landings = Number(r.landings) || 0; }
+    for (const r of sDays) at(r.day).trackedSessions = Number(r.sessions) || 0;
+    for (const r of oDays) { const x = at(r.day); x.orders = Number(r.orders) || 0; x.value = Math.round((Number(r.value) || 0) * 100) / 100; }
+    const daily = [...dayMap.values()].sort((a, b) => a.day.localeCompare(b.day)).map((x) => {
+      const base = x.visits || x.trackedSessions;
+      return { ...x, conversion: base > 0 ? Number(((x.orders / base) * 100).toFixed(2)) : null };
+    });
+    // Same page on different hosts / trailing slash → one row, by path.
+    const lpMap = new Map();
+    for (const r of lpRows) {
+      let path = String(r.url || '').trim();
+      try { path = new URL(path, 'https://x.invalid').pathname; } catch (_) { /* keep raw */ }
+      path = (path.replace(/\/+$/, '') || '/').slice(0, 200);
+      lpMap.set(path, (lpMap.get(path) || 0) + (Number(r.sessions) || 0));
+    }
+    const lpTotal = [...lpMap.values()].reduce((a, v) => a + v, 0);
+    const landingPages = [...lpMap.entries()].map(([path, sessions]) => ({
+      path, sessions, share: lpTotal > 0 ? Number(((sessions / lpTotal) * 100).toFixed(2)) : 0,
+      type: path === '/' ? 'Home' : /^\/products?\//.test(path) ? 'Product' : /^\/(collections?|categories|category|shop)\b/.test(path) ? 'Collection' : /^\/cart\b/.test(path) ? 'Cart' : /^\/(blogs?|journal)\b/.test(path) ? 'Blog' : 'Page',
+    })).sort((a, b) => b.sessions - a.sessions).slice(0, 15);
+
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
       brandId: hasBrand ? brandIdNum : null,
+      daily,
+      landingPages,
       brands: rows.sort((a, b) => b.revenue - a.revenue),
       totals,
       channels: channelGroups,
