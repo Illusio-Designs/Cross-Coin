@@ -1,19 +1,5 @@
-// showSuccess/showError aliases — render the custom Obzus toast.
-import React from 'react';
-import { toast } from 'react-toastify';
-import ToastMessage from '../components/common/ToastMessage';
-
-const config = {
-  position: 'top-right',
-  autoClose: 3000,
-  hideProgressBar: true,
-  closeOnClick: false,
-  pauseOnHover: true,
-  pauseOnFocusLoss: false,
-  draggable: false,
-  icon: false,
-  closeButton: false,
-};
+// showSuccess/showError aliases — gooey toasts (lib/adminToast).
+import { notify } from '../lib/adminToast';
 
 // Friendly copy for the message keys used across the dashboard. Keys not listed
 // here are turned into a sentence from their camelCase name (see humanize).
@@ -49,11 +35,7 @@ const resolve = (key, customMessage, fallback) => {
   return key || fallback;
 };
 
-const show = (type, message, toastId) => {
-  const id = toastId || (typeof message === 'string' ? message : type);
-  toast.dismiss(id);
-  toast(React.createElement(ToastMessage, { type, message }), { ...config, toastId: id });
-};
+const show = (type, message, toastId) => notify(type, message, toastId ? { id: toastId } : {});
 
 export const showSuccess = (key, customMessage) => show('success', resolve(key, customMessage, 'Success!'));
 export const showError   = (key, customMessage) => show('error',   resolve(key, customMessage, 'Something went wrong.'));

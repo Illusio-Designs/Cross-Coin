@@ -2,8 +2,8 @@
 import Head from "next/head";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import AdminToaster from "../components/common/AdminToaster";
+import "goey-toast/styles.css";
 import { AuthProvider } from "../context/AuthContext";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
@@ -16,7 +16,6 @@ import { installErrorReporter } from '../utils/errorReporter';
 // CSS has been removed; only shared globals, the admin login, the dashboard
 // sidebar, and the design-system tokens/ui-kit stay global.
 import "../styles/common/globals.css";
-import "../styles/common/obzToast.css";
 import "../styles/common/responsive.css";
 import "../styles/common/mobile-utilities.css";
 import "../styles/common/skeleton.css";
@@ -73,20 +72,7 @@ function AppContent({ Component, pageProps, progressRef }) {
 
       <Component {...pageProps} />
 
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={true}
-        newestOnTop={true}
-        closeOnClick={false}
-        closeButton={false}
-        icon={false}
-        rtl={false}
-        pauseOnFocusLoss={false}
-        draggable={false}
-        pauseOnHover={true}
-        limit={3}
-      />
+      <AdminToaster />
     </>
   );
 }
