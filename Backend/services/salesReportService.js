@@ -69,6 +69,42 @@ async function stageRows(range, byBrand = false) {
   );
 }
 
+// Per India day (order placed): every line of the sales breakdown.
+//   order value = gross − discounts + shipping   (final_amount, all orders)
+//   net sales   = order value − cancelled − RTO − not delivered yet − refunds
+const DONE = `${STAGE_SQL} IN ('delivered','returned')`;
+function dailyRows(range) {
+  return sequelize.query(
+    `SELECT ${IST_DAY} AS day, COUNT(*) AS placed,
+            SUM(o.status NOT IN ('cancelled','order cancelled')) AS booked,
+            SUM(CASE WHEN o.status NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END) AS booked_value,
+            SUM(${DONE}) AS delivered,
+            SUM(COALESCE(o.total_amount, 0)) AS gross,
+            SUM(COALESCE(o.discount_amount, 0)) AS discounts,
+            SUM(COALESCE(o.shipping_fee, 0)) AS shipping,
+            SUM(COALESCE(o.final_amount, 0)) AS order_value,
+            SUM(CASE WHEN ${STAGE_SQL} = 'cancelled' THEN o.final_amount ELSE 0 END) AS cancelled_value,
+            SUM(CASE WHEN ${STAGE_SQL} = 'rto' THEN o.final_amount ELSE 0 END) AS rto_value,
+            SUM(CASE WHEN ${DONE} THEN o.final_amount ELSE 0 END) AS delivered_value,
+            SUM(CASE WHEN ${DONE} THEN ${REFUND_SQL} ELSE 0 END) AS refunds
+       FROM orders o ${JOINS} WHERE ${whereSql(range)}
+      GROUP BY day ORDER BY day`,
+    { replacements: range, type: QueryTypes.SELECT }
+  );
+}
+const dayStr = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+function dailyOut(d) {
+  const orderValue = r2(d.order_value), cancelled = r2(d.cancelled_value), rto = r2(d.rto_value);
+  const deliveredValue = r2(d.delivered_value), refunds = r2(d.refunds);
+  return {
+    day: dayStr(d.day), placed: num(d.placed), booked: num(d.booked), bookedValue: r2(d.booked_value), delivered: num(d.delivered),
+    gross: r2(d.gross), discounts: r2(d.discounts), shipping: r2(d.shipping), orderValue,
+    cancelled, rto, refunds, deliveredValue,
+    pending: r2(orderValue - cancelled - rto - deliveredValue),
+    netSales: r2(deliveredValue - refunds),
+  };
+}
+
 // Fold stage rows into the summary metrics.
 function summarize(rows) {
   const s = {
@@ -122,19 +158,12 @@ async function salesSummary({ start, end, brandId }) {
   const spanMs = end.getTime() - start.getTime() + 1;
   const prev = { start: new Date(start.getTime() - spanMs), end: new Date(start.getTime() - 1), brandId: range.brandId };
 
-  const [rows, prevRows, brandRowsRaw, daily, topProducts, rtoByCourier, rtoByState, returnsByReason, brands] = await Promise.all([
+  const [rows, prevRows, brandRowsRaw, daily, prevDaily, topProducts, rtoByCourier, rtoByState, returnsByReason, brands] = await Promise.all([
     stageRows(range),
     stageRows(prev),
     stageRows(range, true),
-    sequelize.query(
-      `SELECT ${IST_DAY} AS day, COUNT(*) AS placed,
-              SUM(o.status NOT IN ('cancelled','order cancelled')) AS booked,
-              SUM(CASE WHEN o.status NOT IN ('cancelled','order cancelled') THEN o.final_amount ELSE 0 END) AS booked_value,
-              SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered
-         FROM orders o ${JOINS} WHERE ${whereSql(range)}
-        GROUP BY day ORDER BY day`,
-      { replacements: range, type: QueryTypes.SELECT }
-    ),
+    dailyRows(range),
+    dailyRows(prev),
     sequelize.query(
       `SELECT p.id, p.name, SUM(oi.quantity) AS units, SUM(oi.subtotal) AS value,
               SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN oi.quantity ELSE 0 END) AS delivered_units,
@@ -173,6 +202,7 @@ async function salesSummary({ start, end, brandId }) {
   ]);
 
   const summary = summarize(rows);
+  const dailyRows2 = daily.map(dailyOut);
   const previous = summarize(prevRows);
   const delta = (a, b) => (b ? Math.round(((a - b) / b) * 1000) / 10 : null);
 
@@ -205,7 +235,16 @@ async function salesSummary({ start, end, brandId }) {
       aov: delta(summary.aov, previous.aov),
     },
     byBrand,
-    daily: daily.map((d) => ({ day: d.day instanceof Date ? d.day.toISOString().slice(0, 10) : String(d.day).slice(0, 10), placed: num(d.placed), booked: num(d.booked), bookedValue: r2(d.booked_value), delivered: num(d.delivered) })),
+    daily: dailyRows2,
+    previousDaily: prevDaily.map(dailyOut),
+    // Order value → net sales, for the whole period (sums of the daily lines).
+    breakdown: (() => {
+      const t = {};
+      for (const k of ['gross', 'discounts', 'shipping', 'orderValue', 'cancelled', 'rto', 'pending', 'refunds', 'deliveredValue', 'netSales', 'placed', 'delivered']) {
+        t[k] = r2(dailyRows2.reduce((a, d) => a + num(d[k]), 0));
+      }
+      return t;
+    })(),
     topProducts: topProducts.map((p) => ({ id: p.id, name: p.name, units: num(p.units), value: r2(p.value), deliveredUnits: num(p.delivered_units), returnedUnits: num(p.returned_units), rtoUnits: num(p.rto_units) })),
     rtoByCourier: rtoByCourier.map(closedRate),
     rtoByState: rtoByState.map(closedRate),

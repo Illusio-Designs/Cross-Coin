@@ -51,41 +51,132 @@ function Delta({ pct, invert = false }) {
   return <span className={`delta ${good ? 'up' : 'down'}`}>{up ? '▲' : '▼'} {Math.abs(pct)}%</span>;
 }
 
-/* Daily booked value (line) with delivered orders shown under it. Missing days
-   are filled with 0 so the line spans the whole range. */
-function DailyTrend({ daily, from, to }) {
+/* Sales over time (by the India day orders were placed): order value per day,
+   the part of it that has turned into net sales so far, and the previous
+   period's order value (dotted) for comparison. */
+function SalesTrend({ daily, previousDaily, from, to }) {
   const series = useMemo(() => {
     const byDay = new Map((daily || []).map((d) => [d.day, d]));
+    const prev = previousDaily || [];
+    const span = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
+    const prevStart = shiftDay(from, -span);
+    const prevByDay = new Map(prev.map((d) => [d.day, d]));
     const out = [];
-    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1)) {
+    let i = 0;
+    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1), i += 1) {
       const r = byDay.get(d) || {};
-      out.push({ day: d, value: Number(r.bookedValue) || 0, booked: Number(r.booked) || 0, delivered: Number(r.delivered) || 0 });
+      const pr = prevByDay.get(shiftDay(prevStart, i)) || {};
+      out.push({ day: d, value: Number(r.orderValue) || 0, net: Number(r.netSales) || 0, prev: Number(pr.orderValue) || 0, orders: Number(r.placed) || 0 });
     }
     return out;
-  }, [daily, from, to]);
+  }, [daily, previousDaily, from, to]);
+  const [hover, setHover] = useState(null);
 
-  if (series.length < 2 || series.every((p) => !p.value)) {
+  if (series.length < 2 || series.every((p) => !p.value && !p.prev)) {
     return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
   }
-  const W = 720, H = 180, PAD = 10;
-  const max = Math.max(1, ...series.map((p) => p.value));
-  const pts = series.map((p, i) => [(i / (series.length - 1)) * W, H - PAD - (p.value / max) * (H - PAD * 2)]);
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
-  const best = series.reduce((a, b) => (b.value > a.value ? b : a), series[0]);
+  const W = 720, H = 200, PAD = 12;
+  const max = Math.max(1, ...series.map((p) => Math.max(p.value, p.prev)));
+  const x = (i) => (i / (series.length - 1)) * W;
+  const y = (v) => H - PAD - (v / max) * (H - PAD * 2);
+  const path = (k) => series.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p[k]).toFixed(1)}`).join(' ');
+  const total = (k) => series.reduce((a, p) => a + p[k], 0);
+  const h = hover != null ? series[hover] : null;
+  const ticks = [0, Math.floor((series.length - 1) / 2), series.length - 1];
   return (
     <>
-      <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="180" preserveAspectRatio="none" role="img" aria-label="Booked value per day">
-        <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-        <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-        <path d={`${d} L${W} ${H} L0 ${H} Z`} fill="var(--ds-color-surface-soft)" />
-        <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      </svg>
+      <div className="rep-trend-wrap" onMouseLeave={() => setHover(null)}>
+        <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="200" preserveAspectRatio="none" role="img"
+          aria-label="Order value and net sales per day"
+          onMouseMove={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setHover(Math.max(0, Math.min(series.length - 1, Math.round(((e.clientX - r.left) / r.width) * (series.length - 1)))));
+          }}>
+          <line x1="0" y1={H * 0.33} x2={W} y2={H * 0.33} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+          <line x1="0" y1={H * 0.66} x2={W} y2={H * 0.66} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+          <path d={path('prev')} fill="none" stroke="var(--ds-color-text-faint)" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+          <path d={`${path('value')} L${W} ${H} L0 ${H} Z`} fill="var(--ds-color-surface-soft)" />
+          <path d={path('value')} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          <path d={path('net')} fill="none" stroke="var(--ds-color-success, #16a34a)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          {h ? <line x1={x(hover)} y1="0" x2={x(hover)} y2={H} stroke="var(--ds-color-border)" vectorEffect="non-scaling-stroke" /> : null}
+        </svg>
+        <div className="rep-trend-ticks">{ticks.map((t) => <span key={t}>{new Date(series[t].day + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>)}</div>
+        {h ? (
+          <div className="rep-trend-tip" style={{ left: `${(hover / (series.length - 1)) * 100}%` }}>
+            <b>{new Date(h.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</b>
+            <span>{num(h.orders)} orders · {money(h.value)}</span>
+            <span className="ok">Net sales so far {money(h.net)}</span>
+            <span className="mut">Previous period {money(h.prev)}</span>
+          </div>
+        ) : null}
+      </div>
       <div className="rep-legend">
-        <div className="rep-leg"><div><b className="num">{money(series.reduce((s, p) => s + p.value, 0))}</b><small>booked in {series.length} days</small></div></div>
-        <div className="rep-leg"><div><b className="num">{num(series.reduce((s, p) => s + p.delivered, 0))}</b><small>delivered (by order date)</small></div></div>
-        <div className="rep-leg"><div><b className="num">{money(best.value)}</b><small>best day · {best.day}</small></div></div>
+        <div className="rep-leg"><i className="rep-key" style={{ background: 'var(--ds-color-text)' }} /><div><b className="num">{money(total('value'))}</b><small>order value</small></div></div>
+        <div className="rep-leg"><i className="rep-key" style={{ background: 'var(--ds-color-success, #16a34a)' }} /><div><b className="num">{money(total('net'))}</b><small>net sales so far</small></div></div>
+        <div className="rep-leg"><i className="rep-key rep-key--dash" /><div><b className="num">{money(total('prev'))}</b><small>previous period</small></div></div>
       </div>
     </>
+  );
+}
+
+/* Order value → net sales: every line by the day orders were placed. */
+function SalesBreakdown({ b }) {
+  if (!b) return null;
+  const rounding = Math.round(((b.orderValue || 0) - ((b.gross || 0) - (b.discounts || 0) + (b.shipping || 0))) * 100) / 100;
+  const Row = ({ name, v, sign = '', strong, note, tone }) => (
+    <div className={`rep-bd-row${strong ? ' is-total' : ''}`}>
+      <span className="rep-bd-name">{name}{note ? <small>{note}</small> : null}</span>
+      <span className={`rep-bd-v num${tone ? ` ${tone}` : ''}`}>{sign}{money(Math.abs(v || 0))}</span>
+    </div>
+  );
+  return (
+    <div className="rep-bd">
+      <Row name="Gross sales" v={b.gross} note="item prices × quantity" />
+      <Row name="Discounts" v={b.discounts} sign="− " tone="bad" />
+      <Row name="Shipping charges" v={b.shipping} sign="+ " />
+      {Math.abs(rounding) >= 1 ? <Row name="Rounding & adjustments" v={rounding} sign={rounding < 0 ? '− ' : '+ '} /> : null}
+      <Row name="Order value" v={b.orderValue} strong note={`${num(b.placed)} orders placed`} />
+      <Row name="Cancelled" v={b.cancelled} sign="− " tone="bad" />
+      <Row name="RTO (came back)" v={b.rto} sign="− " tone="bad" />
+      <Row name="Not delivered yet" v={b.pending} sign="− " note="to confirm, to ship, in transit" />
+      <Row name="Refunds" v={b.refunds} sign="− " tone="bad" />
+      <Row name="Net sales" v={b.netSales} strong tone="ok" note={`${num(b.delivered)} orders delivered`} />
+    </div>
+  );
+}
+
+/* Day-by-day: order value and how much of it has become net sales. */
+function DayTable({ daily, from, to, onExport }) {
+  const rows = useMemo(() => {
+    const byDay = new Map((daily || []).map((d) => [d.day, d]));
+    const out = [];
+    for (let d = to; d >= from && out.length < 400; d = shiftDay(d, -1)) out.push({ day: d, ...(byDay.get(d) || {}) });
+    return out;
+  }, [daily, from, to]);
+  return (
+    <div className="rep-panel rep-panel--flush">
+      <div className="rep-ph"><h3>Day by day</h3><span className="hint">by the day the order was placed · newest first</span>
+        <button type="button" className="order-sync-main-btn" onClick={onExport} style={{ marginLeft: 'auto' }}><DlIcon /> CSV</button></div>
+      <div className="rep-tbl-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+        <table className="rep-table">
+          <thead><tr><th>Day</th><th className="r">Orders</th><th className="r">Order value</th><th className="r">Cancelled</th><th className="r">RTO</th><th className="r">Not delivered yet</th><th className="r">Refunds</th><th className="r">Net sales</th></tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.day}>
+                <td className="num">{new Date(r.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</td>
+                <td className="r num">{num(r.placed)}</td>
+                <td className="r num"><b>{money(r.orderValue)}</b></td>
+                <td className="r num">{r.cancelled ? money(r.cancelled) : '—'}</td>
+                <td className="r num">{r.rto ? money(r.rto) : '—'}</td>
+                <td className="r num">{r.pending ? money(r.pending) : '—'}</td>
+                <td className="r num">{r.refunds ? money(r.refunds) : '—'}</td>
+                <td className="r num"><b>{money(r.netSales)}</b></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -180,6 +271,20 @@ export default function Reports() {
       ['COD share %', rates.codShare],
     ]);
 
+  const exportDays = () => exportCsv(`sales-by-day_${period}.csv`, [
+    { label: 'Day', value: (d) => d.day },
+    { label: 'Orders placed', value: (d) => d.placed },
+    { label: 'Gross sales', value: (d) => d.gross },
+    { label: 'Discounts', value: (d) => d.discounts },
+    { label: 'Shipping charges', value: (d) => d.shipping },
+    { label: 'Order value', value: (d) => d.orderValue },
+    { label: 'Cancelled', value: (d) => d.cancelled },
+    { label: 'RTO', value: (d) => d.rto },
+    { label: 'Not delivered yet', value: (d) => d.pending },
+    { label: 'Refunds', value: (d) => d.refunds },
+    { label: 'Net sales', value: (d) => d.netSales },
+  ], data?.daily || []);
+
   const exportBrands = () => exportCsv(`sales-by-brand_${period}.csv`, [
     { label: 'Brand', value: (b) => b.brand },
     { label: 'Placed', value: (b) => b.placed },
@@ -252,10 +357,10 @@ export default function Reports() {
 
       {first ? (
         <>
-          <SkeletonKpis count={4} label="Loading the report…" />
+          <SkeletonKpis count={5} label="Loading the report…" />
           <div className="rep-panel" aria-hidden="true">
-            <div className="rep-ph"><h3>Booked value per day</h3><span className="hint">orders placed (not cancelled), India days</span></div>
-            <Skeleton w="100%" h={180} r={10} />
+            <div className="rep-ph"><h3>Sales over time</h3><span className="hint">by the day the order was placed, India days</span></div>
+            <Skeleton w="100%" h={200} r={10} />
             <div className="rep-legend" style={{ marginTop: 12 }}>
               {[0, 1, 2].map((i) => <div key={i} className="rep-leg"><div style={{ flex: 1 }}><Skeleton w="55%" h={16} /><Skeleton w="70%" h={10} style={{ marginTop: 4 }} /></div></div>)}
             </div>
@@ -304,6 +409,11 @@ export default function Reports() {
         <>
           <div className="rep-kpis" style={dim} aria-busy={refreshing || undefined}>
             <div className="rep-kpi">
+              <div className="rep-kl">Order value</div>
+              <div className="rep-kv num">{money(data.breakdown?.orderValue)}</div>
+              <div className="rep-kf">{num(s.placed)} orders placed · {money(data.breakdown?.pending)} not delivered yet</div>
+            </div>
+            <div className="rep-kpi">
               <div className="rep-kl">Net sales</div>
               <div className="rep-kv num">{money(s.netSales)}</div>
               <div className="rep-kf"><Delta pct={deltas.netSales} /> · {money(s.deliveredValue)} delivered − {money(s.refunds)} refunds</div>
@@ -325,10 +435,18 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="rep-panel" style={dim} aria-busy={refreshing || undefined}>
-            <div className="rep-ph"><h3>Booked value per day</h3><span className="hint">orders placed (not cancelled), India days</span></div>
-            <DailyTrend daily={data.daily} from={from} to={to} />
+          <div className="rep-grid2 rep-grid2--wide" style={dim} aria-busy={refreshing || undefined}>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Sales over time</h3><span className="hint">by the day the order was placed, India days</span></div>
+              <SalesTrend daily={data.daily} previousDaily={data.previousDaily} from={from} to={to} />
+            </div>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Sales breakdown</h3><span className="hint">order value → net sales</span></div>
+              <SalesBreakdown b={data.breakdown} />
+            </div>
           </div>
+
+          <div style={dim}><DayTable daily={data.daily} from={from} to={to} onExport={exportDays} /></div>
 
           <div className="rep-masonry" style={dim} aria-busy={refreshing || undefined}>
             <div className="rep-panel">
