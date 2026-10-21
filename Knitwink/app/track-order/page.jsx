@@ -4,7 +4,7 @@ import { SITE_NAME } from '@/lib/constants'
 const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
 
 export const metadata = {
-  title: `Track your order — ${SITE_NAME}`,
+  title: { absolute: `Track your order — ${SITE_NAME}` },
   description: `Enter your order number or AWB to see the live shipping status of your ${SITE_NAME} order.`,
   alternates: { canonical: `${SITE_URL}/track-order` },
   openGraph: {

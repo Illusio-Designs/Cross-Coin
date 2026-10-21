@@ -6,7 +6,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
 
 export async function generateMetadata() {
   return buildMetadata('blog', {
-    title: `Journal — ${SITE_NAME}`,
+    title: { absolute: `Journal — ${SITE_NAME}` },
     description: `Stories, guides, and material deep-dives from the ${SITE_NAME} team.`,
     alternates: { canonical: `${SITE_URL}/journal` },
     openGraph: {

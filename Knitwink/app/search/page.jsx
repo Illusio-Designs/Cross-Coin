@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ searchParams }) {
   const { q } = await searchParams
   return {
-    title: q ? `"${q}" — Search` : `Search — ${SITE_NAME}`,
+    title: q ? `"${q}" — Search` : { absolute: `Search — ${SITE_NAME}` },
     description: q ? `Browse results for "${q}" on ${SITE_NAME}.` : `Search products on ${SITE_NAME}.`,
   }
 }

@@ -31,6 +31,7 @@ export async function generateMetadata({ params }) {
   }
 
   const title = product.seo?.metaTitle || `${product.name} | Knitwink`;
+
   const description = (product.seo?.metaDescription
     || product.description
     || `${product.name} from Knitwink — natural-fibre knitwear made to last.`).slice(0, 160);
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }) {
   const ogImage = product.images?.[0]?.url || `${SITE_URL}/knitwinklogo.webp`;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {
