@@ -16,6 +16,9 @@ router.post('/token', ctrl.createToken);
 // ── Provider → seller: order webhook (register with ?brand=<slug>) ────────
 router.post('/order-webhook', ctrl.orderWebhook);
 
+// ── Storefront: back from the provider's page → confirm + Purchase ────────
+router.post('/confirm', ctrl.confirmReturn);
+
 // ── Admin utilities ────────────────────────────────────────────────────────
 router.get('/orders', authenticate, isAdmin, ctrl.orderList);
 router.get('/orders/:orderId', authenticate, isAdmin, ctrl.orderDetails);

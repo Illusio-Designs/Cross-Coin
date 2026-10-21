@@ -39,8 +39,41 @@ async function resolveBrandId(req) {
  * @param {object} order - order object with brand_id, total_amount, items[], etc.
  * @param {object} extraData - optional overrides for event_source_url, custom_data, user_data
  */
+/**
+ * Did this shopper allow marketing cookies? Shopify's Meta app sends
+ * server-side events only with that consent, and so do we. The storefront
+ * sends its answer with the order (marketing_consent). Without one, the latest
+ * consent record we logged for the shopper (user id or session cookie)
+ * decides; no record means no.
+ */
+async function hasMarketingConsent(order) {
+  if (order.marketing_consent === true || order.marketing_consent === 'true') return true;
+  if (order.marketing_consent === false || order.marketing_consent === 'false') return false;
+  const userId = order.external_id || order.user_id || null;
+  const sessionId = order.consent_session_id || null;
+  if (!userId && !sessionId) return false;
+  try {
+    const { Op } = require("sequelize");
+    const { ConsentLog } = require("../model/consentLogModel.js");
+    const who = [];
+    if (userId) who.push({ user_id: userId });
+    if (sessionId) who.push({ session_id: sessionId });
+    const row = await ConsentLog.findOne({
+      where: { [Op.or]: who }, order: [["created_at", "DESC"]], attributes: ["marketing"],
+    });
+    return !!row?.marketing;
+  } catch {
+    return false;
+  }
+}
+
 async function sendFacebookEvent(eventName, order, extraData = {}) {
   const brandId = order.brand_id || 1;
+
+  if (!(await hasMarketingConsent(order))) {
+    console.log(`Facebook Pixel: Skipping ${eventName} for ${order.order_number || 'event'} — no marketing consent`);
+    return { skipped: true, reason: 'no marketing consent' };
+  }
 
   // Use THIS brand's own pixel id + token from brand_settings. Never fall back
   // to another brand's pixel — posting one brand's conversions to another's
@@ -241,6 +274,7 @@ router.post('/test', isAuthenticated, isAdmin, async (req, res) => {
       city: 'Surat', state: 'GJ', zip_code: '395006', country: 'in',
       ip_address: ip, user_agent: req.headers['user-agent'] || null,
       items: [{ id: 'TEST-SKU', quantity: 1 }],
+      marketing_consent: true,
     };
     const result = await sendFacebookEvent('Purchase', sampleOrder, { event_source_url: 'https://crosscoin.in/ThankYou' });
     res.json({ ok: !!(result && result.events_received) , result });

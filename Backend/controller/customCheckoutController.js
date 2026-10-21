@@ -146,6 +146,31 @@ exports.syncCollection = async (req, res) => {
   res.json({ success: !result.error, ...result });
 };
 
+// Confirm an order really exists at the provider (signed fetch), then save it
+// locally from the provider's own copy. Idempotent.
+async function verifyAndIngest(brandId, claimedId) {
+  let providerOrder;
+  try {
+    const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
+    const d = confirmed?.data || confirmed;
+    providerOrder = Array.isArray(d) ? d[0] : d;
+    if (!providerOrder) throw new Error('order not found at provider');
+  } catch (verifyErr) {
+    logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
+    const e = new Error('Order could not be verified with the checkout provider'); e.status = 401; throw e;
+  }
+
+  // Build the order ONLY from the provider's own copy (items, amounts,
+  // payment status) — the webhook body is unsigned, so trusting its items
+  // or "payment_status: success" would let anyone holding one real order id
+  // create paid orders with their own items and prices.
+  if (!Array.isArray(providerOrder?.cart_data?.items) || !providerOrder.cart_data.items.length) {
+    logger.error(`[custom-checkout] provider order ${claimedId} has no cart_data.items (keys: ${Object.keys(providerOrder || {}).join(',')}) — not ingesting`);
+    const e = new Error('Provider order has no items'); e.status = 422; throw e;
+  }
+  return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
+}
+
 // POST /api/custom-checkout/order-webhook?brand=<slug>
 // The provider POSTs the full order here after checkout (register this URL,
 // with the brand query, as the seller webhook). Idempotent; non-SUCCESS
@@ -160,26 +185,7 @@ exports.orderWebhook = async (req, res) => {
     // with our signed credentials before ingesting anything.
     const claimedId = String(req.body?.platform_order_id || req.body?.order_id || '').trim();
     if (!claimedId) return res.status(400).json({ ok: false, message: 'platform_order_id is required' });
-    let providerOrder;
-    try {
-      const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
-      const d = confirmed?.data || confirmed;
-      providerOrder = Array.isArray(d) ? d[0] : d;
-      if (!providerOrder) throw new Error('order not found at provider');
-    } catch (verifyErr) {
-      logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
-      return res.status(401).json({ ok: false, message: 'Order could not be verified with the checkout provider' });
-    }
-
-    // Build the order ONLY from the provider's own copy (items, amounts,
-    // payment status) — the webhook body is unsigned, so trusting its items
-    // or "payment_status: success" would let anyone holding one real order id
-    // create paid orders with their own items and prices.
-    if (!Array.isArray(providerOrder?.cart_data?.items) || !providerOrder.cart_data.items.length) {
-      logger.error(`[custom-checkout] provider order ${claimedId} has no cart_data.items (keys: ${Object.keys(providerOrder || {}).join(',')}) — not ingesting`);
-      return res.status(422).json({ ok: false, message: 'Provider order has no items' });
-    }
-    const result = await svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
+    const result = await verifyAndIngest(brandId, claimedId);
     res.json({ ok: true, ...result });
   } catch (err) {
     logger.error('[custom-checkout] order webhook failed: ' + err.message);
@@ -205,5 +211,44 @@ exports.refundReports = async (req, res) => {
     res.json({ success: true, ...data });
   } catch (err) {
     res.status(err.status || 502).json({ success: false, message: err.message, provider: err?.response?.data });
+  }
+};
+
+// POST /api/custom-checkout/confirm  { oid, fbp, fbc, ga_client_id, marketing_consent }
+// The store calls this from the page the provider redirects back to. The order
+// is verified and saved (same as the webhook, whichever comes first), then:
+// with marketing consent, Meta gets the server Purchase with this shopper's
+// browser ids, under the same event id as the browser Purchase the page fires.
+// Returns our order number + contents for that browser Purchase.
+exports.confirmReturn = async (req, res) => {
+  try {
+    const brandId = req.brandId || 1;
+    const oid = String(req.body?.oid || '').trim();
+    if (!oid) return res.status(400).json({ ok: false, message: 'oid is required' });
+    const result = await verifyAndIngest(brandId, oid);
+    if (!result?.order_number) return res.json({ ok: false, ...result });
+    const track = await svc.purchasePayload(brandId, result.order_number);
+    if (track && req.body?.marketing_consent === true) {
+      const payload = {
+        ...track, marketing_consent: true,
+        fbp: req.body?.fbp || req.cookies?._fbp || null,
+        fbc: req.body?.fbc || req.cookies?._fbc || null,
+        ip_address: req.ip || null, user_agent: req.headers['user-agent'] || null,
+      };
+      setImmediate(async () => {
+        try {
+          const { sendFacebookEvent } = require('../integration/facebookPixel.js');
+          await sendFacebookEvent('Purchase', payload);
+        } catch (e) { logger.warn('[custom-checkout] confirm Purchase failed: ' + e.message); }
+      });
+    }
+    res.json({
+      ok: true, order_number: result.order_number,
+      value: track?.final_amount || 0,
+      items: (track?.items || []).map((i) => ({ id: String(i.product_id), quantity: i.quantity })),
+    });
+  } catch (err) {
+    logger.error('[custom-checkout] confirm failed: ' + err.message);
+    res.status(err.status || 500).json({ ok: false, message: err.message });
   }
 };

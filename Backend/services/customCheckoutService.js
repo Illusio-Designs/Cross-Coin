@@ -310,6 +310,40 @@ async function pushCollectionAllBrands(categoryId) {
 Product.addHook('afterSave', 'customCheckoutPush', (p) => { if (p?.id) setImmediate(() => pushProductAllBrands(p.id)); });
 Category.addHook('afterSave', 'customCheckoutPush', (c) => { if (c?.id) setImmediate(() => pushCollectionAllBrands(c.id)); });
 
+// Tracking the store can pass in cart_data.custom_attributes at token time
+// (fbp, fbc, ga_client_id, marketing_consent), read back from the order.
+function trackingFromAttributes(p) {
+  const ca = p?.cart_data?.custom_attributes || p?.custom_attributes || {};
+  const out = {};
+  if (ca.fbp) out.fbp = String(ca.fbp);
+  if (ca.fbc) out.fbc = String(ca.fbc);
+  if (ca.ga_client_id) out.ga_client_id = String(ca.ga_client_id);
+  if (ca.marketing_consent === true || ca.marketing_consent === 'true') out.marketing_consent = true;
+  return out;
+}
+
+// Purchase payload for an already-saved checkout order (Meta CAPI fields).
+async function purchasePayload(brandId, orderNumber) {
+  const order = await Order.findOne({
+    where: { order_number: orderNumber, brand_id: brandId },
+    include: [{ model: OrderItem, as: 'OrderItems' }],
+  });
+  if (!order) return null;
+  const [guest, addr] = await Promise.all([
+    order.guest_user_id ? GuestUser.findByPk(order.guest_user_id) : null,
+    order.shipping_address_id ? ShippingAddress.findByPk(order.shipping_address_id) : null,
+  ]);
+  const amount = Number(order.final_amount) || 0;
+  return {
+    brand_id: brandId, order_number: order.order_number,
+    total_amount: amount, final_amount: amount, currency: 'INR',
+    email: guest?.email || null, phone: addr?.phone || guest?.phone || null,
+    first_name: guest?.firstName || null, last_name: guest?.lastName || null,
+    zip_code: addr?.pincode || null, city: addr?.city || null, state: addr?.state || null, country: 'in',
+    items: (order.OrderItems || []).map((i) => ({ product_id: i.product_id, quantity: i.quantity, price: Number(i.price) || 0, name: '' })),
+  };
+}
+
 // ── Inbound order webhook → local order ─────────────────────────────────────
 // The provider POSTs the full order to our registered webhook once checkout
 // completes. Map it into a real Order (+ items, address, guest, payment) so
@@ -432,6 +466,9 @@ async function ingestCheckoutOrder(brandId, p) {
       first_name: firstName || null, last_name: lastName || null,
       zip_code: String(ship.pincode || '') || null, city: ship.city || null, state: ship.state || null, country: 'in',
       items: lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity, price: l.price, name: '' })),
+      // Browser ids + cookie choice, if the store put them in the cart's
+      // custom_attributes when it asked for the checkout token.
+      ...trackingFromAttributes(p),
     };
     return { created: true, order_number: order.order_number, order_id: order.id, _order: order, _track: track };
   }).then((result) => {
@@ -469,5 +506,5 @@ module.exports = {
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
-  initiateRefund, refundReports, ingestCheckoutOrder,
+  initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload,
 };

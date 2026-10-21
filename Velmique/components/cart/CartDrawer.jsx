@@ -29,7 +29,7 @@ import {
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { ik } from '@/lib/imagekit';
 import SkImg from '@/app/_components/SkImg';
-import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -275,6 +275,7 @@ export default function CartDrawer() {
   // open. Cart line ids are composite, so content_ids use the real product id.
   useEffect(() => {
     if (!cartOpen) return;
+    cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
     // Re-arm the whole-cart shimmer for this open (bag has items to load for).
