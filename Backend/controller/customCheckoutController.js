@@ -27,7 +27,7 @@ exports.listProducts = async (req, res) => {
       limit, offset,
       distinct: true,
     });
-    res.json({ data: { total: count, products: rows.map((p) => svc.mapProduct(p, { vendor: vendor || p.Brands?.[0]?.name || '' })) } });
+    res.json({ data: { total: count, products: rows.map((p) => svc.mapProductStrict(p, { vendor: vendor || p.Brands?.[0]?.name || '' })) } });
   } catch (err) {
     logger.error('[custom-checkout] listProducts failed: ' + err.message);
     res.status(500).json({ data: { total: 0, products: [] }, error: err.message });
@@ -69,7 +69,7 @@ exports.listCollectionProducts = async (req, res) => {
       limit, offset,
       distinct: true,
     });
-    res.json({ data: { total: count, products: rows.map((p) => svc.mapProduct(p, { vendor: vendor || p.Brands?.[0]?.name || '' })) } });
+    res.json({ data: { total: count, products: rows.map((p) => svc.mapProductStrict(p, { vendor: vendor || p.Brands?.[0]?.name || '' })) } });
   } catch (err) {
     logger.error('[custom-checkout] listCollectionProducts failed: ' + err.message);
     res.status(500).json({ data: { total: 0, products: [] }, error: err.message });

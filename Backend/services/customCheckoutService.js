@@ -114,6 +114,48 @@ function mapProduct(p, { vendor = '' } = {}) {
   };
 }
 
+// Product-list pull (GET /products): EXACTLY the keys and order of Shiprocket
+// Checkout's sample response — nothing extra. Dates in India time with the
+// offset written out (2026-10-21T14:16:03+05:30), like their sample.
+const isoIst = (d) => {
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return isoIst(new Date());
+  return new Date(t.getTime() + 330 * 60000).toISOString().slice(0, 19) + '+05:30';
+};
+function mapProductStrict(p, opts = {}) {
+  const full = mapProduct(p, opts);
+  const src = new Map((p.ProductVariations || []).map((v) => [Number(v.id), v]));
+  return {
+    id: full.id,
+    title: full.title,
+    body_html: full.body_html,
+    vendor: full.vendor,
+    product_type: full.product_type,
+    created_at: isoIst(p.createdAt),
+    handle: full.handle,
+    updated_at: isoIst(p.updatedAt),
+    tags: full.tags,
+    status: full.status,
+    variants: full.variants.map((v) => {
+      const row = src.get(Number(v.id)) || {};
+      return {
+        id: v.id,
+        title: v.title,
+        price: v.price,
+        sku: v.sku,
+        created_at: isoIst(row.createdAt),
+        updated_at: isoIst(row.updatedAt),
+        taxable: v.taxable,
+        grams: v.grams,
+        image: { src: v.image.src },
+        weight: v.weight,
+        weight_unit: v.weight_unit,
+      };
+    }),
+    image: { src: full.image.src },
+  };
+}
+
 function mapCollection(c) {
   return {
     id: Number(c.id),
@@ -401,7 +443,7 @@ async function ingestCheckoutOrder(brandId, p) {
 }
 
 module.exports = {
-  mapProduct, mapCollection, productIncludes,
+  mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
   initiateRefund, refundReports, ingestCheckoutOrder,
