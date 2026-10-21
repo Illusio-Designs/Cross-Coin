@@ -5,7 +5,9 @@ import { SITE_URL as SITE } from '@/lib/site';
 const DISALLOW = ['/account', '/cart', '/checkout', '/order-confirmation', '/wishlist', '/login', '/register', '/search', '/api/', '/_next/'];
 // AI crawlers we explicitly allow. Each needs its own rule repeating the
 // private-path disallows, because a crawler obeys only its most-specific group.
-const AI_BOTS = ['GPTBot', 'PerplexityBot', 'ClaudeBot', 'Google-Extended'];
+// OpenAI uses three: GPTBot (training), OAI-SearchBot (ChatGPT search) and
+// ChatGPT-User (pages a ChatGPT user asks it to open).
+const AI_BOTS = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'ClaudeBot', 'Google-Extended'];
 
 export default function robots() {
   return {

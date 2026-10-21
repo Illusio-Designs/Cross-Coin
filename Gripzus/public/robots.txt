@@ -44,6 +44,24 @@ Disallow: /register
 Disallow: /wishlist
 Disallow: /api/
 
+# OpenAI ChatGPT search
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /wishlist
+Disallow: /api/
+
+# OpenAI ChatGPT (pages a user asks it to open)
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /wishlist
+Disallow: /api/
+
 # Perplexity AI
 User-agent: PerplexityBot
 Allow: /
