@@ -12,7 +12,7 @@ import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTi
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
 export const revalidate = 300;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com').replace(/\/+$/, '');
+const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.morbixsocks.com').replace(/\/+$/, '');
 const BRAND = 'Morbix';
 
 export async function generateMetadata({ params }) {

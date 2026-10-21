@@ -8,6 +8,18 @@ export const revalidate = 3600;
 /* Every indexable URL: static pages, products, collections and journal posts.
    Sources are the same public, brand-scoped endpoints the pages use (the
    admin list endpoints need auth and returned nothing here before). */
+// The blog listing returns at most 50 posts per request: walk every page.
+async function allBlogPosts() {
+  const posts = [];
+  for (let page = 1; page <= 40; page += 1) {
+    const r = await getBlogPage({ page, limit: 50 }).catch(() => null);
+    if (!r?.posts?.length) break;
+    posts.push(...r.posts);
+    if (page >= (r.totalPages || 1)) break;
+  }
+  return { posts };
+}
+
 export default async function sitemap() {
   const now = new Date();
   const staticRoutes = [
@@ -23,7 +35,7 @@ export default async function sitemap() {
   const [productsRes, collections, blog] = await Promise.all([
     getPublicProducts({ limit: 500 }).catch(() => ({ products: [] })),
     getPublicCategories().catch(() => []),
-    getBlogPage({ page: 1, limit: 200 }).catch(() => ({ posts: [] })),
+    allBlogPosts(),
   ]);
 
   const productRoutes = (productsRes.products || []).filter((p) => p.slug).map((p) => {

@@ -10,7 +10,7 @@
  * created products show up on the next crawl.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.morbixsocks.com';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
 
@@ -27,6 +27,21 @@ async function safeFetch(path) {
   }
 }
 
+// The blog listing returns at most 50 posts per request: walk every page so
+// posts past the first 50 are in the sitemap too.
+async function fetchAllBlogPosts() {
+  const all = [];
+  for (let page = 1; page <= 40; page += 1) {
+    const r = await safeFetch(`/api/blogs/listing?limit=50&page=${page}`);
+    const list = r?.data?.posts || r?.posts || r?.blogs || r?.data || (Array.isArray(r) ? r : []);
+    if (!Array.isArray(list) || !list.length) break;
+    all.push(...list);
+    const pages = r?.pagination?.totalPages;
+    if (pages ? page >= pages : list.length < 50) break;
+  }
+  return { data: all };
+}
+
 export const revalidate = 300;
 
 export default async function sitemap() {
@@ -35,6 +50,7 @@ export default async function sitemap() {
   const staticRoutes = [
     { url: '/', changeFrequency: 'daily', priority: 1.0 },
     { url: '/collections', changeFrequency: 'daily', priority: 0.9 },
+    { url: '/products', changeFrequency: 'daily', priority: 0.9 },
     { url: '/journal', changeFrequency: 'weekly', priority: 0.7 },
     { url: '/about', changeFrequency: 'monthly', priority: 0.5 },
     { url: '/contact', changeFrequency: 'monthly', priority: 0.5 },
@@ -44,7 +60,7 @@ export default async function sitemap() {
   const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
     safeFetch('/api/products/catalog?limit=500'),
     safeFetch('/api/categories/listing'),
-    safeFetch('/api/blogs/listing?limit=50'),
+    fetchAllBlogPosts(),
     safeFetch('/api/policies'),
   ]);
 
