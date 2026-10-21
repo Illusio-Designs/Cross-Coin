@@ -70,7 +70,7 @@ export default async function HomePage() {
   const heroDesktopSrc = heroSlide ? heroSrc(heroSlide.image, 1600) : null;
   const heroMobileSrc = heroSlide && heroSlide.mobileImage ? heroSrc(heroSlide.mobileImage, 820) : null;
 
-  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in').replace(/\/+$/, '');
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.velquira.in').replace(/\/+$/, '');
   // Prefer the dashboard-controlled Organization object from the backend; fall
   // back to the hardcoded one when the fetch returns nothing (best-effort).
   const org = seoOrg && seoOrg.organization && typeof seoOrg.organization === 'object'

@@ -4,7 +4,7 @@
  * up indexed.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.velquira.in';
 
 const DISALLOW = [
   '/account',
