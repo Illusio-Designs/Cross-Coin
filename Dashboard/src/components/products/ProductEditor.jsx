@@ -451,14 +451,14 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
 
   const askDelete = () => setConfirm({
     title: 'Delete this product?',
-    message: `“${form.name}” will be removed from every shop. Past orders keep their details. This can’t be undone.`,
+    message: `“${form.name}” will be removed from every shop. If it is in past orders it is archived instead — hidden everywhere, and those orders keep their details. This can’t be undone.`,
     confirmLabel: 'Delete product',
     tone: 'danger',
     onConfirm: async () => {
       try {
-        await productService.deleteProduct(form.id);
+        const r = await productService.deleteProduct(form.id);
         setConfirm(null);
-        showSuccess('deleted', 'Product deleted');
+        showSuccess('deleted', r?.archived ? 'Product archived — it has past orders, so it’s hidden everywhere instead of deleted' : 'Product deleted');
         onDeleted?.();
       } catch (err) {
         setConfirm(null);
