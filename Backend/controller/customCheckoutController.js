@@ -8,10 +8,12 @@ const { Product, Category, Brand } = require('../model/associations.js');
 const svc = require('../services/customCheckoutService.js');
 const { logger } = require('../config/logging.js');
 
+// Shiprocket Checkout pages from 0 (their samples call page=0 first, and their
+// own order-list API is 0-based): page=0 → first `limit` rows, page=1 → next.
 const pagination = (req) => {
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const page = Math.max(0, parseInt(req.query.page, 10) || 0);
   const limit = Math.min(250, Math.max(1, parseInt(req.query.limit, 10) || 100));
-  return { page, limit, offset: (page - 1) * limit };
+  return { page, limit, offset: page * limit };
 };
 
 // GET /api/custom-checkout/products?page=&limit=

@@ -119,6 +119,61 @@ function SalesTrend({ daily, previousDaily, from, to }) {
   );
 }
 
+/* Average order value per day: booked order value ÷ booked orders (cancelled
+   left out), with the previous period dotted. */
+function AovTrend({ daily, previousDaily, from, to }) {
+  const series = useMemo(() => {
+    const byDay = new Map((daily || []).map((d) => [d.day, d]));
+    const span = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
+    const prevStart = shiftDay(from, -span);
+    const prevByDay = new Map((previousDaily || []).map((d) => [d.day, d]));
+    const aov = (r) => (Number(r.booked) > 0 ? (Number(r.bookedValue) || 0) / Number(r.booked) : null);
+    const out = [];
+    let i = 0;
+    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1), i += 1) {
+      out.push({ day: d, v: aov(byDay.get(d) || {}), p: aov(prevByDay.get(shiftDay(prevStart, i)) || {}), r: byDay.get(d) || {} });
+    }
+    return out;
+  }, [daily, previousDaily, from, to]);
+  const [hover, setHover] = useState(null);
+  const sum = (k) => series.reduce((a, x) => a + (Number(x.r[k]) || 0), 0);
+  const prevTot = (previousDaily || []).reduce((a, d) => [a[0] + (Number(d.bookedValue) || 0), a[1] + (Number(d.booked) || 0)], [0, 0]);
+  const periodAov = sum('booked') ? sum('bookedValue') / sum('booked') : 0;
+  const prevAov = prevTot[1] ? prevTot[0] / prevTot[1] : 0;
+  if (!series.some((x) => x.v != null)) return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
+  const W = 720, H = 150, PAD = 12;
+  const max = Math.max(1, ...series.map((x) => Math.max(x.v || 0, x.p || 0)));
+  const X = (i) => (i / Math.max(1, series.length - 1)) * W;
+  const Y = (v) => H - PAD - (v / max) * (H - PAD * 2);
+  // Days without orders break the line instead of dropping to ₹0.
+  const path = (k) => series.map((x, i) => (x[k] == null ? '' : `${i && series[i - 1][k] != null ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x[k]).toFixed(1)}`)).join(' ');
+  const h = hover != null ? series[hover] : null;
+  return (
+    <>
+      <div className="rep-trend-wrap" onMouseLeave={() => setHover(null)}>
+        <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height="150" preserveAspectRatio="none" role="img" aria-label="Average order value per day"
+          onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover(Math.max(0, Math.min(series.length - 1, Math.round(((e.clientX - r.left) / r.width) * (series.length - 1))))); }}>
+          <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+          <path d={path('p')} fill="none" stroke="var(--ds-color-text-faint)" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+          <path d={path('v')} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          {h ? <line x1={X(hover)} y1="0" x2={X(hover)} y2={H} stroke="var(--ds-color-border)" vectorEffect="non-scaling-stroke" /> : null}
+        </svg>
+        {h ? (
+          <div className="rep-trend-tip" style={{ left: `${(hover / Math.max(1, series.length - 1)) * 100}%` }}>
+            <b>{new Date(h.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</b>
+            <span>{h.v == null ? 'No orders' : `AOV ${money(h.v)} · ${num(h.r.booked)} orders`}</span>
+            <span className="mut">Previous period {h.p == null ? '—' : money(h.p)}</span>
+          </div>
+        ) : null}
+      </div>
+      <div className="rep-legend">
+        <div className="rep-leg"><i className="rep-key" style={{ background: 'var(--ds-color-text)' }} /><div><b className="num">{money(periodAov)}</b><small>average order value</small></div></div>
+        <div className="rep-leg"><i className="rep-key rep-key--dash" /><div><b className="num">{money(prevAov)}</b><small>previous period</small></div></div>
+      </div>
+    </>
+  );
+}
+
 /* Order value → net sales: every line by the day orders were placed. */
 function SalesBreakdown({ b }) {
   if (!b) return null;
@@ -159,13 +214,14 @@ function DayTable({ daily, from, to, onExport }) {
         <button type="button" className="order-sync-main-btn" onClick={onExport} style={{ marginLeft: 'auto' }}><DlIcon /> CSV</button></div>
       <div className="rep-tbl-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
         <table className="rep-table">
-          <thead><tr><th>Day</th><th className="r">Orders</th><th className="r">Order value</th><th className="r">Cancelled</th><th className="r">RTO</th><th className="r">Not delivered yet</th><th className="r">Refunds</th><th className="r">Net sales</th></tr></thead>
+          <thead><tr><th>Day</th><th className="r">Orders</th><th className="r">Order value</th><th className="r">AOV</th><th className="r">Cancelled</th><th className="r">RTO</th><th className="r">Not delivered yet</th><th className="r">Refunds</th><th className="r">Net sales</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.day}>
                 <td className="num">{new Date(r.day + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}</td>
                 <td className="r num">{num(r.placed)}</td>
                 <td className="r num"><b>{money(r.orderValue)}</b></td>
+                <td className="r num">{r.booked ? money((r.bookedValue || 0) / r.booked) : '—'}</td>
                 <td className="r num">{r.cancelled ? money(r.cancelled) : '—'}</td>
                 <td className="r num">{r.rto ? money(r.rto) : '—'}</td>
                 <td className="r num">{r.pending ? money(r.pending) : '—'}</td>
@@ -278,6 +334,7 @@ export default function Reports() {
     { label: 'Discounts', value: (d) => d.discounts },
     { label: 'Shipping charges', value: (d) => d.shipping },
     { label: 'Order value', value: (d) => d.orderValue },
+    { label: 'AOV (booked)', value: (d) => (d.booked ? Math.round((d.bookedValue / d.booked) * 100) / 100 : '') },
     { label: 'Cancelled', value: (d) => d.cancelled },
     { label: 'RTO', value: (d) => d.rto },
     { label: 'Not delivered yet', value: (d) => d.pending },
@@ -444,6 +501,11 @@ export default function Reports() {
               <div className="rep-ph"><h3>Sales breakdown</h3><span className="hint">order value → net sales</span></div>
               <SalesBreakdown b={data.breakdown} />
             </div>
+          </div>
+
+          <div className="rep-panel" style={dim} aria-busy={refreshing || undefined}>
+            <div className="rep-ph"><h3>Average order value over time</h3><span className="hint">order value ÷ orders (cancelled left out), by order day</span></div>
+            <AovTrend daily={data.daily} previousDaily={data.previousDaily} from={from} to={to} />
           </div>
 
           <div style={dim}><DayTable daily={data.daily} from={from} to={to} onExport={exportDays} /></div>

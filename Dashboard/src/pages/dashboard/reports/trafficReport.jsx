@@ -88,6 +88,51 @@ const DlIcon = () => <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth=
 const Dot = ({ color }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: color, marginRight: 8, verticalAlign: 'middle', flex: 'none' }} />
 );
+/* One series per India day, every day of the range shown (missing days = 0,
+   or a gap when `gaps`), with a hover card. */
+function DayLine({ rows, from, to, valueKey, fmt, tip, gaps = false, height = 160 }) {
+  const series = useMemo(() => {
+    const by = new Map((rows || []).map((r) => [r.day, r]));
+    const out = [];
+    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1)) {
+      const r = by.get(d) || { day: d };
+      const v = r[valueKey];
+      out.push({ ...r, day: d, v: v == null ? (gaps ? null : 0) : Number(v) });
+    }
+    return out;
+  }, [rows, from, to, valueKey, gaps]);
+  const [hover, setHover] = useState(null);
+  if (series.length < 2 || !series.some((x) => x.v)) return <span className="hint">No data in this period yet.</span>;
+  const W = 720, H = height, PAD = 10;
+  const max = Math.max(1e-9, ...series.map((x) => x.v || 0));
+  const X = (i) => (i / (series.length - 1)) * W;
+  const Y = (v) => H - PAD - (v / max) * (H - PAD * 2);
+  const d = series.map((x, i) => (x.v == null ? '' : `${i && series[i - 1].v != null ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x.v).toFixed(1)}`)).join(' ');
+  const h = hover != null ? series[hover] : null;
+  const ticks = [0, Math.floor((series.length - 1) / 2), series.length - 1];
+  return (
+    <div className="rep-trend-wrap" onMouseLeave={() => setHover(null)}>
+      <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height={H} preserveAspectRatio="none" role="img" aria-label={valueKey}
+        onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover(Math.max(0, Math.min(series.length - 1, Math.round(((e.clientX - r.left) / r.width) * (series.length - 1))))); }}>
+        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
+        <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        {/* A day with no neighbours has no line — mark it. */}
+        {series.map((x, i) => (x.v != null && series[i - 1]?.v == null && series[i + 1]?.v == null
+          ? <rect key={x.day} x={X(i) - 3} y={Y(x.v) - 3} width="6" height="6" fill="var(--ds-color-text)" /> : null))}
+        {h ? <line x1={X(hover)} y1="0" x2={X(hover)} y2={H} stroke="var(--ds-color-border)" vectorEffect="non-scaling-stroke" /> : null}
+      </svg>
+      <div className="rep-trend-ticks">{ticks.map((i) => <span key={i}>{fmtDay(series[i].day)}</span>)}</div>
+      {h ? (
+        <div className="rep-trend-tip" style={{ left: `${(hover / (series.length - 1)) * 100}%` }}>
+          <b>{fmtDay(h.day)}</b>
+          <span>{h.v == null ? 'No visits counted' : fmt(h.v)}</span>
+          {tip ? <span className="mut">{tip(h)}</span> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const Dash = () => <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>;
 const Empty = ({ cols, text }) => (
   <tr><td colSpan={cols} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>{text}</td></tr>
@@ -391,6 +436,20 @@ export default function TrafficReport() {
             </p>
           )}
 
+          {/* ── Over time (Shopify-style): visits and conversion per day ── */}
+          <div className="rep-grid2" style={dim} aria-busy={busy}>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Visits over time</h3><span className="hint">{num((data?.daily || []).reduce((a, x) => a + (x.visits || x.trackedSessions), 0))} visits · India days</span></div>
+              <DayLine rows={(data?.daily || []).map((x) => ({ ...x, v2: x.visits || x.trackedSessions }))} from={from} to={to} valueKey="v2"
+                fmt={(v) => plural(v, 'visit')} tip={(r) => `${plural(r.orders || 0, 'order')} · ${inr(r.value)}`} />
+            </div>
+            <div className="rep-panel">
+              <div className="rep-ph"><h3>Conversion rate over time</h3><span className="hint">orders ÷ visits, per day</span></div>
+              <DayLine rows={data?.daily} from={from} to={to} valueKey="conversion" gaps
+                fmt={(v) => `${pct(v)} conversion`} tip={(r) => `${plural(r.orders || 0, 'order')} from ${plural(r.visits || r.trackedSessions || 0, 'visit')}`} />
+            </div>
+          </div>
+
           {/* ── 1. Where visitors come from ── */}
           <div className="rep-panel" style={dim} aria-busy={busy}>
             <div className="rep-ph"><h3>Where visitors come from</h3><span className="hint">share of {num(sourceTotal)} tracked visits</span></div>
@@ -612,6 +671,24 @@ export default function TrafficReport() {
           </div>
 
           {/* ── 3. Ad campaigns, grouped by platform ── */}
+          <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
+            <div className="rep-ph"><h3>Visits by landing page</h3><span className="hint">the first page of each tracked visit</span></div>
+            <div className="rep-tbl-wrap">
+              <table className="rep-table">
+                <thead><tr><th>Page</th><th className="r">Visits</th><th className="r">Share</th></tr></thead>
+                <tbody>
+                  {(data?.landingPages || []).length ? data.landingPages.map((lp) => (
+                    <tr key={lp.path}>
+                      <td style={{ overflowWrap: 'anywhere' }}><span style={{ color: 'var(--ds-color-text-muted)' }}>{lp.type} · </span>{lp.path}</td>
+                      <td className="r num">{num(lp.sessions)}</td>
+                      <td className="r num">{pct(lp.share)}</td>
+                    </tr>
+                  )) : <Empty cols={3} text="No tracked visits in this period" />}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
             <div className="rep-ph">
               <h3>Ad campaigns by platform</h3>
