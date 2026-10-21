@@ -5,6 +5,7 @@ import { Button, Input, Table, SkeletonKpis, FilterChips, StatusPill, Pagination
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import Dropdown from '../../../components/ui/Dropdown';
 import { showError } from '../../../utils/toastNotification';
+import { useReportState } from '../../../lib/reportFilters';
 
 /**
  * Inventory — days of stock left for every active variant, what to reorder,
@@ -75,7 +76,7 @@ function DaysBar({ row }) {
 }
 
 export default function InventoryReport() {
-  const [brandId, setBrandId] = useState('');
+  const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
   const [windowDays, setWindowDays] = useState('30');
   const [filter, setFilter] = useState('all');

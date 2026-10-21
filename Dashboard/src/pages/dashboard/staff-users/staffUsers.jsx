@@ -32,7 +32,7 @@ const PAGE_GROUPS = [
   ["Payments", ["payments"]],
   ["Customers & leads", ["consumers", "customer", "leads"]],
   ["Coupons, reviews & loyalty", ["coupons", "reviews", "loyalty"]],
-  ["Reports", ["reports", "revenue-profit", "traffic-report", "report-ads", "report-location", "report-products", "report-customers", "report-inventory", "report-coupons"]],
+  ["Reports", ["reports-sales", "reports-marketing", "reports", "revenue-profit", "traffic-report", "report-ads", "report-location", "report-products", "report-customers", "report-inventory", "report-coupons"]],
   ["Products & stock", ["products", "categories", "attributes", "pack-pricing", "media-gallery"]],
   ["Website content & SEO", ["slider", "blogs", "seo", "seo-health", "seo-bulk", "seo-pages", "faqs", "seo-global", "policies"]],
   ["WhatsApp", ["whatsapp", "whatsapp-chat"]],

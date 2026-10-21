@@ -89,7 +89,7 @@ export default function Analytics() {
       {fbPixelId && consent.marketing && (
         <Script
           id="fb-pixel-init"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)
@@ -102,6 +102,7 @@ export default function Analytics() {
               'https://connect.facebook.net/en_US/fbevents.js');
               window._fbqId='${fbPixelId}';fbq('init', '${fbPixelId}');
               fbq('track', 'PageView');
+              window.dispatchEvent(new Event('brand-fbq-ready'));
             `,
           }}
         />

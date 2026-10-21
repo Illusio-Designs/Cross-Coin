@@ -24,7 +24,9 @@ const Dropdown = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  // Compare as text: ids arrive as numbers in some places and strings in others.
+  const same = (a, b) => a === b || (a != null && b != null && String(a) === String(b));
+  const selectedOption = options.find(opt => same(opt.value, value));
   const displayLabel = selectedOption?.label || placeholder;
 
   const handleSelect = (optionValue) => {
@@ -64,7 +66,7 @@ const Dropdown = ({
             options.map((option) => (
               <button
                 key={option.value}
-                className={`dropdown-item ${value === option.value ? 'active' : ''}`}
+                className={`dropdown-item ${same(value, option.value) ? 'active' : ''}`}
                 onClick={() => handleSelect(option.value)}
                 type="button"
               >

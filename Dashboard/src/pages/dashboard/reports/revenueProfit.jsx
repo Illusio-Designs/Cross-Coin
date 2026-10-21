@@ -3,6 +3,7 @@ import { trafficReportService } from '../../../services';
 import { Button, DateRangePicker, Input, Table, SkeletonKpis } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import Dropdown from '../../../components/ui/Dropdown';
+import { useReportState } from '../../../lib/reportFilters';
 
 /**
  * Revenue & Gross Profit — per brand, on orders that were DELIVERED in the
@@ -64,8 +65,8 @@ const ProfitCell = (v, bold) => (
 );
 
 export default function RevenueProfitReport() {
-  const [from, setFrom] = useState(shiftDay(istDate(), -29));
-  const [to, setTo] = useState(istDate());
+  const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
+  const [to, setTo] = useReportState('to', istDate());
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');

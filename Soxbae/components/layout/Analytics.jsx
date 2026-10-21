@@ -57,7 +57,7 @@ export default function Analytics() {
       <GoogleTagManager containerId={gtmId} />
       {fbId && consent.marketing && (
         <>
-          <Script id="fb-pixel" strategy="lazyOnload"
+          <Script id="fb-pixel" strategy="afterInteractive"
             dangerouslySetInnerHTML={{ __html: `
               !function(f,b,e,v,n,t,s)
               {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -69,6 +69,7 @@ export default function Analytics() {
               'https://connect.facebook.net/en_US/fbevents.js');
               window._fbqId='${fbId}';fbq('init', '${fbId}');
               fbq('track', 'PageView');
+              window.dispatchEvent(new Event('brand-fbq-ready'));
             ` }}
           />
           <noscript>

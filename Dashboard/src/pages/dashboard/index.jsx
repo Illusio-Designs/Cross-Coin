@@ -29,15 +29,7 @@ import { BrandManager } from "./brands";
 import { Blogs } from "./blogs";
 import { WhatsAppManager } from "./whatsapp";
 import StaffUsers from "./staff-users/staffUsers";
-import Reports from "./reports/reports";
-import TrafficReport from "./reports/trafficReport";
-import RevenueProfitReport from "./reports/revenueProfit";
-import LocationReport from "./reports/locationReport";
-import ProductReport from "./reports/productReport";
-import CustomerReport from "./reports/customerReport";
-import InventoryReport from "./reports/inventoryReport";
-import CouponReport from "./reports/couponReport";
-import AdsReport from "./reports/adsReport";
+import ReportHub, { LEGACY_REPORT_VIEWS } from "./reports/ReportHub";
 import SystemHealth from "./system/systemHealth";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
@@ -208,16 +200,14 @@ function Dashboard() {
       case 'brand-settings':  return <BrandManager />;
       case 'slider':          return <Slider />;
       case 'media-gallery':   return <MediaGallery />;
-      case 'reports':         return <Reports />;
-      case 'traffic-report':  return <TrafficReport />;
-      case 'revenue-profit':  return <RevenueProfitReport />;
-      case 'report-location': return <LocationReport />;
-      case 'report-products': return <ProductReport />;
-      case 'report-customers': return <CustomerReport />;
-      case 'report-inventory': return <InventoryReport />;
-      case 'report-coupons':  return <CouponReport />;
-      // Meta ad spend (admin only — no other role lists it in ROLE_VIEWS).
-      case 'report-ads':      return <AdsReport />;
+      // Reports: two tabbed pages. The old single-report views (bookmarks,
+      // links) open the page and tab that now hold them.
+      case 'reports-sales':     return <ReportHub group="sales" />;
+      case 'reports-marketing': return <ReportHub group="marketing" />;
+      case 'reports': case 'traffic-report': case 'revenue-profit': case 'report-location':
+      case 'report-products': case 'report-customers': case 'report-inventory': case 'report-coupons':
+      case 'report-ads':
+        return <ReportHub group={LEGACY_REPORT_VIEWS[currentView].group} initialTab={LEGACY_REPORT_VIEWS[currentView].tab} />;
       case 'leads':           return <Leads />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;

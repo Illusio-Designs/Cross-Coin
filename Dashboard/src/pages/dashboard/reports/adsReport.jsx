@@ -4,6 +4,7 @@ import { reportPagesService, brandService, metaAdsService } from '../../../servi
 import { Button, DateRangePicker, Input, Select, Table, SkeletonKpis, Skeleton, StatusPill } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import Dropdown from '../../../components/ui/Dropdown';
+import { useReportState } from '../../../lib/reportFilters';
 
 /* ──────────────────────────────────────────────────────────────
    Ads — Meta ad spend against the orders it actually brought in.
@@ -334,9 +335,9 @@ function DiagnosisPanel({ diagnosis }) {
 
 export default function AdsReport() {
   const qc = useQueryClient();
-  const [from, setFrom] = useState(shiftDay(istDate(), -29));
-  const [to, setTo] = useState(istDate());
-  const [brandId, setBrandId] = useState('');
+  const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
+  const [to, setTo] = useReportState('to', istDate());
+  const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
   const [path, setPath] = useState([]); // [{ campaign, brandId }, { adset }]
 

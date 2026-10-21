@@ -56,15 +56,10 @@ export const MENU = [
       { key: 'reviews', label: 'Reviews', view: 'reviews', icon: StarIcon, roles: ORDERS, count: 'reviews', countText: 'waiting' },
       {
         key: 'reports', label: 'Reports', icon: ChartLineData01Icon, roles: ORDERS, children: [
-          { key: 'reports-overview', label: 'Overview', view: 'reports' },
-          { key: 'revenue-profit', label: 'Revenue & Profit', view: 'revenue-profit', roles: ADMIN },
-          { key: 'traffic', label: 'Traffic', view: 'traffic-report', roles: ADMIN },
-          { key: 'report-ads', label: 'Ads', view: 'report-ads', roles: ADMIN },
-          { key: 'report-location', label: 'Location', view: 'report-location' },
-          { key: 'report-products', label: 'Products', view: 'report-products' },
-          { key: 'report-customers', label: 'Customers', view: 'report-customers' },
-          { key: 'report-inventory', label: 'Inventory', view: 'report-inventory' },
-          { key: 'report-coupons', label: 'Coupons', view: 'report-coupons' },
+          // Two tabbed pages (pages/dashboard/reports/ReportHub.jsx); the old
+          // single-report views open the matching tab.
+          { key: 'reports-sales', label: 'Sales', view: 'reports-sales', also: ['reports', 'revenue-profit', 'report-products', 'report-inventory', 'report-location'] },
+          { key: 'reports-marketing', label: 'Marketing', view: 'reports-marketing', also: ['traffic-report', 'report-ads', 'report-coupons', 'report-customers'] },
         ],
       },
     ],
