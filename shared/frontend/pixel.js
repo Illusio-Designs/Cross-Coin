@@ -127,7 +127,37 @@ export function fbTrack(event, params = {}) {
   // First-party funnel event → our own DB (fires regardless of Meta/GA presence).
   fpTrack(event, params);
 
-  if (!window.fbq) return;
+  // Meta: the pixel loads after the tracking config, cookie consent and page
+  // load — later than an event fired on mount (ViewContent on a product page
+  // someone lands on). Hold such events and send them once fbq exists, instead
+  // of dropping them (and their CAPI copy). Without marketing consent fbq never
+  // appears, so held events are never sent.
+  if (!window.fbq) { holdMeta(event, params); return; }
+  sendMeta(event, params, window.location.href);
+}
+
+const pendingMeta = [];
+let metaWaiting = false;
+function flushMeta() {
+  if (!window.fbq) return false;
+  metaWaiting = false;
+  const cutoff = Date.now() - 10 * 60 * 1000; // older than 10 min: stale, drop
+  for (const [ev, p, url, at] of pendingMeta.splice(0)) if (at >= cutoff) sendMeta(ev, p, url);
+  return true;
+}
+function holdMeta(event, params) {
+  if (pendingMeta.length < 50) pendingMeta.push([event, params, window.location.href, Date.now()]);
+  if (metaWaiting) return;
+  metaWaiting = true;
+  // Analytics dispatches 'brand-fbq-ready' right after fbq('init'); the poll is
+  // a fallback (consent given later, or the event missed), for up to 10 min.
+  window.addEventListener('brand-fbq-ready', flushMeta, { once: true });
+  let tries = 0;
+  const tick = () => { if (flushMeta() || ++tries > 600) return; setTimeout(tick, 1000); };
+  setTimeout(tick, 500);
+}
+
+function sendMeta(event, params, url) {
   const eventID = `${event}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   try {
     window.fbq('track', event, params, { eventID });
@@ -144,7 +174,7 @@ export function fbTrack(event, params = {}) {
       body: JSON.stringify({
         event_name: event,
         event_id: eventID,
-        event_source_url: window.location.href,
+        event_source_url: url || window.location.href,
         custom_data: params,
         user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id },
         fbp: readCookie('_fbp'),

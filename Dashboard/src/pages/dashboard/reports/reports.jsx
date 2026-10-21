@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/Dashboard/primitives';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Download04Icon } from '@hugeicons/core-free-icons';
+import { useReportState } from '../../../lib/reportFilters';
 
 /* ──────────────────────────────────────────────────────────────
    Reports — sales on the same pipeline the Orders page uses.
@@ -268,9 +269,9 @@ const Empty = ({ cols, text }) => (
 );
 
 export default function Reports() {
-  const [from, setFrom] = useState(shiftDay(istDate(), -29));
-  const [to, setTo] = useState(istDate());
-  const [brandId, setBrandId] = useState('');
+  const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
+  const [to, setTo] = useReportState('to', istDate());
+  const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
   const [exporting, setExporting] = useState('');
 

@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/Dashboard/primitives';
 import { getImageUrl } from '../../../utils/imageHandler';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Download04Icon } from '@hugeicons/core-free-icons';
+import { useReportState } from '../../../lib/reportFilters';
 
 /* ──────────────────────────────────────────────────────────────
    Products — what each product sells, how shoppers move from viewing
@@ -208,9 +209,9 @@ function DetailPanel({ detail, loading, error, fallbackName, funnelSince }) {
 }
 
 export default function ProductReport() {
-  const [from, setFrom] = useState(shiftDay(istDate(), -29));
-  const [to, setTo] = useState(istDate());
-  const [brandId, setBrandId] = useState('');
+  const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
+  const [to, setTo] = useReportState('to', istDate());
+  const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
   const [view, setView] = useState('sales');
   const [sort, setSort] = useState('units');

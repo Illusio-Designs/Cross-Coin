@@ -6,6 +6,7 @@ import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Download04Icon } from '@hugeicons/core-free-icons';
+import { useReportState } from '../../../lib/reportFilters';
 
 /* ──────────────────────────────────────────────────────────────
    Orders by location — where orders ship to (the shipping address),
@@ -86,9 +87,9 @@ const kpiBtn = { font: 'inherit', textAlign: 'left', cursor: 'pointer', width: '
 const COLS = ['', 'Orders', 'Share', 'Units', 'Net sales', 'AOV', 'COD', 'Delivered', 'RTO', 'Returns', 'Days'];
 
 export default function LocationReport() {
-  const [from, setFrom] = useState(shiftDay(istDate(), -29));
-  const [to, setTo] = useState(istDate());
-  const [brandId, setBrandId] = useState('');
+  const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
+  const [to, setTo] = useReportState('to', istDate());
+  const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
   const [pay, setPay] = useState('all');
   const [measure, setMeasure] = useState('orders');
