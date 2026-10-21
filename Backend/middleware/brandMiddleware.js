@@ -83,7 +83,7 @@ module.exports.optionalBrand = async (req, res, next) => {
 
         if (brandSlug) {
             const brand = await Brand.findOne({
-                where: { slug: String(brandSlug).toLowerCase(), status: 'active' }
+                where: { slug: String(brandSlug).trim().toLowerCase(), status: 'active' }
             });
             
             if (brand) {
