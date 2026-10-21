@@ -776,57 +776,10 @@
         }
       });
 
-      // Fire AddShippingInfo for all orders + InitiateCheckout for COD (prepaid fires InitiateCheckout in createRazorpayOrder)
-      setImmediate(async () => {
-        try {
-          const [orderUser, orderAddress] = await Promise.all([
-            User.findByPk(userId, { attributes: ['email', 'username'] }),
-            ShippingAddress.findByPk(shipping_address_id),
-          ]);
-          const nameParts = (orderUser?.username || '').trim().split(/\s+/);
-          const basePayload = {
-            brand_id: createdOrder.brand_id || 1,
-            external_id: userId || null,
-            order_number: createdOrder.order_number,
-            total_amount: parseFloat(createdOrder.final_amount),
-            final_amount: parseFloat(createdOrder.final_amount),
-            currency: "INR",
-            ip_address: req.ip || null,
-            user_agent: req.headers["user-agent"] || null,
-            email: orderUser?.email || null,
-            phone: orderAddress?.phone || null,
-            first_name: nameParts[0] || null,
-            last_name: nameParts.slice(1).join(' ') || null,
-            zip_code: orderAddress?.pincode || null,
-            city: orderAddress?.city || null,
-            state: orderAddress?.state || null,
-            country: 'in',
-            fbc: req.body?.fbc || req.cookies?._fbc || null,
-            fbp: req.body?.fbp || req.cookies?._fbp || null,
-            items: createdOrder.OrderItems.map(i => ({
-              product_id: i.product_id,
-              quantity: i.quantity,
-              price: parseFloat(i.price || 0),
-              name: i.Product?.name || '',
-            })),
-          };
-
-          // AddShippingInfo fires for all orders when shipping address is confirmed
-          await sendFacebookEvent("AddShippingInfo", basePayload);
-          await sendGAEvent("add_shipping_info", basePayload);
-
-          // InitiateCheckout is already sent (deduped) by the browser pixel + its
-          // CAPI relay when checkout begins — re-sending it here with a different
-          // event_id double-counts, so we don't. AddPaymentInfo has no browser
-          // counterpart, so keep it (COD only; prepaid fires it in createRazorpayOrder).
-          if (payment_type === 'cod') {
-            await sendFacebookEvent("AddPaymentInfo", basePayload);
-            await sendGAEvent("add_payment_info", basePayload);
-          }
-        } catch (fbErr) {
-          logger.error("createOrder: AddShippingInfo/InitiateCheckout analytics error:", fbErr.message);
-        }
-      });
+      // Checkout-step events (add_shipping_info / add_payment_info, Meta
+      // AddPaymentInfo) come from the storefront when Place order is pressed —
+      // browser + its CAPI relay, one event ID — the way Shopify's apps send
+      // them. The server no longer sends its own copies (they double-counted).
 
       // Fire Purchase analytics ONLY for COD orders — prepaid fires in updateOrderPayment after payment confirmation
       if (payment_type === 'cod') {
@@ -857,6 +810,9 @@
               country: 'in',
               fbc: req.body?.fbc || req.cookies?._fbc || null,
               fbp: req.body?.fbp || req.cookies?._fbp || null,
+              // The shopper's GA4 client id (from the _ga cookie) so the
+              // server-side purchase keeps its traffic source in GA4.
+              ga_client_id: req.body?.ga_client_id || null,
               items: createdOrder.OrderItems.map(i => ({
                 product_id: i.product_id,
                 quantity: i.quantity,
@@ -1013,6 +969,8 @@
         discount_amount,
         idempotency_key,
         utm_session_id: req.body.utm_session_id,
+        // Browser ids for the server-side Purchase (Meta match + GA4 source).
+        fbp: req.body.fbp, fbc: req.body.fbc, ga_client_id: req.body.ga_client_id,
       };
 
       // Add token to response header so frontend can store it

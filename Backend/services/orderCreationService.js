@@ -400,8 +400,9 @@ async function handlePaymentSuccess({
           city: shippingAddr?.city || null,
           state: shippingAddr?.state || null,
           country: 'in',
-          fbc: req?.body?.fbc || req?.cookies?._fbc || null,
-          fbp: req?.body?.fbp || req?.cookies?._fbp || null,
+          fbc: session.tracking?.fbc || req?.body?.fbc || req?.cookies?._fbc || null,
+          fbp: session.tracking?.fbp || req?.body?.fbp || req?.cookies?._fbp || null,
+          ga_client_id: session.tracking?.ga_client_id || req?.body?.ga_client_id || null,
           items: orderItems.map(i => ({
             product_id: i.product_id,
             quantity: i.quantity,

@@ -1,4 +1,5 @@
 import { gtagTrack } from './gtagTrack';
+import { getConsent } from '../lib/consent';
 
 // Facebook Pixel event tracking utility.
 //
@@ -15,11 +16,11 @@ import { gtagTrack } from './gtagTrack';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
 
-// Events we mirror to CAPI from the browser. Purchase / AddPaymentInfo /
-// AddShippingInfo are intentionally excluded — the server already sends those
-// authoritatively at order time (Purchase deduped via `Purchase_<order>`), so
-// relaying them again would add redundant server events.
-const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search']);
+// Events we mirror to CAPI from the browser (same set Shopify's Meta app sends
+// server-side). Purchase is intentionally excluded — the server sends it
+// authoritatively at order time (deduped via `Purchase_<order>`), so relaying
+// it again would add a redundant server event.
+const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist']);
 
 const BLOCKED_EVENTS = ['SubscribedButtonClick'];
 
@@ -89,6 +90,11 @@ function ga4Track(event, params) {
   const name = GA4_EVENT[event];
   if (!name) return;
   try {
+    // GA4's recommended `search` event carries only the term (no value/items).
+    if (name === 'search') {
+      gtagTrack(name, { search_term: String(params.search_string || '') });
+      return;
+    }
     gtagTrack(name, {
       currency: params.currency || 'INR',
       value: Number(params.value || 0),
@@ -104,14 +110,41 @@ function makeEventId(event) {
 
 function readCookie(name) {
   if (typeof document === 'undefined') return undefined;
-  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-  return m ? decodeURIComponent(m[1]) : undefined;
+  try {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : undefined;
+  } catch (_) { return undefined; }
+}
+
+// Browser ad/analytics ids for server-side attribution on order/checkout
+// requests (what Shopify's Meta & Google apps attach): Meta _fbp/_fbc and the
+// GA4 client id from the `_ga` cookie (`GA1.1.<id>` → `<id>`). Only keys that
+// exist are returned; never throws.
+export function trackingIds() {
+  const out = {};
+  try {
+    const fbp = readCookie('_fbp');
+    if (fbp) out.fbp = fbp;
+    const fbc = readCookie('_fbc');
+    if (fbc) out.fbc = fbc;
+    const ga = readCookie('_ga');
+    const m = ga && ga.match(/^GA\d+\.\d+\.(.+)$/);
+    if (m && m[1]) out.ga_client_id = m[1];
+  } catch (_) { /* never throw */ }
+  return out;
+}
+
+function hasMarketingConsent() {
+  try { return !!getConsent().marketing; } catch (_) { return false; }
 }
 
 // Fire-and-forget relay to the Conversions API. keepalive lets it complete even
 // if the page is navigating away (e.g. InitiateCheckout → redirect to payment).
+// Sent only with marketing consent (DPDP) — the browser pixel is a queue-only
+// stub until consent, so the server copy must not go out without it either.
 function relayToCapi(event, eventID, params) {
   try {
+    if (!hasMarketingConsent()) return;
     const u = (typeof window !== 'undefined' && window.__fbUser) || {};
     const body = JSON.stringify({
       event_name: event,

@@ -298,6 +298,13 @@ exports.initiateCheckout = async (req, res) => {
       notes: notes || null, brand_id: brandId, utm_tracking_id: utmTrackingId,
       idempotency_key: idempotency_key || null,
       totals: { subtotal: subTotal, discount: appliedDiscount, shipping: shippingFee, final: finalAmount },
+      // Browser ids for the server-side Purchase sent after Razorpay confirms
+      // (the webhook path has no browser request to read them from).
+      tracking: {
+        fbp: req.body?.fbp || req.cookies?._fbp || null,
+        fbc: req.body?.fbc || req.cookies?._fbc || null,
+        ga_client_id: req.body?.ga_client_id || null,
+      },
     });
 
     // Create Razorpay order

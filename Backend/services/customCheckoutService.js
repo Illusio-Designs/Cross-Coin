@@ -425,7 +425,15 @@ async function ingestCheckoutOrder(brandId, p) {
     }
 
     logger.info(`[custom-checkout] ingested order ${order.order_number} (platform ${platformId}, brand ${brandId})`);
-    return { created: true, order_number: order.order_number, order_id: order.id, _order: order };
+    const track = {
+      brand_id: brandId, order_number: order.order_number,
+      total_amount: finalAmount, final_amount: finalAmount, currency: 'INR',
+      email: p.email || ship.email || null, phone: phone || null,
+      first_name: firstName || null, last_name: lastName || null,
+      zip_code: String(ship.pincode || '') || null, city: ship.city || null, state: ship.state || null, country: 'in',
+      items: lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity, price: l.price, name: '' })),
+    };
+    return { created: true, order_number: order.order_number, order_id: order.id, _order: order, _track: track };
   }).then((result) => {
     // After commit: fire the same lifecycle events a native order gets, so the
     // customer receives the WhatsApp confirmation + invoice, abandoned-cart
@@ -433,11 +441,25 @@ async function ingestCheckoutOrder(brandId, p) {
     if (result?._order) {
       const orderEmitter = require('./orderEvents.js');
       const o = result._order;
+      const track = result._track;
       setImmediate(() => {
         try { orderEmitter.emit('order.created', o); } catch (e) { logger.warn('[custom-checkout] order.created emit failed: ' + e.message); }
         try { orderEmitter.emit('order.confirmed', o); } catch (e) { logger.warn('[custom-checkout] order.confirmed emit failed: ' + e.message); }
       });
+      // Server-side Purchase (Meta CAPI + GA4), event id Purchase_<our order
+      // number> — the checkout provider's page can't send a matching browser one.
+      if (track) {
+        setImmediate(async () => {
+          try {
+            const { sendFacebookEvent } = require('../integration/facebookPixel.js');
+            const { sendGAEvent } = require('../integration/googleAnalytics.js');
+            await sendFacebookEvent('Purchase', track);
+            await sendGAEvent('purchase', track);
+          } catch (e) { logger.warn('[custom-checkout] Purchase analytics failed: ' + e.message); }
+        });
+      }
       delete result._order;
+      delete result._track;
     }
     return result;
   });

@@ -1,5 +1,5 @@
 import Script from 'next/script';
-import { trackPageView } from '../../utils/pixel';
+import { trackPageView, metaPageView } from '../../utils/pixel';
 import GoogleTagManager from '../GoogleTagManager';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -41,12 +41,11 @@ export default function Analytics() {
     return () => { aborted = true; };
   }, []);
 
-  // Fire GA page_view + FB PageView on client-side route changes.
+  // Fire GA page_view on client-side route changes.
   useEffect(() => {
     const onRouteChange = (url) => {
       if (typeof window === 'undefined') return;
       if (cfg?.gaId) trackPageView(url);
-      if (consent.marketing && window.fbq) window.fbq('track', 'PageView');
     };
     router.events.on('routeChangeComplete', onRouteChange);
     return () => router.events.off('routeChangeComplete', onRouteChange);
@@ -55,6 +54,13 @@ export default function Analytics() {
   useEffect(() => {
     if (cfg?.gaId && router.isReady) trackPageView(router.asPath);
   }, [cfg?.gaId, router.isReady, router.asPath]);
+
+  // Meta PageView on in-store navigation only. Runs for the landing path too
+  // so metaPageView records it (the pixel snippet already sent that PageView)
+  // and then sends one PageView per later path.
+  useEffect(() => {
+    if (consent.marketing && cfg?.fbId && router.isReady) metaPageView(router.asPath);
+  }, [consent.marketing, cfg?.fbId, router.isReady, router.asPath]);
 
   if (!cfg) return null;
   const { gaId, fbId, clarityId, gtmId } = cfg;
