@@ -149,8 +149,8 @@ async function picker({ kind, search, ids }) {
 // Every place a code is sent or shown without staff typing it:
 //  • Abandoned-cart WhatsApp — cart rules coupon (cartRecoveryService, default CART10)
 //  • Win-back WhatsApp — one code for all stores (cart rules winbackCoupon, default CART10);
-//    the cron only sends when a coupon with that code, home store = that store,
-//    is active and in date (config/cronJobs.js winback)
+//    the cron sends when a live coupon with that code works on the store
+//    (couponForStore: no store list = every store; config/cronJobs.js winback)
 //  • Website pop-up — POPUP_COUPON_CODE env (default PREPAID10), shown on the site
 //    and sent on WhatsApp (leadController.capturePhoneLead)
 //  • Exit pop-up — storefronts prefer CART10 from the public list, otherwise any
@@ -178,16 +178,22 @@ async function automationRefs(brands) {
   return refs;
 }
 
-// (code, home store) -> [{ key, text, enabled }] e.g. "Abandoned-cart WhatsApp",
-// "Win-back WhatsApp · Soxbae". Win-back only counts the row whose home store is
-// that store (what the cron looks up); the others match by code.
+// code -> [{ key, text, enabled }] e.g. "Abandoned-cart WhatsApp",
+// "Win-back WhatsApp · all stores". Win-back is one code for every store, so it
+// is listed once (the cron uses any coupon with the code that works on a store).
 function usedByIndex(refs, brands) {
-  return (code, homeBrandId) => {
+  return (code) => {
     const c = String(code).toUpperCase();
     const out = [];
+    let winDone = false;
     for (const r of refs) {
       if (r.code !== c) continue;
-      if (r.key === 'win_back' && r.brandId !== Number(homeBrandId)) continue;
+      if (r.key === 'win_back') {
+        if (winDone) continue;
+        winDone = true;
+        out.push({ key: r.key, text: `${r.label} · all stores${r.enabled ? '' : ' (switched off)'}`, enabled: r.enabled, soft: !!r.soft, brandId: null });
+        continue;
+      }
       const text = `${r.label}${r.brandId ? ` · ${brands.get(r.brandId)?.name || `store ${r.brandId}`}` : ''}${r.enabled ? '' : ' (switched off)'}`;
       out.push({ key: r.key, text, enabled: r.enabled, soft: !!r.soft, brandId: r.brandId || null });
     }
@@ -274,7 +280,7 @@ async function listCoupons({ tab = 'live', search = '', brandId = null, page = 1
       brands: restricted.map((id) => ({ id, name: brands.get(id)?.name || `Store ${id}` })),
       categories: idList(r.applicableCategories).map((id) => ({ id, name: catNames.get(id) || `Category ${id}` })),
       products: idList(r.applicableProducts).map((id) => ({ id, name: prodNames.get(id) || `Product ${id}` })),
-      usedBy: usedBy(r.code, r.brand_id),
+      usedBy: usedBy(r.code),
       stats: { used: Number(r.used), discount: Math.round(Number(r.discountGiven)), sales: Math.round(Number(r.sales)) },
     };
   });
