@@ -67,7 +67,8 @@ const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// Invalid / empty day (e.g. a half-picked date range) is returned as-is.
+const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); if (Number.isNaN(d.getTime())) return s; d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const fmtDay = (s) => {
   const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z');
   return Number.isNaN(d.getTime()) ? String(s) : new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(d);

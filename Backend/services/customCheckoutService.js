@@ -156,15 +156,16 @@ function mapProductStrict(p, opts = {}) {
   };
 }
 
+// Exactly the keys and order of Shiprocket Checkout's collections sample.
 function mapCollection(c) {
   return {
     id: Number(c.id),
-    updated_at: iso(c.updatedAt),
+    updated_at: isoIst(c.updatedAt),
     body_html: c.description || '',
     handle: c.slug || String(c.id),
     image: { src: absUrl(c.image || '') },
     title: c.name || '',
-    created_at: iso(c.createdAt),
+    created_at: isoIst(c.createdAt),
   };
 }
 

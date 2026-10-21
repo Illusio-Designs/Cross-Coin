@@ -25,7 +25,9 @@ const label = (s) => String(s || '—').replace(/_/g, ' ').replace(/\b\w/g, (c) 
 
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// Invalid / empty day (e.g. a half-picked date range) is returned as-is.
+const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); if (Number.isNaN(d.getTime())) return s; d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const validRange = (from, to) => /^\d{4}-\d{2}-\d{2}$/.test(from || '') && /^\d{4}-\d{2}-\d{2}$/.test(to || '') && from <= to;
 
 const RAMP = ['var(--rr1)', 'var(--rr2)', 'var(--rr3)', 'var(--rr4)', 'var(--rr5)'];
 
@@ -56,6 +58,7 @@ function Delta({ pct, invert = false }) {
    period's order value (dotted) for comparison. */
 function SalesTrend({ daily, previousDaily, from, to }) {
   const series = useMemo(() => {
+    if (!validRange(from, to)) return [];
     const byDay = new Map((daily || []).map((d) => [d.day, d]));
     const prev = previousDaily || [];
     const span = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
@@ -72,7 +75,7 @@ function SalesTrend({ daily, previousDaily, from, to }) {
   }, [daily, previousDaily, from, to]);
   const [hover, setHover] = useState(null);
 
-  if (series.length < 2 || series.every((p) => !p.value && !p.prev)) {
+  if (!validRange(from, to) || series.length < 2 || series.every((p) => !p.value && !p.prev)) {
     return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
   }
   const W = 720, H = 200, PAD = 12;
@@ -123,6 +126,7 @@ function SalesTrend({ daily, previousDaily, from, to }) {
    left out), with the previous period dotted. */
 function AovTrend({ daily, previousDaily, from, to }) {
   const series = useMemo(() => {
+    if (!validRange(from, to)) return [];
     const byDay = new Map((daily || []).map((d) => [d.day, d]));
     const span = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
     const prevStart = shiftDay(from, -span);
@@ -140,7 +144,7 @@ function AovTrend({ daily, previousDaily, from, to }) {
   const prevTot = (previousDaily || []).reduce((a, d) => [a[0] + (Number(d.bookedValue) || 0), a[1] + (Number(d.booked) || 0)], [0, 0]);
   const periodAov = sum('booked') ? sum('bookedValue') / sum('booked') : 0;
   const prevAov = prevTot[1] ? prevTot[0] / prevTot[1] : 0;
-  if (!series.some((x) => x.v != null)) return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
+  if (!validRange(from, to) || !series.some((x) => x.v != null)) return <div className="rep-ph"><span className="hint">No orders in this period yet.</span></div>;
   const W = 720, H = 150, PAD = 12;
   const max = Math.max(1, ...series.map((x) => Math.max(x.v || 0, x.p || 0)));
   const X = (i) => (i / Math.max(1, series.length - 1)) * W;
