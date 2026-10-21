@@ -449,11 +449,8 @@ async function reviewRequest() {
 // offered when that code exists and is active as this store's coupon —
 // otherwise the store is skipped, so customers never get a code that fails.
 async function winback() {
-  const { Op } = require('sequelize');
   const { sequelize: db } = require('../config/db.js');
   const { User } = require('../model/userModel.js');
-  const { Coupon } = require('../model/couponModel.js');
-  const settingsHelper = require('../services/settingsHelper.js');
   const whatsappService = require('../services/whatsappService.js');
 
   // orders is underscored → created_at (MAX(createdAt) threw every run).
@@ -474,17 +471,10 @@ async function winback() {
   const couponFor = async (brandId) => {
     if (couponByBrand.has(brandId)) return couponByBrand.get(brandId);
     const code = await require('../services/cartRecoveryService.js').getWinbackCode();
-    const now = new Date();
-    const coupon = await Coupon.findOne({
-      where: {
-        code, brand_id: brandId, status: 'active',
-        [Op.and]: [
-          { [Op.or]: [{ startDate: null }, { startDate: { [Op.lte]: now } }] },
-          { [Op.or]: [{ endDate: null }, { endDate: { [Op.gte]: now } }] },
-        ],
-      },
-    });
-    const usable = coupon ? code : null;
+    // Any live coupon with this code that works on this store (every-store
+    // coupons included) — the same rule checkout applies.
+    const { status } = await require('../services/couponAdminService.js').couponForStore(code, brandId);
+    const usable = status === 'live' ? code : null;
     if (!usable) { console.warn(`⚠️ [CRON] Win-back: brand ${brandId} has no active coupon "${code}" — skipping its customers`); blockedBrands.set(brandId, code); }
     couponByBrand.set(brandId, usable);
     return usable;
@@ -511,7 +501,7 @@ async function winback() {
     const names = [];
     for (const [id, code] of blockedBrands) {
       const b = await Brand.findByPk(id, { attributes: ['name', 'display_name'] }).catch(() => null);
-      names.push(`${b?.display_name || b?.name || `brand ${id}`} — coupon ${code} not active`);
+      names.push(`${b?.display_name || b?.name || `brand ${id}`} — coupon ${code} not active on this store`);
     }
     blockedNote = `Skipped ${names.join('; ')}`;
   }
