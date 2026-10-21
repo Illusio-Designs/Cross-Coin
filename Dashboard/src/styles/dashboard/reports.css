@@ -35,7 +35,8 @@
 .obz-rep-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ── KPI strip ── */
-.rep-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.rep-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+@media (max-width: 1200px) { .rep-kpis { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) { .rep-kpis { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 420px) { .rep-kpis { grid-template-columns: 1fr; } }
 .rep-kpi {
@@ -173,3 +174,22 @@
 .rep-exp p { margin: 0; font-size: 13px; color: var(--ds-color-text-muted); max-width: 62ch; }
 
 .rep-state { text-align: center; padding: 48px 0; color: var(--ds-color-text-muted); }
+
+/* Sales over time + breakdown */
+.rep-trend-wrap { position: relative; }
+.rep-trend-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ds-color-text-faint); margin-top: 4px; }
+.rep-trend-tip {
+  position: absolute; top: 6px; transform: translateX(-50%); pointer-events: none; z-index: 2;
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; font-size: 12px; white-space: nowrap;
+  background: var(--ds-color-surface); color: var(--ds-color-text); border: 1px solid var(--ds-color-border); box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.rep-trend-tip .ok { color: var(--ds-color-success-text, #067647); }
+.rep-trend-tip .mut { color: var(--ds-color-text-faint); }
+.rep-key { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 8px; align-self: center; flex: none; }
+.rep-key--dash { background: repeating-linear-gradient(90deg, var(--ds-color-text-faint) 0 4px, transparent 4px 7px); }
+.rep-bd { display: flex; flex-direction: column; }
+.rep-bd-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--ds-color-border-soft); font-size: 13px; }
+.rep-bd-row.is-total { font-weight: 700; border-bottom-color: var(--ds-color-border); }
+.rep-bd-name small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ds-color-text-faint); }
+.rep-bd-v.bad { color: var(--ds-color-danger-text, #b42318); }
+.rep-bd-v.ok { color: var(--ds-color-success-text, #067647); }
