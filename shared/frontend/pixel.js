@@ -11,7 +11,7 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || '__BRAND__';
-const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search']);
+const RELAY_EVENTS = new Set(['ViewContent', 'AddToCart', 'InitiateCheckout', 'Search', 'AddPaymentInfo', 'AddToWishlist']);
 
 // Meta event names map to Google ecommerce events. Purchase is sent separately
 // with the order number as transaction_id for reconciliation.
@@ -20,6 +20,7 @@ const GA4_EVENT = {
   AddToCart: 'add_to_cart',
   InitiateCheckout: 'begin_checkout',
   Search: 'search',
+  AddToWishlist: 'add_to_wishlist',
 };
 
 function readCookie(name) {
@@ -109,11 +110,9 @@ function ga4Track(event, params) {
   const name = GA4_EVENT[event];
   if (!name) return;
   try {
-    googleEvent(name, {
-      currency: params.currency || 'INR',
-      value: Number(params.value || 0),
-      items: ga4Items(params),
-    });
+    googleEvent(name, name === 'search'
+      ? { search_term: params.search_string || '' }
+      : { currency: params.currency || 'INR', value: Number(params.value || 0), items: ga4Items(params) });
   } catch (_) { /* never throw */ }
 }
 
@@ -132,6 +131,14 @@ export function fbTrack(event, params = {}) {
   // someone lands on). Hold such events and send them once fbq exists, instead
   // of dropping them (and their CAPI copy). Without marketing consent fbq never
   // appears, so held events are never sent.
+  if (!window.fbq) { holdMeta(event, params); return; }
+  sendMeta(event, params, window.location.href);
+}
+
+// Meta pixel + CAPI relay only (no GA4 / first-party copy) — held until the
+// pixel exists, like fbTrack.
+function metaTrack(event, params) {
+  if (typeof window === 'undefined') return;
   if (!window.fbq) { holdMeta(event, params); return; }
   sendMeta(event, params, window.location.href);
 }
@@ -229,6 +236,57 @@ export function addPaymentInfo(params = {}) {
       items: ga4Items(params),
     });
   } catch (_) { /* never throw */ }
+  // Meta AddPaymentInfo (pixel + CAPI, one event id) for COD and prepaid —
+  // as Shopify's Meta app sends it when payment details are submitted.
+  try {
+    metaTrack('AddPaymentInfo', {
+      content_ids: params.content_ids, contents: params.contents, content_type: 'product',
+      value: Number(params.value || 0), currency: params.currency || 'INR',
+    });
+  } catch (_) { /* never throw */ }
+}
+
+// Meta PageView on in-store navigation. The pixel snippet already sends the
+// PageView for the page it loads on (first load, or when consent is given), so
+// the first path seen here is skipped and each path is sent once.
+let lastMetaPath = null;
+export function metaPageView(path) {
+  if (typeof window === 'undefined' || !path) return;
+  if (lastMetaPath === null || !window.fbq) { lastMetaPath = path; return; }
+  if (path === lastMetaPath) return;
+  lastMetaPath = path;
+  try { window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+}
+
+// Search results shown for a query (Meta Search + CAPI, GA4 search with the
+// term, first-party search). Call once per submitted query.
+export function trackSearch(term) {
+  const q = String(term || '').trim();
+  if (!q) return;
+  fbTrack('Search', { search_string: q.slice(0, 100), content_type: 'product' });
+}
+
+// Product saved to the wishlist (Meta AddToWishlist + CAPI, GA4
+// add_to_wishlist, first-party add_to_wishlist).
+export function trackWishlist(product = {}) {
+  if (!product || product.id == null) return;
+  fbTrack('AddToWishlist', {
+    content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+    value: Number(product.price || 0), currency: 'INR', contents: [{ id: String(product.id), quantity: 1 }],
+  });
+}
+
+// Browser ids to send with an order / checkout request, so the server-side
+// Purchase matches this shopper: Meta _fbp/_fbc and the GA4 client id.
+export function trackingIds() {
+  if (typeof window === 'undefined') return {};
+  const out = {};
+  const fbp = readCookie('_fbp'); if (fbp) out.fbp = fbp;
+  const fbc = readCookie('_fbc'); if (fbc) out.fbc = fbc;
+  const ga = readCookie('_ga'); // GA1.1.<client id>
+  const m = ga && ga.match(/^GA\d\.\d\.(.+)$/);
+  if (m) out.ga_client_id = m[1];
+  return out;
 }
 
 // Purchase — fired browser-side on the order-confirmation (thank-you) view.
@@ -238,47 +296,18 @@ export function addPaymentInfo(params = {}) {
 // two into one conversion instead of double-counting. Because the server
 // already sends Purchase via the Conversions API, this is intentionally NOT
 // relayed again here — the browser pixel is the second, deduped leg.
-// Keep a purchase until direct GA4 initialization completes. Storage failures
-// must not prevent delivery; the in-memory guard also prevents repeat renders.
-const pendingGaPurchases = new Map();
-const sentGaPurchases = new Set();
-let gaReadyListenerAdded = false;
-function trackGaPurchase(orderNumber, params) {
-  const id = String(orderNumber);
-  if (sentGaPurchases.has(id)) return;
-  const key = `ga4_purchase_${id}`;
-  try { if (sessionStorage.getItem(key) === '1') return; } catch (_) {}
-  if (!window.gtag || !window.__brandGa4Ready) {
-    pendingGaPurchases.set(id, params);
-    if (!gaReadyListenerAdded) {
-      gaReadyListenerAdded = true;
-      window.addEventListener('brand-ga4-ready', () => {
-        for (const [number, data] of pendingGaPurchases) trackGaPurchase(number, data);
-      });
-    }
-    return;
-  }
-  try {
-    window.gtag('event', 'purchase', {
-      transaction_id: id,
-      currency: params.currency || 'INR',
-      value: Number(params.value || 0),
-      items: ga4Items(params),
-    });
-    sentGaPurchases.add(id);
-    pendingGaPurchases.delete(id);
-    try { sessionStorage.setItem(key, '1'); } catch (_) {}
-  } catch (_) { /* tracking must never break checkout */ }
-}
-
 export function fbPurchase(orderNumber, params = {}) {
   if (typeof window === 'undefined') return;
   if (!orderNumber || orderNumber === '—') return; // no real order → skip
 
-  trackGaPurchase(orderNumber, params);
+  // GA4 purchase is sent by the server only (with this shopper's GA client id,
+  // see trackingIds) — as Shopify does — so it is never counted twice.
 
-  if (!window.fbq) return;
-  try {
-    window.fbq('track', 'Purchase', params, { eventID: `Purchase_${orderNumber}` });
-  } catch (_) { /* never throw */ }
+  // Meta: the server sends Purchase via CAPI with the same event id; this is
+  // the browser leg. Held until the pixel exists instead of being dropped.
+  const send = () => { try { window.fbq('track', 'Purchase', params, { eventID: `Purchase_${orderNumber}` }); } catch (_) { /* never throw */ } };
+  if (window.fbq) { send(); return; }
+  let tries = 0;
+  const wait = () => { if (window.fbq) { send(); return; } if (++tries < 120) setTimeout(wait, 1000); };
+  setTimeout(wait, 500);
 }

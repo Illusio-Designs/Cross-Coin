@@ -5,6 +5,7 @@ import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
 import { searchProducts } from '@/lib/api';
+import { trackSearch } from '@/utils/pixel';
 
 // Live search — results update as you type (debounced), no Enter needed.
 export default function SearchClient({ initialQuery = '' }) {
@@ -12,6 +13,7 @@ export default function SearchClient({ initialQuery = '' }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const reqId = useRef(0);
+  const lastTracked = useRef('');
 
   useEffect(() => {
     const query = q.trim();
@@ -28,6 +30,17 @@ export default function SearchClient({ initialQuery = '' }) {
         if (id === reqId.current) setLoading(false);
       }
     }, 280);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Search event once the shopper stops typing (not per keystroke), once per term.
+  useEffect(() => {
+    const query = q.trim();
+    if (!query || query === lastTracked.current) return undefined;
+    const t = setTimeout(() => {
+      lastTracked.current = query;
+      trackSearch(query);
+    }, 1200);
     return () => clearTimeout(t);
   }, [q]);
 

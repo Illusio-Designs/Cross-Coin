@@ -2,6 +2,7 @@
 // it works without login — the live wishlist API needs an account, which the
 // preview intentionally doesn't have. PREVIEW ONLY — per-browser, not synced.
 import { useSyncExternalStore } from 'react';
+import { fbqTrack } from '@/utils/fbqTrack';
 
 const KEY = 'cc_test_wishlist_v1';
 let list = []; // [{ id, slug, name, brand, now, was, off, img, rating, revs, colors, sizes, variants }]
@@ -49,7 +50,20 @@ export function toggleWish(p) {
   }
   list = [...list, trim(p)];
   emit();
+  fireAddToWishlist(p);
   return true;
+}
+
+// Meta AddToWishlist (pixel + CAPI relay) + GA4 add_to_wishlist — on ADD only.
+function fireAddToWishlist(p) {
+  try {
+    const id = String(p.id);
+    fbqTrack('AddToWishlist', {
+      content_ids: [id], content_type: 'product', content_name: p.name || undefined,
+      value: Number(p.now) || 0, currency: 'INR',
+      contents: [{ id, quantity: 1 }],
+    });
+  } catch (_) { /* analytics never breaks the wishlist */ }
 }
 
 export function removeWish(id) { hydrate(); list = list.filter((p) => String(p.id) !== String(id)); emit(); }

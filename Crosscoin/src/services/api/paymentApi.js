@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_URL, addBrandHeader, attachFbTracking } from "./config";
+import { trackingIds } from "../../utils/fbqTrack";
 
 export const createRazorpayOrder = async ({ amount, currency = "INR", receipt, isGuest = false }) => {
   try {
@@ -30,6 +31,7 @@ export const initiateCheckout = async (checkoutData) => {
     const token = localStorage.getItem("token");
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) checkoutData.utm_session_id = utmSessionId;
+    Object.assign(checkoutData, trackingIds()); // fbp / fbc / ga_client_id for server-side attribution
     attachFbTracking(checkoutData);
     const response = await axios.post(`${API_URL}/api/checkout/initiate`, checkoutData, {
       headers: { Authorization: `Bearer ${token}`, "X-Brand-Name": "crosscoin" },
@@ -43,6 +45,7 @@ export const initiateGuestCheckout = async (checkoutData) => {
   try {
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) checkoutData.utm_session_id = utmSessionId;
+    Object.assign(checkoutData, trackingIds()); // fbp / fbc / ga_client_id for server-side attribution
     attachFbTracking(checkoutData);
     const response = await axios.post(`${API_URL}/api/checkout/guest/initiate`, checkoutData, {
       headers: { "X-Brand-Name": "crosscoin" }, withCredentials: true, timeout: 30000,

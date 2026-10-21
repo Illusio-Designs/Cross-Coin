@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { addToWishlist, removeFromWishlist } from '@/lib/api/wishlist';
 import { toast } from '@/lib/toast';
+import { trackWishlist } from '@/utils/pixel';
 
 // Heart that FILLS red when active (not just an outline).
 function HeartIcon({ filled }) {
@@ -27,7 +28,7 @@ function writeLocal(ids) {
 
 /** Heart toggle. Optimistically updates a localStorage id set + calls the
  *  backend wishlist API (which accepts a guest token for anonymous users). */
-export default function WishlistButton({ productId, className = 'pcard-fav' }) {
+export default function WishlistButton({ productId, product, className = 'pcard-fav' }) {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function WishlistButton({ productId, className = 'pcard-fav' }) {
     if (next) {
       writeLocal([...new Set([...ids, id])]);
       toast.wishlist('Added to wishlist');
+      trackWishlist({ id: productId, name: product?.name, price: product?.price });
       try { await addToWishlist(productId); } catch {}
     } else {
       writeLocal(ids.filter((x) => x !== id));

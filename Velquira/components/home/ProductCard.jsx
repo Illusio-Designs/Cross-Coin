@@ -31,7 +31,7 @@ export default function ProductCard({ product }) {
           {oldPrice && <span className="vqp-badge sale">-{off}%</span>}
           <ReviewBadge rating={rating} count={reviews} />
         </div>
-        <WishlistButton productId={id} className="vqp-fav" />
+        <WishlistButton productId={id} product={product} className="vqp-fav" />
 
         {/* Touch devices: a small bag icon bottom-right instead of the full bar. */}
         <div className="vqp-mob">

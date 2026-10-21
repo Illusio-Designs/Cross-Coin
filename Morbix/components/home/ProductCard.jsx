@@ -17,7 +17,7 @@ export default function ProductCard({ product }) {
           {badge && <span className={`pcard-badge b-${badgeKey || 'default'}`}>{badge}</span>}
           {oldPrice && <span className="pcard-badge sale">-{off}%</span>}
         </div>
-        <WishlistButton productId={id} />
+        <WishlistButton productId={id} product={product} />
         <ReviewBadge rating={rating} count={reviews} />
 
         <Link href={href} className="pcard-imglink" aria-label={name}>

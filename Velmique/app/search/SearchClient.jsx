@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { searchProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
-import { fbTrack } from '@/utils/pixel';
+import { trackSearch } from '@/utils/pixel';
 import ProductCard from '../_components/ProductCard';
 import { ProductGridSkeleton, Sk } from '../_components/Skeleton';
 
@@ -35,7 +35,7 @@ export default function SearchClient() {
     let alive = true;
     if (!query) { setResults([]); setLoading(false); return undefined; }
     setLoading(true);
-    fbTrack('Search', { search_string: query });
+    trackSearch(query);
     searchProducts(query, 60)
       .then((list) => { if (alive) setResults(Array.isArray(list) ? list : []); })
       .catch(() => { if (alive) setResults([]); })

@@ -3,13 +3,11 @@
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { fbPurchase } from '@/utils/pixel';
 
 /* Landing from the custom-checkout provider's redirect.
-   success: the bag that was sent to checkout is still saved here, so it gives
-            the Purchase its value + contents; then the bag is emptied. The
-            Purchase is keyed on the platform order id, and utils/pixel dedupes
-            repeat renders / refreshes per order.
+   success: the bag that was sent to checkout is emptied. No browser Purchase
+            fires here: the backend sends the Purchase server-side (keyed on our
+            own order number) once the checkout provider confirms the order.
    retry:   offers to reopen the saved bag. */
 export default function CheckoutReturn({ mode, orderId }) {
   const { cart, clearCart, setCartOpen } = useStore();
@@ -22,15 +20,6 @@ export default function CheckoutReturn({ mode, orderId }) {
       if (done.current) return;
       done.current = true;
       const items = cart || [];
-      fbPurchase(orderId, {
-        content_ids: items.map((i) => String(i.productId ?? i.id)),
-        content_type: 'product',
-        contents: items.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
-        num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
-        value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
-        currency: 'INR',
-        order_id: orderId,
-      });
       if (items.length) clearCart(true);
     }, 400);
     return () => clearTimeout(t);

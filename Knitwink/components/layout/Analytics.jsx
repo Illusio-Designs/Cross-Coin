@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { trackPageView } from '@/utils/pixel';
+import { trackPageView, metaPageView } from '@/utils/pixel';
 import GoogleTagManager from '../GoogleTagManager';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -58,6 +58,12 @@ export default function Analytics() {
   useEffect(() => {
     if (ga4Id) trackPageView(pathname);
   }, [ga4Id, pathname]);
+
+  // Meta PageView on in-store navigation only: the pixel snippet sends the
+  // first-load PageView, and metaPageView skips that first path.
+  useEffect(() => {
+    if (consent.marketing && fbPixelId) metaPageView(pathname);
+  }, [fbPixelId, pathname, consent.marketing]);
 
   return (
     <>

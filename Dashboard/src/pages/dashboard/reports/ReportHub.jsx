@@ -1,3 +1,4 @@
+// Reports hub: Sales and Marketing pages, one tab per report (tab kept in the URL hash).
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { ReportFiltersContext, useReportFiltersProvider } from '../../../lib/reportFilters';

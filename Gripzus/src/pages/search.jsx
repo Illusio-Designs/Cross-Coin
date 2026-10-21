@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import ProductCard from '../components/products/ProductCard';
 import SeoWrapper from '../components/SeoWrapper';
 import { searchProducts } from '../services/products';
+import { trackSearch } from '../utils/pixel';
 import { SkBusy, ProductCardSkeletons } from '../components/common/Skeleton';
 
 /* Search — live API search (GET /api/products/search): a debounced field in
@@ -21,6 +22,7 @@ export default function SearchPage() {
 
   const debounceRef = useRef(null);
   const seededRef   = useRef(false);
+  const lastTracked = useRef('');
 
   // Seed the field from ?q= once the router is ready.
   useEffect(() => {
@@ -52,6 +54,17 @@ export default function SearchPage() {
       .catch(() => { if (alive) setResults([]); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
+  }, [query]);
+
+  // Search event once the committed term has settled (not per keystroke), once per term.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q || q === lastTracked.current) return undefined;
+    const t = setTimeout(() => {
+      lastTracked.current = q;
+      trackSearch(q);
+    }, 900);
+    return () => clearTimeout(t);
   }, [query]);
 
   const hasQuery = query.trim().length > 0;

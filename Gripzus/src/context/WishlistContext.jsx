@@ -11,6 +11,7 @@ import {
   toastWishlistCleared,
   showError,
 } from '../utils/toast';
+import { trackWishlist } from '../utils/pixel';
 
 /* Gripzus wishlist — backend-synced (same model as Knitwink).
 
@@ -82,6 +83,7 @@ export function WishlistProvider({ children }) {
     try {
       await apiAddToWishlist(pid);
       toastAddedToWishlist(product.name);
+      trackWishlist({ id: pid, name: product.name, price: product.price });
     } catch {
       setItems((prev) => prev.filter((i) => String(i.key ?? i.id) !== key)); // rollback
       showError('Could not save to wishlist. Please try again.', 'wishlist-err');
