@@ -25,7 +25,7 @@ import {
   toastOrderError,
   showError,
 } from '../../utils/toast';
-import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '../../utils/pixel';
+import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '../../utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '../../utils/cartRecovery';
 import GzImage from '../common/GzImage';
 import { Sk, SkBusy } from '../common/Skeleton';
@@ -311,6 +311,7 @@ export default function CartDrawer() {
      opening the drawer. */
   useEffect(() => {
     if (!open) return;
+    cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
     viewCart({

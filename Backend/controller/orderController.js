@@ -813,6 +813,9 @@
               // The shopper's GA4 client id (from the _ga cookie) so the
               // server-side purchase keeps its traffic source in GA4.
               ga_client_id: req.body?.ga_client_id || null,
+              // Meta gets the Purchase only with marketing consent (as Shopify).
+              marketing_consent: req.body?.marketing_consent,
+              consent_session_id: req.cookies?.session_id || null,
               items: createdOrder.OrderItems.map(i => ({
                 product_id: i.product_id,
                 quantity: i.quantity,
@@ -971,6 +974,7 @@
         utm_session_id: req.body.utm_session_id,
         // Browser ids for the server-side Purchase (Meta match + GA4 source).
         fbp: req.body.fbp, fbc: req.body.fbc, ga_client_id: req.body.ga_client_id,
+        marketing_consent: req.body.marketing_consent,
       };
 
       // Add token to response header so frontend can store it

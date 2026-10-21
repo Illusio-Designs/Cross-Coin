@@ -23,7 +23,7 @@ import {
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
-import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
@@ -595,6 +595,7 @@ export default function CartDrawer() {
      fired here — it fires when the shopper taps "Proceed to checkout" (goToCheckout). */
   useEffect(() => {
     if (!open) return;
+    cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
     // Re-arm the whole-cart shimmer for this open (cart has items to load for).

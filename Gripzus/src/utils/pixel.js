@@ -260,6 +260,22 @@ export function metaPageView(path) {
   try { window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
 }
 
+// The cart drawer counts as a page: one page view each time it opens, at a
+// virtual /cart address (GA4 page_view, Meta PageView), even with an empty
+// bag. Meta only with marketing consent: fbq exists only once the pixel was
+// allowed to load.
+export function cartPageView() {
+  if (typeof window === 'undefined') return;
+  try {
+    googleEvent('page_view', {
+      page_location: window.location.origin + '/cart',
+      page_path: '/cart',
+      page_title: 'Cart',
+    });
+  } catch (_) { /* never throw */ }
+  try { if (window.fbq) window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+}
+
 // Search results shown for a query (Meta Search + CAPI, GA4 search with the
 // term, first-party search). Call once per submitted query.
 export function trackSearch(term) {
@@ -279,10 +295,13 @@ export function trackWishlist(product = {}) {
 }
 
 // Browser ids to send with an order / checkout request, so the server-side
-// Purchase matches this shopper: Meta _fbp/_fbc and the GA4 client id.
+// Purchase matches this shopper: Meta _fbp/_fbc and the GA4 client id. Also
+// whether the shopper allowed marketing cookies: the Meta pixel only loads
+// with that consent, so fbq existing means yes. The server sends Meta a
+// Purchase only when this is true, as Shopify does.
 export function trackingIds() {
   if (typeof window === 'undefined') return {};
-  const out = {};
+  const out = { marketing_consent: !!window.fbq };
   const fbp = readCookie('_fbp'); if (fbp) out.fbp = fbp;
   const fbc = readCookie('_fbc'); if (fbc) out.fbc = fbc;
   const ga = readCookie('_ga'); // GA1.1.<client id>

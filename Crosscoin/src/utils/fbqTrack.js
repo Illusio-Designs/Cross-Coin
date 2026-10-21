@@ -118,10 +118,11 @@ function readCookie(name) {
 
 // Browser ad/analytics ids for server-side attribution on order/checkout
 // requests (what Shopify's Meta & Google apps attach): Meta _fbp/_fbc and the
-// GA4 client id from the `_ga` cookie (`GA1.1.<id>` → `<id>`). Only keys that
-// exist are returned; never throws.
+// GA4 client id from the `_ga` cookie (`GA1.1.<id>` → `<id>`), plus whether the
+// shopper allowed marketing cookies. Only ids that exist are returned; never throws.
 export function trackingIds() {
-  const out = {};
+  // marketing_consent: the server sends Meta a Purchase only when true, as Shopify does.
+  const out = { marketing_consent: hasMarketingConsent() };
   try {
     const fbp = readCookie('_fbp');
     if (fbp) out.fbp = fbp;

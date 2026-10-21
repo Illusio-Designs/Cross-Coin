@@ -28,7 +28,7 @@ import {
   showError,
   showWarning,
 } from '@/lib/toast';
-import { fbTrack, fbPurchase, viewCart, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 import '@/styles/CartDrawer.css';
 import { ShimmerImg } from '@/components/ui/ShimmerImg';
@@ -320,6 +320,7 @@ export function CartDrawer() {
   // "Proceed to checkout" (goToCheckout), tied to checkout intent, not open.
   useEffect(() => {
     if (!drawerOpen) return;
+    cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
     // Re-arm the whole-cart shimmer for this open (cart has items to load for).

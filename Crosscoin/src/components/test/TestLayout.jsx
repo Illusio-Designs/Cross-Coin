@@ -679,6 +679,13 @@ export default function TestLayout({ children }) {
   const trackInitiateCheckout = () => {
     try { fbqTrack('InitiateCheckout', metaCheckoutParams()); } catch (_) { /* never blocks */ }
   };
+  // The cart drawer counts as a page: one page view per open, at a virtual
+  // /cart address (GA4 page_view; Meta PageView with marketing consent).
+  useEffect(() => {
+    if (!drawer) return;
+    try { if (window.gtag) window.gtag('event', 'page_view', { page_location: window.location.origin + '/cart', page_path: '/cart', page_title: 'Cart' }); } catch (_) { /* never throw */ }
+    try { if (getConsent().marketing && window.fbq) window.fbq('track', 'PageView'); } catch (_) { /* never throw */ }
+  }, [drawer]);
   // GA4 view_cart — once per drawer open, when it shows the cart with items.
   useEffect(() => {
     if (!drawer) { viewCartSent.current = false; return; }
