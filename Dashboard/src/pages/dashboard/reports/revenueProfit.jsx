@@ -6,13 +6,13 @@ import Dropdown from '../../../components/ui/Dropdown';
 import { useReportState } from '../../../lib/reportFilters';
 
 /**
- * Revenue & Gross Profit — per brand, on orders that were DELIVERED in the
- * period (customer returns included, refunds subtracted). Same basis as the
- * Reports overview's net sales.
+ * Revenue & Gross Profit — per brand, on the Shopify basis: a sale counts when
+ * the order is PLACED in the period (cancelled and RTO orders left out, refunds
+ * subtracted), so revenue lines up with the period's shipping and ad spend.
  *
- *   Revenue        = delivered value − refunds paid
+ *   Revenue        = value of orders sold − refunds paid
  *   Revenue ex-GST = revenue ÷ (1 + brand GST %)   ← GST isn't your money
- *   Costs          = COGS (cost price × kept units)
+ *   Costs          = COGS (cost price × units sold)
  *                  + shipping × shipped orders + return shipping × RTO orders
  *                  + service charge × delivered orders
  *                  + gateway % of prepaid revenue + COD fee % of COD revenue
@@ -198,7 +198,7 @@ export default function RevenueProfitReport() {
     { header: 'Units ordered', accessor: 'placedUnits', align: 'right', cell: ({ value }) => num(value) },
     { header: 'Delivered', accessor: 'orders', align: 'right', cell: ({ value }) => num(value) },
     { header: 'RTO', accessor: 'rtoOrders', align: 'right', cell: ({ value }) => num(value) },
-    { header: 'Units kept', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
+    { header: 'Units sold', accessor: 'units', align: 'right', cell: ({ value }) => num(value) },
     { header: 'Revenue', accessor: 'revenue', align: 'right', cell: ({ value, refunds }) => (
       <span title={refunds ? `after ${inr(refunds)} refunds` : undefined}>{inr(value)}</span>
     ) },
@@ -237,7 +237,7 @@ export default function RevenueProfitReport() {
     { label: 'Order value (received)', value: (r) => r.placedValue },
     { label: 'Delivered orders', value: (r) => r.orders },
     { label: 'RTO orders', value: (r) => r.rtoOrders },
-    { label: 'Units kept', value: (r) => r.units },
+    { label: 'Units sold', value: (r) => r.units },
     { label: 'Refunds', value: (r) => r.refunds },
     { label: 'Revenue (after refunds)', value: (r) => r.revenue },
     { label: 'Revenue ex-GST', value: (r) => r.revenueExGst },
@@ -257,7 +257,7 @@ export default function RevenueProfitReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders delivered in this period, minus refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser."
+        subtitle="Orders received and units ordered count every order placed in this period. Revenue counts orders placed in this period (as Shopify does), less cancelled and RTO orders and refunds, GST taken out. Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser."
         actions={
           <>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
@@ -314,7 +314,7 @@ export default function RevenueProfitReport() {
       ) : null}
 
       {/* ── Per-brand table ── */}
-      <Panel title="By brand" subtitle="Brands marked “from Meta” use the real spend synced from their ad account for this period. For the rest, type the ad spend per unit — total spend (per-unit × units kept) and after-ads profit recalculate instantly.">
+      <Panel title="By brand" subtitle="Brands marked “from Meta” use the real spend synced from their ad account for this period. For the rest, type the ad spend per unit — total spend (per-unit × units sold) and after-ads profit recalculate instantly.">
         <Table
           columns={columns}
           data={tableData}
@@ -328,7 +328,7 @@ export default function RevenueProfitReport() {
       {/* ── Orders by source ── */}
       <Panel
         title="Orders by source"
-        subtitle="Every order received in this period (cancelled ones left out), by where the shopper came from — the same channels as the Traffic report. Delivered and revenue show how many of those orders turned into money."
+        subtitle="Every order received in this period (cancelled ones left out), by where the shopper came from — the same channels as the Traffic report. Delivered shows how many have reached the customer; revenue leaves out cancelled and RTO orders and refunds."
         actions={sourceBrandOptions.length > 2 ? <div style={{ minWidth: 180 }}><Dropdown value={sourceBrand} onChange={(v) => setSourceBrand(String(v))} options={sourceBrandOptions} /></div> : null}
       >
         <Table

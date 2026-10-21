@@ -687,25 +687,30 @@ exports.getRevenueProfit = async (req, res) => {
       { type: QueryTypes.SELECT }
     );
 
-    // Order-level figures per brand by pipeline stage (same rules as the
-    // Overview): revenue = what reached the customer minus refunds.
+    // Order-level figures per brand, on the Shopify basis: a sale counts when
+    // the order is PLACED (not when it is delivered), so revenue lines up with
+    // the period's shipping, fees and ad spend. Cancelled and RTO orders are
+    // not sales; customer returns come off through their refunds.
+    const SOLD = `${STAGE_SQL} NOT IN ('cancelled','rto')`;
     const ord = await sequelize.query(
       `SELECT o.brand_id,
               SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered,
               SUM(${STAGE_SQL} IN ('delivered','returned','rto','in_transit','problems')) AS shipped,
               SUM(${STAGE_SQL} = 'rto') AS rto,
-              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN o.final_amount ELSE 0 END) AS gross,
-              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN ${REFUND_SQL} ELSE 0 END) AS refunds,
-              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') AND LOWER(o.payment_type) <> 'cod' THEN o.final_amount ELSE 0 END) AS prepaid_gross,
-              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') AND LOWER(o.payment_type) = 'cod' THEN o.final_amount ELSE 0 END) AS cod_gross
+              SUM(CASE WHEN ${SOLD} THEN 1 ELSE 0 END) AS sold,
+              SUM(CASE WHEN ${SOLD} THEN o.final_amount ELSE 0 END) AS gross,
+              SUM(CASE WHEN ${SOLD} THEN ${REFUND_SQL} ELSE 0 END) AS refunds,
+              SUM(CASE WHEN ${SOLD} AND LOWER(o.payment_type) <> 'cod' THEN o.final_amount ELSE 0 END) AS prepaid_gross,
+              SUM(CASE WHEN ${SOLD} AND LOWER(o.payment_type) = 'cod' THEN o.final_amount ELSE 0 END) AS cod_gross
          FROM orders o ${JOINS}
         WHERE o.created_at BETWEEN :start AND :end
         GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    // COGS on units the customer KEPT (delivered, not returned/RTO'd — those
-    // were restocked). cost_price missing → 0 (flagged).
+    // COGS on the units sold (orders placed in the period, less cancelled,
+    // RTO'd and returned ones, which go back to stock). cost_price missing → 0
+    // (flagged).
     const cogs = await sequelize.query(
       `SELECT o.brand_id,
               COALESCE(SUM(COALESCE(pv.cost_price, 0) * oi.quantity), 0) AS cogs,
@@ -715,7 +720,7 @@ exports.getRevenueProfit = async (req, res) => {
          JOIN order_items oi ON oi.order_id = o.id
          LEFT JOIN product_variations pv ON pv.id = oi.variation_id
          ${JOINS}
-        WHERE o.created_at BETWEEN :start AND :end AND ${STAGE_SQL} = 'delivered'
+        WHERE o.created_at BETWEEN :start AND :end AND ${STAGE_SQL} NOT IN ('cancelled','rto','returned')
         GROUP BY o.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
@@ -733,7 +738,7 @@ exports.getRevenueProfit = async (req, res) => {
               COALESCE(SUM(it.units), 0) AS units,
               COALESCE(SUM(o.final_amount), 0) AS value,
               SUM(${STAGE_SQL} IN ('delivered','returned')) AS delivered,
-              SUM(CASE WHEN ${STAGE_SQL} IN ('delivered','returned') THEN o.final_amount - ${REFUND_SQL} ELSE 0 END) AS revenue
+              SUM(CASE WHEN ${SOLD} THEN o.final_amount - ${REFUND_SQL} ELSE 0 END) AS revenue
          FROM orders o
          LEFT JOIN utm_tracking u ON u.id = o.utm_tracking_id
          LEFT JOIN (SELECT order_id, SUM(quantity) AS units FROM order_items GROUP BY order_id) it ON it.order_id = o.id
@@ -802,7 +807,8 @@ exports.getRevenueProfit = async (req, res) => {
         placedOrders: pb.orders,         // every order received in the period (not cancelled)
         placedUnits: pb.units,
         placedValue: Math.round(pb.value),
-        orders: n(r.delivered),          // delivered orders (the revenue base)
+        orders: n(r.delivered),          // delivered orders
+        soldOrders: n(r.sold),           // the revenue base: placed, not cancelled or RTO
         shippedOrders: n(r.shipped),     // forward shipping was paid on these
         rtoOrders: n(r.rto),             // already inside shippedOrders — not charged again
         units: n(c.units),
@@ -823,9 +829,9 @@ exports.getRevenueProfit = async (req, res) => {
     }
 
     const totals = rows.reduce((t, r) => {
-      for (const k of ['placedOrders', 'placedUnits', 'placedValue', 'orders', 'shippedOrders', 'rtoOrders', 'units', 'unitsWithoutCost', 'grossRevenue', 'refunds', 'revenue', 'revenueExGst', 'prepaidRevenue', 'codRevenue', 'cogs']) t[k] += r[k];
+      for (const k of ['placedOrders', 'placedUnits', 'placedValue', 'orders', 'soldOrders', 'shippedOrders', 'rtoOrders', 'units', 'unitsWithoutCost', 'grossRevenue', 'refunds', 'revenue', 'revenueExGst', 'prepaidRevenue', 'codRevenue', 'cogs']) t[k] += r[k];
       return t;
-    }, { placedOrders: 0, placedUnits: 0, placedValue: 0, orders: 0, shippedOrders: 0, rtoOrders: 0, units: 0, unitsWithoutCost: 0, grossRevenue: 0, refunds: 0, revenue: 0, revenueExGst: 0, prepaidRevenue: 0, codRevenue: 0, cogs: 0 });
+    }, { placedOrders: 0, placedUnits: 0, placedValue: 0, orders: 0, soldOrders: 0, shippedOrders: 0, rtoOrders: 0, units: 0, unitsWithoutCost: 0, grossRevenue: 0, refunds: 0, revenue: 0, revenueExGst: 0, prepaidRevenue: 0, codRevenue: 0, cogs: 0 });
 
     const ymd = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
     res.json({
