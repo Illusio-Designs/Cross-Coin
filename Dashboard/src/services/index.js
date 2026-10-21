@@ -334,8 +334,8 @@ export const trafficReportService = {
     if (!data?.success) throw new Error(data?.message || 'Failed to load the sales report');
     return data;
   },
-  getRevenueProfit: async (startDate, endDate) => {
-    const { data } = await adminApi.get('/api/reports/revenue-profit', { params: { startDate, endDate } });
+  getRevenueProfit: async (startDate, endDate, basis = 'placed') => {
+    const { data } = await adminApi.get('/api/reports/revenue-profit', { params: { startDate, endDate, basis } });
     return data;
   },
   getMissingCostPrices: async () => {
