@@ -11,6 +11,7 @@ router.get('/collection-products', ctrl.listCollectionProducts);
 router.get('/points', ctrl.getPoints);
 
 // ── Storefront: create a checkout access token (secret stays server-side) ──
+router.get('/status', ctrl.status);
 router.post('/token', ctrl.createToken);
 
 // ── Provider → seller: order webhook (register with ?brand=<slug>) ────────

@@ -88,6 +88,16 @@ exports.getPoints = async (req, res) => {
 
 // POST /api/custom-checkout/token  { items:[{variant_id,quantity}], custom_attributes?, mobile_app?, redirect_url }
 // Called by the storefront; the HMAC secret stays server-side.
+// GET /api/custom-checkout/status — lets the storefront decide whether its
+// checkout button opens the provider's checkout (API key + secret saved).
+exports.status = async (req, res) => {
+  try {
+    res.json({ success: true, enabled: await svc.isConfigured(req.brandId || 1) });
+  } catch (err) {
+    res.json({ success: true, enabled: false });
+  }
+};
+
 exports.createToken = async (req, res) => {
   try {
     const brandId = req.brandId || 1;
@@ -152,7 +162,8 @@ async function verifyAndIngest(brandId, claimedId) {
   let providerOrder;
   try {
     const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
-    const d = confirmed?.data || confirmed;
+    // The provider wraps the order in `result` (older replies used `data`).
+    const d = confirmed?.result || confirmed?.data || confirmed;
     providerOrder = Array.isArray(d) ? d[0] : d;
     if (!providerOrder) throw new Error('order not found at provider');
   } catch (verifyErr) {

@@ -178,6 +178,11 @@ const productIncludes = (brandId) => [
 ];
 
 // ── Push webhook ────────────────────────────────────────────────────────────
+// Is the checkout provider set up for this store (API key + secret saved)?
+async function isConfigured(brandId) {
+  return !!(await getPushConfig(brandId));
+}
+
 async function getPushConfig(brandId) {
   const [apiKey, secret] = await Promise.all([
     settingsHelper.getSetting(brandId, 'CUSTOM_CHECKOUT_API_KEY'),
@@ -263,7 +268,7 @@ const ORDER_LIST_URL = 'https://checkout-api.shiprocket.com/api/v1/custom-platfo
 async function fetchCheckoutOrder(brandId, orderId) {
   const cfg = await getPushConfig(brandId);
   if (!cfg) { const e = new Error('Custom checkout is not configured for this store'); e.status = 400; throw e; }
-  const res = await signedPost(ORDER_DETAILS_URL, { order_id: String(orderId) }, cfg, 20000);
+  const res = await signedPost(ORDER_DETAILS_URL, { order_id: String(orderId), timestamp: new Date().toISOString() }, cfg, 20000);
   return res.data;
 }
 
@@ -506,5 +511,5 @@ module.exports = {
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
-  initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload,
+  initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
 };

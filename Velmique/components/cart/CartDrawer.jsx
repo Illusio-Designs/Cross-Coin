@@ -31,6 +31,7 @@ import { ik } from '@/lib/imagekit';
 import SkImg from '@/app/_components/SkImg';
 import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -288,9 +289,19 @@ export default function CartDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
 
+  // Shiprocket Checkout, when it is set up for the store: "Proceed to
+  // checkout" opens their checkout instead of our delivery + payment step.
+  // Bags with pack-priced lines (or a line without a variant) stay on our own
+  // checkout, which applies the pack price; Shiprocket only knows unit prices.
+  const [srEnabled, setSrEnabled] = useState(false);
+  useEffect(() => { shiprocketEnabled().then(setSrEnabled); }, []);
+  const useShiprocket = srEnabled && items.length > 0
+    && items.every((i) => i.variationId != null && !i.packGroup);
+
   // Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
-  // checkout intent, not drawer open — then shows the delivery + payment step.
-  function goToCheckout() {
+  // checkout intent, not drawer open — then shows the delivery + payment step
+  // (or opens Shiprocket Checkout; if that fails, our own step instead).
+  async function goToCheckout(e) {
     if (!items.length) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId ?? i.id)),
@@ -300,6 +311,16 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
       currency: 'INR',
     });
+    if (useShiprocket && e) {
+      setIsProcessing(true);
+      setErrorMsg('');
+      try {
+        await openShiprocketCheckout(e, items);
+        return;
+      } catch { /* fall through to our own checkout step */ } finally {
+        setIsProcessing(false);
+      }
+    }
     setCoStep(2);
     requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
   }
@@ -309,7 +330,8 @@ export default function CartDrawer() {
   useEffect(() => {
     if (!cartOpen || !checkoutRequested) return;
     consumeCheckoutRequest();
-    if (items.length) goToCheckout();
+    // With Shiprocket the bag stays open: their checkout opens from a tap.
+    if (items.length && !useShiprocket) goToCheckout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen, checkoutRequested]);
 
