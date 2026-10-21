@@ -1,26 +1,7 @@
-import React from 'react';
-import { toast } from 'react-toastify';
-import ToastMessage from '../components/common/ToastMessage';
+import { notify } from '../lib/adminToast';
 
-// Render the custom Obzus toast (see components/common/ToastMessage +
-// styles/common/obzToast.css). icon/closeButton off — our card owns them.
-const baseConfig = {
-  position: 'top-right',
-  autoClose: 3000,
-  hideProgressBar: true,
-  closeOnClick: false,
-  pauseOnHover: true,
-  pauseOnFocusLoss: false,
-  draggable: false,
-  icon: false,
-  closeButton: false,
-};
-
-const push = (type, message, toastId) => {
-  const id = toastId || (typeof message === 'string' ? message : type);
-  toast.dismiss(id);
-  toast(React.createElement(ToastMessage, { type, message }), { ...baseConfig, toastId: id });
-};
+// Gooey toasts (lib/adminToast). Same id → one toast, never a stack of copies.
+const push = (type, message, toastId) => notify(type, message, toastId ? { id: toastId } : {});
 
 export const showSuccessToast = (message, toastId) => push('success', message, toastId);
 export const showErrorToast = (message, toastId) => push('error', message, toastId);

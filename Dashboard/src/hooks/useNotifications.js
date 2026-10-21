@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { notifyEvent } from '../lib/adminToast';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const MAX_NOTIFICATIONS = 50;
@@ -206,6 +207,7 @@ export function useNotifications() {
     setUnreadCount(c => c + 1);
     playSound(type);
     flagHidden(type, data);
+    notifyEvent(type, data); // gooey toast with a "View" action
   }, []);
 
   // "Turn on sound": runs inside the click, so the engine starts right here,
