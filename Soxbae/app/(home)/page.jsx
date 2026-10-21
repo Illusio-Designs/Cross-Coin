@@ -17,7 +17,7 @@ export const revalidate = 60;
 
 // Self-referencing canonical for the homepage. Next App Router does NOT emit a
 // canonical automatically, so without this the home page had no <link rel=
-// "canonical">. Resolved against metadataBase (https://soxbae.com).
+// "canonical">. Resolved against metadataBase (https://www.soxbae.com).
 // Dashboard-controlled page SEO is merged OVER this fallback; canonical '/'
 // is preserved unless the backend supplies a non-empty canonical_url.
 export async function generateMetadata() {
@@ -53,7 +53,7 @@ export default async function HomePage() {
   // it into <head> so the LCP URL is in the initial HTML.
   const heroSlide = slides[0];
 
-  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbae.com').replace(/\/+$/, '');
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.soxbae.com').replace(/\/+$/, '');
   // Prefer the dashboard-managed Organization schema when the brand has filled
   // its SEO settings; otherwise fall back to the hardcoded one. The WebSite
   // entry below is always kept as-is.

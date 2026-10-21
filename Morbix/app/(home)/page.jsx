@@ -49,7 +49,7 @@ export default async function HomePage() {
   }));
 
 
-  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com').replace(/\/+$/, '');
+  const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.morbixsocks.com').replace(/\/+$/, '');
   // Prefer the backend's per-brand Organization schema when available; fall
   // back to the hardcoded one otherwise (best-effort — renders if backend down).
   const orgLd = seoOrg?.organization ?? {

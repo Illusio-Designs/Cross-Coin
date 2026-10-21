@@ -48,6 +48,21 @@ async function safeFetch(path) {
   }
 }
 
+// The blog listing returns at most 50 posts per request: walk every page so
+// posts past the first 50 are in the sitemap too.
+async function fetchAllBlogPosts() {
+  const all = [];
+  for (let page = 1; page <= 40; page += 1) {
+    const r = await safeFetch(`/api/blogs/listing?limit=50&page=${page}`);
+    const list = r?.data?.posts || r?.posts || r?.blogs || r?.data || (Array.isArray(r) ? r : []);
+    if (!Array.isArray(list) || !list.length) break;
+    all.push(...list);
+    const pages = r?.pagination?.totalPages;
+    if (pages ? page >= pages : list.length < 50) break;
+  }
+  return { data: all };
+}
+
 function urlTag({ loc, lastmod, changefreq, priority, image }) {
   return (
     '<url>' +
@@ -73,7 +88,7 @@ export async function getServerSideProps({ res }) {
   const [productsResp, categoriesResp, blogResp, policiesResp] = await Promise.all([
     safeFetch('/api/products/catalog?limit=500'),
     safeFetch('/api/categories/listing'),
-    safeFetch('/api/blogs/listing?limit=50'),
+    fetchAllBlogPosts(),
     safeFetch('/api/policies'),
   ]);
 

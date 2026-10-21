@@ -4,7 +4,7 @@
  * up indexed.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://morbixsocks.com';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.morbixsocks.com';
 
 const DISALLOW = [
   '/account',
