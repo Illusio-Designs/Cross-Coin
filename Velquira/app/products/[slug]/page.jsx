@@ -10,7 +10,7 @@ import { getProductBySlug, getAllProducts, getProductReviewsWithTotal } from '@/
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
 export const revalidate = 300;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in').replace(/\/+$/, '');
+const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.velquira.in').replace(/\/+$/, '');
 const BRAND = 'Velquira';
 
 export async function generateMetadata({ params }) {

@@ -10,7 +10,7 @@
  * created products show up on the next crawl.
  */
 
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://velquira.in';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.velquira.in';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velquira';
 
