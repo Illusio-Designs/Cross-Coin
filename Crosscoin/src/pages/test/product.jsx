@@ -11,6 +11,8 @@ import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
+import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -47,6 +49,11 @@ export default function TestProduct({ preview = true }) {
   const [sizeChart, setSizeChart] = useState(false);
   const [sticky, setSticky] = useState(false); // sticky buy bar visibility
   const [rv, setRv] = useState({ name: '', email: '', rating: 5, comment: '', busy: false, done: false, err: '' });
+  // Shiprocket Checkout (when switched on for CrossCoin): Buy now opens it
+  // straight away with just this selection.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
 
   useEffect(() => {
     let off = false;
@@ -195,6 +202,31 @@ export default function TestProduct({ preview = true }) {
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
 
+  // Multi-pair packs keep using our own checkout: Shiprocket prices each pair
+  // from the catalog (no pack price) and can't carry a colour per pair.
+  const useShiprocket = srOn && !(hasPacks && selOpt && selOpt.pairs > 1);
+  const onBuyNow = async (e) => {
+    if (srBusy) return;
+    const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty };
+    if (!useShiprocket || line.variationId == null) { add(true); return; }
+    try {
+      fbqTrack('InitiateCheckout', {
+        content_ids: [String(p.id)], content_type: 'product', content_name: p.name,
+        contents: [{ id: String(p.id), quantity: line.quantity }],
+        num_items: line.quantity, value: payable, currency: 'INR',
+      });
+    } catch (_) { /* analytics never blocks the checkout */ }
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, [line], 'buy-now');
+    } catch (_) {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      add(true);
+    } finally {
+      setSrBusy(false);
+    }
+  };
+
   // Real product description (HTML from the live product record), with a safe
   // fallback. Shipping/returns stays a static note.
   const descHtml = (p.raw && (p.raw.description || p.raw.long_description || p.raw.longDescription)) || '';
@@ -322,8 +354,13 @@ export default function TestProduct({ preview = true }) {
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
 
-            <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
-            <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
+            {/* Our prepaid discount doesn't apply inside Shiprocket Checkout. */}
+            {useShiprocket ? (
+              <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
+            ) : (<>
+              <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
+              <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
+            </>)}
 
             <div className="pdptrust">
               <div className="pdptrust__row">
@@ -521,7 +558,7 @@ export default function TestProduct({ preview = true }) {
           </div>
           <div className="pdpsticky__btns">
             <button className="btn" onClick={() => add(false)}>Add to cart</button>
-            <button className="btn btn--buynow" onClick={() => add(true)}>Buy now</button>
+            <button className="btn btn--buynow" onClick={onBuyNow} disabled={srBusy}>Buy now</button>
           </div>
         </div>
       </div>

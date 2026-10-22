@@ -344,3 +344,33 @@ body:has(aside[aria-label="Shopping bag"].translate-x-0) [data-scrolltop],
 body:has(.m-modal) .gzwa-fab,
 body:has(.m-modal) .gzwa-greet,
 body:has(.m-modal) [data-scrolltop] { display: none !important; }
+
+/* Shiprocket's Buy now button (their markup + images) in our Add to cart look
+   (.m-btn.m-btn--fill): gold fill, dark uppercase Inter label, 8px corners,
+   lighter gold on hover. Plain values, since the bag drawer sits outside
+   .m-root's tokens. Shiprocket's stylesheet loads after ours, so these rules
+   use a doubled class and !important to win. Their arrow and Powered by
+   artwork is turned dark to read on the gold, like the label. */
+button.sr-headless-checkout.sr-headless-checkout {
+  width: 100% !important; min-height: 52px !important; height: auto !important; margin: 0 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  padding: 9px 26px 7px !important; border: 1.5px solid #d9a43b !important; border-radius: 8px !important;
+  background: #d9a43b !important; color: #17120a !important; box-shadow: none !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 12px !important; font-weight: 700 !important; letter-spacing: .16em !important; line-height: 1.6 !important;
+  text-transform: uppercase !important; cursor: pointer; transition: .25s;
+}
+button.sr-headless-checkout.sr-headless-checkout:hover { background: #e8c877 !important; border-color: #e8c877 !important; }
+button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .5; cursor: not-allowed; }
+button.sr-headless-checkout.sr-headless-checkout[aria-busy="true"] { opacity: .7; cursor: progress; }
+.sr-headless-checkout.sr-headless-checkout > .sr-d-flex { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 3px !important; width: 100%; }
+.sr-headless-checkout.sr-headless-checkout .full-width { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-checkout-visible2 { font: inherit !important; color: inherit !important; letter-spacing: inherit !important; text-transform: uppercase; white-space: nowrap; }
+.sr-headless-checkout.sr-headless-checkout .sr-pl-15 { padding-left: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout img { display: block !important; max-width: none; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible { height: 20px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible1 { height: 13px !important; width: auto !important; filter: brightness(0); opacity: .9; transition: transform .25s; }
+button.sr-headless-checkout.sr-headless-checkout:hover img.sr-checkout-visible1 { transform: translateX(4px); }
+.sr-headless-checkout.sr-headless-checkout .loader5 { display: none !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by { position: static !important; display: block !important; line-height: 1 !important; margin: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by img { height: 9px !important; width: auto !important; filter: brightness(0); opacity: .7; }

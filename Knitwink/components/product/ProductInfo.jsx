@@ -11,6 +11,9 @@ import { checkServiceability } from '@/lib/api/serviceability'
 import { Minus, Plus, ShoppingBag, Zap, Star, Heart, Truck, AlertTriangle, Check, X, Lock, CreditCard, RotateCcw, ShieldCheck } from 'lucide-react'
 import { SIZE_GUIDE } from '@/lib/sizeGuide'
 import SizeChartModal from './SizeChartModal'
+import { fbTrack } from '@/utils/pixel'
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout'
+import ShiprocketButton from '@/components/checkout/ShiprocketButton'
 
 export function ProductInfo({ product, onColorChange }) {
   const [activeColor, setActiveColor] = useState(
@@ -193,9 +196,38 @@ export function ProductInfo({ product, onColorChange }) {
     setTimeout(() => setAddedFeedback(false), 2000)
   }
 
-  const handleBuyNow = () => {
-    handleAddToCart()
-    openDrawer()
+  /* Shiprocket Checkout (when switched on for Knitwink): Buy now opens it
+     straight away with just this selection — each pack/combo is its own
+     variation, so Shiprocket prices it from the catalog. A product without a
+     variation id keeps the old Buy now. */
+  const [srOn, setSrOn] = useState(false)
+  const [srBusy, setSrBusy] = useState(false)
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on) }); return () => { live = false } }, [])
+  const useShiprocket = srOn && activeVariant?.id != null
+
+  // Otherwise Buy now adds the selection and opens the cart drawer (our checkout).
+  const handleBuyNow = async (e) => {
+    if (!useShiprocket) {
+      handleAddToCart()
+      openDrawer()
+      return
+    }
+    if (srBusy) return
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+      contents: [{ id: String(product.id), quantity: qty }],
+      num_items: qty, value: Number(activePrice || 0) * qty, currency: 'INR',
+    })
+    setSrBusy(true)
+    try {
+      await openShiprocketCheckout(e, [{ variationId: activeVariant.id, quantity: qty }], 'buy-now')
+    } catch {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      handleAddToCart()
+      openDrawer()
+    } finally {
+      setSrBusy(false)
+    }
   }
 
   const discount = activeCompareAtPrice
@@ -460,6 +492,11 @@ export function ProductInfo({ product, onColorChange }) {
               {addedFeedback ? 'Added!' : 'Add to Bag'}
             </button>
 
+            {useShiprocket ? (
+              <div className="min-w-0 flex-1">
+                <ShiprocketButton label="BUY NOW" onClick={handleBuyNow} busy={srBusy} />
+              </div>
+            ) : (
             <button
               onClick={handleBuyNow}
               className="flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-brand-black py-[10px] text-xs font-semibold uppercase tracking-wider text-brand-black transition-colors hover:bg-brand-black hover:text-white"
@@ -467,6 +504,7 @@ export function ProductInfo({ product, onColorChange }) {
               <Zap size={14} />
               Buy Now
             </button>
+            )}
           </div>
         </div>
 
@@ -497,6 +535,8 @@ export function ProductInfo({ product, onColorChange }) {
           ''
         }
         onAddToCart={handleBuyNow}
+        shiprocket={useShiprocket}
+        busy={srBusy}
       />
 
       {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}

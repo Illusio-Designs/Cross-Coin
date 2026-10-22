@@ -5,12 +5,16 @@ import CheckoutReturn from './CheckoutReturn';
 
 export const metadata = pageMeta({ title: 'Order Confirmed — Velmique Maison de Parfum', description: 'Your Velmique order.', path: '/order-confirmation', noindex: true });
 
-/* Two ways in:
-   - our own bag checkout → ?order=<order number> (Purchase already tracked
-     when the order was placed);
-   - the custom-checkout provider's redirect → ?oid=<platform order>&ost=<status>.
-     On SUCCESS, CheckoutReturn empties the bag and confirms the order with
-     the backend, then tracks the Purchase under our own order number; any
+/* The thank-you page after every order. The browser Purchase fires here,
+   once, with the event id Purchase_<order number> — the same id the server's
+   Conversions API event uses, so Meta counts the sale once. Two ways in:
+   - our own bag checkout → ?order=<order number>. The order is already
+     saved; CheckoutReturn fires the Purchase with the details the bag handed
+     over via sessionStorage (lib/thankYou.js);
+   - Shiprocket Checkout's redirect → ?oid=<platform order>&ost=<status>.
+     On SUCCESS, CheckoutReturn confirms the order with the backend, then
+     tracks the Purchase under our own order number, and empties the bag if
+     the checkout was started from it (a single Buy now leaves it alone); any
      other status means the payment didn't complete.
    A bare hit has no order to show, so it goes to the account's order list. */
 export default function OrderConfirmation({ searchParams }) {
@@ -35,7 +39,7 @@ export default function OrderConfirmation({ searchParams }) {
   const order = ownOrder || oid;
   return (
     <section className="m-section"><div className="m-wrap m-oc">
-      {oid && !ownOrder ? <CheckoutReturn mode="success" orderId={oid} /> : null}
+      {ownOrder ? <CheckoutReturn mode="own" orderNumber={ownOrder} /> : <CheckoutReturn mode="success" orderId={oid} />}
       <div className="m-oc__badge" aria-hidden="true">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
       </div>

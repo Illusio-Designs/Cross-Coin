@@ -368,3 +368,29 @@ body:has(.pdt-sticky.visible) .back-to-top {
 @media (max-width: 768px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* Shiprocket Checkout's Buy now button (components/checkout/ShiprocketButton),
+   restyled like the Mint Add to cart button (.btn.btn--crimson.btn--lg):
+   crimson fill, near-black 2px border + 3px stamp shadow, 4px radius, Inter
+   600 15px, lifts on hover. Shiprocket's UPI icons, arrow and "Powered by"
+   line stay. The doubled class + !important outrank Shiprocket's stylesheet. */
+button.sr-headless-checkout.sr-headless-checkout {
+  width: 100% !important; min-height: 60px !important; height: auto !important; margin: 0 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  padding: 10px 28px 8px !important; border: 2px solid var(--line-ink, #171525) !important; border-radius: var(--r, 4px) !important;
+  background: var(--crimson, #e3274c) !important; color: #fff !important; box-shadow: var(--stamp-sm, 3px 3px 0 #171525) !important;
+  font-family: "Inter", system-ui, sans-serif !important; font-size: 15px !important; font-weight: 600 !important; line-height: 1.3 !important; letter-spacing: normal !important;
+  cursor: pointer; transition: transform .16s cubic-bezier(.22,.68,.24,1), box-shadow .16s cubic-bezier(.22,.68,.24,1), background .2s;
+}
+button.sr-headless-checkout.sr-headless-checkout:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--line-ink, #171525) !important; }
+button.sr-headless-checkout.sr-headless-checkout:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--line-ink, #171525) !important; }
+button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor: progress; transform: none; }
+.sr-headless-checkout.sr-headless-checkout > .sr-d-flex { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 3px !important; width: 100%; }
+.sr-headless-checkout.sr-headless-checkout .full-width { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-checkout-visible2 { font: inherit !important; color: inherit !important; white-space: nowrap; }
+.sr-headless-checkout.sr-headless-checkout .sr-pl-15 { padding-left: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible { height: 20px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible1 { height: 13px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout .loader5 { display: none !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by { position: static !important; display: block !important; line-height: 1 !important; margin: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by img { height: 9px !important; width: auto !important; opacity: .85; display: block; }

@@ -4,18 +4,34 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { confirmCheckoutReturn } from '@/lib/api/orders';
+import { SR_SOURCE_KEY } from '@/lib/api/shiprocketCheckout';
 import { fbPurchase } from '@/utils/pixel';
+import { takePurchaseForThankYou } from '@/lib/thankYou';
 
-/* Landing from the custom-checkout provider's redirect.
-   success: the bag that was sent to checkout is emptied, and our backend
-            confirms the order (sending this browser's ids + cookie choice).
-            It answers with our own order number, so the browser Purchase
-            (only with marketing consent) and the server one share the event
-            id Purchase_<order number> and Meta counts the sale once.
+const readSession = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
+const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch { /* blocked */ } };
+
+/* The thank-you page's client side.
+   own:     our own checkout placed the order; fires the browser Purchase
+            with the details the bag handed over (lib/thankYou.js), once.
+   success: landing from Shiprocket Checkout's redirect. A checkout started
+            from the bag empties the bag (a single Buy now leaves it alone),
+            and our backend confirms the order (sending this browser's ids +
+            cookie choice). It answers with our own order number, so the
+            browser Purchase (only with marketing consent) and the server one
+            share the event id Purchase_<order number> and Meta counts the
+            sale once.
    retry:   offers to reopen the saved bag. */
-export default function CheckoutReturn({ mode, orderId }) {
+export default function CheckoutReturn({ mode, orderId, orderNumber }) {
   const { cart, clearCart, setCartOpen } = useStore();
   const done = useRef(false);
+
+  useEffect(() => {
+    if (mode !== 'own' || done.current || !orderNumber) return;
+    done.current = true;
+    const data = takePurchaseForThankYou(orderNumber);
+    if (data) fbPurchase(orderNumber, data);
+  }, [mode, orderNumber]);
 
   useEffect(() => {
     if (mode !== 'success' || done.current || !orderId) return undefined;
@@ -23,8 +39,9 @@ export default function CheckoutReturn({ mode, orderId }) {
     const t = setTimeout(() => {
       if (done.current) return;
       done.current = true;
-      const items = cart || [];
-      if (items.length) clearCart(true);
+      const fromBag = readSession(SR_SOURCE_KEY) === 'cart';
+      dropSession(SR_SOURCE_KEY);
+      if (fromBag && (cart || []).length) clearCart(true);
       // The provider may need a moment to have the order ready: try 3 times.
       const confirm = (tries) => confirmCheckoutReturn(orderId)
         .then((o) => {

@@ -29,9 +29,11 @@ import {
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { ik } from '@/lib/imagekit';
 import SkImg from '@/app/_components/SkImg';
-import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
-import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { savePurchaseForThankYou } from '@/lib/thankYou';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -289,14 +291,17 @@ export default function CartDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
 
-  // Shiprocket Checkout, when it is set up for the store: "Proceed to
-  // checkout" opens their checkout instead of our delivery + payment step.
+  // Shiprocket Checkout, when it is set up for the store: Shiprocket's BUY NOW
+  // button opens their checkout instead of our delivery + payment step (and
+  // replaces our coupon box — Shiprocket applies its own coupons).
   // Bags with pack-priced lines (or a line without a variant) stay on our own
   // checkout, which applies the pack price; Shiprocket only knows unit prices.
+  // If their checkout fails to start, the bag falls back to ours (with our
+  // coupon box and discounts) for the rest of the visit.
   const [srEnabled, setSrEnabled] = useState(false);
+  const [srFailed, setSrFailed] = useState(false);
   useEffect(() => { shiprocketEnabled().then(setSrEnabled); }, []);
-  const useShiprocket = srEnabled && items.length > 0
-    && items.every((i) => i.variationId != null && !i.packGroup);
+  const useShiprocket = srEnabled && !srFailed && shiprocketTakes(items);
 
   // Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
   // checkout intent, not drawer open — then shows the delivery + payment step
@@ -315,9 +320,11 @@ export default function CartDrawer() {
       setIsProcessing(true);
       setErrorMsg('');
       try {
-        await openShiprocketCheckout(e, items);
+        await openShiprocketCheckout(e, items, 'cart');
         return;
-      } catch { /* fall through to our own checkout step */ } finally {
+      } catch {
+        setSrFailed(true); // fall through to our own checkout step
+      } finally {
         setIsProcessing(false);
       }
     }
@@ -397,7 +404,9 @@ export default function CartDrawer() {
   const subtotal       = cartTotal;
   const netSub         = Math.max(0, subtotal - packOff);
   const rawShippingFee = parseFloat(selectedFee?.fee || 0);
-  const couponOff      = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
+  // Shiprocket Checkout applies its own coupons and payment offers, so ours
+  // (coupon + prepaid instant discount) aren't counted then.
+  const couponOff      = appliedCoupon && !useShiprocket ? parseFloat(appliedCoupon.discountAmount) : 0;
   const isCod          = selectedFee?.orderType === 'cod';
   const isPrepaid      = selectedFee?.orderType === 'prepaid';
   // Free shipping: qualifies once the subtotal reaches the API threshold.
@@ -408,7 +417,7 @@ export default function CartDrawer() {
   const shippingFee  = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
   const baseTotal    = Math.round(Math.max(0, netSub + shippingFee - couponOff));
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
-  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon
+  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon && !useShiprocket
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
   const finalPayable = Math.round(Math.max(0, baseTotal - prepaidDisc));
 
@@ -820,6 +829,20 @@ export default function CartDrawer() {
     addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
   };
 
+  // Order placed: the thank-you page fires the Meta Purchase (deterministic
+  // eventID, deduped with the backend's server-side event), with the details
+  // handed over via sessionStorage. Without an order number, the drawer's own
+  // success state shows instead.
+  const showThankYou = (orderNumber, purchaseData, paymentType) => {
+    if (orderNumber && orderNumber !== '—') {
+      savePurchaseForThankYou(orderNumber, purchaseData);
+      setCartOpen(false);
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}`);
+      return;
+    }
+    setOrderSuccess({ orderNumber, paymentType });
+  };
+
   const placeCod = async () => {
     setIsProcessing(true);
     fireCheckoutFunnel('cod', finalPayable);
@@ -828,12 +851,10 @@ export default function CartDrawer() {
       const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
       if (!result?.order) throw new Error('Order creation failed.');
       const orderNumber = result.order.order_number;
-      // Meta Purchase (deduped with the backend's server-side event).
       const purchaseData = buildPurchaseData(orderNumber, finalPayable);
       clearCart(true);
-      fbPurchase(orderNumber, purchaseData);
       toastOrderPlaced(orderNumber);
-      setOrderSuccess({ orderNumber, paymentType: 'cod' });
+      showThankYou(orderNumber, purchaseData, 'cod');
     } catch (err) {
       const msg = err.message || 'Order placement failed.';
       setErrorMsg(msg);
@@ -866,13 +887,11 @@ export default function CartDrawer() {
             reservation_id:    reservationId,
           });
           const orderNumber = result.order?.order_number;
-          // Meta Purchase (deduped with the backend's server-side event).
           const purchaseData = buildPurchaseData(orderNumber, finalPayable);
           clearCart(true);
-          fbPurchase(orderNumber, purchaseData);
           toastPaymentSuccess();
           toastOrderPlaced(orderNumber);
-          setOrderSuccess({ orderNumber, paymentType: 'prepaid' });
+          showThankYou(orderNumber, purchaseData, 'prepaid');
         } catch (err) {
           const msg = err.message || 'Payment verification failed.';
           setErrorMsg(msg);
@@ -1061,7 +1080,7 @@ export default function CartDrawer() {
             <div className="flex flex-col items-center justify-center h-full text-center gap-4 px-6 py-20">
               <ShoppingBag size={48} className="text-[#11100E]/15" />
               <p className="font-serif italic text-2xl text-[#11100E]/50">Your bag is empty</p>
-              <p className="text-[#49423A] text-sm font-body">Discover our maison's collections.</p>
+              <p className="text-[#49423A] text-sm font-body">Discover our maison&apos;s collections.</p>
               <Link href="/shop" onClick={() => setCartOpen(false)} className="pill-cta mt-2">
                 Explore the Shop <ArrowRight size={13} />
               </Link>
@@ -1167,7 +1186,8 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* ── Coupon ──────────────────────────────────────────────── */}
+              {/* ── Coupon (not with Shiprocket: it applies its own) ─────── */}
+              {!useShiprocket && (
               <div className="px-5 py-4 border-b border-[#D8D3C9] space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[#777168] font-body">Promo Code</p>
                 {appliedCoupon ? (
@@ -1274,6 +1294,7 @@ export default function CartDrawer() {
                   </p>
                 )}
               </div>
+              )}
 
               </>)}
 
@@ -1290,7 +1311,7 @@ export default function CartDrawer() {
                   <span className="text-[#11100E] font-body uppercase tracking-[0.2em] text-xs">Total</span>
                   <span className="font-serif italic text-[#11100E] text-2xl">{fmt(finalPayable)}</span>
                 </div>
-                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && (
+                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && !useShiprocket && (
                   <p className="text-[10px] font-body text-[#8F7548] mt-1">
                     {fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant discount applied automatically when you pay online.
                   </p>
@@ -1447,10 +1468,14 @@ export default function CartDrawer() {
                     {errorMsg}
                   </div>
                 )}
+                {useShiprocket ? (
+                  <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={isProcessing} />
+                ) : (
                 <button onClick={goToCheckout} disabled={isProcessing || !items.length}
                   className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || !items.length ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   Proceed to checkout · {fmt(baseTotal)} <ArrowRight size={13} />
                 </button>
+                )}
                 <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#777168]">
                   Secure checkout · 7-day returns
                 </p>

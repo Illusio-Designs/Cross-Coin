@@ -28,8 +28,11 @@ import {
   showError,
   showWarning,
 } from '@/lib/toast';
-import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { savePurchaseForThankYou } from '@/lib/thankYou';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import '@/styles/CartDrawer.css';
 import { ShimmerImg } from '@/components/ui/ShimmerImg';
 
@@ -202,6 +205,15 @@ export function CartDrawer() {
   // Two-step checkout: 1 = review cart, 2 = delivery + payment.
   const [coStep, setCoStep] = useState(1);
 
+  // Shiprocket Checkout (when switched on for Knitwink) replaces the checkout
+  // step — and the coupon box, since Shiprocket applies its own coupons. Every
+  // line needs a variation id (Shiprocket prices each variation from the
+  // catalog); otherwise the cart stays on our own checkout.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && i.variationId !== '');
+
   useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
@@ -336,8 +348,8 @@ export function CartDrawer() {
   // ── Advance to the checkout step ──────────────────────────────────────────
   // Fires InitiateCheckout (Meta) with the SAME payload the open effect used
   // before, now tied to checkout intent rather than drawer open.
-  const goToCheckout = () => {
-    if (items.length === 0) return;
+  const goToCheckout = async (e) => {
+    if (items.length === 0 || srBusy) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map(i => String(i.productId)),
       content_type: 'product',
@@ -346,6 +358,17 @@ export function CartDrawer() {
       value: items.reduce((s, i) => s + getPrice(i) * i.quantity, 0),
       currency: 'INR',
     });
+    if (useShiprocket) {
+      setSrBusy(true);
+      try {
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1 })), 'cart');
+        return;
+      } catch {
+        // Shiprocket couldn't start: carry on with our own checkout.
+      } finally {
+        setSrBusy(false);
+      }
+    }
     setCoStep(2);
     requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
   };
@@ -556,7 +579,8 @@ export function CartDrawer() {
   // Waive the COD shipping fee in the displayed total once the threshold is met
   // (prepaid is already 0). Checkout enforces this server-side.
   const shippingFeeAmount = selectedFee?.orderType === 'cod' && freeShipQualifies ? 0 : rawShippingFee;
-  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discountAmount) : 0;
+  // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
+  const couponDiscount = appliedCoupon && !useShiprocket ? parseFloat(appliedCoupon.discountAmount) : 0;
   const finalTotal = Math.round(Math.max(0, cartTotal + shippingFeeAmount - couponDiscount));
   const totalQty = items.reduce((s, i) => s + (i.quantity || 1), 0);
 
@@ -1037,6 +1061,19 @@ export function CartDrawer() {
     addPaymentInfo({ contents, value, currency: 'INR', payment_type: mode });
   };
 
+  // Order placed: the thank-you page fires the Meta Purchase (deterministic
+  // eventID, deduped with the backend's server-side event). Without an order
+  // number, the drawer's own success view is shown as before.
+  const showThankYou = (orderNumber, purchaseData) => {
+    if (orderNumber) {
+      savePurchaseForThankYou(orderNumber, purchaseData);
+      closeDrawer();
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}`);
+      return;
+    }
+    setOrderSuccess({ orderNumber });
+  };
+
   const placeCodOrder = async () => {
     setIsProcessing(true);
     fireCheckoutFunnel('cod', finalTotal);
@@ -1045,12 +1082,10 @@ export function CartDrawer() {
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
       if (!result?.order) throw new Error('Order creation failed.');
       const orderNumber = result.order.order_number;
-      // Meta Purchase (deduped with the backend's server-side event).
       const purchaseData = buildPurchaseData(orderNumber, finalTotal);
       clearCart();
-      fbPurchase(orderNumber, purchaseData);
       toastOrderPlaced(orderNumber);
-      setOrderSuccess({ orderNumber });
+      showThankYou(orderNumber, purchaseData);
     } catch (err) {
       toastOrderError(err.message || 'Order placement failed. Please try again.');
     } finally {
@@ -1082,13 +1117,11 @@ export function CartDrawer() {
             reservation_id: reservationId,
           });
           const orderNumber = result.order?.order_number;
-          // Meta Purchase (deduped with the backend's server-side event).
           const purchaseData = buildPurchaseData(orderNumber, prepaidPayable);
           clearCart();
           setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, reservationId: null });
-          fbPurchase(orderNumber, purchaseData);
           toastOrderPlaced(orderNumber);
-          setOrderSuccess({ orderNumber });
+          showThankYou(orderNumber, purchaseData);
         } catch {
           toastOrderPlaced('—');
           clearCart();
@@ -1391,7 +1424,8 @@ export function CartDrawer() {
                 })}
               </div>
 
-              {/* Coupon */}
+              {/* Coupon (not with Shiprocket Checkout — it applies its own) */}
+              {!useShiprocket && (
               <div className="cd-sv-section">
                 <div className="cd-section-title">Coupon</div>
                 {appliedCoupon ? (
@@ -1499,6 +1533,7 @@ export function CartDrawer() {
                   </>
                 )}
               </div>
+              )}
 
               {/* You may also like — compact cross-sell strip (bestsellers feed) */}
               {suggested.length > 0 && (
@@ -1809,10 +1844,15 @@ export function CartDrawer() {
           <div className="cd-footer">
             {coStep === 1 ? (
               <>
-                {/* Step 1 → advance to delivery + payment (fires InitiateCheckout) */}
+                {/* Step 1 → advance to delivery + payment (fires InitiateCheckout),
+                    or straight into Shiprocket Checkout when it's on */}
+                {useShiprocket ? (
+                  <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={srBusy} disabled={isProcessing} />
+                ) : (
                 <button className="cd-btn-primary cd-btn-full" onClick={goToCheckout} disabled={isProcessing}>
                   Proceed to Checkout – ₹{finalTotal.toFixed(0)}
                 </button>
+                )}
 
                 {/* Trust bar */}
                 <div className="cd-trust-bar">

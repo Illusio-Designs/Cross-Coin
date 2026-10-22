@@ -11,6 +11,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # ---------------------------------------------------------------------------
@@ -26,6 +27,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 User-agent: Googlebot-Image
@@ -42,6 +44,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # OpenAI ChatGPT search
@@ -51,6 +54,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # OpenAI ChatGPT (pages a user asks it to open)
@@ -60,6 +64,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # Perplexity AI
@@ -69,6 +74,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # Anthropic (Claude)
@@ -78,6 +84,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # Google AI (Gemini / Vertex AI training signal)
@@ -87,6 +94,7 @@ Disallow: /account
 Disallow: /login
 Disallow: /register
 Disallow: /wishlist
+Disallow: /order-confirmation
 Disallow: /api/
 
 # ---------------------------------------------------------------------------

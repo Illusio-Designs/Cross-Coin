@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
 import { BagSkeleton, Sk } from './Skeleton';
@@ -13,7 +16,9 @@ const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
    checkout — address, coupons, shipping/COD fees, prepaid discount, Razorpay,
    WhatsApp abandoned-cart capture — lives in the CartDrawer (root layout);
    this view lists the bag and opens that drawer on its checkout step.
-   `autoCheckout` (the /checkout route) opens it straight away. */
+   `autoCheckout` (the /checkout route) opens it straight away.
+   With Shiprocket Checkout set up (and a bag it can take), the checkout button
+   is Shiprocket's BUY NOW instead, opening their checkout for the bag. */
 export default function BagView({ autoCheckout = false }) {
   const { cart, cartHydrated, cartTotal, cartCount, updateQuantity, removeFromCart, openCheckout } = useStore();
   const opened = useRef(false);
@@ -27,6 +32,33 @@ export default function BagView({ autoCheckout = false }) {
   }, [autoCheckout, cart.length, openCheckout]);
 
   const packLines = cart.filter((i) => i.packGroup).reduce((a, i) => a + (Number(i.quantity) || 1), 0);
+
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && shiprocketTakes(cart);
+
+  // Fires InitiateCheckout, then opens Shiprocket for the whole bag; if it
+  // can't start, the drawer's own checkout opens instead.
+  const onShiprocket = async (e) => {
+    if (srBusy || !cart.length) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: cart.map((i) => String(i.productId ?? i.id)),
+      content_type: 'product',
+      contents: cart.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
+      num_items: cart.reduce((s, i) => s + (i.quantity || 1), 0),
+      value: cart.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
+      currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, cart, 'cart');
+    } catch {
+      openCheckout();
+    } finally {
+      setSrBusy(false);
+    }
+  };
 
   return (
     <>
@@ -80,9 +112,15 @@ export default function BagView({ autoCheckout = false }) {
               <div className="m-sumrow"><span>Shipping</span><span>At checkout</span></div>
               <div className="m-sumrow tot"><span>Subtotal</span><b>{inr(cartTotal)}</b></div>
               <p className="m-muted" style={{ fontSize: 12.5, marginTop: 6 }}>Offers &amp; coupons, shipping, and Cash on Delivery or prepaid options are applied in the next step.</p>
-              <button type="button" className="m-btn m-btn--fill" onClick={openCheckout} style={{ justifyContent: 'center', width: '100%', marginTop: 16 }}>
-                {autoCheckout ? 'Continue to delivery & payment' : 'Proceed to checkout'}
-              </button>
+              {useShiprocket ? (
+                <div style={{ marginTop: 16 }}>
+                  <ShiprocketButton label="BUY NOW" onClick={onShiprocket} busy={srBusy} />
+                </div>
+              ) : (
+                <button type="button" className="m-btn m-btn--fill" onClick={openCheckout} style={{ justifyContent: 'center', width: '100%', marginTop: 16 }}>
+                  {autoCheckout ? 'Continue to delivery & payment' : 'Proceed to checkout'}
+                </button>
+              )}
               <Link className="m-btn m-btn--ghost" href="/shop" style={{ justifyContent: 'center', width: '100%', marginTop: 10 }}>Continue shopping</Link>
             </aside>
           </div>
