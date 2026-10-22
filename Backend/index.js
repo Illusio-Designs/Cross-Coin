@@ -144,7 +144,7 @@ const isNotificationPoll = (req) => {
 // them from the per-IP general limiter.
 const WEBHOOK_PATHS = [
   '/whatsapp/webhook', '/orders/shipping/webhook', '/orders/fship/webhook',
-  '/payment/razorpay/webhook', '/payments/razorpay/webhook', '/custom-checkout/order-webhook',
+  '/payment/razorpay/webhook', '/payments/razorpay/webhook',
 ];
 const isProviderWebhook = (req) => {
   const path = (req.originalUrl || req.url || '').split('?')[0].replace(/^\/api(\/v1)?/, '');
