@@ -507,7 +507,22 @@ async function ingestCheckoutOrder(brandId, p) {
   });
 }
 
+// Last catalog / webhook calls from Shiprocket, per store (in memory, for the
+// staff test page): when, which path, accepted or why not, and the header
+// NAMES it sent — never values.
+const providerCalls = new Map();
+function noteProviderCall(brandId, entry) {
+  const k = brandId || 'unknown';
+  const cur = providerCalls.get(k) || {};
+  cur[entry.ok ? 'lastAccepted' : 'lastRejected'] = { at: new Date().toISOString(), ...entry };
+  providerCalls.set(k, cur);
+}
+function providerCallsFor(brandId) {
+  return { ...(providerCalls.get(brandId) || {}), unknownStore: providerCalls.get('unknown')?.lastRejected };
+}
+
 module.exports = {
+  noteProviderCall, providerCallsFor,
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
