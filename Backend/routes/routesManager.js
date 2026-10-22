@@ -66,6 +66,8 @@ router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
 router.use('/', optionalBrand, require('./bundleRoutes.js'));
+// Custom Checkout (Shiprocket-Checkout-compatible catalog + token + orders)
+router.use('/custom-checkout', optionalBrand, require('./customCheckoutRoutes.js'));
 router.use('/', optionalBrand, require('./abandonedCartRoutes.js'));
 
 // ── GST invoice (public, HMAC-token link used in the WhatsApp document) ───

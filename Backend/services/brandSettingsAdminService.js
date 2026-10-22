@@ -77,6 +77,8 @@ const FIELDS = [
   F('COD_MAX_ORDER_VALUE', 'payments', 'Cash on delivery allowed up to (₹)', { type: 'number', min: 0, max: 1000000, default: '1500', category: 'payment', group: 'Checkout rules', hint: 'Same value as on Shipping & courier.' }),
   F('COD_MIN_ADDRESS_QUALITY', 'payments', 'Lowest address score allowed for COD (0–100)', { type: 'number', min: 0, max: 100, default: '60', category: 'payment', group: 'Checkout rules', hint: '0 = never block COD for a messy address.' }),
   F('FREE_SHIPPING_THRESHOLD', 'shipping', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Delivery rules', hint: '0 = off. Same value as on Shipping & courier.' }),
+  F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Custom checkout API key', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
+  F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Custom checkout signing secret', { type: 'secret', category: 'payment', group: 'Custom checkout' }),
 
   // WhatsApp is universal: one shared number (WhatsApp → Profile) and one
   // win-back coupon for every store (WhatsApp → Abandoned carts → rules).
@@ -124,6 +126,8 @@ const GUIDES = {
   COD_MAX_ORDER_VALUE: 'Your own rule: orders above this amount must be paid online.',
   COD_MIN_ADDRESS_QUALITY: 'Your own rule: addresses scoring below this (incomplete or messy) can’t use cash on delivery. 0 turns it off.',
   FREE_SHIPPING_THRESHOLD: 'Your own rule: orders above this amount ship free. 0 turns it off.',
+  CUSTOM_CHECKOUT_API_KEY: 'Shared with your custom-checkout partner. Both sides must use exactly the same value.',
+  CUSTOM_CHECKOUT_HMAC_SECRET: 'Shared with your custom-checkout partner to sign messages. Both sides must use exactly the same value.',
   FB_PIXEL_ID: 'Meta Events Manager → Data sources → your pixel (dataset): the 15–16 digit ID under its name.',
   FB_ACCESS_TOKEN: 'Meta Events Manager → your pixel → Settings → Conversions API → Generate access token.',
   FB_TEST_EVENT_CODE: 'Meta Events Manager → your pixel → Test events → the code like TEST12345. Remove it once testing is done.',

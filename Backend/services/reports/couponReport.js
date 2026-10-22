@@ -8,7 +8,7 @@
 //     on orders.coupon_id and orders.discount_amount is that coupon's discount
 //     (couponRulesService). A coupon_usages row is written with the SAME amount,
 //     so orders.discount_amount is used here (no extra join, same figure).
-//   • Partner checkout (Shiprocket Checkout orders taken before it was removed): orders.coupon_id is
+//   • Partner checkout (services/customCheckoutService): orders.coupon_id is
 //     NULL and the code(s) are only written into orders.notes as
 //     "Custom checkout order … / coupon CODE[,CODE2]". The first code is read
 //     from there and matched to the coupons table by code. Its discount is the
