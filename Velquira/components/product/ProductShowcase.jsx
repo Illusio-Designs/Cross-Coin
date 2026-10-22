@@ -8,6 +8,8 @@ import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { ikUrl } from '@/lib/image';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -198,6 +200,33 @@ export default function ProductShowcase({ product }) {
     setTimeout(() => setAdded(false), 1600);
   };
 
+  // Shiprocket Checkout (when switched on for Velquira): Buy now opens it
+  // straight away with just this selection (variation + qty). Otherwise the
+  // sticky Buy Now adds to the cart, whose drawer is the checkout.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && inStock && activeVariant?.id != null;
+
+  const onBuyNow = async (e) => {
+    if (!inStock || srBusy) return;
+    if (!useShiprocket) { onAdd(); return; }
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+      contents: [{ id: String(product.id), quantity: qty }],
+      num_items: qty, value: Number(price || 0) * qty, currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, [{ variationId: activeVariant.id, quantity: qty }], 'buy-now');
+    } catch {
+      // Shiprocket couldn't start: fall back to our own checkout (the cart drawer).
+      onAdd();
+    } finally {
+      setSrBusy(false);
+    }
+  };
+
   // Specification rows reflect the SELECTED variation (colour / size / SKU /
   // material change as you pick), then fall back to product-level details.
   const specs = [
@@ -382,6 +411,7 @@ export default function ProductShowcase({ product }) {
                 : <>Add to cart <Icon name="ShoppingBag" size={16} /></>}
             </button>
           </div>
+          {useShiprocket && <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />}
         </div>
 
         {/* About + Specs sit INSIDE the same card, below the buy options, so the
@@ -434,9 +464,13 @@ export default function ProductShowcase({ product }) {
         {oldPrice ? <span className="pdp-sticky-old">₹{Number(oldPrice).toFixed(0)}</span> : null}
         {off > 0 && <span className="pdp-sticky-off">−{off}%</span>}
       </div>
+      {useShiprocket ? (
+        <ShiprocketButton label="BUY NOW" className="pdp-sticky-add" onClick={onBuyNow} busy={srBusy} tabIndex={showSticky ? 0 : -1} />
+      ) : (
       <button type="button" className="btn btn-primary pdp-sticky-add" onClick={onAdd} disabled={!inStock} tabIndex={showSticky ? 0 : -1}>
         {!inStock ? 'Out of stock' : <>Buy Now <Icon name="ShoppingBag" size={16} /></>}
       </button>
+      )}
     </div>
     </>
   );

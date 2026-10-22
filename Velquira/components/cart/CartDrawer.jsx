@@ -23,8 +23,11 @@ import {
 } from '@/lib/api/orders';
 import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers } from '@/lib/api';
-import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
+import { fbTrack, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { savePurchaseForThankYou } from '@/lib/thankYou';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -324,8 +327,8 @@ export default function CartDrawer() {
 
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
      checkout intent, not drawer open. */
-  const goToCheckout = () => {
-    if (!items.length) return;
+  const goToCheckout = async (e) => {
+    if (!items.length || srBusy) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.productId ?? i.id)),
       content_type: 'product',
@@ -334,6 +337,17 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price) * i.qty, 0),
       currency: 'INR',
     });
+    if (useShiprocket) {
+      setSrBusy(true);
+      try {
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+        return;
+      } catch {
+        // Shiprocket couldn't start: carry on with our own checkout.
+      } finally {
+        setSrBusy(false);
+      }
+    }
     setCoStep(2);
     requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
   };
@@ -412,6 +426,15 @@ export default function CartDrawer() {
     } catch { setServiceability(null); }
   };
 
+  // Shiprocket Checkout (when switched on for Velquira) replaces the drawer's
+  // checkout step and its coupon box — Shiprocket applies its own coupons, so
+  // ours (and the prepaid instant discount) aren't counted then. Needs every
+  // line to be a specific variation, since Shiprocket checks out variants.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null);
+
   const rawShippingFee = parseFloat(selectedFee?.fee || 0);
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -424,12 +447,12 @@ export default function CartDrawer() {
   // Coupon discount is derived from the applied coupon (0 when none applied).
   // Applies to BOTH COD and prepaid; it is separate from the prepaid instant
   // discount below.
-  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discount) || 0 : 0;
+  const couponDiscount = appliedCoupon && !useShiprocket ? parseFloat(appliedCoupon.discount) || 0 : 0;
   const total = Math.round(Math.max(0, subtotal + shippingFee - couponDiscount));
   // Prepaid instant discount (0 unless configured) → the amount actually payable
   // online is the total minus that incentive.
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
-  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
+  const prepaidInstantDiscount = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon && !useShiprocket ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, total) : 0;
   const prepaidPayable = Math.round(Math.max(0, total - prepaidInstantDiscount));
 
   // Auto-remove a payment-mode-restricted coupon when the shopper switches
@@ -558,7 +581,7 @@ export default function CartDrawer() {
     const discountAmount = paymentType === 'razorpay' ? prepaidInstantDiscount + couponDiscount : couponDiscount;
     const base = {
       items: buildItems(), payment_type: paymentType, notes: '',
-      discount_amount: discountAmount, coupon_id: appliedCoupon?.id || null, idempotency_key: genIdem(),
+      discount_amount: discountAmount, coupon_id: (!useShiprocket && appliedCoupon?.id) || null, idempotency_key: genIdem(),
     };
     if (isAuthenticated) return { shipping_address_id: selectedAddress.id, ...base };
     return { ...guestBlocks(), ...base };
@@ -577,18 +600,22 @@ export default function CartDrawer() {
 
   const finishSuccess = (order, value) => {
     const orderNumber = order?.order_number || order?.orderNumber || '—';
-    // Meta Purchase (deduped with the backend's server-side event) — build the
-    // custom_data from the cart BEFORE it is cleared.
+    // Meta Purchase custom_data — built from the cart BEFORE clear() empties it.
     const purchaseData = buildPurchaseData(orderNumber, value);
     clear();
     setError('');
     setRetryState(null);
-    fbPurchase(orderNumber, purchaseData);
-    setOrderSuccess({
-      orderNumber,
-      id: order?.id || null,
-    });
     toast.success('Order placed successfully!');
+    // The thank-you page fires the Meta Purchase (deterministic eventID,
+    // deduped with the backend server event).
+    if (orderNumber !== '—') {
+      savePurchaseForThankYou(orderNumber, purchaseData);
+      setProcessing(false);
+      closeCart();
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}${order?.id ? `&id=${order.id}` : ''}`);
+      return;
+    }
+    setOrderSuccess({ orderNumber, id: order?.id || null });
   };
 
   const deliveryDateStr = () => {
@@ -668,7 +695,7 @@ export default function CartDrawer() {
     if (typeof window === 'undefined') return;
     const code = recoverCouponRef.current;
     if (!code || recoverAppliedRef.current) return;
-    if (!open || total <= 0 || appliedCoupon || couponLoading) return;
+    if (!open || total <= 0 || appliedCoupon || couponLoading || useShiprocket) return;
     recoverAppliedRef.current = true;
     try {
       applyCoupon(code);
@@ -840,7 +867,7 @@ export default function CartDrawer() {
                 <div className="cd-ship" style={{ borderRadius: 14, border: '1px solid var(--line-soft)', marginBottom: 10 }}>
                   <span>
                     {freeShipQualifies
-                      ? <b className="cd-ship-done">🎉 You've unlocked FREE shipping!</b>
+                      ? <b className="cd-ship-done">🎉 You&apos;ve unlocked FREE shipping!</b>
                       : <>Add <b>₹{freeShipRemaining.toFixed(0)}</b> for FREE shipping</>}
                   </span>
                   {!freeShipQualifies && (
@@ -884,7 +911,9 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* Coupon — just above the summary so the discount reads clearly */}
+              {/* Coupon — just above the summary so the discount reads clearly.
+                  Hidden with Shiprocket Checkout, which applies its own coupons. */}
+              {!useShiprocket && (
               <div className="cd-co-section">
                 <div className="cd-section-title">Coupon</div>
                 {appliedCoupon ? (
@@ -1021,6 +1050,7 @@ export default function CartDrawer() {
                   );
                 })()}
               </div>
+              )}
 
               {/* You may also like — compact cross-sell strip above the summary.
                   Renders nothing when there's nothing to suggest. */}
@@ -1168,9 +1198,13 @@ export default function CartDrawer() {
               {coStep === 1 ? (
                 <>
                   {error && <p className="cd-error">{error}</p>}
+                  {useShiprocket ? (
+                    <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={srBusy} disabled={processing} />
+                  ) : (
                   <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
                     Proceed to checkout · ₹{total.toFixed(0)}
                   </button>
+                  )}
                   <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                     <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                     <span><Icon name="RefreshCw" size={14} /> Easy returns</span>

@@ -2344,3 +2344,32 @@ p { text-align: justify; text-justify: inter-word; }
   .vq-desc-rich .only-desktop { display: none; }
   .vq-desc-rich .only-mobile { display: block; }
 }
+
+/* Shiprocket's Buy now button (their markup + images) in our Add to cart
+   look: gold gradient, 3px corners, letter-spaced uppercase body font, darker
+   gold on hover. Shiprocket's stylesheet loads after ours, so these rules use
+   a doubled class and !important to win. */
+button.sr-headless-checkout.sr-headless-checkout {
+  width: 100% !important; min-height: 50px !important; height: auto !important; margin: 0 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  padding: 9px 30px 7px !important; border: 1px solid var(--gold-deep) !important; border-radius: 3px !important;
+  background: linear-gradient(180deg, #c8922f, #a5741f) !important; color: #fff6e3 !important;
+  box-shadow: 0 8px 20px -10px rgba(143,102,32,.5) !important;
+  font-family: var(--font-body) !important; font-size: 11.5px !important; font-weight: 500 !important; letter-spacing: .16em !important;
+  cursor: pointer; transition: background .2s, color .2s, border-color .2s, transform .15s ease;
+}
+button.sr-headless-checkout.sr-headless-checkout:hover { background: linear-gradient(180deg, #a5741f, #8f6620) !important; color: #fff !important; box-shadow: none !important; }
+button.sr-headless-checkout.sr-headless-checkout:active { transform: translateY(1px); }
+button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor: progress; }
+.sr-headless-checkout.sr-headless-checkout > .sr-d-flex { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 3px !important; width: 100%; }
+.sr-headless-checkout.sr-headless-checkout .full-width { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-checkout-visible2 { font: inherit !important; letter-spacing: inherit !important; color: inherit !important; text-transform: uppercase; white-space: nowrap; }
+.sr-headless-checkout.sr-headless-checkout .sr-pl-15 { padding-left: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible { height: 20px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible1 { height: 13px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout .loader5 { display: none !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by { position: static !important; display: block !important; line-height: 1 !important; margin: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by img { height: 9px !important; width: auto !important; opacity: .85; display: block; }
+/* In the PDP's mobile sticky bar it shares the row with the price. */
+.pdp-sticky button.sr-headless-checkout.sr-headless-checkout { flex: 1 !important; width: auto !important; min-width: 0 !important; min-height: 46px !important; padding: 7px 12px 6px !important; }
+.pdp-sticky .sr-headless-checkout.sr-headless-checkout .full-width { gap: 8px !important; }
