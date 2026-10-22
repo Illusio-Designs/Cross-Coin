@@ -66,8 +66,11 @@ export async function openShiprocketCheckout(event, lines, redirectPath, log = (
     const provider = res?.provider ? ` — Shiprocket: ${JSON.stringify(res.provider).slice(0, 200)}` : '';
     throw new Error(why + provider);
   }
-  log('step', 'Calling HeadlessCheckout.addToCart', { fallbackUrl: window.location.href });
-  sdk.addToCart(event, token, { fallbackUrl: window.location.href });
+  // Where Shiprocket sends the shopper if it can't open its checkout. The
+  // marker lets the page tell that apart from a normal reload.
+  const fallbackUrl = `${window.location.origin}${redirectPath}?sr_fallback=1`;
+  log('step', 'Calling HeadlessCheckout.addToCart', { fallbackUrl });
+  sdk.addToCart(event, token, { fallbackUrl });
   log('step', 'addToCart returned (the Shiprocket window should now be open)');
 }
 
