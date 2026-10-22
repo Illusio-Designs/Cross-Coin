@@ -14,7 +14,7 @@ const box = { border: '1px solid #e5e5e5', borderRadius: 12, padding: 16, backgr
 const LOG_KEY = 'sr-test-log';
 const SR_HOST = /shiprocket|fastrr|pickrr/i;
 const mask = (v, depth = 0) => {
-  if (depth > 4) return '…';
+  if (depth > 12) return '…';
   if (Array.isArray(v)) return v.slice(0, 30).map((x) => mask(x, depth + 1));
   if (v && typeof v === 'object') {
     const out = {};
@@ -27,6 +27,20 @@ const mask = (v, depth = 0) => {
   if (typeof v === 'string' && v.length > 600) return `${v.slice(0, 600)}…`;
   return v;
 };
+// True only when the URL's host is Shiprocket's (not when our own page
+// address — /shiprocket-test — just appears in a tracker's query string).
+const isSrUrl = (u) => { try { return SR_HOST.test(new URL(String(u), window.location.href).hostname); } catch { return false; } };
+// Shiprocket's reason for giving up, wherever it sits inside a message.
+const findFailure = (v, depth = 0) => {
+  if (!v || typeof v !== 'object' || depth > 12) return null;
+  for (const [k, x] of Object.entries(v)) {
+    if (/failure|error|reason/i.test(k) && x && typeof x !== 'object') return String(x);
+    const inner = findFailure(x, depth + 1);
+    if (inner) return inner;
+  }
+  return null;
+};
+const FAIL_KEY = 'sr-test-failure';
 // Hide token / key values carried in a URL's query string.
 const safeUrl = (u) => String(u).replace(/([?&](?:token|key|secret|access_token)=)[^&#]+/gi, '$1…');
 const readLog = () => { try { return JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]'); } catch { return []; } };
@@ -59,10 +73,15 @@ export default function ShiprocketTestClient({ products }) {
     log('info', `Page loaded: ${window.location.pathname}${window.location.search}`, { userAgent: navigator.userAgent });
 
     const onMsg = (e) => {
-      if (!SR_HOST.test(String(e.origin)) && !(e.data && JSON.stringify(e.data).match(SR_HOST))) return;
+      if (!isSrUrl(e.origin)) return;
       let data = e.data;
       if (typeof data === 'string') { try { data = JSON.parse(data); } catch { /* keep text */ } }
       log('message', `Message from ${e.origin}`, data);
+      const why = findFailure(data);
+      if (why) {
+        log('error', `Shiprocket says: ${why}`);
+        try { sessionStorage.setItem(FAIL_KEY, why); } catch { /* blocked */ }
+      }
     };
     const onErr = (e) => log('error', `Page error: ${e.message}`, { source: e.filename, line: e.lineno });
     const onRej = (e) => log('error', `Unhandled promise rejection: ${e.reason?.message || e.reason}`);
@@ -79,7 +98,7 @@ export default function ShiprocketTestClient({ products }) {
     const origFetch = window.fetch;
     window.fetch = async (input, init) => {
       const url = String(input?.url || input);
-      const watch = SR_HOST.test(url);
+      const watch = isSrUrl(url);
       try {
         const r = await origFetch(input, init);
         if (watch) {
@@ -96,7 +115,7 @@ export default function ShiprocketTestClient({ products }) {
     const XO = XMLHttpRequest.prototype.open; const XS = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.open = function open(m, u, ...rest) { this.__srUrl = String(u); this.__srM = m; return XO.call(this, m, u, ...rest); };
     XMLHttpRequest.prototype.send = function send(...a) {
-      if (SR_HOST.test(this.__srUrl || '')) {
+      if (isSrUrl(this.__srUrl || '')) {
         this.addEventListener('loadend', () => {
           let body = this.responseText; try { body = JSON.parse(body); } catch { body = String(body || '').slice(0, 400); }
           log(this.status >= 200 && this.status < 400 ? 'network' : 'error', `xhr ${this.__srM} ${safeUrl(this.__srUrl)} → ${this.status}`, body);
@@ -133,7 +152,9 @@ export default function ShiprocketTestClient({ products }) {
     const q = new URLSearchParams(window.location.search);
     if (q.get('sr_fallback')) {
       log('error', 'Shiprocket sent the browser back to the fallback URL — it could not open its checkout (see the events just before this)');
-      setMsg({ kind: 'error', text: 'Shiprocket closed and sent you back without opening checkout. The debug log below shows what happened just before — press Copy log.' });
+      let why = '';
+      try { why = sessionStorage.getItem(FAIL_KEY) || ''; sessionStorage.removeItem(FAIL_KEY); } catch { /* blocked */ }
+      setMsg({ kind: 'error', text: `Shiprocket closed and sent you back without opening checkout.${why ? ` Shiprocket says: “${why}”.` : ''} Press Copy log and send it over.` });
     }
     const oid = q.get('oid');
     if (!oid) return;
