@@ -449,7 +449,10 @@ async function ingestCheckoutOrder(brandId, p) {
       final_amount: finalAmount,
       payment_type: isCod ? 'cod' : 'razorpay', // orders ENUM has no 'prepaid'
       payment_status: paid ? 'paid' : (isCod ? 'pending' : 'pending'),
-      status: 'confirmed',
+      // COD waits for the customer's WhatsApp address confirmation, like a
+      // COD order from our own checkout; prepaid is confirmed straight away.
+      status: isCod ? 'awaiting_confirmation' : 'confirmed',
+      ...(isCod ? { cod_address_confirmed: false } : {}),
       notes: `Custom checkout order ${platformId}${p.fastrr_order_id ? ` / fastrr ${p.fastrr_order_id}` : ''}${(p.coupon_codes || []).length ? ` / coupon ${(p.coupon_codes || []).join(',')}` : ''}`,
       shipping_address_id: address.id,
       brand_id: brandId,
@@ -496,16 +499,35 @@ async function ingestCheckoutOrder(brandId, p) {
     };
     return { created: true, order_number: order.order_number, order_id: order.id, _order: order, _track: track };
   }).then((result) => {
-    // After commit: fire the same lifecycle events a native order gets, so the
-    // customer receives the WhatsApp confirmation + invoice, abandoned-cart
-    // recovery stops, and pickup_hold_until is stamped for the booking batch.
+    // After commit: fire the same lifecycle events a native order gets — a
+    // prepaid order is confirmed now (WhatsApp confirmation, abandoned-cart
+    // recovery stops, pickup_hold_until stamped for the booking batch); a COD
+    // order first gets the address-confirmation WhatsApp, like our checkout's.
     if (result?._order) {
       const orderEmitter = require('./orderEvents.js');
       const o = result._order;
       const track = result._track;
-      setImmediate(() => {
+      setImmediate(async () => {
         try { orderEmitter.emit('order.created', o); } catch (e) { logger.warn('[custom-checkout] order.created emit failed: ' + e.message); }
-        try { orderEmitter.emit('order.confirmed', o); } catch (e) { logger.warn('[custom-checkout] order.confirmed emit failed: ' + e.message); }
+        if (o.payment_type !== 'cod') {
+          try { orderEmitter.emit('order.confirmed', o); } catch (e) { logger.warn('[custom-checkout] order.confirmed emit failed: ' + e.message); }
+          return;
+        }
+        // COD: ask the customer to confirm the address on WhatsApp (as our own
+        // checkout does); their YES / Confirm tap confirms the order and fires
+        // order.confirmed. Abandoned-cart recovery stops now — it's an order.
+        try {
+          const addr = await ShippingAddress.findByPk(o.shipping_address_id);
+          if (addr?.phone) {
+            await require('./whatsappService.js').sendCodConfirmation(addr.phone, {
+              name: (addr.full_name || '').split(' ')[0] || 'there',
+              orderNumber: o.order_number,
+              amount: parseFloat(o.final_amount).toFixed(2),
+              fullAddress: [addr.full_name, addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', '),
+            }, o.brand_id || 1);
+            try { await require('../controller/abandonedCartController.js').markRecovered(o.brand_id || 1, addr.phone); } catch (_) { /* best-effort */ }
+          }
+        } catch (e) { logger.warn('[custom-checkout] COD confirmation WhatsApp failed: ' + e.message); }
       });
       // Server-side Purchase (Meta CAPI + GA4), event id Purchase_<our order
       // number> — the checkout provider's page can't send a matching browser one.
