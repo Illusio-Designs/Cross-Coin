@@ -11,6 +11,9 @@ import { takePurchaseForThankYou } from '../../lib/thankYou';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } };
 const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch (_) { /* blocked */ } };
+const writeSession = (k, v) => { try { sessionStorage.setItem(k, v); } catch (_) { /* blocked */ } };
+// Last Shiprocket order whose Purchase fired here, so a reload doesn't send it again.
+const SR_FIRED_KEY = 'cc-sr-fired';
 
 /* The thank-you page after every order (/thank-you and /order-confirmation):
      our own checkout      → ?order=<order number>  (older links: ?order_number=)
@@ -61,6 +64,8 @@ export default function TestThankYou() {
         setSr({ key, phase: 'done', orderNumber: o.order_number });
         dropSession(SR_SOURCE_KEY);
         if (fromCart) clearCart();
+        if (readSession(SR_FIRED_KEY) === String(o.order_number)) return;
+        writeSession(SR_FIRED_KEY, String(o.order_number));
         const contents = o.items || [];
         try {
           fbqTrack('Purchase', {
@@ -80,7 +85,7 @@ export default function TestThankYou() {
   }, [router.isReady, key, order, oid, ost]);
 
   // done (our own order, or no order in the URL) | failed | loading | pending.
-  const phase = order || !oid ? 'done' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
+  const phase = !router.isReady ? 'loading' : order || !oid ? 'done' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
   const orderNo = order || (sr.key === key ? sr.orderNumber || '' : '');
   const failed = phase === 'failed';
 
