@@ -36,20 +36,29 @@ export function loadShiprocketSdk() {
   return sdkPromise;
 }
 
-// Open Shiprocket Checkout for lines [{ variationId, quantity }].
-export async function openShiprocketCheckout(event, lines, redirectPath) {
+// Open Shiprocket Checkout for lines [{ variationId, quantity }]. `log`
+// (optional) receives each step — used by the staff test page.
+export async function openShiprocketCheckout(event, lines, redirectPath, log = () => {}) {
   const items = lines
     .filter((l) => l.variationId != null)
     .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
   if (!items.length) throw new Error('Add at least one item');
+  const redirect_url = `${window.location.origin}${redirectPath}`;
+  log('step', 'Requesting checkout token from our backend', { items, redirect_url });
 
   const [sdk, res] = await Promise.all([
-    loadShiprocketSdk(),
+    loadShiprocketSdk().then((sdkObj) => { log('step', 'Shiprocket script loaded', { methods: Object.keys(sdkObj || {}) }); return sdkObj; },
+      (e) => { log('error', 'Shiprocket script failed to load', { message: e.message }); throw e; }),
     fetch(`${API_URL}/api/custom-checkout/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-      body: JSON.stringify({ items, redirect_url: `${window.location.origin}${redirectPath}` }),
-    }).then((r) => r.json().catch(() => ({}))),
+      body: JSON.stringify({ items, redirect_url }),
+    }).then(async (r) => {
+      const body = await r.json().catch(() => ({}));
+      const t = body?.result?.token || body?.token || '';
+      log(r.ok ? 'step' : 'error', `Token response HTTP ${r.status}`, { ...body, result: body?.result ? { ...body.result, token: t ? `${t.slice(0, 8)}…(${t.length} chars)` : t } : body?.result });
+      return body;
+    }),
   ]);
   const token = res?.result?.token || res?.token;
   if (!res?.success || !token) {
@@ -57,7 +66,9 @@ export async function openShiprocketCheckout(event, lines, redirectPath) {
     const provider = res?.provider ? ` — Shiprocket: ${JSON.stringify(res.provider).slice(0, 200)}` : '';
     throw new Error(why + provider);
   }
+  log('step', 'Calling HeadlessCheckout.addToCart', { fallbackUrl: window.location.href });
   sdk.addToCart(event, token, { fallbackUrl: window.location.href });
+  log('step', 'addToCart returned (the Shiprocket window should now be open)');
 }
 
 // Back from Shiprocket: our backend verifies the order with Shiprocket and
