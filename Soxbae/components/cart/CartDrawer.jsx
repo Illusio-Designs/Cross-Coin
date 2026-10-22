@@ -25,6 +25,9 @@ import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { savePurchaseForThankYou } from '@/lib/thankYou';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -478,8 +481,18 @@ export default function CartDrawer() {
     setQty(packAnchor.key, Math.max(1, P - others));
   };
 
+  // Shiprocket Checkout (when switched on for Soxbae) replaces the drawer's
+  // checkout step (and its coupon box — Shiprocket applies its own coupons).
+  // Carts with a pack stay on our own checkout: Shiprocket prices each pair
+  // from the catalog and can't apply pack prices.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+
   // Clamp the coupon so an over-large coupon can never make the order negative.
-  const effectiveCouponDiscount = Math.min(couponDiscount, displaySubtotal + shippingFee);
+  // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
+  const effectiveCouponDiscount = useShiprocket ? 0 : Math.min(couponDiscount, displaySubtotal + shippingFee);
   const total = Math.round(Math.max(0, displaySubtotal + shippingFee - effectiveCouponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -530,8 +543,8 @@ export default function CartDrawer() {
 
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) + begin_checkout
      (GA4) + first-party funnel — tied to checkout intent, not drawer open. */
-  const goToCheckout = () => {
-    if (!items.length) return;
+  const goToCheckout = async (e) => {
+    if (!items.length || srBusy) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.id)),
       content_type: 'product',
@@ -540,6 +553,17 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
       currency: 'INR',
     });
+    if (useShiprocket) {
+      setSrBusy(true);
+      try {
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+        return;
+      } catch {
+        // Shiprocket couldn't start: carry on with our own checkout.
+      } finally {
+        setSrBusy(false);
+      }
+    }
     setCoStep(2);
     requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
   };
@@ -818,12 +842,17 @@ export default function CartDrawer() {
     clear();
     setError('');
     setRetryState(null);
-    fbPurchase(orderNumber, purchaseData);
-    setOrderSuccess({
-      orderNumber,
-      id: order?.id || null,
-    });
     toast.success('Order placed successfully!');
+    // The thank-you page fires the Meta Purchase (deterministic eventID,
+    // deduped with the backend server event).
+    if (orderNumber !== '—') {
+      savePurchaseForThankYou(orderNumber, purchaseData);
+      closeCart();
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}${order?.id ? `&id=${order.id}` : ''}`);
+      return;
+    }
+    fbPurchase(orderNumber, purchaseData);
+    setOrderSuccess({ orderNumber, id: order?.id || null });
   };
 
   const deliveryDateStr = () => {
@@ -1143,7 +1172,8 @@ export default function CartDrawer() {
                 ))}
               </div>
 
-              {/* Coupon — just above the order summary */}
+              {/* Coupon — just above the order summary (Shiprocket Checkout has its own) */}
+              {!useShiprocket && (
               <div className="cd-co-section">
                 <div className="cd-section-title">Coupon</div>
                 {appliedCoupon ? (
@@ -1262,6 +1292,7 @@ export default function CartDrawer() {
                   );
                 })()}
               </div>
+              )}
 
               {/* Buy More, Save More — offers the cart product's OTHER variations
                   (colours/sizes not yet in the cart) so the shopper can build toward
@@ -1456,9 +1487,13 @@ export default function CartDrawer() {
               {coStep === 1 ? (
                 <>
                   {error && <p className="cd-error">{error}</p>}
+                  {useShiprocket ? (
+                    <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={srBusy} disabled={processing} />
+                  ) : (
                   <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
                     Proceed to checkout · ₹{total.toFixed(0)}
                   </button>
+                  )}
                   <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                     <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                     <span><Icon name="RefreshCw" size={14} /> Easy returns</span>

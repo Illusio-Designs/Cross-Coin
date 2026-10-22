@@ -10,6 +10,8 @@ import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 // Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
 const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
@@ -242,11 +244,49 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     setTimeout(() => setAdded(false), 1600);
   };
 
-  // Soxbae's cart drawer is the checkout, so Buy now adds the selection and
-  // opens it straight away (no "added" toast in between).
-  const onBuyNow = () => {
-    if (!inStock) return;
-    addToCart();
+  // Shiprocket Checkout (when switched on for Soxbae): Buy now opens it
+  // straight away with just this selection. Discounted packs keep using our
+  // own checkout, because Shiprocket prices each pair from the catalog and
+  // wouldn't apply the pack price.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && !(hasPacks && packHasDiscount);
+
+  const buyNowLines = () => {
+    if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
+      const chosen = (packColors.length ? packColors : Array.from({ length: packPairs }, () => color)).slice(0, packPairs);
+      const byVar = new Map();
+      for (const ci of chosen) {
+        const vid = resolvePairVariant(ci).variationId;
+        byVar.set(vid, (byVar.get(vid) || 0) + 1);
+      }
+      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity }));
+    }
+    return [{ variationId: activeVariant?.id ?? null, quantity: hasPacks ? packPairs : qty }];
+  };
+
+  // Otherwise Soxbae's cart drawer is the checkout, so Buy now adds the
+  // selection and opens it straight away (no "added" toast in between).
+  const onBuyNow = async (e) => {
+    if (!inStock || srBusy) return;
+    const lines = useShiprocket ? buyNowLines() : [];
+    if (!lines.length || lines.some((l) => l.variationId == null)) { addToCart(); return; }
+    const pairs = lines.reduce((a, l) => a + l.quantity, 0);
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+      contents: [{ id: String(product.id), quantity: pairs }],
+      num_items: pairs, value: pairs * Number(hasPacks ? packUnit : price || 0), currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, lines, 'buy-now');
+    } catch {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      addToCart();
+    } finally {
+      setSrBusy(false);
+    }
   };
 
   // Show the sticky buy bar once the main buy buttons have scrolled out of view.
@@ -474,16 +514,21 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
           {inStock && (
             <div className="pdx-buy-wrap">
-              {prepaidCoupon?.code && (
+              {/* Our prepaid code doesn't apply inside Shiprocket Checkout. */}
+              {prepaidCoupon?.code && !useShiprocket && (
                 <div className="pdx-prepaid-ribbon" aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
                   <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
                   <strong>{prepaidCoupon.code}</strong>
                   <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
                 </div>
               )}
-              <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
-                <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
-              </button>
+              {useShiprocket ? (
+                <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
+              ) : (
+                <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
+                  <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
+                </button>
+              )}
             </div>
           )}
 

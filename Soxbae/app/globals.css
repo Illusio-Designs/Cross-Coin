@@ -2376,6 +2376,32 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .pdx-buy-now:hover { background: #000; transform: translateY(-1px); }
 .pdx-buy-now:focus-visible, .pdx-color:focus-visible, .pdx-sizeguide button:focus-visible, .pdx-faq summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Shiprocket's Buy now button (their markup + images) in our Add to cart
+   look: orange accent box, 12px radius, same font and hover lift. Shiprocket's
+   stylesheet loads after ours, so these rules use a doubled class and
+   !important to win. */
+button.sr-headless-checkout.sr-headless-checkout {
+  width: 100% !important; min-height: 54px !important; height: auto !important; margin: 0 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  padding: 9px 24px 7px !important; border: 0 !important; border-radius: var(--r-box, 12px) !important;
+  background: var(--accent) !important; color: #fff !important; box-shadow: none !important;
+  font-family: inherit !important; font-size: 14.5px !important; font-weight: 600 !important; letter-spacing: .02em !important;
+  cursor: pointer; transition: background .18s ease, transform .18s ease;
+}
+button.sr-headless-checkout.sr-headless-checkout:hover:not(:disabled) { background: var(--accent-600) !important; transform: translateY(-1px); }
+button.sr-headless-checkout.sr-headless-checkout:active { transform: translateY(1px); }
+button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor: progress; }
+button.sr-headless-checkout.sr-headless-checkout:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 2px !important; }
+.sr-headless-checkout.sr-headless-checkout > .sr-d-flex { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 3px !important; width: 100%; }
+.sr-headless-checkout.sr-headless-checkout .full-width { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-checkout-visible2 { font: inherit !important; color: inherit !important; text-transform: uppercase; white-space: nowrap; }
+.sr-headless-checkout.sr-headless-checkout .sr-pl-15 { padding-left: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible { height: 20px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible1 { height: 13px !important; width: auto !important; }
+.sr-headless-checkout.sr-headless-checkout .loader5 { display: none !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by { position: static !important; display: block !important; line-height: 1 !important; margin: 0 !important; }
+.sr-headless-checkout.sr-headless-checkout .sr-powered-by img { height: 9px !important; width: auto !important; opacity: .85; display: block; }
+
 /* Colour — named cards instead of bare dots */
 .pdx-colors { display: flex; flex-wrap: wrap; gap: 10px; }
 .pdx-color { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 999px; line-height: 0; }
