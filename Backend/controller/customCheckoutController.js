@@ -5,6 +5,7 @@
  * (X-Brand-Name header or ?brand=<slug>), falling back to brand 1.
  */
 const { Product, Category, Brand } = require('../model/associations.js');
+const settingsHelper = require('../services/settingsHelper.js');
 const svc = require('../services/customCheckoutService.js');
 const { logger } = require('../config/logging.js');
 
@@ -92,7 +93,10 @@ exports.getPoints = async (req, res) => {
 // checkout button opens the provider's checkout (API key + secret saved).
 exports.status = async (req, res) => {
   try {
-    res.json({ success: true, enabled: await svc.isConfigured(req.brandId || 1) });
+    // On only when the store's switch is on AND both keys are saved.
+    const brandId = req.brandId || 1;
+    const on = String(await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_ENABLED', 'false')).toLowerCase() === 'true';
+    res.json({ success: true, enabled: on && await svc.isConfigured(brandId) });
   } catch (err) {
     res.json({ success: true, enabled: false });
   }
