@@ -12,6 +12,7 @@
 const OWN_HOSTS = new Set([
   'crosscoin.in',
   'soxbaesocks.com',
+  'soxbae.com', // also Soxbae's; redirects to the store
   'morbixsocks.com',
   'gripzus.com',
   'knitwink.com',

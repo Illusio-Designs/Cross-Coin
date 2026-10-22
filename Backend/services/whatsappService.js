@@ -134,10 +134,10 @@ async function _brandName(brandId) {
 // the order number from ?order=, so the link opens pre-filled. This replaces the
 // old hard-coded crosscoin.in/OrderTracking link that was wrong for every other
 // brand (wrong domain AND wrong path).
-// Canonical live custom domains per brand. The brands table was seeded with the
-// WRONG domains for several stores (morbix.com / soxbae.com / velquira.com — none
-// of which resolve; the live stores are on morbixsocks.com / soxbaesocks.com /
-// velquira.in). These are the verified production domains (source: CORS allow-list
+// Canonical live custom domains per brand. The brands table was seeded with
+// domains that aren't the live stores for several brands (morbix.com /
+// velquira.com don't resolve; soxbae.com is Soxbae's too but only redirects);
+// the live stores are on morbixsocks.com / soxbaesocks.com / velquira.in). These are the verified production domains (source: CORS allow-list
 // in config/corsConfig.js). Keyed by normalised brand name so a wrong Brand.domain
 // row can't produce a dead tracking link. Keep in sync with corsConfig.js.
 const CANONICAL_BRAND_DOMAINS = {
