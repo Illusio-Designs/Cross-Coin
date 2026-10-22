@@ -512,4 +512,5 @@ module.exports = {
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
   initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
+  getPushConfig,
 };
