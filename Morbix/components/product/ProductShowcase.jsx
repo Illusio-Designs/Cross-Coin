@@ -10,6 +10,8 @@ import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButtonContent from '@/components/checkout/ShiprocketButtonContent';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -262,11 +264,49 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     setTimeout(() => setAdded(false), 1600);
   };
 
-  // Morbix's cart drawer is the checkout (add() opens it), so Buy now adds the
-  // selection and lets the drawer open straight away — no "added" toast between.
-  const onBuyNow = () => {
-    if (!inStock) return;
-    addToCart();
+  // Shiprocket Checkout (when switched on for Morbix): Buy now opens it
+  // straight away with just this selection. Discounted packs keep using our
+  // own checkout, because Shiprocket prices each pair from the catalog and
+  // wouldn't apply the pack price.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && !(hasPacks && packHasDiscount);
+
+  const buyNowLines = () => {
+    if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
+      const chosen = (packColors.length ? packColors : Array.from({ length: packPairs }, () => color)).slice(0, packPairs);
+      const byVar = new Map();
+      for (const ci of chosen) {
+        const vid = resolvePairVariant(ci).variationId;
+        byVar.set(vid, (byVar.get(vid) || 0) + 1);
+      }
+      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity }));
+    }
+    return [{ variationId: activeVariant?.id ?? null, quantity: hasPacks ? packPairs : qty }];
+  };
+
+  // Otherwise Morbix's cart drawer is the checkout (add() opens it), so Buy now
+  // adds the selection and lets the drawer open straight away.
+  const onBuyNow = async (e) => {
+    if (!inStock || srBusy) return;
+    const lines = useShiprocket ? buyNowLines() : [];
+    if (!lines.length || lines.some((l) => l.variationId == null)) { addToCart(); return; }
+    const value = lines.reduce((a, l) => a + l.quantity, 0) * Number(hasPacks ? packUnit : price || 0);
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+      contents: [{ id: String(product.id), quantity: lines.reduce((a, l) => a + l.quantity, 0) }],
+      num_items: lines.reduce((a, l) => a + l.quantity, 0), value, currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, lines, 'buy-now');
+    } catch (err) {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      addToCart();
+    } finally {
+      setSrBusy(false);
+    }
   };
 
   // Show the sticky buy bar once the main buy buttons have scrolled out of view.
@@ -500,9 +540,15 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                   <span className="pdp-perf" aria-hidden="true"><i /><i /><i /></span>
                 </div>
               )}
-              <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
-                <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
-              </button>
+              {useShiprocket ? (
+                <button type="button" className="btn pdp-buy-now sr-btn" onClick={onBuyNow} disabled={srBusy}>
+                  <ShiprocketButtonContent label="Buy now" busy={srBusy} />
+                </button>
+              ) : (
+                <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
+                  <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
+                </button>
+              )}
             </div>
           )}
         </div>
