@@ -15,7 +15,6 @@ const DISALLOW = [
   '/login',
   '/register',
   '/api/',
-  '/shiprocket-test',
 ];
 // AI crawlers we explicitly allow. Each needs its own rule repeating the
 // private-path disallows, because a crawler obeys only its most-specific group.

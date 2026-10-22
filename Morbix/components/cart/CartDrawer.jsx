@@ -25,6 +25,9 @@ import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { savePurchaseForThankYou } from '@/lib/thankYou';
+import ShiprocketButtonContent from '@/components/checkout/ShiprocketButtonContent';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
@@ -611,8 +614,17 @@ export default function CartDrawer() {
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) + begin_checkout
      (GA4) + the first-party funnel event — tied to intent to check out, not to
      merely opening the drawer. */
-  const goToCheckout = () => {
-    if (!items.length) return;
+  // Shiprocket Checkout (when switched on for Morbix) replaces the drawer's
+  // checkout step. Carts with a discounted pack stay on our own checkout:
+  // Shiprocket prices each pair from the catalog and can't apply pack prices.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+
+  const goToCheckout = async (e) => {
+    if (!items.length || srBusy) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.id)),
       content_type: 'product',
@@ -621,6 +633,17 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
       currency: 'INR',
     });
+    if (useShiprocket) {
+      setSrBusy(true);
+      try {
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+        return;
+      } catch {
+        // Shiprocket couldn't start: carry on with our own checkout.
+      } finally {
+        setSrBusy(false);
+      }
+    }
     setCoStep(2);
     requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
   };
@@ -771,13 +794,16 @@ export default function CartDrawer() {
     clear();
     setError('');
     setRetryState(null);
-    setOrderSuccess({
-      orderNumber,
-      id: order?.id || null,
-    });
-    // Meta Purchase (deterministic eventID, deduped with the backend server event).
-    fbPurchase(orderNumber, purchaseData);
     toast.success('Order placed successfully!');
+    // The thank-you page fires the Meta Purchase (deterministic eventID,
+    // deduped with the backend server event).
+    if (orderNumber !== '—') {
+      savePurchaseForThankYou(orderNumber, purchaseData);
+      closeCart();
+      router.push(`/order-confirmation?order=${encodeURIComponent(orderNumber)}${order?.id ? `&id=${order.id}` : ''}`);
+      return;
+    }
+    setOrderSuccess({ orderNumber, id: order?.id || null });
   };
 
   const deliveryDateStr = () => {
@@ -1426,8 +1452,8 @@ export default function CartDrawer() {
               {coStep === 1 ? (
                 <>
                   {error && <p className="cd-error">{error}</p>}
-                  <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
-                    Proceed to checkout · ₹{total.toFixed(0)}
+                  <button className={`cd-checkout${useShiprocket ? ' sr-btn' : ''}`} onClick={goToCheckout} disabled={processing || srBusy || !items.length}>
+                    {useShiprocket ? <ShiprocketButtonContent label={`Checkout · ₹${total.toFixed(0)}`} busy={srBusy} /> : <>Proceed to checkout · ₹{total.toFixed(0)}</>}
                   </button>
                   <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                     <span><Icon name="ShieldCheck" size={14} /> Secure</span>
