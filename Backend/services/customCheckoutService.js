@@ -215,8 +215,26 @@ async function pushProduct(productId, brandId = 1) {
     return { pushed: true };
   } catch (err) {
     logger.warn(`[custom-checkout] product push failed (${productId}, brand ${brandId}): ${err?.response?.status || ''} ${err.message}`);
-    return { error: err.message };
+    return { error: err.message, status: err?.response?.status, provider: err?.response?.data };
   }
+}
+
+// Make sure Shiprocket knows the products in this cart before a checkout
+// opens: push each one (once per 30 min per store) and wait for the result.
+const recentlyPushed = new Map();
+async function ensureProductsPushed(brandId, variantIds) {
+  const vars = await ProductVariation.findAll({ where: { id: variantIds.map(Number).filter(Boolean) }, attributes: ['id', 'productId'] });
+  const ids = [...new Set(vars.map((v) => v.productId))];
+  const now = Date.now();
+  const results = await Promise.all(ids.map(async (pid) => {
+    const k = `${brandId}:${pid}`;
+    if (now - (recentlyPushed.get(k) || 0) < 30 * 60 * 1000) return { productId: pid, pushed: 'recently' };
+    const r = await pushProduct(pid, brandId);
+    if (r.pushed) recentlyPushed.set(k, now);
+    return { productId: pid, ...r };
+  }));
+  noteProviderCall(brandId, { ok: results.every((r) => r.pushed), push: true, method: 'PUSH', path: 'product push', results });
+  return results;
 }
 
 // Signed POST to the checkout provider: X-Api-Key + base64 HMAC-SHA256 of the
@@ -514,7 +532,8 @@ const providerCalls = new Map();
 function noteProviderCall(brandId, entry) {
   const k = brandId || 'unknown';
   const cur = providerCalls.get(k) || {};
-  cur[entry.ok ? 'lastAccepted' : 'lastRejected'] = { at: new Date().toISOString(), ...entry };
+  const slot = entry.push ? 'lastPush' : entry.ok ? 'lastAccepted' : 'lastRejected';
+  cur[slot] = { at: new Date().toISOString(), ...entry };
   providerCalls.set(k, cur);
 }
 function providerCallsFor(brandId) {
@@ -522,7 +541,7 @@ function providerCallsFor(brandId) {
 }
 
 module.exports = {
-  noteProviderCall, providerCallsFor,
+  noteProviderCall, providerCallsFor, ensureProductsPushed,
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
