@@ -90,8 +90,13 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const lineQty = pack ? pack.pairs : qty;
   const lineTotal = pack && pack.pairs > 1 ? pack.total : unitPrice * lineQty;
 
+  // An admin pack (2+ bottles at the pack price) is its own bag line, marked
+  // packPrice: Shiprocket would charge each bottle at the catalogue price, so a
+  // bag holding one stays on our own checkout.
+  const isPackLine = !!(pack && pack.pairs > 1);
   const line = () => ({
-    id: `${product.id}:${opt.id}`,
+    id: isPackLine ? `${product.id}:${opt.id}:pk${pack.pairs}` : `${product.id}:${opt.id}`,
+    ...(isPackLine ? { packPrice: true } : {}),
     productId: product.id,
     variationId: opt.id,
     name: product.name,

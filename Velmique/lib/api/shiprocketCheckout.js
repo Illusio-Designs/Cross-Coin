@@ -31,11 +31,11 @@ export function shiprocketEnabled() {
   return enabledPromise;
 }
 
-// Can these lines go to Shiprocket? Each needs a variant, and Build-your-pack
-// lines (pack_group) stay on our own checkout, which applies the pack price;
-// Shiprocket only knows unit prices.
+// Can these lines go to Shiprocket? Each needs a variant. Build-your-pack
+// lines (pack_group) and admin-pack lines (packPrice) stay on our own
+// checkout, which applies the pack price; Shiprocket only knows unit prices.
 export function shiprocketTakes(lines) {
-  return lines.length > 0 && lines.every((l) => l.variationId != null && !l.packGroup);
+  return lines.length > 0 && lines.every((l) => l.variationId != null && !l.packGroup && !l.packPrice);
 }
 
 // Shiprocket's stylesheet (their checkout window + their Buy now button).
