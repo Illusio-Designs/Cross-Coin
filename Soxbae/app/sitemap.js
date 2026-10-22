@@ -11,7 +11,7 @@
  */
 
 // Must match layout.jsx metadataBase so sitemap URLs == canonical URLs.
-const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.soxbae.com';
+const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
 

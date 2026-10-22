@@ -13,7 +13,7 @@ import { getPublicCoupons } from '@/lib/api/orders';
 // 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
 export const revalidate = 300;
 
-const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.soxbae.com').replace(/\/+$/, '');
+const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com').replace(/\/+$/, '');
 const BRAND = 'Soxbae';
 
 export async function generateMetadata({ params }) {
