@@ -210,6 +210,95 @@ exports.orderWebhook = async (req, res) => {
   }
 };
 
+// POST /api/custom-checkout/abandoned-webhook — Shiprocket's "abandoned cart"
+// callback (Shiprocket panel → abandoned service provider: Custom). The
+// shopper typed their phone inside Shiprocket's window and left without
+// paying; we add/refresh their row in abandoned_carts so our WhatsApp cart
+// recovery (and the admin Abandoned carts list) picks it up. Shiprocket's
+// payload isn't documented, so fields are read from the usual names.
+const pick = (obj, re, depth = 0) => {
+  if (!obj || typeof obj !== 'object' || depth > 6) return undefined;
+  for (const [k, v] of Object.entries(obj)) if (re.test(k) && v != null && typeof v !== 'object' && String(v).trim()) return v;
+  for (const v of Object.values(obj)) { const r = pick(v, re, depth + 1); if (r !== undefined) return r; }
+  return undefined;
+};
+const findItems = (obj, depth = 0) => {
+  if (!obj || typeof obj !== 'object' || depth > 6) return null;
+  for (const [k, v] of Object.entries(obj)) {
+    if (/^(items|line_items|cart_items|products)$/i.test(k) && Array.isArray(v) && v.length) return v;
+  }
+  for (const v of Object.values(obj)) { const r = findItems(v, depth + 1); if (r) return r; }
+  return null;
+};
+const keyShape = (obj, depth = 0) => {
+  if (Array.isArray(obj)) return obj.length ? [keyShape(obj[0], depth + 1)] : [];
+  if (!obj || typeof obj !== 'object' || depth > 5) return typeof obj;
+  return Object.fromEntries(Object.entries(obj).slice(0, 60).map(([k, v]) => [k, keyShape(v, depth + 1)]));
+};
+
+exports.abandonedWebhook = async (req, res) => {
+  const brandId = req.brandId || 1;
+  const body = req.body || {};
+  // Field names only (no values / personal data) for the staff test page.
+  const note = (ok, reason) => svc.noteProviderCall(brandId, { push: false, abandoned: true, ok, method: 'POST', path: 'abandoned-webhook', reason, payloadKeys: keyShape(body) });
+  try {
+    const digits = String(pick(body, /phone|mobile|contact/i) || '').replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) { note(false, 'no 10-digit phone in payload'); return res.json({ ok: true, skipped: 'no phone' }); }
+    const first = pick(body, /^(first_?name|fname)$/i) || '';
+    const last = pick(body, /^(last_?name|lname)$/i) || '';
+    const name = String(`${first} ${last}`.trim() || pick(body, /^(name|full_?name|customer_?name)$/i) || '').slice(0, 120) || null;
+
+    const { ProductVariation } = require('../model/associations.js');
+    const raw = findItems(body) || [];
+    const lines = [];
+    for (const it of raw.slice(0, 30)) {
+      const vid = parseInt(it?.variant_id ?? it?.variantId ?? it?.sku_id ?? it?.id, 10);
+      if (!vid) continue;
+      const v = await ProductVariation.findByPk(vid, { attributes: ['id', 'productId', 'price'] });
+      if (!v) continue;
+      lines.push({ productId: v.productId, variationId: v.id, quantity: Math.max(1, parseInt(it.quantity ?? it.qty, 10) || 1), price: Number(v.price) || 0 });
+    }
+    const productIds = [...new Set(lines.map((l) => l.productId))];
+    const prods = productIds.length ? await Product.findAll({ where: { id: productIds }, attributes: ['id', 'name'] }) : [];
+    const names = new Map(prods.map((p) => [p.id, p.name]));
+    const itemCount = lines.reduce((a, l) => a + l.quantity, 0);
+    const claimed = Number(pick(body, /^(total_amount_payable|total_price|cart_value|cart_total|total_amount|total|sub_?total)$/i));
+    const cartValue = Number.isFinite(claimed) && claimed > 0 ? claimed : lines.reduce((a, l) => a + l.price * l.quantity, 0);
+    const cartSummary = lines.map((l) => `${names.get(l.productId) || 'Item'} ×${l.quantity}`).join(', ').slice(0, 250) || null;
+
+    const { AbandonedCart } = require('../model/abandonedCartModel.js');
+    const { phoneHash } = require('../utils/encryption.js');
+    const recovery = require('../services/cartRecoveryService.js');
+    const items = recovery.sanitizeItems(lines.map(({ productId, variationId, quantity }) => ({ productId, variationId, quantity })));
+    const [row, created] = await AbandonedCart.findOrCreate({
+      where: { phoneHashValue: phoneHash(digits), brandId },
+      defaults: { phone: digits, customerName: name, cartSummary, itemCount, cartValue, status: 'pending', waSent: false, items, recoverToken: recovery.newToken() },
+    });
+    if (!created) {
+      if (row.status === 'recovered' && Date.now() - new Date(row.updatedAt).getTime() < 10 * 60 * 1000) {
+        note(true, 'order already placed'); return res.json({ ok: true, skipped: 'recovered' });
+      }
+      const rearm = await recovery.canRearm(row);
+      await row.update({
+        phone: digits,
+        customerName: name || row.customerName,
+        cartSummary: cartSummary || row.cartSummary,
+        itemCount: itemCount || row.itemCount,
+        cartValue: cartValue || row.cartValue,
+        ...(rearm ? { status: 'pending', waSent: false } : {}),
+        ...(items ? { items } : {}),
+        ...(recovery.isToken(row.recoverToken) ? {} : { recoverToken: recovery.newToken() }),
+      });
+    }
+    note(true, `${created ? 'added' : 'updated'} abandoned cart (${itemCount} item${itemCount === 1 ? '' : 's'})`);
+    return res.json({ ok: true, saved: true });
+  } catch (err) {
+    logger.error('[custom-checkout] abandoned webhook failed: ' + err.message);
+    note(false, err.message);
+    return res.status(500).json({ ok: false, message: 'Could not save the abandoned cart' });
+  }
+};
+
 // Admin: refunds — signed pass-throughs to the provider.
 exports.refundInitiate = async (req, res) => {
   try {

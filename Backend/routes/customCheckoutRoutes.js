@@ -98,6 +98,8 @@ router.post('/token', brandRequired, ctrl.createToken);
 
 // ── Provider → seller: order webhook (store's keys required) ──────────────
 router.post('/order-webhook', providerAuth, ctrl.orderWebhook);
+// Shiprocket → abandoned cart (phone typed, no payment) → our WhatsApp recovery.
+router.post('/abandoned-webhook', providerAuth, ctrl.abandonedWebhook);
 
 // ── Storefront: back from the provider's page → confirm + Purchase ────────
 router.post('/confirm', brandRequired, ctrl.confirmReturn);

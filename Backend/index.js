@@ -145,6 +145,7 @@ const isNotificationPoll = (req) => {
 const WEBHOOK_PATHS = [
   '/whatsapp/webhook', '/orders/shipping/webhook', '/orders/fship/webhook',
   '/payment/razorpay/webhook', '/payments/razorpay/webhook', '/custom-checkout/order-webhook',
+  '/custom-checkout/abandoned-webhook',
 ];
 const isProviderWebhook = (req) => {
   const path = (req.originalUrl || req.url || '').split('?')[0].replace(/^\/api(\/v1)?/, '');
