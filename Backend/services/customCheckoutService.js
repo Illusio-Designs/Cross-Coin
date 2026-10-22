@@ -433,8 +433,10 @@ async function ingestCheckoutOrder(brandId, p) {
     }
     if (discount > subtotal) { const e = new Error(`Discount larger than the order for ${platformId}`); e.status = 422; throw e; }
     const finalAmount = expected;
-    const isCod = String(p.payment_type || '').toUpperCase() === 'COD';
-    const paid = String(p.payment_status || '').toLowerCase() === 'success';
+    const pay = (p.payments || [])[0];
+    const isCod = isCodOrder(p, pay);
+    // A COD order isn't paid until the courier collects the cash.
+    const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
 
     const order = await Order.create({
       order_number: await generateUniqueOrderNumber(t, brandId),
@@ -460,7 +462,6 @@ async function ingestCheckoutOrder(brandId, p) {
       await ProductVariation.decrement('stock', { by: l.quantity, where: { id: l.variation_id }, transaction: t });
     }
 
-    const pay = (p.payments || [])[0];
     if (pay) {
       try {
         await Payment.create({
@@ -469,11 +470,11 @@ async function ingestCheckoutOrder(brandId, p) {
           payment_type: isCod ? 'cod' : 'razorpay',
           transaction_id: pay.txn_id || pay.pg_transaction_id || null,
           amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
-          status: String(pay.payment_status || '').toLowerCase() === 'success' ? 'successful' : 'pending',
+          status: !isCod && String(pay.payment_status || '').toLowerCase() === 'success' ? 'successful' : 'pending',
           // Gateway marks the refund route: these payments refund via the
           // checkout provider's refund API, never our own Razorpay keys.
           payment_gateway: 'CustomCheckout',
-          notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
+          notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
           brand_id: brandId,
         }, { transaction: t });
       } catch (e) {
@@ -525,6 +526,13 @@ async function ingestCheckoutOrder(brandId, p) {
   });
 }
 
+// Shiprocket names COD several ways ("COD", "CASH_ON_DELIVERY", "cash") and
+// may put it on the order or on its payment line.
+function isCodOrder(p, pay) {
+  const fields = [p?.payment_type, p?.payment_method, p?.payment_mode, pay?.payment_type, pay?.payment_method, pay?.payment_mode, pay?.gateway, pay?.mode];
+  return fields.some((f) => /^(cod|cash[\s_-]*on[\s_-]*delivery|cash)$/i.test(String(f || '').trim()));
+}
+
 // Last catalog / webhook calls from Shiprocket, per store (in memory, for the
 // staff test page): when, which path, accepted or why not, and the header
 // NAMES it sent — never values.
@@ -541,7 +549,7 @@ function providerCallsFor(brandId) {
 }
 
 module.exports = {
-  noteProviderCall, providerCallsFor, ensureProductsPushed,
+  noteProviderCall, providerCallsFor, ensureProductsPushed, isCodOrder,
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
