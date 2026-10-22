@@ -27,7 +27,7 @@ import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymen
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
-import ShiprocketButtonContent from '@/components/checkout/ShiprocketButtonContent';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
@@ -1452,9 +1452,13 @@ export default function CartDrawer() {
               {coStep === 1 ? (
                 <>
                   {error && <p className="cd-error">{error}</p>}
-                  <button className={`cd-checkout${useShiprocket ? ' sr-btn' : ''}`} onClick={goToCheckout} disabled={processing || srBusy || !items.length}>
-                    {useShiprocket ? <ShiprocketButtonContent label={`Checkout · ₹${total.toFixed(0)}`} busy={srBusy} /> : <>Proceed to checkout · ₹{total.toFixed(0)}</>}
+                  {useShiprocket ? (
+                    <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={srBusy} disabled={processing} />
+                  ) : (
+                  <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
+                    Proceed to checkout · ₹{total.toFixed(0)}
                   </button>
+                  )}
                   <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                     <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                     <span><Icon name="RefreshCw" size={14} /> Easy returns</span>

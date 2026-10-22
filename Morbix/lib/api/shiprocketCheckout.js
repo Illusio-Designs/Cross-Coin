@@ -32,6 +32,15 @@ export function shiprocketEnabled() {
   return enabledPromise;
 }
 
+// Shiprocket's stylesheet (their checkout window + their Buy now button).
+export function loadShiprocketCss() {
+  if (typeof document === 'undefined' || document.querySelector(`link[href="${SDK_CSS}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = SDK_CSS;
+  document.head.appendChild(link);
+}
+
 // Load Shiprocket's checkout script + styles once; resolves when
 // window.HeadlessCheckout exists.
 export function loadShiprocketSdk() {
@@ -39,12 +48,7 @@ export function loadShiprocketSdk() {
   if (window.HeadlessCheckout) return Promise.resolve(window.HeadlessCheckout);
   if (!sdkPromise) {
     sdkPromise = new Promise((resolve, reject) => {
-      if (!document.querySelector(`link[href="${SDK_CSS}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = SDK_CSS;
-        document.head.appendChild(link);
-      }
+      loadShiprocketCss();
       const s = document.createElement('script');
       s.src = SDK_JS;
       s.async = true;

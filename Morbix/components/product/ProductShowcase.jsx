@@ -11,7 +11,7 @@ import { checkServiceability } from '@/lib/api/serviceability';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
-import ShiprocketButtonContent from '@/components/checkout/ShiprocketButtonContent';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -541,9 +541,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 </div>
               )}
               {useShiprocket ? (
-                <button type="button" className="btn pdp-buy-now sr-btn" onClick={onBuyNow} disabled={srBusy}>
-                  <ShiprocketButtonContent label="Buy now" busy={srBusy} />
-                </button>
+                <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
               ) : (
                 <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
                   <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
