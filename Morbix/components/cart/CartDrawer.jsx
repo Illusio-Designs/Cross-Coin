@@ -473,7 +473,16 @@ export default function CartDrawer() {
 
   // couponDiscount is state (set on a successful validate). Clamp so an over-large
   // coupon can never make the order total negative.
-  const effectiveCouponDiscount = Math.min(couponDiscount, displaySubtotal + shippingFee);
+  // Shiprocket Checkout (when switched on for Morbix) replaces the drawer's
+  // checkout step (and its coupon box — Shiprocket applies its own coupons). Carts with a discounted pack stay on our own checkout:
+  // Shiprocket prices each pair from the catalog and can't apply pack prices.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+  // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
+  const effectiveCouponDiscount = useShiprocket ? 0 : Math.min(couponDiscount, displaySubtotal + shippingFee);
   const total = Math.round(Math.max(0, displaySubtotal + shippingFee - effectiveCouponDiscount));
   const isCod = selectedFee?.orderType === 'cod';
   const isPrepaid = selectedFee?.orderType === 'prepaid';
@@ -614,14 +623,6 @@ export default function CartDrawer() {
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) + begin_checkout
      (GA4) + the first-party funnel event — tied to intent to check out, not to
      merely opening the drawer. */
-  // Shiprocket Checkout (when switched on for Morbix) replaces the drawer's
-  // checkout step. Carts with a discounted pack stay on our own checkout:
-  // Shiprocket prices each pair from the catalog and can't apply pack prices.
-  const [srOn, setSrOn] = useState(false);
-  const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-
-  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
 
   const goToCheckout = async (e) => {
     if (!items.length || srBusy) return;
@@ -1126,6 +1127,7 @@ export default function CartDrawer() {
               </div>
 
               {/* Coupon — sits just above the order summary. Applies to COD + prepaid. */}
+              {!useShiprocket && (
               <div className="cd-co-section">
                 <div className="cd-section-title">Coupon</div>
                 {appliedCoupon ? (
@@ -1262,6 +1264,7 @@ export default function CartDrawer() {
                   );
                 })()}
               </div>
+              )}
 
               {/* Buy More, Save More — offers the cart product's OTHER variations
                   (colours/sizes not yet in the cart) so the shopper can build toward

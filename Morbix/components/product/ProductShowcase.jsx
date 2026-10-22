@@ -533,7 +533,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           </div>
           {inStock && (
             <div className="pdp-buy-wrap">
-              {prepaidCoupon?.code && (
+              {/* Our prepaid code doesn't apply inside Shiprocket Checkout. */}
+              {prepaidCoupon?.code && !useShiprocket && (
                 <div className="pdp-prepaid-ribbon" aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
                   <span className="pdp-perf" aria-hidden="true"><i /><i /><i /></span>
                   <strong>{prepaidCoupon.code}</strong>
