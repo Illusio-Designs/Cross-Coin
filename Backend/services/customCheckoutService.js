@@ -540,7 +540,7 @@ const providerCalls = new Map();
 function noteProviderCall(brandId, entry) {
   const k = brandId || 'unknown';
   const cur = providerCalls.get(k) || {};
-  const slot = entry.push ? 'lastPush' : entry.ok ? 'lastAccepted' : 'lastRejected';
+  const slot = entry.abandoned ? 'lastAbandoned' : entry.push ? 'lastPush' : entry.ok ? 'lastAccepted' : 'lastRejected';
   cur[slot] = { at: new Date().toISOString(), ...entry };
   providerCalls.set(k, cur);
 }
