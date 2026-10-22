@@ -116,8 +116,10 @@ exports.createToken = async (req, res) => {
     };
     const redirectUrl = String(req.body.redirect_url || '');
     if (!redirectUrl) return res.status(400).json({ success: false, message: 'redirect_url is required' });
+    // Shiprocket must know these products before its checkout can show them.
+    const catalogPush = await svc.ensureProductsPushed(brandId, items.map((i) => i.variant_id)).catch((e) => [{ error: e.message }]);
     const data = await svc.createCheckoutToken(brandId, cartData, redirectUrl);
-    res.json({ success: true, ...data });
+    res.json({ success: true, ...data, catalogPush });
   } catch (err) {
     logger.error('[custom-checkout] createToken failed: ' + (err?.response?.status || '') + ' ' + err.message);
     res.status(err.status || 502).json({ success: false, message: err.message, provider: err?.response?.data });

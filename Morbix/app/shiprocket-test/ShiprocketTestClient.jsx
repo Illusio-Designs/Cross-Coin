@@ -150,6 +150,7 @@ export default function ShiprocketTestClient({ products }) {
       if (!c.lastAccepted && !c.lastRejected && !c.unknownStore) log('error', 'No catalog calls from Shiprocket reached our backend since it last restarted');
       if (c.lastAccepted) log('network', `Last ACCEPTED Shiprocket call: ${c.lastAccepted.method} ${c.lastAccepted.path} → ${c.lastAccepted.status} at ${c.lastAccepted.at}`, { headers: c.lastAccepted.headers });
       if (c.lastRejected) log('error', `Last REJECTED Shiprocket call: ${c.lastRejected.method} ${c.lastRejected.path} → ${c.lastRejected.status} (${c.lastRejected.reason}) at ${c.lastRejected.at}`, { headers: c.lastRejected.headers });
+      if (c.lastPush) log(c.lastPush.ok ? 'network' : 'error', `Last product push to Shiprocket at ${c.lastPush.at}: ${c.lastPush.ok ? 'OK' : 'FAILED'}`, c.lastPush.results);
       if (c.unknownStore) log('error', `Last call we couldn't match to a store: ${c.unknownStore.method} ${c.unknownStore.path} → ${c.unknownStore.status} (${c.unknownStore.reason}) at ${c.unknownStore.at}`, { headers: c.unknownStore.headers });
     } catch (e) {
       log('error', `Could not read Shiprocket call status: ${e.message}`);
