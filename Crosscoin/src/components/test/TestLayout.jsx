@@ -19,6 +19,9 @@ import { fbqTrack, trackCartPageView, trackShippingInfoFp } from '@/utils/fbqTra
 import { gtagTrack } from '@/utils/gtagTrack';
 import { useWishlist, wishCount } from './wishlist';
 import { getConsent, setConsent } from '../../lib/consent';
+import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import { savePurchaseForThankYou } from '../../lib/thankYou';
+import ShiprocketButton from '../checkout/ShiprocketButton';
 
 // Fallbacks used only until the live /api/shipping-fees response arrives.
 const FREE_SHIP = 799;
@@ -648,6 +651,17 @@ export default function TestLayout({ children }) {
 
   const showToast = (m) => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
 
+  // Shiprocket Checkout (when switched on for CrossCoin) replaces the drawer's
+  // checkout step, and its coupon box — Shiprocket applies its own coupons, so
+  // ours is dropped while it's on. Carts with pack-priced lines (a bundle pack,
+  // or a line repriced to a Buy More, Save More tier) stay on our own checkout:
+  // Shiprocket prices each pair from the catalog and can't apply pack prices.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.packId && !(i.unit < i.base));
+  useEffect(() => { if (useShiprocket && coupon) setCoupon(null); }, [useShiprocket, coupon]);
+
   // Order math (same rules as the live cart): free-shipping threshold + fees come
   // from /api/shipping-fees; coupon discount from live validation; paying online
   // gives the ₹50 instant discount (doesn't stack with a coupon) and ships free.
@@ -700,6 +714,21 @@ export default function TestLayout({ children }) {
     buyNowIC.current = false;
     trackInitiateCheckout();
   }, [buyNowTick, drawer, step, cart.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cart → Shiprocket Checkout with every line; if it can't start, our own
+  // checkout step takes over.
+  const checkoutShiprocket = async (e) => {
+    if (srBusy || !cart.length) return;
+    trackInitiateCheckout();
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, cart.map((i) => ({ variationId: i.vid, quantity: i.qty })), 'cart');
+    } catch (_) {
+      setStep('checkout');
+    } finally {
+      setSrBusy(false);
+    }
+  };
 
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
@@ -765,16 +794,21 @@ export default function TestLayout({ children }) {
     } catch (_) { /* analytics never blocks the order */ }
     setOrderErr(''); setPlacing(true);
     const done = (no) => {
-      // Meta Pixel + CAPI Purchase (deduped by Purchase_<order>) + GA4 + first-
-      // party funnel. Fire BEFORE clearCart so the cart contents are still here.
-      try {
-        fbqTrack('Purchase', {
-          content_ids: cart.map((i) => String(i.id)), content_type: 'product',
-          contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })),
-          num_items: count, value: total, currency: 'INR',
-        }, { eventID: 'Purchase_' + no });
-      } catch (_) { /* analytics never blocks the order */ }
-      setOrderNo(no); setStep('done'); clearCart(); setCoupon(null); setPlacing(false);
+      // The thank-you page fires the Meta Pixel + CAPI Purchase (deduped by
+      // Purchase_<order>), once. Hand it the cart contents BEFORE clearCart.
+      const purchase = {
+        content_ids: cart.map((i) => String(i.id)), content_type: 'product',
+        contents: cart.map((i) => ({ id: String(i.id), quantity: i.qty })),
+        num_items: count, value: total, currency: 'INR',
+      };
+      clearCart(); setCoupon(null); setPlacing(false);
+      if (no) {
+        savePurchaseForThankYou(no, purchase);
+        setDrawer(false); setStep('cart');
+        router.push(`/order-confirmation?order=${encodeURIComponent(no)}`);
+        return;
+      }
+      setOrderNo(no); setStep('done');
     };
     const fail = (msg) => { setOrderErr(msg || 'Something went wrong. Please try again.'); setPlacing(false); };
     try {
@@ -1043,7 +1077,7 @@ export default function TestLayout({ children }) {
                 );
               })()}
 
-              {coupon ? (
+              {useShiprocket ? null : coupon ? (
                 <div className="coupon-applied" style={{ marginTop: 14 }}><span>✓ {coupon.code} · −{inr(disc)}</span><button className="x" style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', cursor: 'pointer' }} onClick={() => setCoupon(null)}>✕</button></div>
               ) : (<>
                 <div className="couponrow"><input ref={promoRef} placeholder="Coupon code" aria-label="Coupon code" /><button className="couponrow__btn" onClick={() => applyPromo()}>Apply</button></div>
@@ -1072,7 +1106,11 @@ export default function TestLayout({ children }) {
             {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { trackInitiateCheckout(); setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
+            {useShiprocket ? (
+              <ShiprocketButton label="BUY NOW" onClick={checkoutShiprocket} busy={srBusy} />
+            ) : (
+              <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { trackInitiateCheckout(); setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
+            )}
             <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}

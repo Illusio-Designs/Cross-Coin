@@ -17,6 +17,8 @@ import { getPublicCoupons } from '../../services/publicindex';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
+import { shiprocketEnabled, openShiprocketCheckout } from '../../services/shiprocketCheckout';
+import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 
 // Right-size ImageKit images per slot (f-auto, width-only): GzImage `w` / ikw().
 import { checkServiceability } from '../../services/serviceability';
@@ -294,6 +296,11 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     return () => obs.disconnect();
   }, [product]);
 
+  // Shiprocket Checkout switch (Brand settings → Payments) — see handleBuyNow.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+
   /* ── Loading / not-found ─────────────────────────────────── */
   if (loading) {
     return (
@@ -425,12 +432,54 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     setTimeout(() => setAdded(false), 1800);
   };
 
-  // Buy Now mirrors Morbix: run the SAME pack-aware builder (packs + per-pair
-  // colours included), no "added" confirmation, and open the cart/checkout the
-  // Gripzus way.
-  const handleBuyNow = () => {
+  // Shiprocket Checkout (when switched on for Gripzus): Buy now opens it
+  // straight away with just this selection. Discounted packs keep using our
+  // own checkout, because Shiprocket prices each pair from the catalog and
+  // wouldn't apply the pack price.
+  const useShiprocket = srOn && product.inStock !== false && !(hasPacks && packHasDiscount);
+
+  // The selection as Shiprocket lines [{ variationId, quantity }]; per-pair
+  // colours of the same variation are merged into one line.
+  const buyNowLines = () => {
+    if (canPerPair) {
+      const byVar = new Map();
+      for (const name of perPairColors) {
+        const vid = resolvePairVariant(name).variationId;
+        byVar.set(vid, (byVar.get(vid) || 0) + 1);
+      }
+      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity }));
+    }
+    const line = buildCartLine();
+    return [{ variationId: line.variationId ?? null, quantity: line.qty }];
+  };
+
+  // Otherwise Buy Now mirrors Morbix: run the SAME pack-aware builder (packs +
+  // per-pair colours included), no "added" confirmation, and open the
+  // cart/checkout the Gripzus way.
+  const buyNowInCart = () => {
     addSelectionToCart({ openDrawer: false, toast: false });
     openCart();
+  };
+
+  const handleBuyNow = async (e) => {
+    if (srBusy) return;
+    const lines = useShiprocket ? buyNowLines() : [];
+    if (!lines.length || lines.some((l) => l.variationId == null)) { buyNowInCart(); return; }
+    const pairs = lines.reduce((a, l) => a + l.quantity, 0);
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+      contents: [{ id: String(product.id), quantity: pairs }],
+      num_items: pairs, value: pairs * Number(hasPacks ? packUnit : price || 0), currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, lines, 'buy-now');
+    } catch {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      buyNowInCart();
+    } finally {
+      setSrBusy(false);
+    }
   };
 
   /* ── Server-rendered SEO (mirrors Crosscoin's /products/[slug]) ──────────
@@ -887,7 +936,8 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                     top edge (Morbix pattern) — a real admin-created prepaid-only
                     coupon (never fabricated), in Gripzus's monochrome tokens. */}
                 <div className="flex flex-col items-stretch">
-                  {prepaidCoupon?.code && (
+                  {/* Our prepaid code doesn't apply inside Shiprocket Checkout. */}
+                  {prepaidCoupon?.code && !useShiprocket && (
                     <div
                       className="relative z-[2] -mb-3 self-center inline-flex items-center gap-2 border border-ink bg-paper px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-ink shadow-[0_6px_14px_-7px_rgba(18,18,18,0.35)]"
                       aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}
@@ -898,10 +948,14 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                       <span aria-hidden="true" className="flex gap-0.5 text-ink-muted"><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /><i className="inline-block h-[3px] w-[3px] rounded-full bg-current" /></span>
                     </div>
                   )}
+                  {useShiprocket ? (
+                    <ShiprocketButton label="BUY NOW" onClick={handleBuyNow} busy={srBusy} />
+                  ) : (
                   <button onClick={handleBuyNow} className="btn w-full justify-center gap-2 !py-3.5 sm:!py-4 whitespace-nowrap">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                     BUY NOW – Cash On Delivery
                   </button>
+                  )}
                 </div>
               </div>
 

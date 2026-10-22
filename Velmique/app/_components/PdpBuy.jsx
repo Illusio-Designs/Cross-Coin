@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getPublicCoupons } from '@/lib/api/orders';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
 
@@ -87,8 +90,13 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const lineQty = pack ? pack.pairs : qty;
   const lineTotal = pack && pack.pairs > 1 ? pack.total : unitPrice * lineQty;
 
+  // An admin pack (2+ bottles at the pack price) is its own bag line, marked
+  // packPrice: Shiprocket would charge each bottle at the catalogue price, so a
+  // bag holding one stays on our own checkout.
+  const isPackLine = !!(pack && pack.pairs > 1);
   const line = () => ({
-    id: `${product.id}:${opt.id}`,
+    id: isPackLine ? `${product.id}:${opt.id}:pk${pack.pairs}` : `${product.id}:${opt.id}`,
+    ...(isPackLine ? { packPrice: true } : {}),
     productId: product.id,
     variationId: opt.id,
     name: product.name,
@@ -151,6 +159,47 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   }, []);
   // Buy now: add, then open the bag straight on delivery & payment.
   const buy = () => { if (add()) openCheckout(); };
+
+  // Shiprocket Checkout (when it is set up for the store): Buy now opens it
+  // straight away with just this selection, leaving the bag alone. Packs
+  // (an admin pack, or 2+ ticked scents) keep using our own checkout, because
+  // Shiprocket prices each bottle from the catalog and wouldn't apply the
+  // pack price.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && !(pack && pack.pairs > 1) && !(isMix && mixCount > 1);
+
+  // The selection as checkout lines (a simple product without variations
+  // has no variant id, so it can't go to Shiprocket).
+  const buyNowLine = () => {
+    if (isMix) {
+      const o = scentOpts[[...picked][0]];
+      return o ? { productId: o.pid, variationId: o.vid ?? null, quantity: 1, price: o.price, name: o.name } : null;
+    }
+    const vid = (product.variations || []).length ? opt.id : (product.defaultVariationId ?? null);
+    return { productId: product.id, variationId: vid, quantity: lineQty, price: unitPrice, name: product.name };
+  };
+
+  const onBuyNow = async (e) => {
+    if (soldOut || srBusy) return;
+    const l = useShiprocket ? buyNowLine() : null;
+    if (!l || l.variationId == null) { buy(); return; }
+    fbTrack('InitiateCheckout', {
+      content_ids: [String(l.productId)], content_type: 'product', content_name: l.name || undefined,
+      contents: [{ id: String(l.productId), quantity: l.quantity }],
+      num_items: l.quantity, value: l.price * l.quantity, currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, [l], 'buy-now');
+    } catch {
+      // Shiprocket couldn't start: fall back to our own checkout.
+      buy();
+    } finally {
+      setSrBusy(false);
+    }
+  };
 
   return (
     <>
@@ -256,8 +305,15 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         </button>
       </div>
       {opt.inStock && opt.stock != null && opt.stock > 0 && opt.stock <= 5 ? <p className="m-lowstock">Only {opt.stock} left in {opt.label}</p> : null}
-      {prepaidOffer ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
-      <button type="button" className="m-btn m-buynow" onClick={buy} disabled={soldOut || (isMix && !mixCount)}>Buy now</button>
+      {/* Our prepaid offer doesn't apply inside Shiprocket Checkout. */}
+      {prepaidOffer && !useShiprocket ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
+      {useShiprocket ? (
+        <div style={{ marginTop: 12 }}>
+          <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={soldOut || (isMix && !mixCount)} />
+        </div>
+      ) : (
+        <button type="button" className="m-btn m-buynow" onClick={buy} disabled={soldOut || (isMix && !mixCount)}>Buy now</button>
+      )}
 
       {barOn && (
         <div className="m-buynowbar" data-sticky-atc="">

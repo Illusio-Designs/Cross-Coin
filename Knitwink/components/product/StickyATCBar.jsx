@@ -3,13 +3,18 @@
 import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
 import { createPortal } from 'react-dom'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import { ShoppingBag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import ShiprocketButton from '@/components/checkout/ShiprocketButton'
 
-export function StickyATCBar({ visible, productName, color, price, imageUrl, onAddToCart }) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+const noopSubscribe = () => () => {}
+
+// `shiprocket`: Shiprocket Checkout is on for this selection — show its Buy
+// now button (same handler) instead of ours.
+export function StickyATCBar({ visible, productName, color, price, imageUrl, onAddToCart, shiprocket = false, busy = false }) {
+  // false on the server / first hydration pass, true once in the browser.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false)
 
   if (!visible || !mounted) return null
 
@@ -32,6 +37,11 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
           </div>
         </div>
 
+        {shiprocket ? (
+          <div className="w-44 shrink-0 sm:w-56">
+            <ShiprocketButton label="BUY NOW" onClick={onAddToCart} busy={busy} />
+          </div>
+        ) : (
         <button
           onClick={onAddToCart}
           className="flex shrink-0 items-center gap-2 rounded-full bg-brand-black px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-80"
@@ -39,6 +49,7 @@ export function StickyATCBar({ visible, productName, color, price, imageUrl, onA
           <ShoppingBag size={14} />
           Buy Now
         </button>
+        )}
       </div>
     </div>,
     document.body

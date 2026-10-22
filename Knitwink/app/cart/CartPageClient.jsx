@@ -8,8 +8,11 @@ import { FreeShippingBar } from '@/components/cart/FreeShippingBar';
 import { CartUpsell } from '@/components/cart/CartUpsell';
 import { formatPrice } from '@/lib/utils';
 import { SHIPPING_THRESHOLD } from '@/lib/constants';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Skeleton, SkeletonRegion } from '@/components/ui/Skeleton';
+import { fbTrack } from '@/utils/pixel';
+import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 
 // Cart lines + summary while the saved cart is read from this browser (the
 // server can't see it), so the page never flashes "Your cart is empty".
@@ -62,6 +65,34 @@ export function CartPageClient({ upsellProducts }) {
   const total = subtotal + shipping;
   // false on the server / first hydration pass, true once in the browser.
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+
+  // Shiprocket Checkout (when switched on for Knitwink): Checkout opens it
+  // with every cart line (each needs a variation id). Otherwise — or if it
+  // can't start — Checkout opens the cart drawer, our own checkout.
+  const [srOn, setSrOn] = useState(false);
+  const [srBusy, setSrBusy] = useState(false);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && i.variationId !== '');
+
+  const onShiprocketCheckout = async (e) => {
+    if (srBusy) return;
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map((i) => String(i.productId)),
+      content_type: 'product',
+      contents: items.map((i) => ({ id: String(i.productId), quantity: i.quantity || 1 })),
+      num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
+      value: subtotal,
+      currency: 'INR',
+    });
+    setSrBusy(true);
+    try {
+      await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1 })), 'cart');
+    } catch {
+      openDrawer();
+    } finally {
+      setSrBusy(false);
+    }
+  };
 
   if (!mounted) return <CartPageSkeleton />;
 
@@ -125,11 +156,17 @@ export function CartPageClient({ upsellProducts }) {
                 <span>{formatPrice(total)}</span>
               </div>
 
+              {useShiprocket ? (
+                <div className="mt-6">
+                  <ShiprocketButton label="BUY NOW" onClick={onShiprocketCheckout} busy={srBusy} />
+                </div>
+              ) : (
               <button
                 onClick={openDrawer}
                 className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-sage px-8 py-3.5 text-sm font-medium uppercase tracking-wider text-white transition-colors duration-150 hover:bg-sage-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sage">
                 Checkout
               </button>
+              )}
 
               <Link
                 href="/collections/all"
