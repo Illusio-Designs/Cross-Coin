@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { openShiprocketCheckout, confirmShiprocketOrder } from '@/lib/api/shiprocketCheckout';
+import { openShiprocketCheckout, confirmShiprocketOrder, shiprocketCallStatus } from '@/lib/api/shiprocketCheckout';
 
 const PATH = '/shiprocket-test';
 const inr = (v) => `₹${Math.round(Number(v) || 0).toLocaleString('en-IN')}`;
@@ -141,6 +141,21 @@ export default function ShiprocketTestClient({ products }) {
       XMLHttpRequest.prototype.open = XO; XMLHttpRequest.prototype.send = XS; mo.disconnect();
     };
   }, [log]);
+  // Did Shiprocket's catalog pulls reach our backend, and were they accepted?
+  const checkCalls = async () => {
+    try {
+      const d = await shiprocketCallStatus();
+      const c = d?.shiprocketCalls || {};
+      log('info', `Checkout switch: ${d?.enabled ? 'on' : 'off'}`);
+      if (!c.lastAccepted && !c.lastRejected && !c.unknownStore) log('error', 'No catalog calls from Shiprocket reached our backend since it last restarted');
+      if (c.lastAccepted) log('network', `Last ACCEPTED Shiprocket call: ${c.lastAccepted.method} ${c.lastAccepted.path} → ${c.lastAccepted.status} at ${c.lastAccepted.at}`, { headers: c.lastAccepted.headers });
+      if (c.lastRejected) log('error', `Last REJECTED Shiprocket call: ${c.lastRejected.method} ${c.lastRejected.path} → ${c.lastRejected.status} (${c.lastRejected.reason}) at ${c.lastRejected.at}`, { headers: c.lastRejected.headers });
+      if (c.unknownStore) log('error', `Last call we couldn't match to a store: ${c.unknownStore.method} ${c.unknownStore.path} → ${c.unknownStore.status} (${c.unknownStore.reason}) at ${c.unknownStore.at}`, { headers: c.unknownStore.headers });
+    } catch (e) {
+      log('error', `Could not read Shiprocket call status: ${e.message}`);
+    }
+  };
+
   const copyLog = async () => {
     const text = logs.map((l) => `${l.t} [${l.type}] ${l.text}${l.data !== undefined ? ` ${JSON.stringify(l.data)}` : ''}`).join('\n');
     try { await navigator.clipboard.writeText(text); setMsg({ kind: 'info', text: 'Log copied.' }); } catch { setMsg({ kind: 'error', text: 'Copy blocked — select the log text and copy it by hand.' }); }
@@ -260,6 +275,7 @@ export default function ShiprocketTestClient({ products }) {
       <section style={{ ...box, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <strong style={{ flex: 1 }}>3. Debug log ({logs.length})</strong>
+          <button type="button" style={btnGhost} onClick={checkCalls}>Shiprocket catalog calls</button>
           <button type="button" style={btnGhost} onClick={copyLog} disabled={!logs.length}>Copy log</button>
           <button type="button" style={btnGhost} onClick={() => { logRef.current = []; saveLog([]); setLogs([]); }}>Clear</button>
         </div>

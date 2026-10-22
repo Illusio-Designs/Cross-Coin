@@ -86,3 +86,10 @@ export async function confirmShiprocketOrder(oid) {
   if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
   return data;
 }
+
+// What our backend last saw from Shiprocket's catalog / webhook calls for this
+// store (time, accepted or why not, header names) — for the staff test page.
+export async function shiprocketCallStatus() {
+  const r = await fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } });
+  return r.json();
+}

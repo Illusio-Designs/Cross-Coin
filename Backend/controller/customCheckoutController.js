@@ -96,7 +96,7 @@ exports.status = async (req, res) => {
     // On only when the store's switch is on AND both keys are saved.
     const brandId = req.brandId || 1;
     const on = String(await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_ENABLED', 'false')).toLowerCase() === 'true';
-    res.json({ success: true, enabled: on && await svc.isConfigured(brandId) });
+    res.json({ success: true, enabled: on && await svc.isConfigured(brandId), shiprocketCalls: svc.providerCallsFor(brandId) });
   } catch (err) {
     res.json({ success: true, enabled: false });
   }

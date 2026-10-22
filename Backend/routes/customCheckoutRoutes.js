@@ -36,6 +36,13 @@ const same = (a, b) => {
 const hmacOf = (secret, data) => crypto.createHmac('sha256', secret).update(data, 'utf8').digest('base64');
 
 async function providerAuth(req, res, next) {
+  const headerNames = Object.keys(req.headers).filter((h) => h !== 'cookie' && h !== 'authorization');
+  const path = (req.originalUrl || '').split('?')[0];
+  const reject = (code, reason, message) => {
+    svc.noteProviderCall(req.brandId, { ok: false, method: req.method, path, status: code, reason, headers: headerNames });
+    console.warn(`[custom-checkout] rejected ${req.method} ${path} for ${req.brand?.slug || 'unknown store'}: ${reason}`);
+    return res.status(code).json({ success: false, message });
+  };
   try {
     const key = String(req.headers['x-api-key'] || '').trim();
     if (!req.brand && key) {
@@ -48,27 +55,31 @@ async function providerAuth(req, res, next) {
     }
     if (!req.brand || !req.brandId) {
       const sent = req.headers['x-brand-name'] || req.query.brand;
-      return res.status(sent ? 400 : 401).json({
-        success: false,
-        message: sent ? `Unknown store "${String(sent).slice(0, 40)}" in X-Brand-Name`
-          : 'Send X-Api-Key (and X-Brand-Name, e.g. velmique)',
-      });
+      return reject(sent ? 400 : 401, sent ? 'unknown store name' : key ? 'X-Api-Key matches no store' : 'no X-Api-Key',
+        sent ? `Unknown store "${String(sent).slice(0, 40)}" in X-Brand-Name` : 'Send X-Api-Key (and X-Brand-Name, e.g. velmique)');
     }
     const cfg = await svc.getPushConfig(req.brandId);
     if (!cfg) {
-      return res.status(403).json({ success: false, message: 'Shiprocket keys are not saved for this store (Brand settings → Custom checkout)' });
+      return reject(403, 'keys not saved for this store', 'Shiprocket keys are not saved for this store (Brand settings → Custom checkout)');
     }
     if (!same(cfg.apiKey, key)) {
-      return res.status(401).json({ success: false, message: key ? 'Wrong X-Api-Key for this store' : 'X-Api-Key is required' });
+      return reject(401, key ? 'wrong X-Api-Key' : 'no X-Api-Key', key ? 'Wrong X-Api-Key for this store' : 'X-Api-Key is required');
     }
     const secretHdr = String(req.headers['x-api-secret'] || '').trim();
     const sig = String(req.headers['x-api-hmac-sha256'] || '').trim();
     const raw = req.rawBody ? req.rawBody.toString('utf8') : '';
-    const query = (req.originalUrl || '').split('?')[1] || '';
-    const sigOk = sig && [raw, query, ''].some((d) => same(hmacOf(cfg.secret, d), sig));
+    // Shiprocket doesn't document what a GET is signed over, so accept the
+    // usual forms — every one still needs the store's secret.
+    const url = req.originalUrl || '';
+    const query = url.split('?')[1] || '';
+    const full = `${req.protocol}://${req.get('host')}${url}`;
+    const signed = [raw, query, '', url, path, full, JSON.stringify(req.query || {})];
+    const sigOk = sig && signed.some((d) => same(hmacOf(cfg.secret, d), sig));
     if (!(secretHdr && same(cfg.secret, secretHdr)) && !sigOk) {
-      return res.status(401).json({ success: false, message: (secretHdr || sig) ? 'Wrong secret / signature for this store' : 'X-Api-Secret (or X-Api-HMAC-SHA256) is required' });
+      return reject(401, secretHdr ? 'wrong X-Api-Secret' : sig ? 'signature mismatch' : 'no secret or signature',
+        (secretHdr || sig) ? 'Wrong secret / signature for this store' : 'X-Api-Secret (or X-Api-HMAC-SHA256) is required');
     }
+    res.on('finish', () => svc.noteProviderCall(req.brandId, { ok: true, method: req.method, path, status: res.statusCode, headers: headerNames }));
     return next();
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Could not check the Shiprocket keys' });
