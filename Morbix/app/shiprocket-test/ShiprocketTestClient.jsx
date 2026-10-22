@@ -131,6 +131,10 @@ export default function ShiprocketTestClient({ products }) {
   const [ret, setRet] = useState(null);
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
+    if (q.get('sr_fallback')) {
+      log('error', 'Shiprocket sent the browser back to the fallback URL — it could not open its checkout (see the events just before this)');
+      setMsg({ kind: 'error', text: 'Shiprocket closed and sent you back without opening checkout. The debug log below shows what happened just before — press Copy log.' });
+    }
     const oid = q.get('oid');
     if (!oid) return;
     const ost = String(q.get('ost') || '').toUpperCase();
