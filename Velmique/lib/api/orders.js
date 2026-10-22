@@ -260,19 +260,3 @@ export async function getMyReturns() {
   if (!res.ok) throw new Error(data.message || 'Failed to load returns');
   return data;
 }
-
-// Back from the custom-checkout provider's page: our backend confirms the
-// order with the provider, saves it, and (with marketing consent) sends Meta
-// the server Purchase with this shopper's browser ids. Returns our order
-// number + contents for the matching browser Purchase.
-export async function confirmCheckoutReturn(oid) {
-  const res = await fetch(`${API_URL}/api/custom-checkout/confirm`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-    body: JSON.stringify(withTracking({ oid })),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
-  return data;
-}

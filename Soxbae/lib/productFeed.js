@@ -8,7 +8,7 @@
  * X-Brand-Name header on the catalog API.
  */
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.soxbae.com';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://soxbaesocks.com';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const IMAGEKIT = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/wp2oatzmf';
 
