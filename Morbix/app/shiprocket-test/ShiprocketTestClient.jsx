@@ -1,12 +1,36 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { openShiprocketCheckout, confirmShiprocketOrder } from '@/lib/api/shiprocketCheckout';
 
 const PATH = '/shiprocket-test';
 const inr = (v) => `₹${Math.round(Number(v) || 0).toLocaleString('en-IN')}`;
 
 const box = { border: '1px solid #e5e5e5', borderRadius: 12, padding: 16, background: '#fff' };
+
+// ── Debug log ────────────────────────────────────────────────────────────
+// Everything around the Shiprocket window is recorded here and kept in
+// sessionStorage, so it survives a reload / redirect and can be copied.
+const LOG_KEY = 'sr-test-log';
+const SR_HOST = /shiprocket|fastrr|pickrr/i;
+const mask = (v, depth = 0) => {
+  if (depth > 4) return '…';
+  if (Array.isArray(v)) return v.slice(0, 30).map((x) => mask(x, depth + 1));
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const [k, x] of Object.entries(v).slice(0, 40)) {
+      out[k] = /token|secret|key|authorization/i.test(k) && typeof x === 'string' && x.length > 12
+        ? `${x.slice(0, 6)}…(${x.length})` : mask(x, depth + 1);
+    }
+    return out;
+  }
+  if (typeof v === 'string' && v.length > 600) return `${v.slice(0, 600)}…`;
+  return v;
+};
+// Hide token / key values carried in a URL's query string.
+const safeUrl = (u) => String(u).replace(/([?&](?:token|key|secret|access_token)=)[^&#]+/gi, '$1…');
+const readLog = () => { try { return JSON.parse(sessionStorage.getItem(LOG_KEY) || '[]'); } catch { return []; } };
+const saveLog = (l) => { try { sessionStorage.setItem(LOG_KEY, JSON.stringify(l.slice(-300))); } catch { /* full / blocked */ } };
 const btn = { padding: '10px 16px', borderRadius: 10, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, cursor: 'pointer' };
 const btnGhost = { ...btn, background: '#fff', color: '#111' };
 
@@ -18,6 +42,90 @@ export default function ShiprocketTestClient({ products }) {
   const [lines, setLines] = useState([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { kind: 'error'|'ok'|'info', text }
+  const [logs, setLogs] = useState([]);
+  const logRef = useRef([]);
+  const log = useCallback((type, text, data) => {
+    const entry = { t: new Date().toISOString().slice(11, 23), type, text: String(text), data: data === undefined ? undefined : mask(data) };
+    logRef.current = [...logRef.current, entry].slice(-300);
+    saveLog(logRef.current);
+    setLogs(logRef.current);
+  }, []);
+
+  // Watch the page while testing: Shiprocket's window messages, its network
+  // calls, errors, and when its window (iframe / overlay) is added or removed.
+  useEffect(() => {
+    logRef.current = readLog();
+    setLogs(logRef.current);
+    log('info', `Page loaded: ${window.location.pathname}${window.location.search}`, { userAgent: navigator.userAgent });
+
+    const onMsg = (e) => {
+      if (!SR_HOST.test(String(e.origin)) && !(e.data && JSON.stringify(e.data).match(SR_HOST))) return;
+      let data = e.data;
+      if (typeof data === 'string') { try { data = JSON.parse(data); } catch { /* keep text */ } }
+      log('message', `Message from ${e.origin}`, data);
+    };
+    const onErr = (e) => log('error', `Page error: ${e.message}`, { source: e.filename, line: e.lineno });
+    const onRej = (e) => log('error', `Unhandled promise rejection: ${e.reason?.message || e.reason}`);
+    const onHide = () => log('info', 'Page is unloading / navigating away');
+    window.addEventListener('message', onMsg);
+    window.addEventListener('error', onErr);
+    window.addEventListener('unhandledrejection', onRej);
+    window.addEventListener('pagehide', onHide);
+
+    const origErr = console.error; const origWarn = console.warn;
+    console.error = (...a) => { log('console', `console.error: ${a.map((x) => (x?.message || (typeof x === 'object' ? JSON.stringify(mask(x)) : String(x)))).join(' ')}`); origErr.apply(console, a); };
+    console.warn = (...a) => { log('console', `console.warn: ${a.map((x) => (x?.message || (typeof x === 'object' ? JSON.stringify(mask(x)) : String(x)))).join(' ')}`); origWarn.apply(console, a); };
+
+    const origFetch = window.fetch;
+    window.fetch = async (input, init) => {
+      const url = String(input?.url || input);
+      const watch = SR_HOST.test(url);
+      try {
+        const r = await origFetch(input, init);
+        if (watch) {
+          let body;
+          try { body = await r.clone().json(); } catch { try { body = (await r.clone().text()).slice(0, 400); } catch { body = undefined; } }
+          log(r.ok ? 'network' : 'error', `fetch ${init?.method || 'GET'} ${safeUrl(url)} → ${r.status}`, body);
+        }
+        return r;
+      } catch (err) {
+        if (watch) log('error', `fetch ${safeUrl(url)} failed: ${err.message}`);
+        throw err;
+      }
+    };
+    const XO = XMLHttpRequest.prototype.open; const XS = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function open(m, u, ...rest) { this.__srUrl = String(u); this.__srM = m; return XO.call(this, m, u, ...rest); };
+    XMLHttpRequest.prototype.send = function send(...a) {
+      if (SR_HOST.test(this.__srUrl || '')) {
+        this.addEventListener('loadend', () => {
+          let body = this.responseText; try { body = JSON.parse(body); } catch { body = String(body || '').slice(0, 400); }
+          log(this.status >= 200 && this.status < 400 ? 'network' : 'error', `xhr ${this.__srM} ${safeUrl(this.__srUrl)} → ${this.status}`, body);
+        });
+      }
+      return XS.apply(this, a);
+    };
+
+    const describe = (n) => `${n.tagName?.toLowerCase()}${n.id ? `#${n.id}` : ''}${n.className && typeof n.className === 'string' ? `.${n.className.trim().split(/\s+/).slice(0, 3).join('.')}` : ''}${n.src ? ` src=${safeUrl(n.src)}` : ''}`;
+    const interesting = (n) => n.nodeType === 1 && (n.tagName === 'IFRAME' || /shiprocket|fastrr|headless|checkout/i.test(`${n.id} ${typeof n.className === 'string' ? n.className : ''} ${n.src || ''}`));
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        m.addedNodes.forEach((n) => { if (interesting(n)) log('dom', `Added ${describe(n)}`); });
+        m.removedNodes.forEach((n) => { if (interesting(n)) log('dom', `Removed ${describe(n)}`); });
+      }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.removeEventListener('message', onMsg); window.removeEventListener('error', onErr);
+      window.removeEventListener('unhandledrejection', onRej); window.removeEventListener('pagehide', onHide);
+      console.error = origErr; console.warn = origWarn; window.fetch = origFetch;
+      XMLHttpRequest.prototype.open = XO; XMLHttpRequest.prototype.send = XS; mo.disconnect();
+    };
+  }, [log]);
+  const copyLog = async () => {
+    const text = logs.map((l) => `${l.t} [${l.type}] ${l.text}${l.data !== undefined ? ` ${JSON.stringify(l.data)}` : ''}`).join('\n');
+    try { await navigator.clipboard.writeText(text); setMsg({ kind: 'info', text: 'Log copied.' }); } catch { setMsg({ kind: 'error', text: 'Copy blocked — select the log text and copy it by hand.' }); }
+  };
 
   // Back from Shiprocket: ?oid=<their order>&ost=<status>.
   const [ret, setRet] = useState(null);
@@ -27,13 +135,14 @@ export default function ShiprocketTestClient({ products }) {
     if (!oid) return;
     const ost = String(q.get('ost') || '').toUpperCase();
     setRet({ oid, ost, state: ost === 'SUCCESS' ? 'confirming' : 'failed' });
+    log('step', `Back from Shiprocket: oid=${oid} ost=${ost}`);
     if (ost !== 'SUCCESS') return;
     let tries = 3;
     const go = () => confirmShiprocketOrder(oid)
-      .then((o) => setRet({ oid, ost, state: 'done', order: o }))
-      .catch((e) => { if (--tries > 0) setTimeout(go, 2500); else setRet({ oid, ost, state: 'error', error: e.message }); });
+      .then((o) => { log('step', 'Order confirmed by our backend', o); setRet({ oid, ost, state: 'done', order: o }); })
+      .catch((e) => { log('error', `Confirm failed: ${e.message}`); if (--tries > 0) setTimeout(go, 2500); else setRet({ oid, ost, state: 'error', error: e.message }); });
     go();
-  }, []);
+  }, [log]);
 
   useEffect(() => { setVariantId(product?.variants[0]?.id ?? ''); }, [productId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -51,9 +160,11 @@ export default function ShiprocketTestClient({ products }) {
   const checkout = async (e) => {
     setBusy(true); setMsg({ kind: 'info', text: 'Opening Shiprocket checkout…' });
     try {
-      await openShiprocketCheckout(e, lines, PATH);
+      log('step', 'Checkout pressed', { lines: lines.map((l) => ({ variant: l.variationId, qty: l.quantity })) });
+      await openShiprocketCheckout(e, lines, PATH, log);
       setMsg(null);
     } catch (err) {
+      log('error', `Checkout failed: ${err.message}`);
       setMsg({ kind: 'error', text: err.message });
     } finally { setBusy(false); }
   };
@@ -119,6 +230,22 @@ export default function ShiprocketTestClient({ products }) {
           <span style={{ color: '#555', fontSize: 14 }}>Prices here are our variant prices; Shiprocket shows its own total.</span>
         </div>
         {msg ? <p style={{ margin: 0, color: msg.kind === 'error' ? '#a32a1d' : '#555' }}>{msg.text}</p> : null}
+      </section>
+
+      <section style={{ ...box, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <strong style={{ flex: 1 }}>3. Debug log ({logs.length})</strong>
+          <button type="button" style={btnGhost} onClick={copyLog} disabled={!logs.length}>Copy log</button>
+          <button type="button" style={btnGhost} onClick={() => { logRef.current = []; saveLog([]); setLogs([]); }}>Clear</button>
+        </div>
+        <p style={{ margin: 0, color: '#555', fontSize: 14 }}>Kept across reloads in this tab. Press Copy log and paste it to the developer.</p>
+        <pre style={{ margin: 0, maxHeight: 420, overflow: 'auto', background: '#0f1115', color: '#d6dde6', borderRadius: 10, padding: 12, fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {logs.length ? logs.map((l, i) => (
+            <div key={i} style={{ color: l.type === 'error' ? '#ff8a80' : l.type === 'message' ? '#9ecbff' : l.type === 'network' ? '#b5e48c' : l.type === 'dom' ? '#ffd58a' : '#d6dde6' }}>
+              {`${l.t} [${l.type}] ${l.text}`}{l.data !== undefined ? `\n    ${JSON.stringify(l.data)}` : ''}
+            </div>
+          )) : 'No events yet.'}
+        </pre>
       </section>
     </main>
   );
