@@ -12,6 +12,7 @@ import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import { cleanColorParam } from '@/lib/pdpColor';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -36,6 +37,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     return i >= 0 ? i : 0;
   })();
   const [color, setColor] = useState(initialColorIndex); // index into product.colors
+  // Old ?color= links: the colour is applied, so keep the address clean.
+  useEffect(() => { cleanColorParam(); }, []);
   const [active, setActive] = useState(0);         // active gallery image
   const [lightbox, setLightbox] = useState(false); // full-screen zoom overlay
   const [qty, setQty] = useState(1);

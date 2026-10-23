@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PdpLink from '@/components/product/PdpLink';
 import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
@@ -10,7 +11,6 @@ import ReviewBadge from '@/components/product/ReviewBadge';
 // swatches + a small add button). Distinctive and premium.
 export default function ProductCard({ product }) {
   const { id, slug, name, category, price, oldPrice, sizes, badge, badgeKey, image, group, colors, colorNames, colorParam, rating, reviews } = product;
-  const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
   // Colour dot(s): a merged group links each dot to its own page; otherwise show
   // this card's colour(s) — including a single dot for an exploded colour card.
@@ -29,7 +29,7 @@ export default function ProductCard({ product }) {
               fallback={<span className="sxp-ph" aria-hidden><Icon name="Footprints" size={40} /></span>} />
           : <span className="sxp-ph" aria-hidden><Icon name="Footprints" size={40} /></span>}
 
-        <Link href={href} className="sxp-link" aria-label={name} />
+        <PdpLink slug={slug} color={colorParam} className="sxp-link" aria-label={name} />
 
         <div className="sxp-tags">
           {badge && <span className={`sxp-tag b-${badgeKey || 'default'}`}>{badge}</span>}
@@ -41,7 +41,7 @@ export default function ProductCard({ product }) {
 
       <div className="sxp-info">
         <div className="sxp-plate-row">
-          <h3 className="sxp-name"><Link href={href}>{name}</Link></h3>
+          <h3 className="sxp-name"><PdpLink slug={slug} color={colorParam}>{name}</PdpLink></h3>
           <span className="sxp-price">
             {isGroup ? 'From ' : ''}₹{price.toFixed(0)}{oldPrice && <span className="old">₹{oldPrice.toFixed(0)}</span>}
           </span>
@@ -50,7 +50,7 @@ export default function ProductCard({ product }) {
           {swatches ? (
             <div className="sxp-swatches" aria-label={`${swatches.length} colours`}>
               {swatches.slice(0, 6).map((s, i) => (
-                <Link key={s.slug || i} href={s.slug ? `/products/${s.slug}` : href} className="sxp-sw"
+                <PdpLink key={s.slug || i} slug={s.slug || slug} color={s.slug ? null : colorParam} className="sxp-sw"
                   style={{ background: s.hex }} title={s.name || 'colour'} aria-label={s.name || 'colour'} />
               ))}
               {swatches.length > 6 && <span className="sxp-sw-more">+{swatches.length - 6}</span>}
