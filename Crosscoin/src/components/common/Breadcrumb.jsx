@@ -59,15 +59,16 @@ const Breadcrumb = () => {
     "/collections": "Collections",
     "/contact": "Contact",
     "/products": "Products",
-    "/Products": "Products",
     "/product-details": "Product Details",
     "/ProductDetails": "Product Details",
     "/search-results": "Search Results",
+    "/search": "Search Results",
     "/wishlist": "Wishlist",
     "/profile": "My Profile",
     "/login": "Login",
     "/register": "Register",
     "/order-tracking": "Order Tracking",
+    "/track-order": "Order Tracking",
     "/policy": "Policy",
     "/thank-you": "Thank You",
     "/unified-checkout": "Checkout",
@@ -94,7 +95,7 @@ const Breadcrumb = () => {
         // through to the literal "[slug]" placeholder.
         label = humaniseSegment(seg);
       }
-      if (currentPath === '/Products' && query.category) {
+      if (currentPath === '/products' && query.category) {
         label = decodeURIComponent(query.category);
       }
       if (currentPath !== '/') {

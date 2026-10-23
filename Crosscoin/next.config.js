@@ -130,7 +130,7 @@ const nextConfig = {
       // AFTER their slug variants above, so the old pages are never served.
       {
         source: '/ProductDetails',
-        destination: '/Products',
+        destination: '/products',
         permanent: true,
       },
       {
@@ -150,14 +150,14 @@ const nextConfig = {
         destination: '/journal/:slug*',
         permanent: true,
       },
-      // Legacy collection URL filtered via /Products?category=X →
+      // Collection filtered via /products?category=X (or the old /Products) →
       // /collections/<slug>. We can only redirect when the query value
       // already matches a slug-style string (lowercase, hyphens). For
       // older URLs that have URL-encoded category *names* there's no
-      // safe single redirect — those land on /Products which still
+      // safe single redirect — those land on /products which still
       // works via its existing filter.
       {
-        source: '/Products',
+        source: '/products',
         has: [{ type: 'query', key: 'category', value: '(?<slug>[a-z0-9-]+)' }],
         destination: '/collections/:slug',
         permanent: true,

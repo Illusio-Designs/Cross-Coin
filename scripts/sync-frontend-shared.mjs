@@ -43,6 +43,15 @@ const EDGE_FILE = {
   Velmique: 'middleware', Velquira: 'middleware', Knitwink: 'proxy',
 };
 
+// Retired mixed-case page paths per brand → their lowercase replacements
+// (redirected 301 by the edge file; see shared/frontend/visitCounter.js).
+const LEGACY_PATHS = {
+  Crosscoin: {
+    '/Products': '/products', '/Collections': '/collections', '/Wishlist': '/wishlist',
+    '/SearchResults': '/search', '/OrderTracking': '/track-order', '/Contact': '/contact', '/About': '/about',
+  },
+};
+
 // Shared file → { source, dest(base, brand), brands?, vars?(brand) }
 // (brands omitted = all 7; vars = extra placeholder → value replacements)
 const FILES = [
@@ -83,7 +92,7 @@ const FILES = [
     // `proxy` (export `proxy`); Next 14/15 use `middleware`.
     source: 'shared/frontend/visitCounter.js',
     dest: (base, brand) => `${base}${EDGE_FILE[brand]}.js`,
-    vars: (brand) => ({ __HANDLER__: EDGE_FILE[brand] }),
+    vars: (brand) => ({ __HANDLER__: EDGE_FILE[brand], __LEGACY_PATHS__: JSON.stringify(LEGACY_PATHS[brand] || {}) }),
   },
 ];
 

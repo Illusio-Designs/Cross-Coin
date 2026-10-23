@@ -15,7 +15,9 @@ export default function TestSearch() {
   const [ran, setRan] = useState(false);
   const lastTracked = useRef('');
 
-  const q = typeof router.query.q === 'string' ? router.query.q : '';
+  // ?q= (also ?query= from old /SearchResults links)
+  const raw = router.query.q ?? router.query.query;
+  const q = typeof raw === 'string' ? raw : '';
 
   // Sync the input with the URL and run the real search whenever ?q= changes.
   useEffect(() => {

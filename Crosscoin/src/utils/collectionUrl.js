@@ -13,7 +13,7 @@
  * badly and look bad in shared links.
  */
 export function collectionUrl(input) {
-  if (!input) return '/Collections';
+  if (!input) return '/collections';
   // Already a category object with a slug.
   if (typeof input === 'object' && input.slug) {
     return `/collections/${input.slug}`;

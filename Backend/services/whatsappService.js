@@ -129,8 +129,8 @@ async function _brandName(brandId) {
 }
 
 // The brand's OWN in-site order-tracking link. The domain comes from the Brand
-// table (then STORE_URL, then crosscoin.in). The path differs by storefront:
-// Crosscoin uses /OrderTracking, every other brand uses /track-order. Both read
+// table (then STORE_URL, then crosscoin.in). Every storefront serves
+// /track-order (Crosscoin's old /OrderTracking redirects there). It reads
 // the order number from ?order=, so the link opens pre-filled. This replaces the
 // old hard-coded crosscoin.in/OrderTracking link that was wrong for every other
 // brand (wrong domain AND wrong path).
@@ -223,10 +223,8 @@ async function _productUrl(brandId, slug, anchor = '') {
 }
 
 async function _trackingUrl(brandId, orderNumber) {
-  const { domain, key } = await _brandInfo(brandId);
-  // Crosscoin's storefront route is /OrderTracking; every other brand uses /track-order.
-  const path = (key === 'crosscoin' || /crosscoin/i.test(domain)) ? '/OrderTracking' : '/track-order';
-  return `https://${domain}${path}?order=${encodeURIComponent(orderNumber)}`;
+  const { domain } = await _brandInfo(brandId);
+  return `https://${domain}/track-order?order=${encodeURIComponent(orderNumber)}`;
 }
 
 // Invalidate the credentials cache so an updated WhatsApp token/phone id takes
@@ -558,7 +556,7 @@ function buildTemplates(storeName, storeUrl) {
         {
           type: 'BODY',
           text: `Great news, {{1}}! 🚚\n\nYour *{{2}}* order *#{{3}}* has been dispatched and is heading your way.\n\n🔖 *Tracking (AWB):* {{4}}\n📍 *Track live:* {{5}}\n\nThanks for staying connected — we'll notify you the moment it's delivered.`,
-          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/OrderTracking?order=CC-20240101-0001`]] },
+          example: { body_text: [['Rushikesh', storeName, 'CC-20240101-0001', 'BD9812345678', `https://${storeUrl}/track-order?order=CC-20240101-0001`]] },
         },
         { type: 'FOOTER', text: footer },
       ],

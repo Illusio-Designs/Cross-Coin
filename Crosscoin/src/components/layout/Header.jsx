@@ -142,7 +142,7 @@ const Header = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/SearchResults?query=${encodeURIComponent(searchQuery)}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setShowSearch(false);
       setSearchQuery("");
       setSearchResults([]);
@@ -249,8 +249,8 @@ const Header = () => {
               style={{ position: 'relative' }}
             >
               <Link
-                href="/Products"
-                className={activePage === "/Products" ? "active" : ""}
+                href="/products"
+                className={activePage === "/products" ? "active" : ""}
               >
                 Products
               </Link>
@@ -263,7 +263,7 @@ const Header = () => {
                         {attr.values.map((val) => (
                           <li key={val.id}>
                             <Link
-                              href={`/Products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
+                              href={`/products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
                               onClick={() => setShowMegaMenu(false)}
                             >
                               {val.value}
@@ -279,8 +279,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/Collections"
-                className={activePage === "/Collections" ? "active" : ""}
+                href="/collections"
+                className={activePage === "/collections" ? "active" : ""}
               >
                 Collections
               </Link>
@@ -295,24 +295,24 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/About"
-                className={activePage === "/About" ? "active" : ""}
+                href="/about"
+                className={activePage === "/about" ? "active" : ""}
               >
                 About Us
               </Link>
             </li>
             <li>
               <Link
-                href="/Contact"
-                className={activePage === "/Contact" ? "active" : ""}
+                href="/contact"
+                className={activePage === "/contact" ? "active" : ""}
               >
                 Contact Us
               </Link>
             </li>
             <li>
               <Link
-                href="/OrderTracking"
-                className={activePage === "/OrderTracking" ? "active" : ""}
+                href="/track-order"
+                className={activePage === "/track-order" ? "active" : ""}
               >
                 Track Order
               </Link>
@@ -382,7 +382,7 @@ const Header = () => {
                     {searchResults.length > 5 && (
                       <div className="search-view-all">
                         <button type="button" onMouseDown={() => {
-                          router.push(`/SearchResults?query=${encodeURIComponent(searchQuery)}`);
+                          router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
                           setShowSearch(false);
                           setSearchQuery('');
                           setSearchResults([]);
@@ -400,7 +400,7 @@ const Header = () => {
               </div>
             )}
           </div>
-          <Link href="/Wishlist" className="header__wishlist" aria-label="Wishlist">
+          <Link href="/wishlist" className="header__wishlist" aria-label="Wishlist">
             <WishlistIcon />
             {hasMounted && wishlistCount > 0 && <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>}
           </Link>
@@ -448,14 +448,14 @@ const Header = () => {
         {/* Search Icon */}
         <button
           className="header__mobile-search"
-          onClick={() => router.push("/SearchResults")}
+          onClick={() => router.push("/search")}
           aria-label="Search"
         >
           <SearchIcon />
         </button>
 
         {/* Wishlist Icon */}
-        <Link href="/Wishlist" className="header__mobile-wishlist" aria-label="Wishlist">
+        <Link href="/wishlist" className="header__mobile-wishlist" aria-label="Wishlist">
           <WishlistIcon />
           {hasMounted && wishlistCount > 0 && (
             <span className="header__badge" aria-label={`${wishlistCount} items`}>{wishlistCount}</span>
@@ -487,8 +487,8 @@ const Header = () => {
             <li>
               <div className="mobile-menu__products-row">
                 <Link
-                  href="/Products"
-                  className={activePage === "/Products" ? "active" : ""}
+                  href="/products"
+                  className={activePage === "/products" ? "active" : ""}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Products
@@ -512,7 +512,7 @@ const Header = () => {
                         {attr.values.map((val) => (
                           <li key={val.id}>
                             <Link
-                              href={`/Products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
+                              href={`/products?attributes=${encodeURIComponent(JSON.stringify({ [attr.name]: [val.value] }))}`}
                               onClick={() => { setIsMobileMenuOpen(false); setShowMobileMegaMenu(false); }}
                             >
                               {val.value} ({val.product_count})
@@ -527,8 +527,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/Collections"
-                className={activePage === "/Collections" ? "active" : ""}
+                href="/collections"
+                className={activePage === "/collections" ? "active" : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Collections
@@ -545,8 +545,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/About"
-                className={activePage === "/About" ? "active" : ""}
+                href="/about"
+                className={activePage === "/about" ? "active" : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 About Us
@@ -554,8 +554,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/Contact"
-                className={activePage === "/Contact" ? "active" : ""}
+                href="/contact"
+                className={activePage === "/contact" ? "active" : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contact Us
@@ -563,8 +563,8 @@ const Header = () => {
             </li>
             <li>
               <Link
-                href="/OrderTracking"
-                className={activePage === "/OrderTracking" ? "active" : ""}
+                href="/track-order"
+                className={activePage === "/track-order" ? "active" : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Track Order

@@ -1,4 +1,4 @@
-// Live About route — Mint design on its canonical URL, with SSR SEO preserved:
+// Live /about route — Mint design on its canonical URL, with SSR SEO preserved:
 // fetchPageSeo + SeoWrapper emit the server-rendered meta/canonical/JSON-LD;
 // the Mint page renders the UI (and fetches its own content client-side).
 import SeoWrapper from '../console/SeoWrapper';

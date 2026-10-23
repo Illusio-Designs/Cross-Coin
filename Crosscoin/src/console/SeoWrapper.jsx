@@ -4,23 +4,36 @@ import { useRouter } from 'next/router';
 import { getSeoByPageName } from '../services/publicApi';
 import Head from 'next/head';
 
+// Retired mixed-case page paths (redirected 301 by the middleware). A saved
+// canonical that still uses one points at its current lowercase path.
+const LEGACY_PATHS = {
+    '/Products': '/products', '/Collections': '/collections', '/Wishlist': '/wishlist',
+    '/SearchResults': '/search', '/OrderTracking': '/track-order', '/Contact': '/contact', '/About': '/about',
+};
+const currentCanonicalPath = (path) => {
+    const clean = String(path || '/').split(/[?#]/)[0] || '/';
+    return LEGACY_PATHS[clean] || clean;
+};
+
 const SeoWrapper = ({ pageName, children, seoData, organizationLd = null, fallbackOgImage = null, fallbackDescription = null }) => {
     const router = useRouter();
+    // This page's own path (no query) — known on the server too, unlike
+    // window.location, so the server-rendered canonical is the real page.
+    const pagePath = currentCanonicalPath(router?.asPath);
     const [seoDataState, setSeoDataState] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const hasFetchedRef = useRef(false);
 
     const defaultSeoData = useMemo(() => {
         const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
         return {
             meta_title: 'Cross-Coin - Your Trusted Shopping Partner',
             meta_description: 'Discover amazing products at Cross-Coin, your one-stop shop for all your needs.',
             meta_keywords: 'cross-coin, shopping, online store, products',
-            canonical_url: `${baseUrl}${currentPath}`,
+            canonical_url: `${baseUrl}${pagePath}`,
             meta_image: null,
         };
-    }, []);
+    }, [pagePath]);
 
     // Fetch SEO data automatically if not provided
     useEffect(() => {
@@ -60,22 +73,27 @@ const SeoWrapper = ({ pageName, children, seoData, organizationLd = null, fallba
     
     // Generate absolute canonical URL
     const getAbsoluteCanonicalUrl = (url) => {
-        if (!url) {
-            // If no URL provided, use current page URL
-            const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
-            const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-            return `${baseUrl}${currentPath}`;
-        }
-        
-        // If already absolute URL, return as is
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            return url;
-        }
-        
-        // If relative URL, make it absolute
         const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.crosscoin.in';
+        if (!url) {
+            // If no URL provided, use this page's own path
+            return `${baseUrl}${pagePath}`;
+        }
+
+        // Absolute URL: keep it, but move a retired mixed-case path to its current one
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            try {
+                const u = new URL(url);
+                const moved = LEGACY_PATHS[u.pathname];
+                if (moved) u.pathname = moved;
+                return u.toString();
+            } catch {
+                return url;
+            }
+        }
+
+        // If relative URL, make it absolute
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-        return `${baseUrl}${cleanUrl}`;
+        return `${baseUrl}${currentCanonicalPath(cleanUrl)}${cleanUrl.includes('?') ? cleanUrl.slice(cleanUrl.indexOf('?')) : ''}`;
     };
     
     // Non-overwriting brand fallbacks: only fill in when the page's own

@@ -1,4 +1,4 @@
-// Live OrderTracking route — renders the Mint design (utility page, noindex via its own
+// Live /track-order route — renders the Mint design (utility page, noindex via its own
 // Head). Kept on its canonical URL so existing links keep working.
 import TestTrack from './test/track';
 

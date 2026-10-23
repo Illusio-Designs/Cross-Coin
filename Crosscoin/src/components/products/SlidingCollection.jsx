@@ -30,7 +30,7 @@ const SlidingCollection = ({ collections = [], isLoading = false }) => {
 
   const handleCollectionClick = async (collectionName) => {
     if (!collectionName) {
-      router.push('/Products');
+      router.push('/products');
       return;
     }
 

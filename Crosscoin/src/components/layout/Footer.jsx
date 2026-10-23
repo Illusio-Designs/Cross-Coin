@@ -87,10 +87,10 @@ const Footer = () => {
         <div className="footer__col">
           <h4>Quick Links</h4>
           <ul>
-            <li><Link href="/About">About Us</Link></li>
-            <li><Link href="/Collections">Collections</Link></li>
-            <li><Link href="/Products">All Products</Link></li>
-            <li><Link href="/Contact">Contact Us</Link></li>
+            <li><Link href="/about">About Us</Link></li>
+            <li><Link href="/collections">Collections</Link></li>
+            <li><Link href="/products">All Products</Link></li>
+            <li><Link href="/contact">Contact Us</Link></li>
           </ul>
         </div>
 
@@ -99,8 +99,8 @@ const Footer = () => {
           <h4>Account</h4>
           <ul>
             <li><Link href="/profile">My Account</Link></li>
-            <li><Link href="/OrderTracking">Track Order</Link></li>
-            <li><Link href="/Wishlist">Wishlist</Link></li>
+            <li><Link href="/track-order">Track Order</Link></li>
+            <li><Link href="/wishlist">Wishlist</Link></li>
           </ul>
         </div>
 
@@ -109,7 +109,7 @@ const Footer = () => {
           <h4>Policies</h4>
           <ul>
             <li><Link href="/policy/privacy-policy">Privacy Policy</Link></li>
-            <li><Link href="/Contact#grievance">Grievance</Link></li>
+            <li><Link href="/contact#grievance">Grievance</Link></li>
             <li><Link href="/policy/terms-and-conditions">Terms & Conditions</Link></li>
             <li><Link href="/policy/shipping-policy">Shipping Policy</Link></li>
             <li><Link href="/policy/cancellation-and-refund">Cancellation & Refund</Link></li>

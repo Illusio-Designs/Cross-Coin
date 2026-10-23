@@ -29,13 +29,13 @@ const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin';
 // src/pages (Next pages-router routes are case-sensitive).
 const STATIC_ROUTES = [
   { path: '/',              priority: '1.0', changefreq: 'daily' },
-  { path: '/Products',      priority: '0.9', changefreq: 'daily' },
-  { path: '/Collections',   priority: '0.8', changefreq: 'weekly' },
+  { path: '/products',      priority: '0.9', changefreq: 'daily' },
+  { path: '/collections',   priority: '0.8', changefreq: 'weekly' },
   { path: '/journal',       priority: '0.7', changefreq: 'weekly' },
-  { path: '/About',         priority: '0.6', changefreq: 'monthly' },
-  { path: '/Contact',       priority: '0.6', changefreq: 'monthly' },
+  { path: '/about',         priority: '0.6', changefreq: 'monthly' },
+  { path: '/contact',       priority: '0.6', changefreq: 'monthly' },
   { path: '/returns',       priority: '0.5', changefreq: 'monthly' },
-  { path: '/OrderTracking', priority: '0.5', changefreq: 'monthly' },
+  { path: '/track-order', priority: '0.5', changefreq: 'monthly' },
   // Per-policy and per-product/category/blog URLs are emitted dynamically
   // below from the live API so new items show up without a code change.
 ];

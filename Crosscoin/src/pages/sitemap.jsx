@@ -23,63 +23,63 @@ const Sitemap = ({ seoData }) => {
         <div className="sitemap-wrap">
         {/* ══════════════ SHOP ══════════════ */}
           <div className="section-block">
-            <Link href="/Products" className="section-heading">Shop</Link>
+            <Link href="/products" className="section-heading">Shop</Link>
             <p className="section-desc">Browse through our range of exclusive Crosscoin products. Shop for apparel, accessories and more from our latest collection.</p>
             <div className="category-grid">
               <div className="cat-col">
-                <Link href="/Products" className="cat-heading">All Products</Link>
+                <Link href="/products" className="cat-heading">All Products</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Products">Featured Products</Link></li>
-                  <li><Link href="/Products">Latest Arrivals</Link></li>
-                  <li><Link href="/Products">Best Sellers</Link></li>
+                  <li><Link href="/products">Featured Products</Link></li>
+                  <li><Link href="/products">Latest Arrivals</Link></li>
+                  <li><Link href="/products">Best Sellers</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Collections" className="cat-heading">Collections</Link>
+                <Link href="/collections" className="cat-heading">Collections</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Collections">Browse All</Link></li>
-                  <li><Link href="/Products">Men's Collection</Link></li>
-                  <li><Link href="/Products">Women's Collection</Link></li>
-                  <li><Link href="/Products">Accessories</Link></li>
+                  <li><Link href="/collections">Browse All</Link></li>
+                  <li><Link href="/products">Men's Collection</Link></li>
+                  <li><Link href="/products">Women's Collection</Link></li>
+                  <li><Link href="/products">Accessories</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Products" className="cat-heading">Shop by Category</Link>
+                <Link href="/products" className="cat-heading">Shop by Category</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Products">Apparel</Link></li>
-                  <li><Link href="/Products">Innerwear</Link></li>
-                  <li><Link href="/Products">Accessories</Link></li>
-                  <li><Link href="/Products">Seasonal</Link></li>
+                  <li><Link href="/products">Apparel</Link></li>
+                  <li><Link href="/products">Innerwear</Link></li>
+                  <li><Link href="/products">Accessories</Link></li>
+                  <li><Link href="/products">Seasonal</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Products" className="cat-heading">Shop by Price</Link>
+                <Link href="/products" className="cat-heading">Shop by Price</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Products">Under ₹500</Link></li>
-                  <li><Link href="/Products">₹500 - ₹1000</Link></li>
-                  <li><Link href="/Products">₹1000 - ₹2000</Link></li>
-                  <li><Link href="/Products">Above ₹2000</Link></li>
+                  <li><Link href="/products">Under ₹500</Link></li>
+                  <li><Link href="/products">₹500 - ₹1000</Link></li>
+                  <li><Link href="/products">₹1000 - ₹2000</Link></li>
+                  <li><Link href="/products">Above ₹2000</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Products" className="cat-heading">New Arrivals</Link>
+                <Link href="/products" className="cat-heading">New Arrivals</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Products">This Week</Link></li>
-                  <li><Link href="/Products">This Month</Link></li>
-                  <li><Link href="/Products">Trending Now</Link></li>
+                  <li><Link href="/products">This Week</Link></li>
+                  <li><Link href="/products">This Month</Link></li>
+                  <li><Link href="/products">Trending Now</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Collections" className="cat-heading">Special Offers</Link>
+                <Link href="/collections" className="cat-heading">Special Offers</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Collections">Sale Items</Link></li>
-                  <li><Link href="/Collections">Clearance</Link></li>
-                  <li><Link href="/Collections">Bundle Deals</Link></li>
+                  <li><Link href="/collections">Sale Items</Link></li>
+                  <li><Link href="/collections">Clearance</Link></li>
+                  <li><Link href="/collections">Bundle Deals</Link></li>
                 </ul>
               </div>
             </div>
@@ -103,11 +103,11 @@ const Sitemap = ({ seoData }) => {
               </div>
 
               <div className="cat-col">
-                <Link href="/About" className="cat-heading">Resources</Link>
+                <Link href="/about" className="cat-heading">Resources</Link>
                 <ul className="cat-links">
-                  <li><Link href="/About">Size Guide</Link></li>
+                  <li><Link href="/about">Size Guide</Link></li>
                   <li><Link href="/policy/shipping-policy">Care Instructions</Link></li>
-                  <li><Link href="/About">Fabric Guide</Link></li>
+                  <li><Link href="/about">Fabric Guide</Link></li>
                   <li><Link href="/journal">Style Tips</Link></li>
                 </ul>
               </div>
@@ -136,15 +136,15 @@ const Sitemap = ({ seoData }) => {
                 <ul className="cat-links">
                   <li><Link href="/profile">Profile</Link></li>
                   <li><Link href="/profile">My Orders</Link></li>
-                  <li><Link href="/Wishlist">Wishlist</Link></li>
+                  <li><Link href="/wishlist">Wishlist</Link></li>
                   <li><Link href="/profile">Saved Addresses</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/OrderTracking" className="cat-heading">Orders</Link>
+                <Link href="/track-order" className="cat-heading">Orders</Link>
                 <ul className="cat-links">
-                  <li><Link href="/OrderTracking">Track Order</Link></li>
+                  <li><Link href="/track-order">Track Order</Link></li>
                   <li><Link href="/profile">Order History</Link></li>
                   <li><Link href="/policy/cancellation-and-refund">Returns</Link></li>
                   <li><Link href="/policy/cancellation-and-refund">Refunds</Link></li>
@@ -157,7 +157,7 @@ const Sitemap = ({ seoData }) => {
                   <li><button className="sitemap-btn-link" onClick={() => setIsDrawerOpen(true)}>Checkout</button></li>
                   <li><Link href="/policy/terms-and-conditions">Payment Methods</Link></li>
                   <li><Link href="/policy/shipping-policy">Shipping Info</Link></li>
-                  <li><Link href="/OrderTracking">Delivery Tracking</Link></li>
+                  <li><Link href="/track-order">Delivery Tracking</Link></li>
                 </ul>
               </div>
             </div>
@@ -167,26 +167,26 @@ const Sitemap = ({ seoData }) => {
 
           {/* ══════════════ COMPANY INFO ══════════════ */}
           <div className="section-block">
-            <Link href="/About" className="section-heading">Company Info</Link>
+            <Link href="/about" className="section-heading">Company Info</Link>
             <p className="section-desc">Learn more about Crosscoin, our policies and how we can help you.</p>
             <div className="category-grid">
               <div className="cat-col">
-                <Link href="/About" className="cat-heading">About</Link>
+                <Link href="/about" className="cat-heading">About</Link>
                 <ul className="cat-links">
-                  <li><Link href="/About">About Us</Link></li>
-                  <li><Link href="/About">Our Story</Link></li>
-                  <li><Link href="/Contact">Careers</Link></li>
-                  <li><Link href="/Contact">Press</Link></li>
+                  <li><Link href="/about">About Us</Link></li>
+                  <li><Link href="/about">Our Story</Link></li>
+                  <li><Link href="/contact">Careers</Link></li>
+                  <li><Link href="/contact">Press</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/Contact" className="cat-heading">Contact</Link>
+                <Link href="/contact" className="cat-heading">Contact</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Contact">Get in Touch</Link></li>
-                  <li><Link href="/Contact">Customer Support</Link></li>
-                  <li><Link href="/Contact">Feedback</Link></li>
-                  <li><Link href="/Contact">Report Issue</Link></li>
+                  <li><Link href="/contact">Get in Touch</Link></li>
+                  <li><Link href="/contact">Customer Support</Link></li>
+                  <li><Link href="/contact">Feedback</Link></li>
+                  <li><Link href="/contact">Report Issue</Link></li>
                 </ul>
               </div>
 
@@ -201,11 +201,11 @@ const Sitemap = ({ seoData }) => {
               </div>
 
               <div className="cat-col">
-                <Link href="/Contact" className="cat-heading">Help & Support</Link>
+                <Link href="/contact" className="cat-heading">Help & Support</Link>
                 <ul className="cat-links">
-                  <li><Link href="/Contact">FAQs</Link></li>
-                  <li><Link href="/Contact">Troubleshooting</Link></li>
-                  <li><Link href="/Contact">Grievance Redressal</Link></li>
+                  <li><Link href="/contact">FAQs</Link></li>
+                  <li><Link href="/contact">Troubleshooting</Link></li>
+                  <li><Link href="/contact">Grievance Redressal</Link></li>
                   <li><Link href="/sitemap">Sitemap</Link></li>
                 </ul>
               </div>
@@ -250,17 +250,17 @@ const Sitemap = ({ seoData }) => {
                 <Link href="/" className="cat-heading">Home</Link>
                 <ul className="cat-links">
                   <li><Link href="/">Homepage</Link></li>
-                  <li><Link href="/Products">Shop Now</Link></li>
-                  <li><Link href="/Collections">Browse Collections</Link></li>
+                  <li><Link href="/products">Shop Now</Link></li>
+                  <li><Link href="/collections">Browse Collections</Link></li>
                 </ul>
               </div>
 
               <div className="cat-col">
-                <Link href="/SearchResults" className="cat-heading">Search</Link>
+                <Link href="/search" className="cat-heading">Search</Link>
                 <ul className="cat-links">
-                  <li><Link href="/SearchResults">Search Results</Link></li>
-                  <li><Link href="/Products">Advanced Search</Link></li>
-                  <li><Link href="/Products">Popular Searches</Link></li>
+                  <li><Link href="/search">Search Results</Link></li>
+                  <li><Link href="/products">Advanced Search</Link></li>
+                  <li><Link href="/products">Popular Searches</Link></li>
                 </ul>
               </div>
 
