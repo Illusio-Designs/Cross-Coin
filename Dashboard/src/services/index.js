@@ -1031,6 +1031,18 @@ export const exceptionsService = {
       throw new Error(getErrorMessage(error.response?.data || error.message));
     }
   },
+  // Clear a refund case by hand (src = order | return): message + proof image.
+  clearCase: async (src, id, message, proofFile) => {
+    try {
+      const form = new FormData();
+      form.append('message', message);
+      form.append('proof', proofFile);
+      const response = await adminApi.post(`/api/admin/exceptions/${src}/${id}/clear`, form);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
   saveReturnCharges: async (brandId, charges) => {
     try {
       const response = await adminApi.put('/api/admin/exceptions/return-charges', { brandId, ...charges });
