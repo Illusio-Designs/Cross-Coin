@@ -87,7 +87,7 @@ const FIELDS = [
 
   // Tracking (trackingConfigController + integrations read these brand-only)
   F('FB_PIXEL_ID', 'tracking', 'Meta pixel ID', { rule: 'digits', category: 'analytics', group: 'Meta' }),
-  F('FB_ACCESS_TOKEN', 'tracking', 'Meta Conversions API token', { type: 'secret', category: 'analytics', group: 'Meta' }),
+  F('FB_ACCESS_TOKEN', 'tracking', 'Meta Conversions API token', { type: 'secret', category: 'analytics', group: 'Meta', hint: 'This store’s own token — from this store’s pixel. The ads token in General · all stores is a different one.' }),
   F('FB_TEST_EVENT_CODE', 'tracking', 'Meta test event code', { category: 'analytics', group: 'Meta', hint: 'Only while testing — remove afterwards.' }),
   F('META_AD_ACCOUNT_ID', 'tracking', 'Meta ad account ID', { brandOnly: true, rule: 'adAccount', category: 'analytics', group: 'Meta', hint: 'For reading ad spend into the reports.' }),
   F('META_ADS_TOKEN', 'tracking', 'Meta ads token (read-only)', { brandOnly: true, type: 'secret', category: 'analytics', group: 'Meta', hint: 'Only if “Check ad account access” fails with the Conversions API token.' }),
@@ -387,7 +387,7 @@ async function brandWarnings(brand, rows, winBack = new Map(), globals = new Map
   out.push(...(winBack.get(Number(brand.id)) || []));
 
   if (!get('FB_PIXEL_ID')) out.push({ tab: 'tracking', field: 'FB_PIXEL_ID', text: 'No Meta pixel of its own — purchases on this store aren’t reported to Meta.' });
-  else if (!get('FB_ACCESS_TOKEN')) out.push({ tab: 'tracking', field: 'FB_ACCESS_TOKEN', text: 'Meta pixel is set but there’s no Conversions API token — add it in General · all stores.' });
+  else if (!get('FB_ACCESS_TOKEN')) out.push({ tab: 'tracking', field: 'FB_ACCESS_TOKEN', text: 'Meta pixel is set but there’s no Conversions API token — add this store’s token in Tracking → Meta.' });
   return out;
 }
 

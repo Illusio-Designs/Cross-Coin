@@ -23,6 +23,11 @@ function envFallbackAllowed(brandId, key, brandOnly = false) {
     return String(key).startsWith('WHATSAPP_') && id === (Number(process.env.WHATSAPP_SHARED_BRAND_ID) || PRIMARY_BRAND_ID);
 }
 
+// The Meta Conversions API token belongs to each store's own pixel, so it is
+// per store (Brands → store → Tracking). A store without one still uses an
+// all-stores value saved earlier (ALL_FB_ACCESS_TOKEN), so nothing breaks.
+const STORE_FIRST_KEYS = new Set(['FB_ACCESS_TOKEN']);
+
 // Account credentials shared by ALL stores ("General · all stores" on the
 // Brands page). Stored once, on GLOBAL_BRAND_ID, under the key ALL_<KEY>. When
 // set they win for every store; until then each store's own value (then the
@@ -30,7 +35,7 @@ function envFallbackAllowed(brandId, key, brandOnly = false) {
 const GLOBAL_BRAND_ID = 1;
 const GLOBAL_PREFIX = 'ALL_';
 const GLOBAL_KEYS = new Set([
-    'FB_ACCESS_TOKEN', 'META_ADS_TOKEN',
+    'META_ADS_TOKEN',
     'ITHINK_ACCESS_TOKEN', 'ITHINK_SECRET_KEY', 'ITHINK_ENVIRONMENT',
     'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET',
 ]);
@@ -89,7 +94,7 @@ class SettingsHelper {
                 where: { brand_id: brandId, key }
             });
 
-            if (setting) {
+            if (setting && setting.getDataValue('value')) {
                 const rawValue = setting.getDataValue('value');
                 let value = rawValue;
 
@@ -105,6 +110,11 @@ class SettingsHelper {
                 });
 
                 return value;
+            }
+
+            if (STORE_FIRST_KEYS.has(key)) {
+                const shared = await this.getGlobal(key);
+                if (shared) return shared;
             }
 
             // Fallback to environment variable (never another brand's credentials)
