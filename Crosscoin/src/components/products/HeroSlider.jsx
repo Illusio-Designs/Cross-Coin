@@ -46,7 +46,7 @@ const HeroSlider = ({ slides = [] }) => {
         : currentSlide.categoryName;
       window.location.href = collectionUrl(slugSource);
     } else {
-      window.location.href = '/Collections';
+      window.location.href = '/collections';
     }
   };
 

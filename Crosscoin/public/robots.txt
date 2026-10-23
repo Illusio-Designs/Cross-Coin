@@ -11,7 +11,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -36,7 +36,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -60,7 +60,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -77,7 +77,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -94,7 +94,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -111,7 +111,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -128,7 +128,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
@@ -145,7 +145,7 @@ Disallow: /account
 Disallow: /cart
 Disallow: /checkout
 Disallow: /order-confirmation
-Disallow: /OrderTracking
+Disallow: /track-order
 Disallow: /login
 Disallow: /register
 Disallow: /profile
