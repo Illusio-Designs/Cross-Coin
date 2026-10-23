@@ -1,6 +1,7 @@
 const express = require('express');
 const { isAuthenticated, isOrderManager } = require('../middleware/authMiddleware.js');
 const exceptions = require('../services/exceptionsService.js');
+const { upload, validateMagicBytes } = require('../middleware/uploadMiddleware.js');
 const { logger } = require('../config/logging.js');
 
 // Dashboard → Orders → Problems: failed deliveries, returns and refunds due
@@ -49,6 +50,21 @@ router.put('/return-charges', async (req, res) => {
     res.json({ success: true, brandId, charges, message: 'Return charges saved for this brand.' });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.status ? e.message : 'Couldn’t save return charges' });
+  }
+});
+
+// POST /api/admin/exceptions/:src/:id/clear — clear a refund case by hand
+// (src = order | return). Multipart: message + proof (image).
+router.post('/:src/:id/clear', upload.single('proof'), validateMagicBytes, async (req, res) => {
+  try {
+    const [proofPath] = req.file ? await require('../controller/returnController.js').storeUploads([req.file], '/refund-proofs') : [];
+    const r = await exceptions.clearRefundCase(req.params.src, req.params.id, {
+      message: req.body?.message, proofPath, adminId: req.user?.id,
+    });
+    res.json({ success: true, ...r });
+  } catch (e) {
+    if (!e.status) logger.error(`Clear refund case ${req.params.src}/${req.params.id} failed: ${e.message}`);
+    res.status(e.status || 500).json({ success: false, message: e.status ? e.message : 'Couldn’t clear this case' });
   }
 });
 

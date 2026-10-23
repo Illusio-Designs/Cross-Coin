@@ -221,6 +221,7 @@ const ACTION_LABEL = {
   picked_up: 'Mark picked up',
   receive: 'Mark received',
   retry_refund: 'Retry refund',
+  clear_case: 'Clear case',
 };
 
 function ItemPanel({ item, onChanged, onOpenOrder }) {
@@ -235,6 +236,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
   const [restock, setRestock] = useState(true);
   const [amount, setAmount] = useState(item.refund ? item.refund.refundAmount : 0);
   const [chargesOpen, setChargesOpen] = useState(false);
+  const [proof, setProof] = useState(null); // clear-case proof image (File)
 
   const isNdr = item.src === 'ndr';
   const ret = item.return;
@@ -266,7 +268,8 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
     setMsg(null);
     setOpen(open === a ? null : a);
     if (a === 'mark_done' && !note) setNote('Updated in iThink panel');
-    if (a === 'reject' || a === 'approve') setNote('');
+    if (a === 'reject' || a === 'approve' || a === 'clear_case') setNote('');
+    if (a === 'clear_case') setProof(null);
   };
 
   // Actions that aren't plain buttons: the refund calculator owns 'refund'.
@@ -308,7 +311,10 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
             {timeline.map((t, i) => (
               <li key={i}>
                 <span className={`exc-dot exc-dot--${t.tone || 'muted'}`} aria-hidden="true" />
-                <span className="exc-tl-txt"><span>{t.text}</span><small>{when(t.at)}</small></span>
+                <span className="exc-tl-txt">
+                  <span>{t.text}{t.proof ? <> · <a href={t.proof} target="_blank" rel="noreferrer">View proof</a></> : null}</span>
+                  <small>{when(t.at)}</small>
+                </span>
               </li>
             ))}
           </ol>
@@ -498,6 +504,21 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
                 </label>
                 <ConfirmRow busy={busy} label="Mark received" onCancel={() => setOpen(null)}
                   onConfirm={() => run(() => returnService.receive(item.refId, restock), 'Received.')} />
+              </>
+            )}
+            {open === 'clear_case' && (
+              <>
+                <p className="exc-hint">Settled outside the panel (UPI, bank transfer …) or no refund needed? Clearing marks the money as refunded and takes the case off the queue.</p>
+                <label className="exc-field">Message — what was done
+                  <textarea rows={3} value={note} maxLength={450} onChange={(e) => setNote(e.target.value)}
+                    placeholder={`e.g. Paid ${money(refund?.refundAmount)} by UPI to the customer, ref 4521…`} />
+                </label>
+                <label className="exc-field">Proof (screenshot or photo)
+                  <input type="file" accept="image/*" onChange={(e) => setProof(e.target.files?.[0] || null)} />
+                </label>
+                {proof && <p className="exc-hint">{proof.name}</p>}
+                <ConfirmRow busy={busy} disabled={!note.trim() || !proof} label="Clear case" onCancel={() => setOpen(null)}
+                  onConfirm={() => run(() => exceptionsService.clearCase(item.src, item.refId, note.trim(), proof), 'Case cleared.')} />
               </>
             )}
             {open === 'retry_refund' && (

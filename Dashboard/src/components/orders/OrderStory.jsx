@@ -10,6 +10,10 @@ import { SkeletonText } from "../ui/Skeleton";
 const money = (n) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const when = (d) => (d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
 const label = (s) => String(s || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+// Web links in a history note (e.g. a refund proof) open in a new tab.
+const linkify = (text) => String(text).split(/(https?:\/\/\S+)/).map((part, i) => (
+  /^https?:\/\//.test(part) ? <a key={i} href={part} target="_blank" rel="noreferrer">{/proof/i.test(part) ? "View proof" : part}</a> : part
+));
 
 const TONE = {
   ok: { bg: "var(--ds-color-success-bg)", fg: "var(--ds-color-success)" },
@@ -131,7 +135,7 @@ export default function OrderStory({ orderId }) {
                 <span>
                   <strong style={{ fontSize: ".85rem" }}>{label(h.status)}</strong>
                   <span style={{ ...muted, marginLeft: 8 }}>{when(h.createdAt || h.created_at)}</span>
-                  {h.notes && <div style={muted}>{h.notes}</div>}
+                  {h.notes && <div style={muted}>{linkify(h.notes)}</div>}
                 </span>
               </li>
             ))}

@@ -686,3 +686,7 @@ module.exports.applyReversePickupEvent = async (awb, courierStatus) => {
   logger.info(`↩︎ Reverse pickup ${awb} for ${ret.return_number}: ${courierStatus}`);
   return true;
 };
+
+// Shared with Orders → Problems (clear a refund case by hand).
+module.exports.storeUploads = storeUploads;
+module.exports.closeReturnedOrder = closeReturnedOrder;

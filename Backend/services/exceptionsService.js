@@ -47,6 +47,11 @@ function ensureSchema() {
         KEY idx_exc_ev_ref (kind, ref_id),
         KEY idx_exc_ev_order (order_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+      const evCols = await q(`SELECT LOWER(column_name) AS c FROM information_schema.columns
+                               WHERE table_schema = DATABASE() AND table_name = 'exception_events'`);
+      if (!evCols.some((r) => r.c === 'proof')) {
+        await sequelize.query('ALTER TABLE exception_events ADD COLUMN proof VARCHAR(255) NULL');
+      }
       const cols = await q(`SELECT LOWER(column_name) AS c FROM information_schema.columns
                              WHERE table_schema = DATABASE() AND table_name = 'ndr_cases'`);
       const have = new Set(cols.map((r) => r.c));
@@ -63,13 +68,14 @@ function ensureSchema() {
   return schemaPromise;
 }
 
-// Best-effort action log shown on the item's timeline.
-async function logEvent(kind, refId, orderId, text, { tone = null, actorId = null } = {}) {
+// Best-effort action log shown on the item's timeline. `proof` is an
+// uploaded image path (e.g. the screenshot behind a cleared refund case).
+async function logEvent(kind, refId, orderId, text, { tone = null, actorId = null, proof = null } = {}) {
   try {
     await ensureSchema();
     await sequelize.query(
-      'INSERT INTO exception_events (kind, ref_id, order_id, text, tone, actor_id) VALUES (?, ?, ?, ?, ?, ?)',
-      { replacements: [kind, refId, orderId || null, String(text).slice(0, 500), tone, actorId || null] }
+      'INSERT INTO exception_events (kind, ref_id, order_id, text, tone, actor_id, proof) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      { replacements: [kind, refId, orderId || null, String(text).slice(0, 500), tone, actorId || null, proof || null] }
     );
   } catch (e) {
     logger.warn(`exception event skipped (${kind} ${refId}): ${e.message}`);
@@ -454,12 +460,17 @@ async function waTimeline(conversationId, since) {
 
 async function eventsFor(kind, refId) {
   const rows = await q(
-    `SELECT e.text, e.tone, e.created_at AS at, u.username AS actor
+    `SELECT e.text, e.tone, e.proof, e.created_at AS at, u.username AS actor
        FROM exception_events e LEFT JOIN users u ON u.id = e.actor_id
       WHERE e.kind = :kind AND e.ref_id = :id ORDER BY e.id ASC LIMIT 100`,
     { kind, id: refId }
   );
-  return rows.map((e) => ({ at: e.at, text: e.actor ? `${e.text} — by ${e.actor}` : e.text, tone: e.tone || 'muted' }));
+  const imagekit = require('./imagekitService.js');
+  const proofUrl = (p) => { try { return imagekit.getOptimizedUrl(p, 'large'); } catch { return p; } };
+  return rows.map((e) => ({
+    at: e.at, text: e.actor ? `${e.text} — by ${e.actor}` : e.text, tone: e.tone || 'muted',
+    ...(e.proof ? { proof: proofUrl(e.proof) } : {}),
+  }));
 }
 
 async function historyFor(orderId, since) {
@@ -662,7 +673,7 @@ async function returnDetail(id) {
     ask = 'Parcel on its way back — mark it received when it arrives';
     help = 'Check the item first. Untick “back in stock” if it can’t be sold again.';
   } else if (s === 'received') {
-    actions = ['refund'];
+    actions = ['refund', 'clear_case'];
     ask = refund.gateway ? `Refund ${inr(refund.refundAmount)} to the original payment?` : `Pay ${inr(refund.refundAmount)} to the customer’s UPI?`;
     help = refund.gateway
       ? 'Deductions come from the brand’s return charges. The customer gets a WhatsApp when the refund goes through.'
@@ -722,11 +733,12 @@ async function orderRefundDetail(orderId) {
   if (!due && !failed.length) return null;
   const conversationId = await findConversation(ctx.phone, order.brand_id);
   const since = new Date(new Date(failed.length ? failed[0].created_at : (order.updated_at || order.updatedAt || Date.now())).getTime() - 15 * 86400000);
-  const [hist, wa, customer, refund] = await Promise.all([
+  const [hist, wa, customer, refund, events] = await Promise.all([
     historyFor(order.id, since),
     waTimeline(conversationId, since),
     customerSummary(ctx),
     refundInfo(null, order),
+    eventsFor('refund', order.id),
   ]);
   const fails = failed.map((f) => ({ at: f.created_at, text: `Razorpay refused a refund of ${inr(f.amount)}${f.notes ? ` — ${String(f.notes).slice(0, 120)}` : ''}`, tone: 'bad' }));
   const owed = failed.length ? num(failed[failed.length - 1].amount) : num(order.final_amount);
@@ -735,12 +747,13 @@ async function orderRefundDetail(orderId) {
   let ask = 'Nothing left to do.';
   let help = '';
   if (due && refund.gateway) {
-    actions = ['retry_refund'];
+    actions = ['retry_refund', 'clear_case'];
     ask = wasFailed ? `Retry the ${inr(owed)} refund via Razorpay?` : `Refund ${inr(owed)} to the original payment?`;
     help = wasFailed ? 'If Razorpay refuses again, pay the customer by UPI and note it on the order.' : 'Refunds the full amount through Razorpay. The customer gets a WhatsApp when it goes through.';
   } else if (due) {
+    actions = ['clear_case'];
     ask = `${inr(owed)} is owed but there’s no online payment to refund`;
-    help = 'Pay the customer by UPI or bank transfer, then note it on the order.';
+    help = 'Pay the customer by UPI or bank transfer, then clear the case with the payment screenshot.';
   }
   return {
     id: `order-${order.id}`,
@@ -757,10 +770,66 @@ async function orderRefundDetail(orderId) {
     order: orderSummary(order),
     customer,
     conversationId,
-    timeline: [...hist, ...fails, ...wa].sort(byTime),
+    timeline: [...hist, ...fails, ...events, ...wa].sort(byTime),
     refund: { ...refund, refundAmount: owed },
     actions, ask, help,
   };
+}
+
+// Clear a refund case by hand: staff settled it outside the panel (UPI, bank
+// transfer, store credit …) or it needs no refund. Needs a message and a proof
+// image; marks the money as refunded so the case leaves the queue, and keeps
+// the message + proof on the order history and the case timeline.
+//   src 'order'  — a cancelled / returned prepaid order whose refund is due
+//   src 'return' — a return received at the warehouse, refund not sent yet
+async function clearRefundCase(src, id, { message, proofPath, adminId }) {
+  await ensureSchema();
+  const text = String(message || '').trim().slice(0, 450);
+  if (!text) { const e = new Error('Write what was done.'); e.status = 400; throw e; }
+  if (!proofPath) { const e = new Error('Add a proof image.'); e.status = 400; throw e; }
+  const { Order, OrderStatusHistory } = require('../model/associations.js');
+  const n = parseInt(id, 10);
+  // The order's history keeps a link to the proof, so it can be opened from
+  // the order after the case has left the queue.
+  let proofLink = proofPath;
+  try { proofLink = require('./imagekitService.js').getOptimizedUrl(proofPath, 'large'); } catch { /* keep the path */ }
+
+  if (src === 'order') {
+    const detail = await orderRefundDetail(n);
+    if (!detail || !detail.actions.includes('clear_case')) { const e = new Error('This refund isn’t open any more.'); e.status = 409; throw e; }
+    const order = await Order.findByPk(n);
+    await order.update({ payment_status: 'refunded' });
+    await OrderStatusHistory.create({
+      order_id: order.id, status: order.status, updated_by: adminId || null,
+      notes: `Refund case cleared by hand — ${text} · Proof: ${proofLink}`,
+    });
+    await logEvent('refund', order.id, order.id, `Case cleared — ${text}`, { tone: 'good', actorId: adminId, proof: proofPath });
+    return { ok: true, message: 'Case cleared.' };
+  }
+
+  if (src === 'return') {
+    const { Return } = require('../model/returnModel.js');
+    const ret = await Return.findByPk(n);
+    if (!ret || ret.status !== 'received') { const e = new Error('This return isn’t waiting for a refund any more.'); e.status = 409; throw e; }
+    const order = await Order.findByPk(ret.order_id);
+    await ret.update({
+      status: 'refunded', refunded_at: new Date(),
+      payout_proof: ret.payout_proof || proofPath,
+      admin_note: [ret.admin_note, `Cleared by hand: ${text}`].filter(Boolean).join('\n').slice(0, 1000),
+    });
+    if (order) {
+      if (['paid', 'refund_pending'].includes(String(order.payment_status || '').toLowerCase())) await order.update({ payment_status: 'refunded' });
+      await OrderStatusHistory.create({
+        order_id: order.id, status: order.status, updated_by: adminId || null,
+        notes: `Return ${ret.return_number} refund cleared by hand — ${text} · Proof: ${proofLink}`,
+      });
+      await require('../controller/returnController.js').closeReturnedOrder(order, adminId, ret);
+    }
+    await logEvent('return', ret.id, ret.order_id, `Case cleared — ${text}`, { tone: 'good', actorId: adminId, proof: proofPath });
+    return { ok: true, message: 'Case cleared.' };
+  }
+
+  const e = new Error('Only refund cases can be cleared here.'); e.status = 400; throw e;
 }
 
 async function getDetail(src, id) {
@@ -773,4 +842,4 @@ async function getDetail(src, id) {
   return null;
 }
 
-module.exports = { ensureSchema, logEvent, listQueue, getDetail, getReturnCharges, setReturnCharges, CHARGE_KEYS };
+module.exports = { ensureSchema, logEvent, listQueue, getDetail, clearRefundCase, getReturnCharges, setReturnCharges, CHARGE_KEYS };
