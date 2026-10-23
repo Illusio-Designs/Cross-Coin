@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { productHref, rememberPdpColor } from '@/lib/pdpColor';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 
@@ -56,9 +57,8 @@ export default function Hero({ features = [], slides = [], products = [] }) {
         <div className="heroc-cards">
           {cards.length > 0 ? cards.map((p, i) => {
             const off = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
-            const href = p.colorParam ? `/products/${p.slug}?color=${encodeURIComponent(p.colorParam)}` : `/products/${p.slug}`;
             return (
-              <Link key={p.uid ?? p.id} href={href} className="heroc-pc">
+              <Link key={p.uid ?? p.id} href={productHref(p.slug)} onClick={() => rememberPdpColor(p.slug, p.colorParam)} className="heroc-pc">
                 <span className="heroc-ph">
                   {p.image
                     ? <ShimmerImg src={p.image} alt={p.name} width={600} widths={[300, 450, 600]} sizes="(max-width: 820px) 45vw, 260px"

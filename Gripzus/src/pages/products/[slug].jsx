@@ -18,6 +18,7 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { fbTrack } from '../../utils/pixel';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../services/shiprocketCheckout';
+import { PDP_COLOR_COOKIE, pdpColorFor, cleanColorParam, readPdpColor } from '../../lib/pdpColor';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 
 // Right-size ImageKit images per slot (f-auto, width-only): GzImage `w` / ikw().
@@ -45,7 +46,7 @@ function truncate(s, n) {
  * receives already carries the full product — no skeleton, better LCP, and the
  * SEO <Head> below is populated from real data. Returns 404 for a missing slug.
  */
-export async function getServerSideProps({ params, res }) {
+export async function getServerSideProps({ params, req, res }) {
   const slug = params?.slug;
   if (!slug) return { notFound: true };
 
@@ -68,11 +69,16 @@ export async function getServerSideProps({ params, res }) {
   const prepaidCoupon = (Array.isArray(couponList) ? couponList : [])
     .find((c) => (c?.paymentModeRestriction || c?.payment_mode_restriction) === 'prepaid') || null;
 
+  // The colour of the card that was clicked (lib/pdpColor).
+  let pickedColor = null;
+  try { pickedColor = pdpColorFor(slug, req?.cookies?.[PDP_COLOR_COOKIE]); } catch { pickedColor = null; }
+
   // CDN caching: product pages change rarely; let the edge serve a stale copy
-  // while it revalidates in the background.
+  // while it revalidates in the background. A page opened on a clicked colour
+  // is for this shopper only, so it isn't shared through the CDN.
   res?.setHeader?.(
     'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=86400'
+    pickedColor ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=86400'
   );
 
   return {
@@ -84,23 +90,27 @@ export async function getServerSideProps({ params, res }) {
       initialFaqs: faqs || [],
       prepaidCoupon,
       bundleTiers: bundleTiers || [],
+      pickedColor,
     },
   };
 }
 
-export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [], prepaidCoupon = null, bundleTiers = [] }) {
+export default function ProductDetail({ slug: slugProp, initialProduct = null, initialReviews = [], initialReviewTotal = 0, initialFaqs = [], prepaidCoupon = null, bundleTiers = [], pickedColor = null }) {
   const router = useRouter();
   const slug = slugProp || router.query.slug;
 
   const { addItem, addPack, openCart } = useCart();
   const { has, toggle } = useWishlist();
 
-  // Preselect the colour from ?color= (set by the per-colour cards). Computed
+  // Old ?color= links: the colour is applied, so keep the address clean.
+  useEffect(() => { cleanColorParam(); }, []);
+
+  // Preselect the colour of the clicked card (cookie) or an old ?color=. Computed
   // the same way on the server (first render) and the client so hydration agrees.
   const pickInitialColor = (p) => {
     if (!p) return '';
     const wanted = Array.isArray(p.colors)
-      ? p.colors.find((c) => c.name === router.query.color)
+      ? p.colors.find((c) => c.name === (router.query.color || pickedColor))
       : null;
     return wanted?.name || p.colors?.[0]?.name || '';
   };
@@ -179,10 +189,11 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     setActiveImg(0);
     setPack(0);
     setSize(p.sizes?.[0] || '');
-    // Preselect the colour from ?color= (set by the per-colour cards); fall
-    // back to the first colour when it's absent or doesn't match.
+    // Preselect the clicked card's colour (cookie, read here too in case the
+    // page came from the CDN cache) or an old ?color=; fall back to the first
+    // colour when it's absent or doesn't match.
     const wanted = Array.isArray(p.colors)
-      ? p.colors.find((c) => c.name === router.query.color)
+      ? p.colors.find((c) => c.name === (router.query.color || pickedColor || readPdpColor(slug)))
       : null;
     setColor(wanted?.name || p.colors?.[0]?.name || '');
     // Meta funnel: ViewContent (browser pixel + server CAPI, deduped by eventID).

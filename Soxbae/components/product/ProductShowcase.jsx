@@ -12,6 +12,7 @@ import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import { cleanColorParam } from '@/lib/pdpColor';
 
 // Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
 const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
@@ -33,6 +34,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     return i >= 0 ? i : 0;
   })();
   const [color, setColor] = useState(initialColorIndex);
+  // Old ?color= links: the colour is applied, so keep the address clean.
+  useEffect(() => { cleanColorParam(); }, []);
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const [qty, setQty] = useState(1);

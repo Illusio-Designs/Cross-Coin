@@ -1,5 +1,5 @@
 import ReviewBadge from '@/components/product/ReviewBadge';
-import Link from 'next/link';
+import PdpLink from '@/components/product/PdpLink';
 import Icon from '@/components/Icon';
 import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
@@ -7,7 +7,6 @@ import WishlistButton from '@/components/product/WishlistButton';
 
 export default function ProductCard({ product }) {
   const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image, colorParam } = product;
-  const href = colorParam ? `/products/${slug}?color=${encodeURIComponent(colorParam)}` : `/products/${slug}`;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
   return (
@@ -20,12 +19,12 @@ export default function ProductCard({ product }) {
         <WishlistButton productId={id} product={product} />
         <ReviewBadge rating={rating} count={reviews} />
 
-        <Link href={href} className="pcard-imglink" aria-label={name}>
+        <PdpLink slug={slug} color={colorParam} className="pcard-imglink" aria-label={name}>
           {image
             ? <ShimmerImg src={image} alt={name} width={600} widths={[300, 450, 600]} sizes="(max-width: 760px) 50vw, (max-width: 1040px) 33vw, 240px"
                 fallback={<span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>} />
             : <span className="pcard-ph" aria-hidden><Icon name="Footprints" size={48} /></span>}
-        </Link>
+        </PdpLink>
 
         {/* Desktop: quick-add bar on hover. */}
         <div className="pcard-quickadd">
@@ -40,7 +39,7 @@ export default function ProductCard({ product }) {
       <div className="pcard-body">
         {/* Lead with the product name (not the long collection name) so the card
             reads cleanly — same as the other brands. */}
-        <Link href={href}><h3 className="pcard-name">{name}</h3></Link>
+        <PdpLink slug={slug} color={colorParam}><h3 className="pcard-name">{name}</h3></PdpLink>
 
         <div className="pcard-foot">
           <div className="pcard-price">

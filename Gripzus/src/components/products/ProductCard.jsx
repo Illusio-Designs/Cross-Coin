@@ -5,6 +5,7 @@ import { useWishlist } from '../../context/WishlistContext';
 import { resolveVariationId } from '../../services/products';
 import ReviewBadge from './ReviewBadge';
 import GzImage from '../common/GzImage';
+import { productHref, rememberPdpColor } from '../../lib/pdpColor';
 
 /* Gripzus ProductCard — "GROUND INDEX" architectural gallery card.
    A 1px-framed image (no shadow, square corners), square black index/discount
@@ -21,9 +22,8 @@ export default function ProductCard({ product }) {
   const [added, setAdded] = useState(false);
 
   const slug    = product.slug || product.handle || product.id;
-  const href    = product.colorParam
-    ? `/products/${slug}?color=${encodeURIComponent(product.colorParam)}`
-    : `/products/${slug}`;
+  const href    = productHref(slug);
+  const pickColor = () => rememberPdpColor(slug, product.colorParam);
   const name    = product.name || 'Gripzus Pair';
   const price   = Number(product.salePrice ?? product.price ?? 0);
   const compare = product.salePrice ? Number(product.price) : (product.compareAtPrice ? Number(product.compareAtPrice) : null);
@@ -63,7 +63,7 @@ export default function ProductCard({ product }) {
 
       {/* ── Image — 1px architectural frame on warm paper ─────────── */}
       <div className="relative border border-line overflow-hidden bg-paper-warm">
-        <Link href={href} className="relative block aspect-[4/5] overflow-hidden">
+        <Link href={href} onClick={pickColor} className="relative block aspect-[4/5] overflow-hidden">
           <GzImage src={primary} alt={name} w={600} widths={[300, 600]} sizes="(max-width: 767px) 50vw, (max-width: 1279px) 25vw, 20vw" fallback={FALLBACK_IMG}
                className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]" />
           {!inStock && (
@@ -114,7 +114,7 @@ export default function ProductCard({ product }) {
         </div>
 
         {/* name + price share a baseline */}
-        <Link href={href} className="mt-1.5 flex items-baseline justify-between gap-3">
+        <Link href={href} onClick={pickColor} className="mt-1.5 flex items-baseline justify-between gap-3">
           <h3 className="h-display text-[14px] text-ink leading-snug truncate">{name}</h3>
           <span className="shrink-0 flex items-baseline gap-1.5">
             {compare && compare > price && (

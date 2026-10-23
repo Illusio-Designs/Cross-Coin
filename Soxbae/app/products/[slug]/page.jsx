@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+import { PDP_COLOR_COOKIE, pdpColorFor } from '@/lib/pdpColor';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
@@ -75,6 +77,8 @@ function buildProductJsonLd(product) {
 export default async function ProductPage({ params, searchParams }) {
   const { slug } = await params;
   const sp = (await searchParams) || {};
+  // The colour of the card that was clicked (lib/pdpColor); ?color= from old links wins.
+  const pickedColor = pdpColorFor(slug, (await cookies()).get(PDP_COLOR_COOKIE)?.value);
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
@@ -109,7 +113,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
+      <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
       {/* ── "What Soxbae Socks Are Made For" benefits band (before the details) ── */}
       <ProductBenefits />
