@@ -367,6 +367,44 @@ const RULES = [
 ];
 const hourLabel = (h) => (h === 0 ? '12 am' : h === 12 ? '12 pm' : h === 24 ? '12 am (next day)' : h < 12 ? `${h} am` : `${h - 12} pm`);
 
+// The server_alert template on WhatsApp. Messages the business starts only
+// arrive through an approved template; the server creates it when missing.
+const TPL = {
+  APPROVED: { tone: 'ok', label: 'Approved', text: 'WhatsApp alerts will arrive.' },
+  PENDING: { tone: 'warn', label: 'Waiting for WhatsApp approval', text: 'Usually a few minutes to a few hours. Until then WhatsApp alerts only arrive if that number messaged your business number in the last 24 hours.' },
+  IN_APPEAL: { tone: 'warn', label: 'In appeal', text: 'Until it is approved, WhatsApp alerts only arrive within the 24-hour window.' },
+  REJECTED: { tone: 'bad', label: 'Rejected by WhatsApp', text: 'Open WhatsApp → Templates, fix and re-submit server_alert.' },
+  PAUSED: { tone: 'bad', label: 'Paused by WhatsApp', text: 'Open WhatsApp → Templates to see why.' },
+  DISABLED: { tone: 'bad', label: 'Disabled by WhatsApp', text: 'Open WhatsApp → Templates to see why.' },
+  MISSING: { tone: 'bad', label: 'Not created', text: 'The server will create it the next time this page loads or an alert is sent.' },
+  UNKNOWN: { tone: 'muted', label: 'Could not check', text: '' },
+};
+function TemplateStatus({ t }) {
+  if (!t) return null;
+  const st = TPL[t.status] || TPL.UNKNOWN;
+  return (
+    <span className="sl-help">
+      Template <code>{t.name}</code>: <Pill tone={st.tone}>{t.created ? 'Just sent to WhatsApp for approval' : st.label}</Pill> {st.text}
+      {t.reason ? ` Reason: ${t.reason}.` : ''}{t.error ? ` (${t.error})` : ''}
+    </span>
+  );
+}
+// One recipient's test result, with what WhatsApp did with it.
+function WaResult({ w }) {
+  if (!w.ok) return <><Pill tone="bad">Not delivered</Pill> <span className="sh-small">{w.error}</span></>;
+  const how = w.via === 'text' ? ' as plain message' : '';
+  if (w.delivery === 'read') return <Pill tone="ok">Read{how}</Pill>;
+  if (w.delivery === 'delivered') return <Pill tone="ok">Delivered{how}</Pill>;
+  return (
+    <>
+      <Pill tone="warn">Accepted by WhatsApp{how}</Pill>{' '}
+      <span className="sh-small">
+        {w.via === 'text' ? 'Not delivered yet. Without an approved template it only arrives if this number messaged your business number in the last 24 hours.' : 'Not confirmed as delivered yet. Check the phone.'}
+      </span>
+    </>
+  );
+}
+
 function SettingsTab({ data, onSaved }) {
   const [f, setF] = useState(() => ({ ...data.settings, emails: data.settings.emails.join(', '), whatsapp: data.settings.whatsapp.join(', '), rules: { ...data.settings.rules } }));
   const [saving, setSaving] = useState(false);
@@ -410,7 +448,7 @@ function SettingsTab({ data, onSaved }) {
           <label className="sl-field">
             <span className="sl-lbl">WhatsApp numbers</span>
             <input className="sl-input" value={f.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} placeholder="98765 43210" />
-            <span className="sl-help">Sent with the <code>server_alert</code> template. Create and get it approved under WhatsApp → Templates. Until then a plain message is tried, which only arrives if that number messaged the business number in the last 24 hours.</span>
+            <TemplateStatus t={data.wa_template} />
           </label>
           <div className="sl-row">
             <label className="sl-field">
@@ -462,7 +500,7 @@ function SettingsTab({ data, onSaved }) {
             <>
               <div>Email: {test.email?.ok ? <Pill tone="ok">Sent</Pill> : <><Pill tone="bad">Not sent</Pill> <span className="sh-small">{test.email?.error}</span></>}</div>
               {(test.whatsapp || []).map((w, i) => (
-                <div key={i}>WhatsApp {w.phone}: {w.ok ? <Pill tone="ok">{w.via === 'text' ? 'Sent as plain message' : 'Sent'}</Pill> : <><Pill tone="bad">Not sent</Pill> <span className="sh-small">{w.error}</span></>}</div>
+                <div key={i}>WhatsApp {w.phone}: <WaResult w={w} /></div>
               ))}
             </>
           )}

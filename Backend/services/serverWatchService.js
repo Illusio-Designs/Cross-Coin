@@ -397,26 +397,80 @@ async function sendEmail(to, subject, lines) {
   await t.sendMail({ from: `"Obzus Server Watch" <${process.env.EMAIL_USER}>`, to: to.join(', '), subject, html, text: lines.join('\n\n') });
 }
 
+// The server_alert WhatsApp template on the shared business number: its
+// status on Meta, and when it doesn't exist yet, create it (at most every
+// 10 min) so Meta starts reviewing it. Business-started messages only arrive
+// through an APPROVED template.
+let tplCreateTriedAt = 0;
+async function alertTemplate({ create = true } = {}) {
+  const wa = require('./whatsappService.js');
+  const brandId = wa.SHARED_WA_BRAND_ID || 1;
+  const name = wa.tName('server_alert');
+  try {
+    const list = (await wa.listTemplates(brandId))?.data || [];
+    // Our versioned name, or a plain server_alert made by hand; approved first.
+    const found = list.filter((x) => x.name === name || x.name === 'server_alert');
+    const t = found.find((x) => String(x.status).toUpperCase() === 'APPROVED') || found[0];
+    if (t) {
+      const status = String(t.status || '').toUpperCase();
+      return { name: t.name, status, reason: status === 'REJECTED' && t.rejected_reason && t.rejected_reason !== 'NONE' ? t.rejected_reason : null };
+    }
+    if (create && Date.now() - tplCreateTriedAt > 10 * 60 * 1000) {
+      tplCreateTriedAt = Date.now();
+      const [r] = await wa.seedDefaultTemplates(brandId, [name]);
+      try { wa.invalidateTemplateCache?.(brandId); } catch (_) { /* older build */ }
+      if (r && (r.status === 'created' || r.status === 'already_exists')) return { name, status: 'PENDING', created: r.status === 'created' };
+      return { name, status: 'MISSING', error: r?.error || 'WhatsApp did not accept the template' };
+    }
+    return { name, status: 'MISSING' };
+  } catch (e) {
+    return { name, status: 'UNKNOWN', error: e.message };
+  }
+}
+
 async function sendWhatsApp(phones, title, detail, when) {
   const wa = require('./whatsappService.js');
   const brandId = wa.SHARED_WA_BRAND_ID || 1;
+  const tpl = await alertTemplate();
   const results = [];
   for (const phone of phones) {
-    try {
-      await wa.sendTemplate(phone, wa.tName('server_alert'), [title, detail, when], brandId, { staff: true });
-      results.push({ phone, ok: true, via: 'template' });
-    } catch (tplErr) {
-      // Template not approved yet: a plain message still arrives when this
-      // number messaged the business number in the last 24 hours.
+    let tplErr = null;
+    if (tpl.status === 'APPROVED') {
       try {
-        await wa.sendTextMessage(phone, `*${title}*\n\n${detail}\n\nTime: ${when} (India time)`, brandId);
-        results.push({ phone, ok: true, via: 'text' });
-      } catch (txtErr) {
-        results.push({ phone, ok: false, error: `${tplErr.message}; plain message: ${txtErr.message}` });
-      }
+        const r = await wa.sendTemplate(phone, tpl.name, [title, detail, when], brandId, { staff: true });
+        results.push({ phone, ok: true, via: 'template', waId: r?.messages?.[0]?.id || null });
+        continue;
+      } catch (e) { tplErr = e; }
+    }
+    // No approved template: a plain message, which WhatsApp only delivers when
+    // this number messaged the business number in the last 24 hours.
+    try {
+      const r = await wa.sendTextMessage(phone, `*${title}*\n\n${detail}\n\nTime: ${when} (India time)`, brandId);
+      results.push({ phone, ok: true, via: 'text', waId: r?.messages?.[0]?.id || null, template: tpl.status });
+    } catch (txtErr) {
+      results.push({ phone, ok: false, error: `${tplErr ? `template: ${wa.metaError ? wa.metaError(tplErr) : tplErr.message}; ` : ''}plain message: ${wa.metaError ? wa.metaError(txtErr) : txtErr.message}`, template: tpl.status });
     }
   }
   return results;
+}
+
+// What WhatsApp did with the messages we just sent: the webhook updates the
+// saved row (sent → delivered → read, or failed with Meta's reason). Waits up
+// to ~10 s for an answer.
+async function deliveryOf(results) {
+  const ids = results.map((r) => r.waId).filter(Boolean);
+  if (!ids.length) return results;
+  let rows = [];
+  for (let i = 0; i < 5; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    rows = await q('SELECT wa_message_id, status, error_reason, error_text FROM whatsapp_messages WHERE wa_message_id IN (:ids)', { ids }).catch(() => []);
+    if (rows.length === ids.length && rows.every((r) => r.status && r.status !== 'sent' && r.status !== 'pending')) break;
+  }
+  return results.map((r) => {
+    const row = rows.find((x) => x.wa_message_id === r.waId);
+    if (!row) return r;
+    return { ...r, delivery: row.status, ...(row.status === 'failed' ? { ok: false, error: row.error_text || row.error_reason || 'WhatsApp could not deliver it' } : {}) };
+  });
 }
 
 /** Email + WhatsApp to every recipient. Never throws; returns what happened. */
@@ -814,12 +868,16 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
     last_watch: lastWatch || null,
     settings,
     email_ready: !!(process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD),
+    wa_template: await alertTemplate(),
   };
 }
 
 async function sendTest() {
   const s = await getSettings();
-  return notify(s, { title: 'Test alert', detail: 'This is a test from Obzus Server Watch. If you got this, alerts reach you.', subject: '[Obzus] Test alert' });
+  const out = await notify(s, { title: 'Test alert', detail: 'This is a test from Obzus Server Watch. If you got this, alerts reach you.', subject: '[Obzus] Test alert' });
+  out.whatsapp = await deliveryOf(out.whatsapp || []);
+  out.template = await alertTemplate({ create: false });
+  return out;
 }
 
 module.exports = {
