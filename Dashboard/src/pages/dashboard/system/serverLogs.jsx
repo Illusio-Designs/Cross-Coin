@@ -81,6 +81,92 @@ function Tile({ label, value, tone, note }) {
   );
 }
 
+// The biggest live server process: total memory it holds, and how much of
+// that the app itself is using (the rest is memory not handed back yet).
+function memTile(m, r) {
+  const top = (m?.processes?.length ? m.processes : [m?.now]).filter(Boolean).reduce((a, p) => (p.rss_mb > (a?.rss_mb || 0) ? p : a), null);
+  if (!top) return { label: 'Memory', value: '—', tone: 'muted', note: 'no reading yet' };
+  const n = m.processes?.length || 1;
+  return {
+    label: 'Memory',
+    value: `${num(top.rss_mb)} MB`,
+    tone: top.rss_mb >= r.memoryMb ? 'bad' : top.rss_mb >= r.memoryMb * 0.8 ? 'warn' : 'ok',
+    note: `app uses ${num(top.heap_used_mb)} MB of it · ${n} process${n > 1 ? 'es' : ''} · alert at ${num(r.memoryMb)} MB`,
+  };
+}
+
+// Plain-English reading of the memory numbers.
+function memVerdict(m) {
+  const procs = m?.processes?.length ? m.processes : [m?.now].filter(Boolean);
+  if (!procs.length) return null;
+  const top = procs.reduce((a, p) => (p.rss_mb > a.rss_mb ? p : a));
+  if (top.heap_limit_mb && top.heap_used_mb >= top.heap_limit_mb * 0.75) {
+    return { tone: 'bad', text: `The app is using ${num(top.heap_used_mb)} MB of its ${num(top.heap_limit_mb)} MB limit. It will crash and restart if it reaches the limit. Something is holding a lot of data in memory.` };
+  }
+  // In-use memory rising hour after hour (oldest → newest, same processes).
+  const hrs = [...(m.hours || [])].reverse().filter((h) => h.heap_max > 0);
+  const last = hrs.slice(-6);
+  if (last.length >= 6 && last.every((h, i) => i === 0 || h.heap_max >= last[i - 1].heap_max) && last[5].heap_max > last[0].heap_max * 1.3) {
+    return { tone: 'bad', text: `Memory the app uses has gone up every hour for 6 hours (${num(last[0].heap_max)} → ${num(last[5].heap_max)} MB). That looks like a leak. Send me a screenshot of this section.` };
+  }
+  if (top.heap_used_mb < top.rss_mb * 0.5) {
+    return { tone: 'warn', text: `The app itself uses only ${num(top.heap_used_mb)} MB; the other ${num(top.rss_mb - top.heap_used_mb)} MB is memory left over from big jobs (reports, exports, broadcasts) that Node hasn't given back yet. Not a leak, but the host counts it.` };
+  }
+  return { tone: 'ok', text: `The app uses ${num(top.heap_used_mb)} MB of ${num(top.rss_mb)} MB held. Watch the hourly numbers below: a steady climb means a leak, single jumps mean a heavy job.` };
+}
+
+const upFor = (s) => (s < 3600 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} days`);
+
+function MemoryPanel({ memory }) {
+  const v = memVerdict(memory);
+  const procs = memory?.processes || [];
+  return (
+    <section className="rep-panel rep-panel--flush">
+      <div className="rep-ph">
+        <h3>Memory</h3>
+        <span className="hint">Every server process, sampled every 5 min{memory?.started_in_range ? ` · ${memory.started_in_range} process start${memory.started_in_range > 1 ? 's' : ''} in this range` : ''}</span>
+      </div>
+      {v && <div className={`sl-verdict sl-verdict--${v.tone}`}>{v.text}</div>}
+      {procs.length > 0 && (
+        <div className="rep-tbl-wrap">
+          <table className="rep-table sl-events">
+            <thead><tr><th>Process</th><th className="num">Holding</th><th className="num">App uses</th><th className="num">Other (files, images)</th><th className="num">App limit</th><th>Running for</th></tr></thead>
+            <tbody>
+              {procs.map((p) => (
+                <tr key={p.pid}>
+                  <td className="sl-hour">#{p.pid}{p.pid === memory.now?.pid ? <span className="sh-small"> · answered this page</span> : null}</td>
+                  <td className="num"><strong>{num(p.rss_mb)} MB</strong></td>
+                  <td className="num">{num(p.heap_used_mb)} MB</td>
+                  <td className="num mut">{num(p.external_mb)} MB</td>
+                  <td className="num mut">{num(p.heap_limit_mb)} MB</td>
+                  <td className="sl-hour mut">{upFor(p.uptime_s)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {memory?.hours?.length > 0 && (
+        <div className="rep-tbl-wrap sl-hours-wrap">
+          <table className="rep-table sl-events">
+            <thead><tr><th>Hour</th><th className="num">Highest held</th><th className="num">Highest app use</th><th className="num">Processes</th></tr></thead>
+            <tbody>
+              {memory.hours.map((h) => (
+                <tr key={h.hour}>
+                  <td className="sl-hour">{when(istHour(h.hour))}</td>
+                  <td className="num">{num(h.rss_max)} MB</td>
+                  <td className="num">{num(h.heap_max)} MB</td>
+                  <td className="num mut">{h.procs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function tilesFrom(d) {
   const k = d.kpis;
   const r = d.settings.rules;
@@ -93,7 +179,7 @@ function tilesFrom(d) {
     { label: 'Checkout', value: k.checkout_1h ? `${k.checkout_fail_pct_1h}% failed` : 'No tries', tone: !k.checkout_1h ? 'muted' : k.checkout_fail_pct_1h > r.checkoutFailPct ? 'bad' : k.checkout_fail_pct_1h > 0 ? 'warn' : 'ok', note: `${num(k.checkout_1h)} checkout requests, last hour` },
     { label: 'Orders', value: num(k.orders_1h), tone: lastOrderAge == null ? 'muted' : lastOrderAge > r.ordersStoppedHours * HOUR ? 'warn' : 'ok', note: `last hour${d.orders_all_stores && d.brand ? ' · all stores' : ''} · last order ${ago(k.last_order_at)}` },
     { label: 'Response time', value: k.requests_1h ? secs(k.avg_ms_1h) : '—', tone: k.requests_1h ? avgTone : 'muted', note: 'average, last hour' },
-    { label: 'Memory', value: `${num(k.memory_mb)} MB`, tone: k.memory_mb >= r.memoryMb ? 'bad' : k.memory_mb >= r.memoryMb * 0.8 ? 'warn' : 'ok', note: `this server process · alert at ${num(r.memoryMb)} MB` },
+    memTile(d.memory, r),
   ];
 }
 
@@ -462,6 +548,7 @@ export default function ServerLogs() {
           <section className="sh-tiles" aria-label="Right now">
             {tilesFrom(data).map((t) => <Tile key={t.label} {...t} />)}
           </section>
+          <MemoryPanel memory={data.memory} />
 
           <div className="sl-range" role="group" aria-label="Time range">
             {RANGES.map((r) => (
