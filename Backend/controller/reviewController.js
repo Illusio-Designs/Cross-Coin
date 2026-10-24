@@ -92,17 +92,19 @@ const removeReviewFile = (fileName) => {
 module.exports.createPublicReview = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        // Rate limiting for public reviews via Redis (15 min window, max 5 submissions)
+        // Rate limiting for public reviews via Redis (15 min window): 5 per
+        // reviewer email, 30 per IP (many shoppers can share one mobile IP).
         const ip = req.ip || req.connection.remoteAddress;
-        const rateLimitKey = `ratelimit:review:${ip}`;
+        const reviewer = String(req.body?.email || '').trim().toLowerCase().slice(0, 120);
         const windowSec = 15 * 60; // 900 seconds
-        const maxReviews = 5;
-        const count = await redisService.incr(rateLimitKey);
-        if (count === 1) {
+        let limited = false;
+        for (const [key, max] of [[`ratelimit:review:ip:${ip}`, 30], [`ratelimit:review:email:${reviewer}`, 5]]) {
+            const count = await redisService.incr(key);
             // First request in this window — set expiry so key auto-cleans
-            await redisService.expire(rateLimitKey, windowSec);
+            if (count === 1) await redisService.expire(key, windowSec);
+            if (count !== null && count > max) limited = true;
         }
-        if (count !== null && count > maxReviews) {
+        if (limited) {
             await transaction.rollback();
             return res.status(429).json({ success: false, message: 'Too many reviews. Please try again later.' });
         }

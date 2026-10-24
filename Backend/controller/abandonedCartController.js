@@ -14,11 +14,12 @@ function tenDigits(phone) {
 // paid WhatsApp marketing message — so cap it per client IP and per phone.
 // Redis counters (shared by every app process), with an in-memory fallback
 // when Redis is down. Generous enough for a real checkout (the storefront
-// re-posts as the shopper edits their details) and for shoppers behind
-// carrier-grade NAT sharing one IP.
+// re-posts as the shopper edits their details) and for many shoppers behind
+// carrier-grade NAT sharing one IP: the per-phone cap is the real guard, the
+// per-IP caps only stop one address flooding fake numbers.
 const CAPTURE_LIMITS = [
-  { scope: 'ip15m', windowSec: 15 * 60, max: 30 },
-  { scope: 'ipday', windowSec: 24 * 3600, max: 300 },
+  { scope: 'ip15m', windowSec: 15 * 60, max: 300 },
+  { scope: 'ipday', windowSec: 24 * 3600, max: 3000 },
   { scope: 'phoneday', windowSec: 24 * 3600, max: 10 },
 ];
 const _memHits = new Map(); // key → { n, resetAt }

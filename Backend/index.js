@@ -69,19 +69,36 @@ app.use(helmet({
   hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false
 }));
 
-// Rate limiting — granular per route type
-const rateLimit = require('express-rate-limit');
+// Rate limiting — granular per route type.
+// In India many mobile customers reach us from ONE shared IP (carrier NAT),
+// so a per-IP budget is shared by every shopper on that network. Limits here
+// are sized for that: customer-facing budgets are per IP + account where it
+// matters (login), generous per IP everywhere else, and checkout / payments /
+// orders have no per-IP limit of their own.
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
-// Strict: auth, OTP, checkout, payments (10 req / 15 min)
-const strictLimiter = rateLimit({
+// Login, sign-up, OTP: 10 tries / 15 min per IP + account (email or phone),
+// so password guessing on one account is stopped while two customers on the
+// same shared IP don't block each other. Needs the parsed body, so these are
+// mounted after express.json() below. Plus a looser per-IP ceiling against one
+// address hammering many accounts.
+const authAccount = (req) => String(req.body?.email || req.body?.phone || req.body?.username || '').trim().toLowerCase().slice(0, 120);
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' } },
+  keyGenerator: (req) => `auth:${ipKeyGenerator(req.ip)}:${authAccount(req)}`,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many attempts. Please try again in a few minutes.' } },
+});
+const authIpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many attempts. Please try again in a few minutes.' } },
 });
 
-// Medium: order creation, address creation (30 req / 15 min)
 // Who signed this request, from its Bearer token (signature checked, so it
 // can't be faked). Only used to pick a rate-limit budget — the routes still
 // run their own auth checks. Cached on the request.
@@ -103,18 +120,6 @@ const isStaffRequest = (req) => {
   const u = signedUser(req);
   return !!u && require('./middleware/authMiddleware').STAFF_ROLES.includes(u.role);
 };
-
-// Orders: guards checkout / tracking against abuse. Staff working the Orders
-// pages, and signed-in customers reading their own orders, aren't limited
-// here — a whole office shares one IP and used to hit 30 in minutes.
-const mediumLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => isStaffRequest(req) || ((req.method || 'GET').toUpperCase() === 'GET' && !!signedUser(req)),
-  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
-});
 
 // Public, cached, read-only GET endpoints. The storefront renders server-side
 // on Vercel, so every SSR call reaches this API from a small pool of Vercel IPs
@@ -171,18 +176,38 @@ const isEdgeVisitPing = (req) => {
   return path.replace(/^\/api(\/v1)?/, '') === '/i/v' && visitKeyOk(req);
 };
 
-// General: all other API routes (120 req / min), skipping public cached reads.
-const generalLimiter = rateLimit({
+// Tracking beacons the storefront fires on every page (visit ping, pixel
+// events, Meta CAPI): 3–6 per page view. Their own per-IP budget so a busy
+// shared IP's tracking never uses up its shoppers' cart / checkout budget.
+const BEACON_PATHS = ['/i/v', '/i/e', '/facebook-pixel/track'];
+const isBeacon = (req) => {
+  if ((req.method || '').toUpperCase() !== 'POST') return false;
+  const path = (req.originalUrl || req.url || '').split('?')[0].replace(/^\/api(\/v1)?/, '');
+  return BEACON_PATHS.includes(path);
+};
+const beaconLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 120,
+  max: 1200,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => isPublicReadGet(req) || isNotificationPoll(req) || isProviderWebhook(req) || isEdgeVisitPing(req) || isStaffRequest(req),
+  keyGenerator: (req) => `beacon:${ipKeyGenerator(req.ip)}`,
+  skip: (req) => !isBeacon(req) || isEdgeVisitPing(req),
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
+});
+
+// General: all other API routes (600 req / min per IP — shared by every
+// shopper on that IP), skipping public cached reads and tracking beacons.
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => isPublicReadGet(req) || isBeacon(req) || isNotificationPoll(req) || isProviderWebhook(req) || isEdgeVisitPing(req) || isStaffRequest(req),
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } },
 });
 
 // Staff (admin dashboard): their own budget per person instead of sharing the
-// office IP's 120/min — the dashboard loads many panels at once. Still a cap,
+// office IP's 600/min — the dashboard loads many panels at once. Still a cap,
 // so a runaway loop can't flood the server.
 const staffLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -202,21 +227,9 @@ const staffLimiter = rateLimit({
 // response (including preflights and 429s) carries the correct CORS headers.
 app.use(cors(corsOptions));
 
-// Strict routes
-app.use('/api/users/login', strictLimiter);
-app.use('/api/users/register', strictLimiter);
-// OTP endpoints burn SMS/WhatsApp credits — strict limiter.
-app.use('/api/auth/otp', strictLimiter);
-app.use('/api/checkout/initiate', strictLimiter);
-app.use('/api/checkout/retry', strictLimiter);
-app.use('/api/checkout/guest/initiate', strictLimiter);
-app.use('/api/payments/razorpay', strictLimiter);
-
-// Medium routes
-app.use('/api/orders', mediumLimiter);
-app.use('/api/shipping-addresses', mediumLimiter);
 
 // General
+app.use('/api/', beaconLimiter);
 app.use('/api/', generalLimiter);
 app.use('/api/', staffLimiter);
 
@@ -231,6 +244,11 @@ app.use(express.json({
     verify: (req, res, buf) => { req.rawBody = buf; }
 }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Login / sign-up / OTP limits (per IP + account) — after body parsing.
+for (const p of ['/api/users/login', '/api/users/register', '/api/auth/otp']) {
+  app.use(p, authIpLimiter, authLimiter);
+}
 
 // Compression middleware
 app.use(compression());
