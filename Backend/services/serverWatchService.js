@@ -65,6 +65,14 @@ const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
 const istTime = (d = new Date()) => new Date(d).toLocaleString('en-IN', { timeZone: IST, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const istHour = (d = new Date()) => Number(new Date(d).toLocaleString('en-US', { timeZone: IST, hour: 'numeric', hourCycle: 'h23' }));
 
+// Which server this process is: the storefront API (api.crosscoin.in: stores,
+// checkout, webhooks, scheduled jobs) or the admin API copy
+// (admin-api.crosscoin.in, APP_ROLE=admin). Every count, logged problem and
+// memory sample is tagged with it, so the page shows the two apart.
+const APPS = ['store', 'admin'];
+const thisApp = () => (String(process.env.APP_ROLE || '').toLowerCase() === 'admin' ? 'admin' : 'store');
+const appOf = (v) => (APPS.includes(v) ? v : 'store');
+
 // ── Schema ─────────────────────────────────────────────────────────────────
 let schemaPromise = null;
 function ensureSchema() {
@@ -74,6 +82,7 @@ function ensureSchema() {
         bucket DATETIME NOT NULL,
         grp VARCHAR(16) NOT NULL,
         brand VARCHAR(32) NOT NULL DEFAULT '',
+        app VARCHAR(8) NOT NULL DEFAULT 'store',
         requests INT NOT NULL DEFAULT 0,
         fail5xx INT NOT NULL DEFAULT 0,
         fail4xx INT NOT NULL DEFAULT 0,
@@ -82,11 +91,12 @@ function ensureSchema() {
         slow INT NOT NULL DEFAULT 0,
         dur_sum BIGINT NOT NULL DEFAULT 0,
         dur_max INT NOT NULL DEFAULT 0,
-        PRIMARY KEY (bucket, grp, brand)
+        PRIMARY KEY (bucket, grp, brand, app)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
       await exec(`CREATE TABLE IF NOT EXISTS server_log_events (
         id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         hour DATETIME NOT NULL,
+        app VARCHAR(8) NOT NULL DEFAULT 'store',
         sig CHAR(16) NOT NULL,
         level VARCHAR(8) NOT NULL,
         kind VARCHAR(16) NOT NULL,
@@ -118,6 +128,7 @@ function ensureSchema() {
       await exec(`CREATE TABLE IF NOT EXISTS server_memory (
         at DATETIME NOT NULL,
         pid INT NOT NULL,
+        app VARCHAR(8) NOT NULL DEFAULT 'store',
         rss_mb INT NOT NULL,
         heap_used_mb INT NOT NULL,
         heap_total_mb INT NOT NULL,
@@ -126,6 +137,19 @@ function ensureSchema() {
         uptime_s INT NOT NULL,
         PRIMARY KEY (at, pid)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+      // Tables made before the store/admin split get the app column (rows
+      // from before count as the storefront server: it was the only one).
+      const addApp = async (table, alter) => {
+        const [c] = await q(`SELECT COUNT(*) n FROM information_schema.COLUMNS
+                              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = 'app'`, { table });
+        if (num(c?.n)) return;
+        try { await exec(`ALTER TABLE ${table} ${alter}`); } catch (e) {
+          if (!/duplicate column/i.test(e.message)) throw e; // the other app added it first
+        }
+      };
+      await addApp('server_stats', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER brand, DROP PRIMARY KEY, ADD PRIMARY KEY (bucket, grp, brand, app)");
+      await addApp('server_log_events', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER hour");
+      await addApp('server_memory', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER pid");
       await exec(`CREATE TABLE IF NOT EXISTS server_watch_settings (
         id TINYINT NOT NULL PRIMARY KEY,
         data TEXT NOT NULL,
@@ -268,7 +292,7 @@ function normPath(url) {
 }
 
 function bump(bucketMs, grp, brand, f) {
-  const k = `${bucketMs}|${grp}|${brand}`;
+  const k = `${bucketMs}|${grp}|${brand}|${thisApp()}`;
   let s = stats.get(k);
   if (!s) { s = { requests: 0, fail5xx: 0, fail4xx: 0, rl429: 0, cors: 0, slow: 0, dur_sum: 0, dur_max: 0 }; stats.set(k, s); }
   f(s);
@@ -282,12 +306,13 @@ function noteEvent({ level = 'error', kind = 'error', brand = null, method = nul
     const hourMs = now - (now % HOUR_MS);
     const msg = String(message || '').replace(/\s+/g, ' ').trim().slice(0, 500) || '(no message)';
     // Numbers vary per occurrence (ids, amounts, ms); leave them out of the signature.
-    const sig = sigOf([kind, brand, method, path, status, msg.replace(/\d+/g, '#')].join('|'));
+    const app = thisApp();
+    const sig = sigOf([app, kind, brand, method, path, status, msg.replace(/\d+/g, '#')].join('|'));
     const k = `${hourMs}|${sig}`;
     const e = events.get(k);
     if (e) { e.count += 1; e.last = now; return; }
     if (events.size > 2000) return; // runaway: keep memory bounded until the next flush
-    events.set(k, { hourMs, sig, level, kind, brand, method, path, status, message: msg, count: 1, first: now, last: now });
+    events.set(k, { hourMs, app, sig, level, kind, brand, method, path, status, message: msg, count: 1, first: now, last: now });
   } catch (_) { /* never break the caller */ }
 }
 
@@ -349,19 +374,19 @@ async function flush() {
   try {
     await ensureSchema();
     for (const [k, v] of s) {
-      const [bucketMs, grp, brand] = k.split('|');
-      await exec(`INSERT INTO server_stats (bucket, grp, brand, requests, fail5xx, fail4xx, rl429, cors, slow, dur_sum, dur_max)
-                  VALUES (:bucket, :grp, :brand, :requests, :fail5xx, :fail4xx, :rl429, :cors, :slow, :dur_sum, :dur_max)
+      const [bucketMs, grp, brand, app] = k.split('|');
+      await exec(`INSERT INTO server_stats (bucket, grp, brand, app, requests, fail5xx, fail4xx, rl429, cors, slow, dur_sum, dur_max)
+                  VALUES (:bucket, :grp, :brand, :app, :requests, :fail5xx, :fail4xx, :rl429, :cors, :slow, :dur_sum, :dur_max)
                   ON DUPLICATE KEY UPDATE requests = requests + VALUES(requests), fail5xx = fail5xx + VALUES(fail5xx),
                     fail4xx = fail4xx + VALUES(fail4xx), rl429 = rl429 + VALUES(rl429), cors = cors + VALUES(cors),
                     slow = slow + VALUES(slow), dur_sum = dur_sum + VALUES(dur_sum), dur_max = GREATEST(dur_max, VALUES(dur_max))`,
-      { bucket: new Date(Number(bucketMs)), grp, brand, ...v });
+      { bucket: new Date(Number(bucketMs)), grp, brand, app: appOf(app), ...v });
     }
     for (const v of e) {
-      await exec(`INSERT INTO server_log_events (hour, sig, level, kind, brand, method, path, status, message, count, first_at, last_at)
-                  VALUES (:hour, :sig, :level, :kind, :brand, :method, :path, :status, :message, :count, :first, :last)
+      await exec(`INSERT INTO server_log_events (hour, app, sig, level, kind, brand, method, path, status, message, count, first_at, last_at)
+                  VALUES (:hour, :app, :sig, :level, :kind, :brand, :method, :path, :status, :message, :count, :first, :last)
                   ON DUPLICATE KEY UPDATE count = count + VALUES(count), last_at = GREATEST(last_at, VALUES(last_at))`,
-      { ...v, hour: new Date(v.hourMs), first: new Date(v.first), last: new Date(v.last), brand: v.brand ? String(v.brand).slice(0, 64) : null, method: v.method || null, path: v.path || null, status: v.status || null });
+      { ...v, app: appOf(v.app), hour: new Date(v.hourMs), first: new Date(v.first), last: new Date(v.last), brand: v.brand ? String(v.brand).slice(0, 64) : null, method: v.method || null, path: v.path || null, status: v.status || null });
     }
   } catch (err) {
     // Database down: put the counts back (bounded) so the next flush retries.
@@ -508,23 +533,25 @@ function memNow() {
 async function sampleMemory() {
   await ensureSchema();
   const now = Date.now();
-  await exec(`INSERT IGNORE INTO server_memory (at, pid, rss_mb, heap_used_mb, heap_total_mb, external_mb, heap_limit_mb, uptime_s)
-              VALUES (:at, :pid, :rss_mb, :heap_used_mb, :heap_total_mb, :external_mb, :heap_limit_mb, :uptime_s)`,
-  { at: new Date(now - (now % 60000)), ...memNow() });
+  await exec(`INSERT IGNORE INTO server_memory (at, pid, app, rss_mb, heap_used_mb, heap_total_mb, external_mb, heap_limit_mb, uptime_s)
+              VALUES (:at, :pid, :app, :rss_mb, :heap_used_mb, :heap_total_mb, :external_mb, :heap_limit_mb, :uptime_s)`,
+  { at: new Date(now - (now % 60000)), app: thisApp(), ...memNow() });
 }
-// Latest sample of every process seen in the last 15 minutes.
-async function liveProcesses() {
+// Latest sample of every process seen in the last 15 minutes (one server's,
+// or both).
+async function liveProcesses(app = null) {
   return q(`SELECT m.* FROM server_memory m
               JOIN (SELECT pid, MAX(at) at FROM server_memory WHERE at >= :since GROUP BY pid) l ON l.pid = m.pid AND l.at = m.at
-             ORDER BY m.rss_mb DESC`, { since: new Date(Date.now() - 15 * 60 * 1000) });
+             ${app ? 'WHERE m.app = :app' : ''}
+             ORDER BY m.rss_mb DESC`, { since: new Date(Date.now() - 15 * 60 * 1000), app });
 }
 
 // ── Watchdog ───────────────────────────────────────────────────────────────
-async function windowStats(minutes, grp = null, brand = null) {
+async function windowStats(minutes, grp = null, brand = null, app = null) {
   const [r] = await q(`SELECT COALESCE(SUM(requests),0) requests, COALESCE(SUM(fail5xx),0) fail5xx, COALESCE(SUM(fail4xx),0) fail4xx,
                               COALESCE(SUM(rl429),0) rl429, COALESCE(SUM(cors),0) cors, COALESCE(SUM(slow),0) slow, COALESCE(SUM(dur_sum),0) dur_sum
-                         FROM server_stats WHERE bucket >= :since ${grp ? 'AND grp = :grp' : ''} ${brand != null ? 'AND brand = :brand' : ''}`,
-  { since: new Date(Date.now() - minutes * 60 * 1000), grp, brand });
+                         FROM server_stats WHERE bucket >= :since ${grp ? 'AND grp = :grp' : ''} ${brand != null ? 'AND brand = :brand' : ''} ${app ? 'AND app = :app' : ''}`,
+  { since: new Date(Date.now() - minutes * 60 * 1000), grp, brand, app });
   const o = {};
   for (const k of Object.keys(r)) o[k] = num(r[k]);
   return o;
@@ -554,45 +581,59 @@ async function checkRules(s) {
   }
 
   // 2. Checkout requests failing.
-  const co = await windowStats(30, 'checkout');
+  const co = await windowStats(30, 'checkout', null, 'store');
   const coBad = co.fail5xx + co.rl429 + co.cors;
   if (co.requests >= r.checkoutMinRequests && pct(coBad, co.requests) > r.checkoutFailPct) {
     add('checkout_failing', 'high', 'Checkout is failing',
       `${coBad} of ${co.requests} checkout requests failed in the last 30 minutes (${pct(coBad, co.requests)}%: ${co.fail5xx} server errors, ${co.rl429} rate-limited, ${co.cors} blocked).`);
   }
 
-  // 3. Server errors across the API.
-  const all = await windowStats(15);
-  if (all.requests >= r.errorMinRequests && pct(all.fail5xx, all.requests) > r.errorPct) {
-    add('errors_5xx', 'high', 'Server errors are high',
-      `${all.fail5xx} of ${all.requests} requests failed with a server error in the last 15 minutes (${pct(all.fail5xx, all.requests)}%).`);
+  // 3. Server errors, per server (storefront keeps the original alert key).
+  const SERVER = { store: 'Storefront server', admin: 'Admin server' };
+  const keyFor = (base, app) => (app === 'store' ? base : `${base}:${app}`);
+  const per = {};
+  for (const app of APPS) per[app] = await windowStats(15, null, null, app);
+  for (const app of APPS) {
+    const w = per[app];
+    if (w.requests >= r.errorMinRequests && pct(w.fail5xx, w.requests) > r.errorPct) {
+      add(keyFor('errors_5xx', app), 'high', `${SERVER[app]}: server errors are high`,
+        `${w.fail5xx} of ${w.requests} requests failed with a server error in the last 15 minutes (${pct(w.fail5xx, w.requests)}%).`);
+    }
   }
 
-  // 4. Customers being turned away (rate limit / CORS).
+  // 4. Customers being turned away (rate limit / CORS) on the storefront server.
+  const all = per.store;
   const blocked = all.rl429 + all.cors;
   if (r.blockedCount > 0 && blocked >= r.blockedCount) {
     add('blocked_requests', 'medium', 'Requests are being blocked',
       `${blocked} requests were refused in the last 15 minutes (${all.rl429} rate-limited, ${all.cors} blocked by CORS). Customers may see "something went wrong".`);
   }
 
-  // 5. Slow responses.
-  if (r.slowMs > 0 && all.requests >= r.errorMinRequests) {
-    const avg = Math.round(all.dur_sum / all.requests);
-    if (avg >= r.slowMs) {
-      add('slow_responses', 'medium', 'The server is slow',
-        `Average response time was ${(avg / 1000).toFixed(1)} s over the last 15 minutes (${all.slow} requests took over 3 s).`);
+  // 5. Slow responses, per server.
+  for (const app of APPS) {
+    const w = per[app];
+    if (r.slowMs > 0 && w.requests >= r.errorMinRequests) {
+      const avg = Math.round(w.dur_sum / w.requests);
+      if (avg >= r.slowMs) {
+        add(keyFor('slow_responses', app), 'medium', `${SERVER[app]} is slow`,
+          `Average response time was ${(avg / 1000).toFixed(1)} s over the last 15 minutes (${w.slow} requests took over 3 s).`);
+      }
     }
   }
 
-  // 6. Memory of the server processes (every process's latest sample).
+  // 6. Memory of the server processes (every process's latest sample), per
+  // server; the account's total is in the detail (both share one limit).
   if (r.memoryMb > 0) {
     let procs = [];
-    try { await sampleMemory(); procs = await liveProcesses(); } catch (_) { procs = [{ ...memNow() }]; }
-    const top = procs.reduce((a, p) => (p.rss_mb > (a?.rss_mb || 0) ? p : a), null);
-    if (top && top.rss_mb >= r.memoryMb) {
-      const total = procs.reduce((n, p) => n + num(p.rss_mb), 0);
-      add('memory_high', 'medium', 'Server memory is high',
-        `A server process is holding ${top.rss_mb} MB (the app uses ${top.heap_used_mb} MB of it; alert level ${r.memoryMb} MB). ${procs.length} process${procs.length > 1 ? 'es' : ''}, ${total} MB together. The host may restart or slow it down.`);
+    try { await sampleMemory(); procs = await liveProcesses(); } catch (_) { procs = [{ ...memNow(), app: thisApp() }]; }
+    const total = procs.reduce((n, p) => n + num(p.rss_mb), 0);
+    for (const app of APPS) {
+      const mine = procs.filter((p) => appOf(p.app) === app);
+      const top = mine.reduce((a, p) => (p.rss_mb > (a?.rss_mb || 0) ? p : a), null);
+      if (top && top.rss_mb >= r.memoryMb) {
+        add(keyFor('memory_high', app), 'medium', `${SERVER[app]}: memory is high`,
+          `A process is holding ${top.rss_mb} MB (the app uses ${top.heap_used_mb} MB of it; alert level ${r.memoryMb} MB). Both servers together: ${procs.length} process${procs.length > 1 ? 'es' : ''}, ${total} MB. The host may restart or slow it down.`);
+      }
     }
   }
 
@@ -762,28 +803,33 @@ function start() {
 // ── Admin page data ────────────────────────────────────────────────────────
 const rank = (slug) => (slug === ADMIN_SOURCE ? 1 : slug === 'other' ? 2 : slug === '' ? 3 : 0);
 
-async function overview({ hours = 24, level = '', search = '', brand = '' } = {}) {
+// app: 'store' (storefront server) or 'admin' (admin server). Everything
+// below is that server's, except orders (storefront only) and alerts (both,
+// tagged with their server).
+async function overview({ hours = 24, level = '', search = '', brand = '', app = 'store' } = {}) {
   await ensureSchema();
   await flush();
+  app = appOf(app);
+  const isStore = app === 'store';
   const h = [6, 24, 48, 168].includes(Number(hours)) ? Number(hours) : 24;
   const since = new Date(Date.now() - h * HOUR_MS);
   const byBrand = await brands();
   // One store, or all of them. '' = all; '-' = requests without a store.
   const wanted = String(brand || '').toLowerCase();
-  const b = brand === '-' ? '' : wanted === ADMIN_SOURCE || (wanted && byBrand.has(wanted)) ? wanted : null;
+  const b = !isStore ? null : brand === '-' ? '' : wanted === ADMIN_SOURCE || (wanted && byBrand.has(wanted)) ? wanted : null;
   const brandId = b && b !== ADMIN_SOURCE ? byBrand.get(b).id : null;
   const oWhere = brandId ? 'AND brand_id = :brandId' : '';
-  const sWhere = b != null ? 'AND brand = :b' : '';
+  const sWhere = `AND app = :app ${b != null ? 'AND brand = :b' : ''}`;
 
-  const [last15, lastHour, checkout1h, window] = await Promise.all([windowStats(15, null, b), windowStats(60, null, b), windowStats(60, 'checkout', b), windowStats(h * 60, null, b)]);
+  const [last15, lastHour, checkout1h, window] = await Promise.all([windowStats(15, null, b, app), windowStats(60, null, b, app), windowStats(60, 'checkout', b, app), windowStats(h * 60, null, b, app)]);
   const [orders1h] = await q(`SELECT COUNT(*) n FROM orders WHERE created_at >= :since ${oWhere}`, { since: new Date(Date.now() - HOUR_MS), brandId });
   const [lastOrder] = await q(`SELECT MAX(created_at) at FROM orders WHERE 1 = 1 ${oWhere}`, { brandId });
 
   // Hours are India-time hours (stored times are UTC).
   const series = await q(`SELECT DATE_FORMAT(DATE_ADD(bucket, INTERVAL 330 MINUTE), '%Y-%m-%d %H:00:00') hour, grp, SUM(requests) requests, SUM(fail5xx) fail5xx,
                                  SUM(rl429) + SUM(cors) blocked, SUM(dur_sum) dur_sum
-                            FROM server_stats WHERE bucket >= :since ${sWhere} GROUP BY hour, grp ORDER BY hour`, { since, b });
-  const ordersByHour = await q(`SELECT DATE_FORMAT(DATE_ADD(created_at, INTERVAL 330 MINUTE), '%Y-%m-%d %H:00:00') hour, COUNT(*) n FROM orders
+                            FROM server_stats WHERE bucket >= :since ${sWhere} GROUP BY hour, grp ORDER BY hour`, { since, b, app });
+  const ordersByHour = !isStore ? [] : await q(`SELECT DATE_FORMAT(DATE_ADD(created_at, INTERVAL 330 MINUTE), '%Y-%m-%d %H:00:00') hour, COUNT(*) n FROM orders
                                  WHERE created_at >= :since ${oWhere} GROUP BY hour`, { since, brandId });
 
   // Per store, over the chosen range.
@@ -791,9 +837,9 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
                                    SUM(CASE WHEN grp = 'checkout' THEN requests ELSE 0 END) checkout,
                                    SUM(CASE WHEN grp = 'checkout' THEN fail5xx + rl429 + cors ELSE 0 END) checkout_failed,
                                    SUM(fail5xx) fail5xx, SUM(rl429) + SUM(cors) blocked
-                              FROM server_stats WHERE bucket >= :since GROUP BY brand`, { since });
+                              FROM server_stats WHERE bucket >= :since AND app = :app GROUP BY brand`, { since, app });
   const perOrders = await q('SELECT brand_id, COUNT(*) n, MAX(created_at) last_at FROM orders WHERE created_at >= :since GROUP BY brand_id', { since });
-  const perErrors = await q(`SELECT brand, SUM(count) n FROM server_log_events WHERE last_at >= :since AND level = 'error' AND brand IS NOT NULL GROUP BY brand`, { since });
+  const perErrors = await q(`SELECT brand, SUM(count) n FROM server_log_events WHERE last_at >= :since AND app = :app AND level = 'error' AND brand IS NOT NULL GROUP BY brand`, { since, app });
   const stores = new Map();
   const row = (slug) => {
     if (!stores.has(slug)) stores.set(slug, { brand: slug, name: brandName(slug), requests: 0, visits: 0, checkout: 0, checkout_failed: 0, fail5xx: 0, blocked: 0, errors: 0, orders: 0, last_order_at: null });
@@ -808,8 +854,8 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
     Object.assign(row(slug), { orders: num(r.n), last_order_at: r.last_at });
   }
 
-  const where = ['last_at >= :since'];
-  const repl = { since };
+  const where = ['last_at >= :since', 'app = :app'];
+  const repl = { since, app };
   if (['error', 'warn', 'info'].includes(level)) { where.push('level = :level'); repl.level = level; }
   if (search) { where.push('(message LIKE :s OR path LIKE :s OR brand LIKE :s)'); repl.s = `%${String(search).slice(0, 80)}%`; }
   if (b) { where.push('brand = :b'); repl.b = b; } else if (b === '') where.push('brand IS NULL');
@@ -818,25 +864,44 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
                                FROM server_log_events WHERE ${where.join(' AND ')}
                               GROUP BY sig ORDER BY last_at DESC LIMIT 200`, repl);
 
-  const alerts = await q(`SELECT id, alert_key, severity, title, detail, opened_at, last_seen_at, last_notified_at, notified_count, resolved_at
+  const alertRows = await q(`SELECT id, alert_key, severity, title, detail, opened_at, last_seen_at, last_notified_at, notified_count, resolved_at
                             FROM server_alerts WHERE resolved_at IS NULL OR opened_at >= :old ORDER BY resolved_at IS NULL DESC, opened_at DESC LIMIT 60`,
   { old: new Date(Date.now() - 7 * 24 * HOUR_MS) });
+  const alerts = alertRows.map((a) => ({ ...a, app: /:admin$/.test(a.alert_key) ? 'admin' : 'store' }));
 
   // Memory: every live process now, and per India-time hour the highest
   // total held / app heap in use (across processes) and how many ran.
   await sampleMemory().catch(() => {});
-  const memProcs = await liveProcesses().catch(() => []);
+  const memProcs = await liveProcesses(app).catch(() => []);
   const memHours = await q(`SELECT DATE_FORMAT(DATE_ADD(at, INTERVAL 330 MINUTE), '%Y-%m-%d %H:00:00') hour,
                                    MAX(rss_mb) rss_max, MAX(heap_used_mb) heap_max, MAX(heap_limit_mb) heap_limit,
                                    COUNT(DISTINCT pid) procs, MIN(uptime_s) min_uptime
-                              FROM server_memory WHERE at >= :since GROUP BY hour ORDER BY hour DESC`, { since }).catch(() => []);
-  const restarts = await q(`SELECT COUNT(*) n FROM (SELECT pid FROM server_memory WHERE at >= :since GROUP BY pid HAVING MIN(uptime_s) < 600) x`, { since }).catch(() => [{ n: 0 }]);
+                              FROM server_memory WHERE at >= :since AND app = :app GROUP BY hour ORDER BY hour DESC`, { since, app }).catch(() => []);
+  const restarts = await q(`SELECT COUNT(*) n FROM (SELECT pid FROM server_memory WHERE at >= :since AND app = :app GROUP BY pid HAVING MIN(uptime_s) < 600) x`, { since, app }).catch(() => [{ n: 0 }]);
+  // Both servers at a glance, for the two tabs.
+  const allProcs = await liveProcesses().catch(() => []);
+  const servers = {};
+  for (const a of APPS) {
+    const w = a === app ? last15 : await windowStats(15, null, null, a);
+    const procs = allProcs.filter((p) => appOf(p.app) === a);
+    servers[a] = {
+      requests_15m: w.requests,
+      error_pct_15m: pct(w.fail5xx, w.requests),
+      avg_ms_15m: w.requests ? Math.round(w.dur_sum / w.requests) : 0,
+      processes: procs.length,
+      memory_mb: procs.reduce((n, p) => n + num(p.rss_mb), 0),
+      open_alerts: alerts.filter((x) => !x.resolved_at && x.app === a).length,
+    };
+  }
 
   let lastWatch = null;
   try { [lastWatch] = await q(`SELECT started_at, status, summary FROM job_runs WHERE job_key = 'server-watch' ORDER BY id DESC LIMIT 1`); } catch (_) { /* no runs yet */ }
 
   const settings = await getSettings();
   return {
+    app,
+    this_app: thisApp(),
+    servers,
     brand: b,
     brands: [...[...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => ({ slug, name: v.name })), { slug: ADMIN_SOURCE, name: brandName(ADMIN_SOURCE) }],
     orders_all_stores: !brandId,
@@ -856,7 +921,7 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
       memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
     },
     memory: {
-      now: memNow(),
+      now: thisApp() === app ? memNow() : null,
       processes: memProcs.map((p) => ({ pid: p.pid, rss_mb: num(p.rss_mb), heap_used_mb: num(p.heap_used_mb), heap_total_mb: num(p.heap_total_mb), external_mb: num(p.external_mb), heap_limit_mb: num(p.heap_limit_mb), uptime_s: num(p.uptime_s), at: p.at })),
       hours: memHours.map((h) => ({ hour: h.hour, rss_max: num(h.rss_max), heap_max: num(h.heap_max), heap_limit: num(h.heap_limit), procs: num(h.procs) })),
       started_in_range: num(restarts[0]?.n),
@@ -883,5 +948,5 @@ async function sendTest() {
 module.exports = {
   DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, start,
   getSettings, saveSettings, overview, sendTest,
-  _internal: { memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
+  _internal: { thisApp, memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
 };

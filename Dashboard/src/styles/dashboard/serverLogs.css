@@ -11,7 +11,7 @@
 .sl .rep-chip.is-active { color: var(--ds-color-text); border-color: var(--ds-color-text); background: var(--ds-color-surface-soft); }
 
 /* ── Tabs ── */
-.sl-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ds-color-border); }
+.sl-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ds-color-border); overflow-x: auto; }
 .sl-tab {
   display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; margin-bottom: -1px;
   border: 0; border-bottom: 2px solid transparent; background: none; cursor: pointer;
@@ -20,6 +20,12 @@
 .sl-tab:hover { color: var(--ds-color-text); }
 .sl-tab.is-on { color: var(--ds-color-text); border-bottom-color: var(--ds-color-text); }
 .sl-tab:focus-visible { outline: 2px solid var(--ds-color-info); outline-offset: 2px; border-radius: 4px; }
+.sl-tab--server { flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.sl-tab-name { display: inline-flex; align-items: center; gap: 7px; }
+.sl-tab-sub { font-size: 11px; font-weight: 500; color: var(--ds-color-text-muted); overflow-wrap: anywhere; }
+.sl-server-what { margin: 0; font-size: 12.5px; color: var(--ds-color-text-muted); }
+.sl-server-what code { font-family: var(--ds-font-mono); font-size: 12px; }
+.sl-hours--narrow { min-width: 560px; }
 .sl-count {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; font-size: 11px; line-height: 18px; text-align: center;
   background: var(--ds-color-danger); color: var(--ds-color-surface);

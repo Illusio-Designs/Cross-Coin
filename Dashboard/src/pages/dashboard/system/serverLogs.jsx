@@ -9,7 +9,11 @@ import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
 /* ──────────────────────────────────────────────────────────────
    Server logs (Settings → Server logs, admins only). Server Watch.
 
-   What the live server is doing, and what went wrong:
+   Two servers, one tab each (same code, same database):
+   · Storefront server, api.crosscoin.in: the 7 stores, checkout,
+     webhooks and the scheduled jobs.
+   · Admin server, admin-api.crosscoin.in: the Obzus admin panel.
+   Per server, what it is doing and what went wrong:
    · Open alerts: problems the watchdog found (checked every 10 min;
      also sent by email + WhatsApp, reminded hourly, "Resolved" after).
    · Tiles: requests, server errors, blocked requests, checkout,
@@ -19,9 +23,10 @@ import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
      (stores send X-Brand-Name). The store filter narrows everything.
    · Hour by hour: requests per group, errors, blocked, orders.
    · Logged problems: errors and blocked requests, grouped.
+     (Store chips, By store and orders: storefront server only.)
    · Settings tab: recipients, alert hours, alert levels, test alert.
 
-   Data: GET /api/admin/system/server-logs (every 60 s),
+   Data: GET /api/admin/system/server-logs?app=store|admin (every 60 s),
    PUT …/server-logs/settings, POST …/server-logs/test.
    Times are shown in India time.
    ────────────────────────────────────────────────────────────── */
@@ -66,6 +71,11 @@ const GROUPS = [
   { key: 'admin', label: 'Admin' },
   { key: 'webhook', label: 'Webhooks' },
 ];
+
+const SERVERS = {
+  store: { label: 'Storefront server', host: 'api.crosscoin.in', what: 'stores, checkout, webhooks, scheduled jobs' },
+  admin: { label: 'Admin server', host: 'admin-api.crosscoin.in', what: 'the Obzus admin panel' },
+};
 
 function Pill({ tone, children }) {
   return <span className={`sh-pill sh-pill--${tone}`}>{children}</span>;
@@ -117,14 +127,14 @@ function memVerdict(m) {
 
 const upFor = (s) => (s < 3600 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} days`);
 
-function MemoryPanel({ memory }) {
+function MemoryPanel({ memory, app }) {
   const v = memVerdict(memory);
   const procs = memory?.processes || [];
   return (
     <section className="rep-panel rep-panel--flush">
       <div className="rep-ph">
         <h3>Memory</h3>
-        <span className="hint">Every server process, sampled every 5 min{memory?.started_in_range ? ` · ${memory.started_in_range} process start${memory.started_in_range > 1 ? 's' : ''} in this range` : ''}</span>
+        <span className="hint">Every {SERVERS[app]?.label.toLowerCase() || 'server'} process, sampled every 5 min{memory?.started_in_range ? ` · ${memory.started_in_range} process start${memory.started_in_range > 1 ? 's' : ''} in this range` : ''}</span>
       </div>
       {v && <div className={`sl-verdict sl-verdict--${v.tone}`}>{v.text}</div>}
       {procs.length > 0 && (
@@ -134,7 +144,7 @@ function MemoryPanel({ memory }) {
             <tbody>
               {procs.map((p) => (
                 <tr key={p.pid}>
-                  <td className="sl-hour">#{p.pid}{p.pid === memory.now?.pid ? <span className="sh-small"> · answered this page</span> : null}</td>
+                  <td className="sl-hour">#{p.pid}{memory.now && p.pid === memory.now.pid ? <span className="sh-small"> · answered this page</span> : null}</td>
                   <td className="num"><strong>{num(p.rss_mb)} MB</strong></td>
                   <td className="num">{num(p.heap_used_mb)} MB</td>
                   <td className="num mut">{num(p.external_mb)} MB</td>
@@ -172,6 +182,16 @@ function tilesFrom(d) {
   const r = d.settings.rules;
   const avgTone = k.avg_ms_1h >= r.slowMs ? 'bad' : k.avg_ms_1h >= r.slowMs / 2 ? 'warn' : 'ok';
   const lastOrderAge = k.last_order_at ? Date.now() - new Date(k.last_order_at).getTime() : null;
+  if (d.app === 'admin') {
+    const w = k.window;
+    return [
+      { label: 'Requests', value: num(k.requests_15m), tone: k.requests_15m ? 'ok' : 'muted', note: `last 15 min · ${num(k.requests_1h)} in the last hour` },
+      { label: 'Server errors', value: `${k.error_pct_15m}%`, tone: k.error_pct_15m > r.errorPct ? 'bad' : k.error_pct_15m > 0 ? 'warn' : 'ok', note: 'of requests, last 15 min' },
+      { label: 'Response time', value: k.requests_1h ? secs(k.avg_ms_1h) : '—', tone: k.requests_1h ? avgTone : 'muted', note: 'average, last hour' },
+      { label: 'Slow requests', value: num(w.slow), tone: w.slow ? 'warn' : 'ok', note: `over 3 s, last ${w.hours} h (big reports, exports)` },
+      memTile(d.memory, r),
+    ];
+  }
   return [
     { label: 'Requests', value: num(k.requests_15m), tone: k.requests_15m ? 'ok' : 'muted', note: `last 15 min · ${num(k.requests_1h)} in the last hour` },
     { label: 'Server errors', value: `${k.error_pct_15m}%`, tone: k.error_pct_15m > r.errorPct ? 'bad' : k.error_pct_15m > 0 ? 'warn' : 'ok', note: 'of requests, last 15 min' },
@@ -215,6 +235,8 @@ function OpenAlerts({ alerts }) {
 }
 
 function HourTable({ data, hours }) {
+  const isStore = data.app !== 'admin';
+  const groups = isStore ? GROUPS : [];
   const rows = useMemo(() => {
     const byHour = new Map();
     const at = (t) => {
@@ -238,12 +260,12 @@ function HourTable({ data, hours }) {
 
   return (
     <div className="rep-tbl-wrap sl-hours-wrap">
-      <table className="rep-table sl-hours">
+      <table className={`rep-table sl-hours${isStore ? '' : ' sl-hours--narrow'}`}>
         <thead>
           <tr>
             <th>Hour</th><th>Requests</th>
-            {GROUPS.map((g) => <th key={g.key} className="num">{g.label}</th>)}
-            <th className="num">Orders</th><th className="num">Errors</th><th className="num">Blocked</th><th className="num">Avg time</th>
+            {groups.map((g) => <th key={g.key} className="num">{g.label}</th>)}
+            {isStore && <th className="num">Orders</th>}<th className="num">Errors</th><th className="num">Blocked</th><th className="num">Avg time</th>
           </tr>
         </thead>
         <tbody>
@@ -254,8 +276,8 @@ function HourTable({ data, hours }) {
                 <span className="sl-bar" aria-hidden="true"><span style={{ width: `${(r.total / max) * 100}%` }} /></span>
                 <span className="sl-barnum">{num(r.total)}</span>
               </td>
-              {GROUPS.map((g) => <td key={g.key} className="num mut">{r.g[g.key] ? num(r.g[g.key]) : '·'}</td>)}
-              <td className="num">{r.orders ? <strong>{num(r.orders)}</strong> : <span className="mut">0</span>}</td>
+              {groups.map((g) => <td key={g.key} className="num mut">{r.g[g.key] ? num(r.g[g.key]) : '·'}</td>)}
+              {isStore && <td className="num">{r.orders ? <strong>{num(r.orders)}</strong> : <span className="mut">0</span>}</td>}
               <td className={`num${r.fail5xx ? ' sl-bad' : ' mut'}`}>{num(r.fail5xx)}</td>
               <td className={`num${r.blocked ? ' sl-warn' : ' mut'}`}>{num(r.blocked)}</td>
               <td className="num mut">{r.total ? secs(r.dur / r.total) : '·'}</td>
@@ -513,7 +535,8 @@ function SettingsTab({ data, onSaved }) {
 // ── Page ────────────────────────────────────────────────────────────
 export default function ServerLogs() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('store'); // 'store' | 'admin' | 'settings'
+  const app = tab === 'admin' ? 'admin' : 'store';
   const [hours, setHours] = useState(24);
   const [brand, setBrand] = useState('');
   const [level, setLevel] = useState('');
@@ -521,22 +544,28 @@ export default function ServerLogs() {
   const [q, setQ] = useState('');
   useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 350); return () => clearTimeout(t); }, [search]);
 
-  const { data, error, isLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ['server-logs', hours, brand, level, q],
-    queryFn: () => serverLogsService.get({ hours, brand, level, q }),
+  const { data: raw, error, isLoading: firstLoad, isFetching, refetch, dataUpdatedAt } = useQuery({
+    queryKey: ['server-logs', app, hours, app === 'store' ? brand : '', level, q],
+    queryFn: () => serverLogsService.get({ app, hours, brand: app === 'store' ? brand : '', level, q }),
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
     placeholderData: (prev) => prev,
     retry: 1,
   });
 
-  const openCount = data?.alerts?.filter((a) => !a.resolved_at).length || 0;
+  // Keep the last data while a filter changes, but never show one server's
+  // numbers under the other server's tab: that waits for its own data.
+  const switching = !!raw && (raw.app || 'store') !== app;
+  const data = switching ? null : raw;
+  const isLoading = firstLoad || switching;
+  const serverAlerts = (data?.alerts || []).filter((a) => (a.app || 'store') === app);
+  const isStore = app === 'store';
 
   return (
     <div className="dashboard-sections obz-rep sh sl">
       <PageHeader
         title="Server logs"
-        subtitle="What the live server is doing and what went wrong. Problems are sent to you by email and WhatsApp."
+        subtitle="What each live server is doing and what went wrong. Problems are sent to you by email and WhatsApp."
         actions={(
           <div className="sh-head-act">
             {dataUpdatedAt ? <span className="sh-small">Updated {clock(dataUpdatedAt)}</span> : null}
@@ -549,9 +578,15 @@ export default function ServerLogs() {
       />
 
       <div className="sl-tabs" role="tablist" aria-label="Server logs">
-        <button type="button" role="tab" aria-selected={tab === 'overview'} className={`sl-tab${tab === 'overview' ? ' is-on' : ''}`} onClick={() => setTab('overview')}>
-          Overview{openCount ? <span className="sl-count">{openCount}</span> : null}
-        </button>
+        {Object.entries(SERVERS).map(([key, sv]) => {
+          const sum = raw?.servers?.[key];
+          return (
+            <button key={key} type="button" role="tab" aria-selected={tab === key} className={`sl-tab sl-tab--server${tab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>
+              <span className="sl-tab-name">{sv.label}{sum?.open_alerts ? <span className="sl-count">{sum.open_alerts}</span> : null}</span>
+              <span className="sl-tab-sub">{sv.host}{sum ? ` · ${num(sum.requests_15m)} req / 15 min · ${sum.error_pct_15m}% errors` : ''}</span>
+            </button>
+          );
+        })}
         <button type="button" role="tab" aria-selected={tab === 'settings'} className={`sl-tab${tab === 'settings' ? ' is-on' : ''}`} onClick={() => setTab('settings')}>Alert settings</button>
       </div>
 
@@ -573,20 +608,21 @@ export default function ServerLogs() {
       ) : (
         <>
           {error && <div className="sh-stale" role="status">Couldn't refresh just now. Showing the last data. {error.message}</div>}
-          <OpenAlerts alerts={data.alerts} />
+          <p className="sl-server-what">{SERVERS[app].label} (<code>{SERVERS[app].host}</code>): {SERVERS[app].what}.</p>
+          <OpenAlerts alerts={serverAlerts} />
           {!data.settings.enabled && <div className="sh-stale">Alerts are turned off. Problems are still logged. Turn them on under Alert settings.</div>}
 
-          <div className="sl-range" role="group" aria-label="Store">
+          {isStore && <div className="sl-range" role="group" aria-label="Store">
             <span className="sl-lbl">Store</span>
             {[{ slug: '', name: 'All stores' }, ...data.brands, { slug: '-', name: 'No store (webhooks, other)' }].map((b) => (
               <button key={b.slug || 'all'} type="button" className={`rep-chip${brand === b.slug ? ' is-active' : ''}`} aria-pressed={brand === b.slug} onClick={() => setBrand(b.slug)}>{b.name}</button>
             ))}
-          </div>
+          </div>}
 
           <section className="sh-tiles" aria-label="Right now">
             {tilesFrom(data).map((t) => <Tile key={t.label} {...t} />)}
           </section>
-          <MemoryPanel memory={data.memory} />
+          <MemoryPanel memory={data.memory} app={app} />
 
           <div className="sl-range" role="group" aria-label="Time range">
             {RANGES.map((r) => (
@@ -598,7 +634,7 @@ export default function ServerLogs() {
             </span>
           </div>
 
-          {!brand && (
+          {isStore && !brand && (
             <section className="rep-panel rep-panel--flush">
               <div className="rep-ph"><h3>By store</h3><span className="hint">Over the time range · click a row to see only its numbers</span></div>
               <StoresTable stores={data.stores} onPick={setBrand} />
@@ -606,7 +642,7 @@ export default function ServerLogs() {
           )}
 
           <section className="rep-panel rep-panel--flush">
-            <div className="rep-ph"><h3>Hour by hour</h3><span className="hint">India time{brand ? ` · ${data.brands.find((b) => b.slug === brand)?.name || 'no store'} only` : ' · all stores'}</span></div>
+            <div className="rep-ph"><h3>Hour by hour</h3><span className="hint">India time{!isStore ? ' · admin server' : brand ? ` · ${data.brands.find((b) => b.slug === brand)?.name || 'no store'} only` : ' · all stores'}</span></div>
             <HourTable data={data} hours={hours} />
           </section>
 
@@ -617,7 +653,7 @@ export default function ServerLogs() {
                 {[['', 'All'], ['error', 'Errors'], ['warn', 'Blocked'], ['info', 'Restarts']].map(([v, l]) => (
                   <button key={v || 'all'} type="button" className={`rep-chip${level === v ? ' is-active' : ''}`} aria-pressed={level === v} onClick={() => setLevel(v)}>{l}</button>
                 ))}
-                <input className="sl-input sl-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search message, path, brand" aria-label="Search logged problems" />
+                <input className="sl-input sl-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isStore ? 'Search message, path, brand' : 'Search message, path'} aria-label="Search logged problems" />
               </div>
             </div>
             <EventsTable events={data.events} />
@@ -625,7 +661,7 @@ export default function ServerLogs() {
 
           <section className="rep-panel rep-panel--flush">
             <div className="rep-ph"><h3>Past alerts</h3><span className="hint">Last 7 days</span></div>
-            <PastAlerts alerts={data.alerts} />
+            <PastAlerts alerts={serverAlerts} />
           </section>
         </>
       )}
