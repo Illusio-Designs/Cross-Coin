@@ -169,7 +169,17 @@ export default function CartDrawer() {
   const [ldCoupons, setLdCoupons] = useState(true);
   const [ldSuggest, setLdSuggest] = useState(true);
   const [ldFees, setLdFees] = useState(true);
-  const cartReady = ldCoupons && ldSuggest && ldFees;
+  // Never hold the items back for a slow server: show the cart as soon as the
+  // shipping fees are in (the totals need them) or after 1.2 s; coupons and
+  // suggestions fill in when they arrive.
+  const [ldWaitOver, setLdWaitOver] = useState(false);
+  useEffect(() => {
+    if (ldFees) return undefined;
+    setLdWaitOver(false);
+    const t = setTimeout(() => setLdWaitOver(true), 1200);
+    return () => clearTimeout(t);
+  }, [ldFees]);
+  const cartReady = ldFees || ldWaitOver;
 
   // Countdown timer (urgency), like the other brands' drawers.
   useEffect(() => {
