@@ -106,7 +106,7 @@ export default function Document({ tracking }) {
         )}
 
         {/* Preconnect — critical image/API + font origins */}
-        <link rel="preconnect" href="https://api.crosscoin.in" crossOrigin="anonymous" />
+        <link rel="preconnect" href={API_URL} crossOrigin="anonymous" />
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

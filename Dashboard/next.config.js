@@ -105,7 +105,7 @@ const nextConfig = {
               // stats.g.doubleclick.net is GA4's Google Signals / remarketing
               // beacon (demographics + audiences); without it those features
               // are refused even though basic page_view hits succeed.
-              "connect-src 'self' https://api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.razorpay.com https://lumberjack.razorpay.com",
+              "connect-src 'self' https://api.crosscoin.in https://admin-api.crosscoin.in https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.google.com https://*.googletagmanager.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://*.clarity.ms https://*.msg91.com https://*.razorpay.com https://lumberjack.razorpay.com",
               "frame-ancestors 'none'",
             ].join('; ') + ';'
           },
@@ -185,8 +185,13 @@ const nextConfig = {
   staticPageGenerationTimeout: 120,
 
   // Environment variables
+  // The admin panel talks to its own copy of the API (admin-api.crosscoin.in,
+  // the AdminBackend app in cPanel) so heavy admin work never slows the
+  // stores. Same code and database as api.crosscoin.in; webhooks and the
+  // stores stay on api.crosscoin.in. NEXT_PUBLIC_ADMIN_API_URL overrides it
+  // (e.g. back to https://api.crosscoin.in if the admin app is down).
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL || 'https://admin-api.crosscoin.in',
   },
 
   // Experimental features for better performance
