@@ -8,6 +8,7 @@ import { ConfirmModal } from '../common/AlertModal';
 import { productService, categoryService, attributeService, brandService } from '../../services';
 import AttributeSelector from './AttributeSelector';
 import ProductVideoFields from './ProductVideoFields';
+import { videosForProduct } from './productVideoData';
 import ExistingImageSelector from './ExistingImageSelector';
 import SerpPreview, { brandSiteName, brandUrl } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
@@ -108,7 +109,7 @@ function productToForm(product, admin = null) {
     slug: product.slug || '',
     name: product.name || '',
     description: product.description || '',
-    videos: Array.isArray(product.videos) ? product.videos : [],
+    videos: videosForProduct(product),
     categoryId: product.categoryId != null ? String(product.categoryId) : '',
     status: product.status || 'active',
     images: (product.images || []).filter((img) => !img.product_variation_id).map(toFormImage),

@@ -1,5 +1,5 @@
 const { parseProductAttributes, mergeProductAttributes } = require('../../utils/productAttributes');
-const { normalizeProductVideos, matchesVideoHeader, MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES } = require('../../utils/productVideos');
+const { normalizeProductVideos, videosFromAttributes, matchesVideoHeader, MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES } = require('../../utils/productVideos');
 
 const video = { url: 'https://cdn.example.com/socks.mp4', caption: '  How to wear Morbix  ', poster: 'https://cdn.example.com/cover.jpg' };
 
@@ -32,7 +32,7 @@ describe('Product video metadata', () => {
 
 test('updates preserve other attribute groups and video order; explicit empty videos removes the section', () => {
   const previous = { notes: [], _videos: [video] };
-  expect(mergeProductAttributes(JSON.stringify({ notes: ['Cotton'] }), previous)._videos).toEqual([video]);
+  expect(mergeProductAttributes(JSON.stringify({ notes: ['Cotton'] }), previous)._videos).toEqual(normalizeProductVideos([video]));
   expect(mergeProductAttributes(JSON.stringify({ notes: [], _videos: [] }), previous)._videos).toEqual([]);
   expect(mergeProductAttributes(undefined, previous)).toBeUndefined();
   const next = parseProductAttributes({ notes: ['Cotton'], accords: [{ name: 'Fresh', image: '' }], _videos: [{ ...video, caption: 'Second' }, { ...video, caption: 'First' }] });
@@ -49,5 +49,22 @@ describe('Product video signatures', () => {
     expect(matchesVideoHeader('video/mp4', Buffer.from('<script>bad</script>'))).toBe(false);
     expect(matchesVideoHeader('video/mp4', Buffer.from('ftyp'))).toBe(false);
     expect(matchesVideoHeader('image/png', Buffer.alloc(12))).toBe(false);
+  });
+});
+
+describe('JSON-text product attributes from database reads', () => {
+  test('returns saved videos for both object and text JSON columns', () => {
+    const attributes = { notes: [], _videos: [video] };
+    expect(videosFromAttributes(JSON.stringify(attributes))).toEqual(videosFromAttributes(attributes));
+    expect(videosFromAttributes(JSON.stringify(attributes))).toHaveLength(1);
+  });
+  test('preserves saved videos when an older client updates a JSON-text product', () => {
+    const attributes = JSON.stringify({ notes: [], _videos: [video] });
+    expect(mergeProductAttributes({ notes: ['Cotton'] }, attributes)._videos).toEqual(normalizeProductVideos([video]));
+    expect(mergeProductAttributes({ notes: [], _videos: [] }, attributes)._videos).toEqual([]);
+  });
+  test('tolerates malformed and missing JSON columns', () => {
+    expect(videosFromAttributes('invalid')).toEqual([]);
+    expect(videosFromAttributes(null)).toEqual([]);
   });
 });

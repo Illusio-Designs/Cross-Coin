@@ -30,10 +30,18 @@ function normalizeProductVideos(value, { strict = false } = {}) {
   });
 }
 
+function videosFromAttributes(attributes) {
+  let parsed = attributes;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { return []; }
+  }
+  return normalizeProductVideos(parsed?._videos);
+}
+
 function matchesVideoHeader(mime, bytes) {
   if (mime === 'video/mp4') return bytes.length >= 12 && bytes.toString('ascii', 4, 8) === 'ftyp';
   if (mime === 'video/webm') return bytes.length >= 4 && bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
   return false;
 }
 
-module.exports = { MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES, VIDEO_MIME_TYPES, normalizeProductVideos, matchesVideoHeader };
+module.exports = { MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES, VIDEO_MIME_TYPES, normalizeProductVideos, videosFromAttributes, matchesVideoHeader };

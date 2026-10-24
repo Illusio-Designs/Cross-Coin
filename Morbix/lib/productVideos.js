@@ -13,3 +13,14 @@ export function productVideos(value) {
     return url ? [{ url, poster: mediaUrl(video.poster), caption: String(video.caption || '').trim().slice(0, 300) }] : [];
   });
 }
+
+// Some MySQL/MariaDB responses return the JSON attributes column as text.
+export function videosForProduct(product) {
+  const direct = productVideos(product?.videos);
+  if (direct.length) return direct;
+  let attributes = product?.attributes;
+  if (typeof attributes === 'string') {
+    try { attributes = JSON.parse(attributes); } catch { return []; }
+  }
+  return productVideos(attributes?._videos);
+}

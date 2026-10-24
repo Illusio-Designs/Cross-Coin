@@ -1,4 +1,4 @@
-const { normalizeProductVideos } = require('./productVideos');
+const { normalizeProductVideos, videosFromAttributes } = require('./productVideos');
 
 function parseProductAttributes(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -43,8 +43,9 @@ function mergeProductAttributes(raw, previous) {
   if (raw === undefined) return undefined;
   let next = parseProductAttributes(raw);
   // Clients editing fragrance notes alone must not clear managed videos.
-  if (!Object.prototype.hasOwnProperty.call(next || {}, '_videos') && previous?._videos) {
-    next = { ...(next || {}), _videos: previous._videos };
+  const previousVideos = videosFromAttributes(previous);
+  if (!Object.prototype.hasOwnProperty.call(next || {}, '_videos') && previousVideos.length) {
+    next = { ...(next || {}), _videos: previousVideos };
   }
   return next;
 }
