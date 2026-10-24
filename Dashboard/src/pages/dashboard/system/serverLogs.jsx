@@ -18,8 +18,7 @@ import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
      also sent by email + WhatsApp, reminded hourly, "Resolved" after).
    · Tiles: requests, server errors, blocked requests, checkout,
      orders, response time, memory.
-   · By store: each storefront's page loads, checkout, errors, orders,
-     plus the Obzus admin panel (same server) as its own row
+   · By store: each storefront's page loads, checkout, errors, orders
      (stores send X-Brand-Name). The store filter narrows everything.
    · Hour by hour: requests per group, errors, blocked, orders.
    · Logged problems: errors and blocked requests, grouped.
@@ -68,7 +67,6 @@ const GROUPS = [
   { key: 'store', label: 'Store API' },
   { key: 'checkout', label: 'Checkout' },
   { key: 'login', label: 'Login' },
-  { key: 'admin', label: 'Admin' },
   { key: 'webhook', label: 'Webhooks' },
 ];
 

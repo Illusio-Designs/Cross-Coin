@@ -150,6 +150,18 @@ function ensureSchema() {
       await addApp('server_stats', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER brand, DROP PRIMARY KEY, ADD PRIMARY KEY (bucket, grp, brand, app)");
       await addApp('server_log_events', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER hour");
       await addApp('server_memory', "ADD COLUMN app VARCHAR(8) NOT NULL DEFAULT 'store' AFTER pid");
+      // Admin-panel traffic counted as storefront (from before the split, or
+      // from a not-yet-reloaded panel still calling api.crosscoin.in) moves
+      // to the admin server, merged into any admin row for the same slot.
+      // Nothing left to move after the first run.
+      await exec(`INSERT INTO server_stats (bucket, grp, brand, app, requests, fail5xx, fail4xx, rl429, cors, slow, dur_sum, dur_max)
+                  SELECT bucket, 'admin', brand, 'admin', SUM(requests), SUM(fail5xx), SUM(fail4xx), SUM(rl429), SUM(cors), SUM(slow), SUM(dur_sum), MAX(dur_max)
+                    FROM server_stats WHERE app = 'store' AND (brand = :admin OR grp = 'admin') GROUP BY bucket, brand
+                  ON DUPLICATE KEY UPDATE requests = requests + VALUES(requests), fail5xx = fail5xx + VALUES(fail5xx),
+                    fail4xx = fail4xx + VALUES(fail4xx), rl429 = rl429 + VALUES(rl429), cors = cors + VALUES(cors),
+                    slow = slow + VALUES(slow), dur_sum = dur_sum + VALUES(dur_sum), dur_max = GREATEST(dur_max, VALUES(dur_max))`, { admin: ADMIN_SOURCE });
+      await exec("DELETE FROM server_stats WHERE app = 'store' AND (brand = :admin OR grp = 'admin')", { admin: ADMIN_SOURCE });
+      await exec("UPDATE server_log_events SET app = 'admin' WHERE app = 'store' AND brand = :admin", { admin: ADMIN_SOURCE });
       await exec(`CREATE TABLE IF NOT EXISTS server_watch_settings (
         id TINYINT NOT NULL PRIMARY KEY,
         data TEXT NOT NULL,
@@ -291,8 +303,13 @@ function normPath(url) {
     .slice(0, 191);
 }
 
+// Admin-panel traffic (the panel itself, or any request to an admin path)
+// belongs to the admin server's numbers even when an old, not-reloaded panel
+// sends it to api.crosscoin.in.
+const appFor = (brand, grp = null) => (brand === ADMIN_SOURCE || grp === 'admin' ? 'admin' : thisApp());
+
 function bump(bucketMs, grp, brand, f) {
-  const k = `${bucketMs}|${grp}|${brand}|${thisApp()}`;
+  const k = `${bucketMs}|${grp}|${brand}|${appFor(brand, grp)}`;
   let s = stats.get(k);
   if (!s) { s = { requests: 0, fail5xx: 0, fail4xx: 0, rl429: 0, cors: 0, slow: 0, dur_sum: 0, dur_max: 0 }; stats.set(k, s); }
   f(s);
@@ -306,7 +323,7 @@ function noteEvent({ level = 'error', kind = 'error', brand = null, method = nul
     const hourMs = now - (now % HOUR_MS);
     const msg = String(message || '').replace(/\s+/g, ' ').trim().slice(0, 500) || '(no message)';
     // Numbers vary per occurrence (ids, amounts, ms); leave them out of the signature.
-    const app = thisApp();
+    const app = appFor(brand);
     const sig = sigOf([app, kind, brand, method, path, status, msg.replace(/\d+/g, '#')].join('|'));
     const k = `${hourMs}|${sig}`;
     const e = events.get(k);
@@ -903,7 +920,7 @@ async function overview({ hours = 24, level = '', search = '', brand = '', app =
     this_app: thisApp(),
     servers,
     brand: b,
-    brands: [...[...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => ({ slug, name: v.name })), { slug: ADMIN_SOURCE, name: brandName(ADMIN_SOURCE) }],
+    brands: [...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => ({ slug, name: v.name })),
     orders_all_stores: !brandId,
     // Stores first (busiest on top), then the admin panel, unknown, no store.
     stores: [...stores.values()].sort((x, y) => rank(x.brand) - rank(y.brand) || y.requests - x.requests),
