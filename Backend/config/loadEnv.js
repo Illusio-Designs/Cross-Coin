@@ -24,6 +24,7 @@
  * cPanel variables always win.
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const dotenv = require('dotenv');
 
@@ -59,12 +60,20 @@ function loadFile(file) {
 
 dotenv.config({ quiet: true });
 
+// What the admin copy looked for and found (index.js shows it when the
+// settings are missing, instead of the host's bare 503).
+const diagnostics = { looked: [], found: [] };
+
 if (String(process.env.APP_ROLE || '').toLowerCase() === 'admin') {
-  const mainApp = path.resolve(APP_DIR, '..', 'Backend');
+  // The main app's folder: next to this one, else Backend/ in the home folder.
+  const homes = [...new Set([path.resolve(APP_DIR, '..', 'Backend'), path.join(os.homedir(), 'Backend')])];
+  const mainApp = homes.find((d) => fs.existsSync(path.join(d, '.env.shared.json')) || fs.existsSync(path.join(d, '.env'))) || homes[0];
   const files = process.env.SHARED_ENV_FILE
     ? [path.resolve(process.env.SHARED_ENV_FILE)]
-    : [path.join(mainApp, '.env.shared.json'), path.join(mainApp, '.env')];
+    : homes.flatMap((d) => [path.join(d, '.env.shared.json'), path.join(d, '.env')]);
   const found = files.filter((f) => fs.existsSync(f));
+  diagnostics.looked = files;
+  diagnostics.found = found;
   for (const f of found) {
     try { loadFile(f); } catch (e) { console.warn(`[env] could not read ${f}: ${e.message}`); }
   }
@@ -83,3 +92,5 @@ if (String(process.env.APP_ROLE || '').toLowerCase() === 'admin') {
     console.warn(`[env] could not write .env.shared.json for the admin API: ${e.message}`);
   }
 }
+
+module.exports = { diagnostics };
