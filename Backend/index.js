@@ -49,6 +49,12 @@ const app = express();
 // Trust reverse proxy (Nginx) — required for correct IP in rate limiting and req.ip
 app.set('trust proxy', 1);
 
+// Server Watch: counts every request (incl. 429s and CORS refusals) for the
+// dashboard's Server logs page and the alert watchdog. First, so it sees all.
+const serverWatch = require('./services/serverWatchService.js');
+app.use(serverWatch.recorder);
+serverWatch.start();
+
 // Security headers - MUST be first middleware
 const helmet = require('helmet');
 app.use(helmet({

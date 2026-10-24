@@ -68,7 +68,18 @@ function writeToFile(stream, line) {
   }
 }
 
+// Error lines also go to Server Watch (dashboard → Server logs). Lazy so this
+// file loads first; the flag stops a loop if Server Watch itself logs.
+let watching = false;
+function toServerWatch(level, message, data) {
+  if (level !== 'error' || watching) return;
+  watching = true;
+  try { require('../services/serverWatchService.js').noteLog(level, message, data); } catch (_) { /* never break logging */ }
+  watching = false;
+}
+
 function log(level, message, data) {
+  toServerWatch(level, message, data);
   if (!shouldLog(level)) return;
 
   const line = formatLine(level, message, data);
@@ -129,6 +140,7 @@ function requestLogger(req, res, next) {
       duration: `${duration}ms`,
       ip: req.ip,
       userId: req.user?.id || null,
+      brand: req.headers['x-brand-name'] || null,
     };
 
     if (res.statusCode >= 500) logger.error('Request failed', entry);

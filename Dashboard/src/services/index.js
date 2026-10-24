@@ -400,6 +400,36 @@ export const systemHealthService = {
   },
 };
 
+// Server Watch (Settings → Server logs): request counts, logged problems,
+// alerts and the alert settings. Admin only.
+export const serverLogsService = {
+  get: async ({ hours = 24, brand = '', level = '', q = '' } = {}) => {
+    try {
+      const { data } = await adminApi.get('/api/admin/system/server-logs', { params: { hours, brand: brand || undefined, level: level || undefined, q: q || undefined } });
+      if (!data?.success) throw new Error(data?.message || 'Failed to load server logs');
+      return data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to load server logs');
+    }
+  },
+  saveSettings: async (settings) => {
+    try {
+      const { data } = await adminApi.put('/api/admin/system/server-logs/settings', settings);
+      return data.settings;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to save the settings');
+    }
+  },
+  sendTest: async () => {
+    try {
+      const { data } = await adminApi.post('/api/admin/system/server-logs/test');
+      return data.result;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to send the test alert');
+    }
+  },
+};
+
 // Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve
 // the brand from the X-Brand-Name header, so pass the brand's slug per call.
 export const facebookCapiService = {

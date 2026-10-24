@@ -708,6 +708,10 @@ const JOBS = [
     cron: '0 4 * * *', tz: IST, mode: 'inline', run: dataRetention },
   { key: 'meta-ads-sync', name: 'Meta ad spend sync', schedule: 'Every 3 hours (:25)',
     cron: '25 */3 * * *', tz: IST, mode: 'inline', lockMinutes: 30, run: metaAdsSync },
+  { key: 'server-watch', name: 'Server Watch alerts', schedule: 'Every 10 min',
+    cron: '*/10 * * * *', tz: IST, mode: 'inline', lockMinutes: 8, run: () => require('../services/serverWatchService.js').watch() },
+  { key: 'server-watch-daily', name: 'Server daily summary', schedule: 'Daily 9 am', oncePerDay: true,
+    cron: '0 9 * * *', tz: IST, mode: 'inline', lockMinutes: 20, run: () => require('../services/serverWatchService.js').dailySummary() },
 ];
 
 const getJob = (key) => JOBS.find((j) => j.key === key) || null;
