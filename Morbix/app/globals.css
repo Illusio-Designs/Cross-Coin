@@ -1658,23 +1658,23 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
   letter-spacing: 0;
 }
 
-.bundle-heading { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; text-align: center; text-transform: uppercase; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
+.bundle-heading { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; text-align: center; text-transform: uppercase; font-size: 18px; font-weight: 800; letter-spacing: .04em; }
 .bundle-heading::before, .bundle-heading::after { content: ''; flex: 1; height: 1px; background: currentColor; }
 .pdp-packs { container-type: inline-size; }
 .pdp-packs .pack-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
-.pdp-packs .pack-card { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 2px solid color-mix(in srgb, var(--navy) 24%, var(--card)); border-radius: 14px; background: var(--card); text-align: center; color: var(--ink); }
+.pdp-packs .pack-card { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 2px solid color-mix(in srgb, var(--navy) 24%, var(--card)); border-radius: 10px; background: var(--card); text-align: center; color: var(--ink); }
 .pdp-packs .pack-card.active { background: var(--teal-050); border-color: var(--navy); }
 .pdp-packs .pack-card:hover { border-color: var(--navy); }
 .pack-card:focus-visible { outline: 3px solid var(--teal-600); outline-offset: 3px; }
-.bundle-banner { display: flex; align-items: center; justify-content: center; min-height: 3.4em; padding: 6px 4px; background: var(--navy); color: var(--card); font-size: clamp(9px, 2.4cqw, 13px); font-weight: 800; text-transform: uppercase; line-height: 1.3; }
+.bundle-banner { display: flex; align-items: center; justify-content: center; min-height: 2.8em; padding: 4px; background: var(--navy); color: var(--card); font-size: clamp(9px, 2.2cqw, 11px); font-weight: 800; text-transform: uppercase; line-height: 1.3; }
 .bundle-banner.empty { background: transparent; }
-.bundle-content { display: grid; flex: 1; grid-template-rows: 2.6em 1.15em 1.4em 2.6em 1.4em 2em 2.6em; align-items: center; justify-items: center; padding: 12px 6px 14px; gap: 6px; font-size: clamp(11px, 3cqw, 16px); line-height: 1.3; }
-.bundle-name { font-size: clamp(14px, 4cqw, 22px); font-weight: 800; }
-.bundle-unit { color: var(--navy); font-size: clamp(21px, 5.8cqw, 32px); font-weight: 800; line-height: 1.1; white-space: nowrap; }
-.bundle-per { color: var(--ink-soft); font-weight: 700; font-size: 13px; }
-.bundle-total { font-size: clamp(12px, 3.4cqw, 18px); font-weight: 800; }
-.bundle-mrp { color: var(--ink-soft); text-decoration: line-through; font-size: 13px; }
-.bundle-discount { color: var(--teal-600); background: var(--teal-050); border-radius: 24px; padding: 4px 9px; font-size: clamp(10px, 3cqw, 16px); font-weight: 800; }
-.bundle-caption { font-weight: 800; font-size: clamp(10px, 3cqw, 16px); }
+.bundle-content { display: grid; flex: 1; grid-template-rows: 1.8em 2.2em 1.2em 1.6em 1.3em 2em 1.8em; align-items: center; justify-items: center; padding: 8px 5px; gap: 3px; font-size: clamp(10px, 2.7cqw, 13px); line-height: 1.3; }
+.bundle-name { font-size: clamp(12px, 3.5cqw, 17px); font-weight: 800; }
+.bundle-unit { color: var(--navy); font-size: clamp(18px, 5cqw, 26px); font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.bundle-per { color: var(--ink-soft); font-weight: 700; font-size: clamp(10px, 2.6cqw, 12px); }
+.bundle-total { font-size: clamp(10px, 2.9cqw, 14px); font-weight: 800; }
+.bundle-mrp { color: var(--ink-soft); text-decoration: line-through; font-size: clamp(10px, 2.6cqw, 12px); }
+.bundle-discount { color: var(--teal-600); background: var(--teal-050); border-radius: 24px; padding: 3px 7px; font-size: clamp(9px, 2.6cqw, 12px); font-weight: 800; }
+.bundle-caption { font-weight: 800; font-size: clamp(9px, 2.6cqw, 12px); }
 .bundle-placeholder { visibility: hidden; }
 @media (max-width: 380px) { .pdp-packs .pack-list { gap: 5px; } .bundle-content { padding-inline: 2px; } }
