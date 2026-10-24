@@ -1,5 +1,5 @@
 // Environment first (incl. the admin API copy reading the main app's .env).
-require('./config/loadEnv.js');
+const envLoad = require('./config/loadEnv.js');
 // Sentry — must be first so the SDK instruments everything below it.
 // No-op unless SENTRY_DSN is set (see instrument.js).
 const Sentry = require('./instrument.js');
@@ -29,10 +29,31 @@ dotenv.config();
 // via settingsHelper — they are NOT env vars and should not be validated here.
 const REQUIRED_ENV = ['JWT_SECRET'];
 const missingRequired = REQUIRED_ENV.filter(k => !process.env[k]);
+let setupBroken = false;
 if (missingRequired.length) {
     console.error(`[Startup] FATAL — missing required environment variables: ${missingRequired.join(', ')}`);
-    process.exit(1);
+    if (String(process.env.APP_ROLE || '').toLowerCase() !== 'admin') process.exit(1);
+    // The admin API copy: say WHY on every request instead of exiting into the
+    // host's bare 503 (usually: the main API hasn't written its settings yet).
+    setupBroken = true;
+    const { looked = [], found = [] } = envLoad.diagnostics || {};
+    const body = JSON.stringify({
+        success: false,
+        message: `Admin API is not set up yet: missing ${missingRequired.join(', ')}.`,
+        fix: found.length
+            ? 'A settings file was found but has no JWT_SECRET. Restart the main API app in cPanel so it rewrites it, then restart this app.'
+            : 'Restart the main API app in cPanel once (it writes Backend/.env.shared.json), then restart this app. Or set SHARED_ENV_FILE on this app to the main app\'s settings file.',
+        looked_for: looked,
+        found,
+    }, null, 2);
+    require('http').createServer((req, res) => {
+        res.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        res.end(body);
+    }).listen(process.env.PORT || 5000);
 }
+// Nothing else can start without the settings (Node allows a top-level
+// return in a CommonJS module).
+if (setupBroken) return;
 
 // Debug environment variables on startup (only in development)
 if (process.env.NODE_ENV !== 'production') {
