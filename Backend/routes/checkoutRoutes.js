@@ -78,9 +78,11 @@ const otpSendSchema = z.object({
   phone: zSchemas.indianPhone,
 });
 
+// The storefront verifies with MSG91's widget and sends the widget's
+// access_token (see controller verifyPhoneOtp), not the OTP digits.
 const otpVerifySchema = z.object({
   phone: zSchemas.indianPhone,
-  otp: z.string().trim().regex(/^\d{4,8}$/, 'OTP must be 4-8 digits'),
+  access_token: z.string().trim().min(10, 'access_token is required').max(4096),
 });
 
 // OTP endpoints
