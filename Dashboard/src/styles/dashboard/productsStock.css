@@ -267,3 +267,15 @@
 /* Sort picker (admin Dropdown) in the filter bar. */
 .pst-sort { flex: 0 0 auto; width: auto; min-width: 170px; max-width: 240px; }
 @media (max-width: 720px) { .pst-sort { flex: 1 1 100%; max-width: none; } }
+
+/* Product video uploads, separate from photos and rich descriptions. */
+.pst-video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
+.pst-video-card { min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ds-color-border); border-radius: 14px; }
+.pst-video-card video { width: 100%; max-height: 280px; aspect-ratio: 9 / 16; object-fit: contain; background: var(--ds-color-surface-soft); border-radius: 10px; }
+.pst-video-card textarea { width: 100%; resize: vertical; padding: 10px; border: 1px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-surface); color: var(--ds-color-text); font: inherit; }
+.pst-video-upload { position: relative; overflow: hidden; align-self: flex-start; }
+.pst-video-upload input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.pst-video-upload:focus-within { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
+.pst-video-upload:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.pst-video-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pst-video-error { color: var(--ds-color-danger); }

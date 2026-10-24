@@ -7,6 +7,7 @@
  * empty state.
  */
 import { ikSrc } from './image';
+import { productVideos } from './productVideos';
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
 import { plainText } from './plainText';
@@ -526,6 +527,7 @@ function mapProduct(p) {
     // save) — used by the PDP to render rich descriptions. `description` above
     // stays plain text for meta tags / cards.
     descriptionHtml: str(p.description || ''),
+    videos: productVideos(p.videos ?? p.attributes?._videos),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,

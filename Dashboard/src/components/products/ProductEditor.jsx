@@ -7,6 +7,7 @@ import { Skeleton, SkeletonForm, SkeletonList, SkeletonTableRows } from '../ui/S
 import { ConfirmModal } from '../common/AlertModal';
 import { productService, categoryService, attributeService, brandService } from '../../services';
 import AttributeSelector from './AttributeSelector';
+import ProductVideoFields from './ProductVideoFields';
 import ExistingImageSelector from './ExistingImageSelector';
 import SerpPreview, { brandSiteName, brandUrl } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
@@ -32,6 +33,7 @@ const SECTIONS = [
   ['sizes', 'Sizes & stock'],
   ['brands', 'Prices per brand'],
   ['photos', 'Photos'],
+  ['videos', 'Videos'],
   ['seo', 'SEO'],
   ['badge', 'Badge'],
 ];
@@ -48,7 +50,7 @@ const EMPTY_SEO = { metaTitle: '', metaDescription: '', metaKeywords: '', ogTitl
 const emptyVariation = () => ({ price: '', comparePrice: '', cost_price: '', stock: '', sku: '', attributes: {} });
 const emptyForm = () => ({
   id: null, slug: '', name: '', description: '', categoryId: '', status: 'active',
-  images: [], imagesToDelete: [], variationImagesToDelete: [],
+  videos: [], images: [], imagesToDelete: [], variationImagesToDelete: [],
   weight: '', weightUnit: 'g', dimensions: { length: '', width: '', height: '' }, dimensionUnit: 'cm', gst_rate: '5',
   attributes: [{ key: 'notes', values: [] }],
   variations: [emptyVariation()], variationImages: [],
@@ -75,7 +77,7 @@ function parseProductAttributes(raw) {
   try { parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch { parsed = {}; }
   if (!parsed || typeof parsed !== 'object') parsed = {};
   const groups = Object.entries(parsed)
-    .filter(([, v]) => Array.isArray(v))
+    .filter(([key, v]) => key !== '_videos' && Array.isArray(v))
     .map(([key, arr]) => ({
       key,
       values: arr.map((item) => (item && typeof item === 'object')
@@ -106,6 +108,7 @@ function productToForm(product, admin = null) {
     slug: product.slug || '',
     name: product.name || '',
     description: product.description || '',
+    videos: Array.isArray(product.videos) ? product.videos : [],
     categoryId: product.categoryId != null ? String(product.categoryId) : '',
     status: product.status || 'active',
     images: (product.images || []).filter((img) => !img.product_variation_id).map(toFormImage),
@@ -173,6 +176,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
   const [loading, setLoading] = useState(!isNew);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [videosUploading, setVideosUploading] = useState(false);
   const [error, setError] = useState('');
   const [openVar, setOpenVar] = useState(() => (isNew ? { 0: true } : {}));
   const [imagePicker, setImagePicker] = useState(null); // null | 'product' | <variation index>
@@ -303,6 +307,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
 
   // ── save (same multipart payload as the old modal + brandSettings/badge_locked) ──
   const handleSubmit = async () => {
+    if (videosUploading) { setError('Please wait for the video upload to finish.'); return; }
     setError('');
     const variations = form.variations.map((variation) => {
       const processed = {};
@@ -388,6 +393,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       if (vals.length) attributesObj[key] = (attributesObj[key] || []).concat(vals);
     });
     if (!attributesObj.notes) attributesObj.notes = [];
+    attributesObj._videos = form.videos || [];
     fd.append('attributes', JSON.stringify(attributesObj));
 
     fd.append('brandIds', JSON.stringify(selectedBrands.map((b) => b.id)));
@@ -726,6 +732,13 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             </div>
           </section>
 
+          <ProductVideoFields
+            videos={form.videos}
+            onChange={(videos) => edit((previous) => ({ ...previous, videos }))}
+            onUploadingChange={setVideosUploading}
+            disabled={saving}
+          />
+
           {/* ── SEO ── */}
           <section id="pst-sec-seo" className="pst-panel pst-sec">
             <div className="pst-sec-head">
@@ -802,8 +815,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             {error && <span className="pst-err" role="alert">{error}</span>}
             <span className="pst-savebar-sp" />
             {dirty && !error && <span className="pst-dirty">Unsaved changes</span>}
-            <button type="button" className="pst-btn" onClick={leave} disabled={saving}>{isNew ? 'Cancel' : 'Back to list'}</button>
-            <button type="submit" className="pst-btn pst-btn--primary" disabled={saving}>{saving ? 'Saving…' : isNew ? 'Create product' : 'Save'}</button>
+            <button type="button" className="pst-btn" onClick={leave} disabled={saving || videosUploading}>{isNew ? 'Cancel' : 'Back to list'}</button>
+            <button type="submit" className="pst-btn pst-btn--primary" disabled={saving || videosUploading}>{saving ? 'Saving…' : isNew ? 'Create product' : 'Save'}</button>
           </div>
         </form>
       )}

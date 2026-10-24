@@ -1,3 +1,5 @@
+const { parseProductAttributes, mergeProductAttributes } = require('../utils/productAttributes.js');
+const { normalizeProductVideos } = require('../utils/productVideos.js');
 const {
   Product,
   ProductVariation,
@@ -56,58 +58,10 @@ const uploadFileToImageKit = async (file) => {
   }
 };
 
-// Parse + sanitize the product `attributes` payload from the admin form (a JSON
-// string) into named value groups, each of shape [{name,image}]. The primary
-// group is `notes` (fragrance notes), which the storefront reads from
-// `product.attributes.notes`. Additional groups (e.g. `accords`) are passed
-// through using the SAME {name,image} shape so merchandising values that carry
-// imagery — which the per-variation attribute system can't hold — can live here
-// too. Storefront attribute CHIPS are still derived from each variation's own
-// attributes (gender/longevity/projection/…), not from this field.
-//
-// Backward compatibility: `notes` is always present (possibly empty), exactly as
-// before; any other group is only emitted when it has at least one usable value,
-// so a payload carrying only notes yields the identical { notes:[...] } output
-// older products/storefront already expect. Returns null when nothing usable was
-// sent.
-const parseProductAttributes = (raw) => {
-  if (raw === undefined || raw === null || raw === '') return null;
-  let obj = raw;
-  if (typeof raw === 'string') {
-    try { obj = JSON.parse(raw); } catch { return null; }
-  }
-  if (!obj || typeof obj !== 'object') return null;
-
-  // Sanitize one group into [{name,image}]. Tolerates legacy bare-string values
-  // (maps them to { name, image:'' }) without rejecting them.
-  const sanitizeGroup = (arr) => Array.isArray(arr) ? arr
-    .map((n) => ({
-      name: String(n?.name ?? n ?? '').trim().slice(0, 40),
-      image: String(n?.image ?? '').trim().slice(0, 500),
-    }))
-    .filter((n) => n.name)
-    .slice(0, 50) : [];
-
-  const result = {};
-  // `notes` first and always present — preserves the existing storefront contract.
-  result.notes = sanitizeGroup(obj.notes);
-
-  // Pass through any additional named groups (same {name,image} shape). Keys are
-  // lowercased for consistency with how variation attributes are normalized;
-  // non-array values are ignored defensively.
-  for (const [key, val] of Object.entries(obj)) {
-    const k = String(key || '').trim().toLowerCase();
-    if (!k || k === 'notes' || !Array.isArray(val)) continue;
-    const group = sanitizeGroup(val);
-    if (group.length) result[k] = group;
-  }
-
-  return result;
-};
-
 // Helper function to format product response
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
+  productData.videos = normalizeProductVideos(productData.attributes?._videos);
 
   // Heal local fallback image URLs embedded in the rich-text description:
   // rewrite /uploads/ → /api/uploads/ (unless already /api/uploads/) so images
@@ -977,6 +931,8 @@ module.exports.updateProduct = async (req, res) => {
       slugSuffix++;
     }
 
+    const nextAttributes = mergeProductAttributes(req.body.attributes, product.attributes);
+
     await product.update(
       {
         name,
@@ -994,7 +950,7 @@ module.exports.updateProduct = async (req, res) => {
           ? { gst_rate: Number(req.body.gst_rate) }
           : {}),
         ...(req.body.attributes !== undefined
-          ? { attributes: parseProductAttributes(req.body.attributes) }
+          ? { attributes: nextAttributes }
           : {}),
       },
       { transaction }
