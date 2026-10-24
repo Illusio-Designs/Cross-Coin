@@ -13,6 +13,7 @@ import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { cleanColorParam } from '@/lib/pdpColor';
+import { getDeliveryEstimate } from '@/lib/deliveryEstimate';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -47,6 +48,13 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const [showChart, setShowChart] = useState(false);   // size chart modal visibility
   const actionsRef = useRef(null);                      // the main buy buttons
   const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
+  const [deliveryEstimate, setDeliveryEstimate] = useState(null);
+  useEffect(() => {
+    const refresh = () => setDeliveryEstimate(getDeliveryEstimate());
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Match the thumbnail rail's height to the main image so it never runs longer
   // than the photo — extra thumbnails scroll inside it instead.
@@ -531,6 +539,12 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 <button type="button" className="btn pdp-buy-now" onClick={onBuyNow}>
                   <Icon name="ShoppingBag" size={16} /> BUY NOW – Cash On Delivery
                 </button>
+              )}
+              {deliveryEstimate && (
+                <p className="pdp-delivery-estimate">
+                  Estimated delivery: <time dateTime={deliveryEstimate.earliest.dateTime}>{deliveryEstimate.earliest.label}</time>
+                  {' – '}<time dateTime={deliveryEstimate.latest.dateTime}>{deliveryEstimate.latest.label}</time>
+                </p>
               )}
             </div>
           )}
