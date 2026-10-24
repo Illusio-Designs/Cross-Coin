@@ -485,8 +485,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                         <span className="bundle-unit">₹{per.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                         <span className="bundle-per">per pair</span>
                         <span className="bundle-total">₹{t.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })} total</span>
-                        {disc && <span className="bundle-mrp">₹{mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>}
-                        {disc && <span className="bundle-discount">{discount}% OFF</span>}
+                        <span className={`bundle-mrp${disc ? '' : ' bundle-placeholder'}`} aria-hidden={!disc}>₹{mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className={`bundle-discount${disc ? '' : ' bundle-placeholder'}`} aria-hidden={!disc}>{discount}% OFF</span>
                         <span className="bundle-caption">{t.pairs === 1 ? 'For you' : t.pairs === 2 ? 'You + Mom' : 'Whole family'}</span>
                       </span>
                     </button>

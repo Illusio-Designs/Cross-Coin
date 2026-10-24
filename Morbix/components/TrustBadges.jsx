@@ -19,7 +19,7 @@ export default function TrustBadges() {
       </div>
       <div className="benefit-trust-icons">
         {[['toe', 'Toe alignment'], ['pain', 'Pain relief'], ['sleep', 'Sleep comfort'], ['posture', 'Natural posture']].map(([type, label]) => (
-          <div key={type}><BenefitIcon type={type}/><strong>{label}</strong></div>
+          <div key={type}><BenefitIcon type={type}/><strong><span>{label.split(' ')[0]}</span><span>{label.split(' ').slice(1).join(' ')}</span></strong></div>
         ))}
       </div>
     </section>

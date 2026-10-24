@@ -1580,33 +1580,36 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
 .sr-headless-checkout.sr-headless-checkout .sr-powered-by img { height: 9px !important; width: auto !important; opacity: .85; display: block; }
 
 /* Product-detail trust and bundle sections use the Morbix palette. */
-.benefit-trust { margin: 28px 0; width: 100%; }
+.benefit-trust { margin: 0; width: 100%; container-type: inline-size; }
 .benefit-trust-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--line); padding: 16px 0; }
-.benefit-trust-summary > div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; text-align: center; }
+.benefit-trust-summary > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; padding: 0 8px; text-align: center; }
 .benefit-trust-summary > div + div { border-left: 1px solid var(--line); }
-.benefit-trust-summary strong { color: var(--teal-600); font-size: clamp(21px, 2.8vw, 32px); line-height: 1.2; font-weight: 800; }
-.benefit-trust-summary span { color: var(--ink-soft); font-size: clamp(11px, 1.8vw, 20px); line-height: 1.4; }
+.benefit-trust-summary strong { color: var(--teal-600); font-size: clamp(20px, 5.5cqw, 32px); line-height: 1.2; font-weight: 800; }
+.benefit-trust-summary span { color: var(--ink-soft); font-size: clamp(11px, 3cqw, 17px); line-height: 1.4; min-height: 2.8em; display: flex; align-items: flex-start; justify-content: center; }
 .benefit-trust-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 18px 0 8px; }
 .benefit-trust-icons > div { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-.benefit-trust-icons svg { width: clamp(44px, 6vw, 78px); height: clamp(44px, 6vw, 78px); color: var(--teal-600); }
-.benefit-trust-icons strong { max-width: 130px; color: var(--ink); font-size: clamp(11px, 1.5vw, 19px); line-height: 1.35; text-transform: uppercase; font-weight: 800; }
+.benefit-trust-icons svg { width: clamp(44px, 13cqw, 72px); height: clamp(44px, 13cqw, 72px); color: var(--teal-600); }
+.benefit-trust-icons strong { max-width: 130px; color: var(--ink); font-size: clamp(10px, 2.8cqw, 16px); line-height: 1.35; text-transform: uppercase; font-weight: 800; }
+.benefit-trust-icons strong span { display: block; }
 @media (max-width: 480px) { .benefit-trust-icons { gap: 8px; } .benefit-trust-summary > div { padding-inline: 4px; } }
 
-.bundle-heading { display: flex; align-items: center; gap: 14px; margin: 22px 0 18px; text-align: center; text-transform: uppercase; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
+.bundle-heading { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; text-align: center; text-transform: uppercase; font-size: 22px; font-weight: 800; letter-spacing: .04em; }
 .bundle-heading::before, .bundle-heading::after { content: ''; flex: 1; height: 1px; background: currentColor; }
-.pdp-packs .pack-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.pdp-packs .pack-card { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 3px solid var(--line); border-radius: 14px; background: var(--bg); text-align: center; color: var(--ink); }
-.pdp-packs .pack-card.active { background: var(--card); border-color: var(--navy); }
+.pdp-packs { container-type: inline-size; }
+.pdp-packs .pack-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+.pdp-packs .pack-card { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0; overflow: hidden; border: 2px solid color-mix(in srgb, var(--navy) 24%, var(--card)); border-radius: 14px; background: var(--card); text-align: center; color: var(--ink); }
+.pdp-packs .pack-card.active { background: var(--teal-050); border-color: var(--navy); }
 .pdp-packs .pack-card:hover { border-color: var(--navy); }
 .pack-card:focus-visible { outline: 3px solid var(--teal-600); outline-offset: 3px; }
-.bundle-banner { display: block; padding: 7px 3px; background: var(--navy); color: var(--card); font-size: clamp(9px, 1vw, 13px); font-weight: 800; text-transform: uppercase; line-height: 1.3; }
+.bundle-banner { display: flex; align-items: center; justify-content: center; min-height: 3.4em; padding: 6px 4px; background: var(--navy); color: var(--card); font-size: clamp(9px, 2.4cqw, 13px); font-weight: 800; text-transform: uppercase; line-height: 1.3; }
 .bundle-banner.empty { background: transparent; }
-.bundle-content { display: flex; flex: 1; flex-direction: column; align-items: center; padding: 14px 5px 18px; gap: 6px; }
-.bundle-name { font-size: clamp(14px, 1.6vw, 22px); font-weight: 800; }
-.bundle-unit { font-size: clamp(23px, 2.5vw, 32px); font-weight: 800; line-height: 1.1; margin-top: 4px; }
+.bundle-content { display: grid; flex: 1; grid-template-rows: 2.6em 1.15em 1.4em 2.6em 1.4em 2em 2.6em; align-items: center; justify-items: center; padding: 12px 6px 14px; gap: 6px; font-size: clamp(11px, 3cqw, 16px); line-height: 1.3; }
+.bundle-name { font-size: clamp(14px, 4cqw, 22px); font-weight: 800; }
+.bundle-unit { color: var(--navy); font-size: clamp(21px, 5.8cqw, 32px); font-weight: 800; line-height: 1.1; white-space: nowrap; }
 .bundle-per { color: var(--ink-soft); font-weight: 700; font-size: 13px; }
-.bundle-total { font-size: clamp(12px, 1.4vw, 18px); font-weight: 800; }
+.bundle-total { font-size: clamp(12px, 3.4cqw, 18px); font-weight: 800; }
 .bundle-mrp { color: var(--ink-soft); text-decoration: line-through; font-size: 13px; }
-.bundle-discount { color: var(--teal-600); background: var(--teal-050); border-radius: 24px; padding: 4px 9px; font-size: clamp(11px, 1.3vw, 16px); font-weight: 800; }
-.bundle-caption { margin-top: auto; padding-top: 6px; font-weight: 800; font-size: clamp(11px, 1.3vw, 16px); }
+.bundle-discount { color: var(--teal-600); background: var(--teal-050); border-radius: 24px; padding: 4px 9px; font-size: clamp(10px, 3cqw, 16px); font-weight: 800; }
+.bundle-caption { font-weight: 800; font-size: clamp(10px, 3cqw, 16px); }
+.bundle-placeholder { visibility: hidden; }
 @media (max-width: 380px) { .pdp-packs .pack-list { gap: 5px; } .bundle-content { padding-inline: 2px; } }
