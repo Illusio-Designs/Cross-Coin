@@ -11,7 +11,7 @@ const { logger } = require('../config/logging.js');
 
 const router = express.Router();
 
-const UPLOAD_DIR = path.join(__dirname, '../uploads/products');
+const UPLOAD_DIR = path.join(require('../utils/uploadsDir.js'), 'products');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 // Extension always comes from the allowlisted MIME type, never the client's
 // file name (/uploads is served statically).

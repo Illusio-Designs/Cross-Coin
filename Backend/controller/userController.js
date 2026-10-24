@@ -15,7 +15,7 @@ const loyaltyService = require('../services/loyaltyService.js');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/users'));
+const imageHandler = new ImageHandler(path.join(require('../utils/uploadsDir.js'), 'users'));
 
 // Turn a DB unique-constraint clash into a message a person can act on
 // (Sequelize reports it as a bare "Validation error").

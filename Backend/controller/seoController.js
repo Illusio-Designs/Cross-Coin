@@ -15,10 +15,10 @@ const seoCacheKey = (brandId, pageName) => `seo:public:${brandId || 1}:${pageNam
 const invalidateSeoCache = () => cacheManager.invalidate('seo:public:*');
 
 // In CommonJS, __filename and __dirname are available
-const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/seo'));
+const imageHandler = new ImageHandler(path.join(require('../utils/uploadsDir.js'), 'seo'));
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = require('../utils/uploadsDir.js');
 const seoUploadsDir = path.join(uploadsDir, 'seo');
 
 if (!fs.existsSync(uploadsDir)) {

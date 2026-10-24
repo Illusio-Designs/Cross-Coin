@@ -23,7 +23,7 @@ const sliderCacheKey = (brandName) => `sliders:public:${(brandName || 'all').toL
 const invalidateSliderCache = () => cacheManager.invalidate('sliders:public:*');
 
 // In CommonJS, __filename and __dirname are available
-const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/slider'));
+const imageHandler = new ImageHandler(path.join(require('../utils/uploadsDir.js'), 'slider'));
 
 // Upload one slider image (ImageKit first, local disk as fallback). Returns the
 // stored path/URL. `tag` keeps desktop and mobile files apart in the folder.
@@ -51,7 +51,7 @@ const MOBILE_SIZE = { width: 1080, height: 1350 };
 // Configure storage for uploaded files
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../uploads/slider'));
+        cb(null, path.join(require('../utils/uploadsDir.js'), 'slider'));
     },
     filename: (req, file, cb) => {
         cb(null, `slider-${uuidv4()}.webp`);

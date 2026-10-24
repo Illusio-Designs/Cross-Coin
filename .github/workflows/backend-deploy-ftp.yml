@@ -1,6 +1,7 @@
 name: Deploy backend to FTP
 
-# Auto-deploys Backend/ → /Backend/ on production FTP server (ftp.crosscoin.in)
+# Auto-deploys Backend/ → /Backend/ on production FTP server (ftp.crosscoin.in),
+# then the same code → /AdminBackend/ (the admin API app, see deploy-admin)
 # every time a commit on main touches Backend code. Skips deploys that only
 # edit /Crosscoin or /docs (paths filter) to avoid wasting a deploy slot.
 #
@@ -166,4 +167,87 @@ jobs:
           echo "   FTP Server: ${{ secrets.FTP_SERVER }}"
           echo "   Passenger restart triggered"
           echo "   Files synced and app restarted"
+
+  # ── Admin API copy (admin-api.crosscoin.in) ────────────────────────────────
+  # The same backend code, uploaded to a second folder that cPanel runs as its
+  # own Node.js app for the Obzus admin panel, so heavy admin work never slows
+  # the stores. That app's .env sets APP_ROLE=admin (no scheduled jobs: they
+  # stay on the main API) and UPLOAD_PATH=<home>/Backend/uploads (one shared
+  # uploads folder). Runs after the main deploy, so the stores are never held
+  # up by it. Folder: secret FTP_ADMIN_DIR, default /AdminBackend/.
+  deploy-admin:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Write build stamp
+        run: |
+          printf '{"sha":"%s","builtAt":"%s","role":"admin"}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > Backend/BUILD_INFO.json
+
+      - name: Sync admin API copy to FTP server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          timeout: 120000
+          local-dir: ./Backend/
+          server-dir: ${{ secrets.FTP_ADMIN_DIR || '/AdminBackend/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/.vscode/**
+            **/.idea/**
+            **/.DS_Store
+            **/Thumbs.db
+            **/.env
+            **/.env.*
+            **/.envrc
+            **/node_modules/**
+            **/package-lock.json
+            **/.htaccess
+            **/.well-known/**
+            **/scripts/ftp-*.js
+            **/scripts/test.js
+            **/__tests__/**
+            **/test/**
+            **/tests/**
+            **/*.test.js
+            **/*.spec.js
+            **/coverage/**
+            **/.nyc_output/**
+            **/.eslintcache
+            **/.cache/**
+            **/tmp/**
+            **/logs/**
+            **/uploads/**
+            **/*.log
+            **/.seed-state.json
+            **/DEPLOY_TEST.txt
+
+      - name: Trigger admin API restart
+        working-directory: Backend
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+          FTP_PORT: '21'
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SECURE: explicit
+          FTP_BASE_DIR: ${{ secrets.FTP_ADMIN_DIR || '/AdminBackend/' }}
+        run: |
+          npm install --no-save --no-audit --no-fund --silent basic-ftp
+          node scripts/ftp-restart.js
 

@@ -331,7 +331,7 @@ async function deleteStoredFile(stored) {
   const v = String(stored || '');
   const localMatch = v.match(/\/uploads\/([a-z0-9_-]+)\/([^/?#]+)$/i);
   if (localMatch) {
-    const full = path.join(__dirname, '../uploads', localMatch[1], localMatch[2]);
+    const full = path.join(require('../utils/uploadsDir.js'), localMatch[1], localMatch[2]);
     await fs.unlink(full).catch((e) => { if (e.code !== 'ENOENT') throw e; });
     return;
   }

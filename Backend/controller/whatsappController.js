@@ -1977,9 +1977,7 @@ exports.sendProductLink = async (req, res) => {
 const _mediaPath = require('path');
 const _mediaFs = require('fs');
 const _mediaCrypto = require('crypto');
-const WA_MEDIA_CACHE_DIR = _mediaPath.join(
-  __dirname, '..', process.env.UPLOAD_PATH || 'uploads', 'wa-media'
-);
+const WA_MEDIA_CACHE_DIR = _mediaPath.join(require('../utils/uploadsDir.js'), 'wa-media');
 try { _mediaFs.mkdirSync(WA_MEDIA_CACHE_DIR, { recursive: true }); } catch (_) {}
 
 // ── Media cache size/age cap ──────────────────────────────────────────────────

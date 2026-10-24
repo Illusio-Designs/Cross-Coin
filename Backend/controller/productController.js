@@ -28,7 +28,7 @@ const { buildProductSeoData } = require("../services/productSeoHelper.js");
 
 // In CommonJS, __filename and __dirname are available
 const imageHandler = new ImageHandler(
-  path.join(__dirname, "../uploads/products")
+  path.join(require('../utils/uploadsDir.js'), 'products')
 );
 
 // Helper: upload a multer file to ImageKit and return the filePath
@@ -929,8 +929,8 @@ module.exports.updateProduct = async (req, res) => {
         if (img) {
           // Remove file from storage
           const imagePath = path.join(
-            __dirname,
-            "../uploads/products",
+            require('../utils/uploadsDir.js'),
+            'products',
             img.image_url.split("/").pop()
           );
           try {
@@ -951,8 +951,8 @@ module.exports.updateProduct = async (req, res) => {
         const img = await ProductImage.findByPk(imgId, { transaction });
         if (img) {
           const imagePath = path.join(
-            __dirname,
-            "../uploads/products",
+            require('../utils/uploadsDir.js'),
+            'products',
             img.image_url.split("/").pop()
           );
           try {
@@ -1714,8 +1714,8 @@ module.exports.deleteProduct = async (req, res) => {
     if (product.ProductImages && product.ProductImages.length > 0) {
       for (const image of product.ProductImages) {
         const imagePath = path.join(
-          __dirname,
-          "../uploads/products",
+          require('../utils/uploadsDir.js'),
+          'products',
           image.image_url.split("/").pop()
         );
         try {
@@ -2251,10 +2251,10 @@ module.exports.getExistingImages = async (req, res) => {
     let uploadsPath;
     if (source === 'uploads') {
       // Get all images from uploads directory
-      uploadsPath = path.join(__dirname, '../uploads');
+      uploadsPath = require('../utils/uploadsDir.js');
     } else {
       // Get only product images
-      uploadsPath = path.join(__dirname, '../uploads/products');
+      uploadsPath = path.join(require('../utils/uploadsDir.js'), 'products');
     }
     
     // Check if uploads directory exists
@@ -2499,7 +2499,7 @@ module.exports.deleteImages = async (req, res) => {
         }
 
         // Construct full file path
-        const fullPath = path.join(__dirname, '../uploads/products', filename);
+        const fullPath = path.join(require('../utils/uploadsDir.js'), 'products', filename);
         
         // Check if file exists
         try {

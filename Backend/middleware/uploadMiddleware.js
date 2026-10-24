@@ -5,14 +5,15 @@ const fs = require('fs');
 // In CommonJS, __filename and __dirname are available
 
 // Define upload directories
+const UPLOADS = require('../utils/uploadsDir.js');
 const UPLOAD_DIRS = {
-    products: path.join(__dirname, '../uploads/products'),
-    categories: path.join(__dirname, '../uploads/categories'),
-    users: path.join(__dirname, '../uploads/users'),
-    seo: path.join(__dirname, '../uploads/seo'),
-    slider: path.join(__dirname, '../uploads/slider'),
-    reviews: path.join(__dirname, '../uploads/reviews'),
-    blogs: path.join(__dirname, '../uploads/blogs'),
+    products: path.join(UPLOADS, 'products'),
+    categories: path.join(UPLOADS, 'categories'),
+    users: path.join(UPLOADS, 'users'),
+    seo: path.join(UPLOADS, 'seo'),
+    slider: path.join(UPLOADS, 'slider'),
+    reviews: path.join(UPLOADS, 'reviews'),
+    blogs: path.join(UPLOADS, 'blogs'),
 };
 
 // Create directories if they don't exist
