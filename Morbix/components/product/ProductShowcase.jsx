@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import TrustBadges from '@/components/TrustBadges';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { ikSrc } from '@/lib/image';
@@ -463,27 +464,30 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             )}
           </div>
 
+          <TrustBadges />
           {hasPacks && (
             <div className="opt pdp-packs">
-              <span className="opt-label">Choose your pack</span>
+              <h3 className="bundle-heading">Bundle &amp; Save</h3>
               <div className="pack-list">
                 {packOptions.map((t, i) => {
                   const per = t.pairs > 0 ? t.price / t.pairs : t.price;
-                  const mrp = Number(price) * t.pairs;
-                  const disc = !t.base && t.price < mrp;
+                  const mrp = Math.max(Number(oldPrice) || Number(price), Number(price)) * t.pairs;
+                  const disc = t.price < mrp;
+                  const discount = disc ? Math.round((1 - t.price / mrp) * 100) : 0;
+                  const badge = t.badge || (t.pairs === 2 ? "Most popular" : t.pairs >= 3 ? "Best value" : null);
                   return (
                     <button type="button" key={i}
                       className={`pack-card${i === pack ? ' active' : ''}`}
                       onClick={() => setPack(i)} aria-pressed={i === pack}>
-                      <span className="pack-radio" aria-hidden="true" />
-                      <span className="pack-body">
-                        <span className="pack-name">{t.label}
-                          {t.badge ? <span className="pack-badge">{t.badge}</span> : null}</span>
-                        <span className="pack-per">₹{per.toFixed(2)} / pair</span>
-                      </span>
-                      <span className="pack-price">
-                        <span className="pack-now">₹{t.price.toFixed(0)}</span>
-                        {disc ? <span className="pack-mrp">₹{mrp.toFixed(0)}</span> : null}
+                      <span className={`bundle-banner${badge ? '' : ' empty'}`}>{badge || '\u00a0'}</span>
+                      <span className="bundle-content">
+                        <span className="bundle-name">{t.label}</span>
+                        <span className="bundle-unit">₹{per.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="bundle-per">per pair</span>
+                        <span className="bundle-total">₹{t.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })} total</span>
+                        {disc && <span className="bundle-mrp">₹{mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>}
+                        {disc && <span className="bundle-discount">{discount}% OFF</span>}
+                        <span className="bundle-caption">{t.pairs === 1 ? 'For you' : t.pairs === 2 ? 'You + Mom' : 'Whole family'}</span>
                       </span>
                     </button>
                   );
@@ -553,13 +557,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
               )}
             </div>
           )}
-        </div>
-
-        <div className="pdp-trust">
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01"/><path d="M18 12h.01"/></svg> Cash on Delivery</div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</div>
-          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
         </div>
 
         {/* Delivery / pincode serviceability (after the trust badges) */}

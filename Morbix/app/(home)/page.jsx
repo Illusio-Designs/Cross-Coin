@@ -1,3 +1,4 @@
+import TrustBadges from '@/components/TrustBadges';
 import Hero from '@/components/home/Hero';
 import Bestsellers from '@/components/home/Bestsellers';
 import ExclusiveSection from '@/components/home/ExclusiveSection';
@@ -80,6 +81,7 @@ export default async function HomePage() {
         <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }} />
       ))}
       <Hero features={getHeroFeatures()} slides={slides} products={products} />
+      <div className="container"><TrustBadges /></div>
       {collections.length > 0 && <Reveal as="section"><CategoryBanners items={collections} /></Reveal>}
       <Reveal as="section"><Bestsellers products={products} /></Reveal>
       {products.length > 0 && <Reveal as="section"><ExclusiveSection products={products} /></Reveal>}
