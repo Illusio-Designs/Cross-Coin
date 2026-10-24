@@ -60,6 +60,11 @@ function loadFile(file) {
 
 dotenv.config({ quiet: true });
 
+// The admin copy is deployed to AdminBackend/: treat it as APP_ROLE=admin
+// even when the cPanel variable is missing, so it finds the main app's
+// settings and can never start the scheduled jobs.
+if (!process.env.APP_ROLE && /admin/i.test(path.basename(APP_DIR))) process.env.APP_ROLE = 'admin';
+
 // What the admin copy looked for and found (index.js shows it when the
 // settings are missing, instead of the host's bare 503).
 const diagnostics = { looked: [], found: [] };
@@ -77,7 +82,8 @@ if (String(process.env.APP_ROLE || '').toLowerCase() === 'admin') {
   for (const f of found) {
     try { loadFile(f); } catch (e) { console.warn(`[env] could not read ${f}: ${e.message}`); }
   }
-  if (!found.length) console.warn(`[env] APP_ROLE=admin but none of ${files.join(', ')} exists: start the main API once, or set SHARED_ENV_FILE`);
+  if (found.length) console.warn(`[env] admin API: settings loaded from ${found.join(', ')}${process.env.JWT_SECRET ? '' : ' (but no JWT_SECRET in them)'}`);
+  else console.warn(`[env] APP_ROLE=admin but none of ${files.join(', ')} exists: start the main API once, or set SHARED_ENV_FILE`);
   if (!process.env.UPLOAD_PATH) process.env.UPLOAD_PATH = path.join(mainApp, 'uploads');
 } else if (process.env.NODE_ENV === 'production') {
   try {
