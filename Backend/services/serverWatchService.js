@@ -17,6 +17,9 @@
  *   dailySummary(): yesterday in numbers, 9 am IST (cron 'server-watch-daily').
  *   dbPing: every 5 min each process checks the database; when it is down
  *     the alert is emailed directly (no database needed for that).
+ *   memory: every 5 min each server process records its memory (total held,
+ *     app heap in use, heap limit) so the page can tell a leak (heap in use
+ *     keeps climbing), heavy jobs (spikes) and memory not yet given back.
  *
  * Tables (created lazily): server_stats, server_log_events, server_alerts,
  * server_watch_settings. Stats and events are kept 30 days.
@@ -111,6 +114,17 @@ function ensureSchema() {
         resolved_at DATETIME NULL,
         KEY idx_sa_open (resolved_at, alert_key),
         KEY idx_sa_opened (opened_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+      await exec(`CREATE TABLE IF NOT EXISTS server_memory (
+        at DATETIME NOT NULL,
+        pid INT NOT NULL,
+        rss_mb INT NOT NULL,
+        heap_used_mb INT NOT NULL,
+        heap_total_mb INT NOT NULL,
+        external_mb INT NOT NULL,
+        heap_limit_mb INT NOT NULL,
+        uptime_s INT NOT NULL,
+        PRIMARY KEY (at, pid)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
       await exec(`CREATE TABLE IF NOT EXISTS server_watch_settings (
         id TINYINT NOT NULL PRIMARY KEY,
@@ -423,6 +437,34 @@ async function notify(settings, { title, detail, subject }) {
   return out;
 }
 
+// ── Memory ─────────────────────────────────────────────────────────────────
+const MB = 1024 * 1024;
+function memNow() {
+  const m = process.memoryUsage();
+  return {
+    pid: process.pid,
+    rss_mb: Math.round(m.rss / MB),
+    heap_used_mb: Math.round(m.heapUsed / MB),
+    heap_total_mb: Math.round(m.heapTotal / MB),
+    external_mb: Math.round((m.external + (m.arrayBuffers || 0)) / MB),
+    heap_limit_mb: Math.round(require('v8').getHeapStatistics().heap_size_limit / MB),
+    uptime_s: Math.round(process.uptime()),
+  };
+}
+async function sampleMemory() {
+  await ensureSchema();
+  const now = Date.now();
+  await exec(`INSERT IGNORE INTO server_memory (at, pid, rss_mb, heap_used_mb, heap_total_mb, external_mb, heap_limit_mb, uptime_s)
+              VALUES (:at, :pid, :rss_mb, :heap_used_mb, :heap_total_mb, :external_mb, :heap_limit_mb, :uptime_s)`,
+  { at: new Date(now - (now % 60000)), ...memNow() });
+}
+// Latest sample of every process seen in the last 15 minutes.
+async function liveProcesses() {
+  return q(`SELECT m.* FROM server_memory m
+              JOIN (SELECT pid, MAX(at) at FROM server_memory WHERE at >= :since GROUP BY pid) l ON l.pid = m.pid AND l.at = m.at
+             ORDER BY m.rss_mb DESC`, { since: new Date(Date.now() - 15 * 60 * 1000) });
+}
+
 // ── Watchdog ───────────────────────────────────────────────────────────────
 async function windowStats(minutes, grp = null, brand = null) {
   const [r] = await q(`SELECT COALESCE(SUM(requests),0) requests, COALESCE(SUM(fail5xx),0) fail5xx, COALESCE(SUM(fail4xx),0) fail4xx,
@@ -488,11 +530,16 @@ async function checkRules(s) {
     }
   }
 
-  // 6. Memory of this server process.
-  const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
-  if (r.memoryMb > 0 && rssMb >= r.memoryMb) {
-    add('memory_high', 'medium', 'Server memory is high',
-      `The server process is using ${rssMb} MB of memory (alert level ${r.memoryMb} MB). The host may restart or slow it down.`);
+  // 6. Memory of the server processes (every process's latest sample).
+  if (r.memoryMb > 0) {
+    let procs = [];
+    try { await sampleMemory(); procs = await liveProcesses(); } catch (_) { procs = [{ ...memNow() }]; }
+    const top = procs.reduce((a, p) => (p.rss_mb > (a?.rss_mb || 0) ? p : a), null);
+    if (top && top.rss_mb >= r.memoryMb) {
+      const total = procs.reduce((n, p) => n + num(p.rss_mb), 0);
+      add('memory_high', 'medium', 'Server memory is high',
+        `A server process is holding ${top.rss_mb} MB (the app uses ${top.heap_used_mb} MB of it; alert level ${r.memoryMb} MB). ${procs.length} process${procs.length > 1 ? 'es' : ''}, ${total} MB together. The host may restart or slow it down.`);
+    }
   }
 
   // 7. Courier webhooks quiet (status updates stopped arriving).
@@ -586,6 +633,7 @@ async function dailySummary() {
   await exec('DELETE FROM server_stats WHERE bucket < :cutoff', { cutoff });
   await exec('DELETE FROM server_log_events WHERE hour < :cutoff', { cutoff });
   await exec('DELETE FROM server_alerts WHERE resolved_at IS NOT NULL AND resolved_at < :cutoff', { cutoff });
+  await exec('DELETE FROM server_memory WHERE at < :c', { c: new Date(Date.now() - 14 * 24 * HOUR_MS) });
   if (!s.enabled || !s.dailySummary) return { summary: 'Daily summary is turned off', status: 'skipped' };
 
   const { from, to } = istDayRange(1);
@@ -652,7 +700,9 @@ function start() {
   started = true;
   setInterval(() => { flush().catch(() => {}); }, FLUSH_MS).unref();
   setInterval(() => { dbPing().catch(() => {}); }, 5 * 60 * 1000).unref();
-  noteEvent({ level: 'info', kind: 'restart', message: 'Server process started' });
+  setInterval(() => { sampleMemory().catch(() => {}); }, 5 * 60 * 1000).unref();
+  setTimeout(() => { sampleMemory().catch(() => {}); }, 30 * 1000).unref();
+  noteEvent({ level: 'info', kind: 'restart', message: `Server process started (pid ${process.pid})` });
 }
 
 // ── Admin page data ────────────────────────────────────────────────────────
@@ -718,6 +768,16 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
                             FROM server_alerts WHERE resolved_at IS NULL OR opened_at >= :old ORDER BY resolved_at IS NULL DESC, opened_at DESC LIMIT 60`,
   { old: new Date(Date.now() - 7 * 24 * HOUR_MS) });
 
+  // Memory: every live process now, and per India-time hour the highest
+  // total held / app heap in use (across processes) and how many ran.
+  await sampleMemory().catch(() => {});
+  const memProcs = await liveProcesses().catch(() => []);
+  const memHours = await q(`SELECT DATE_FORMAT(DATE_ADD(at, INTERVAL 330 MINUTE), '%Y-%m-%d %H:00:00') hour,
+                                   MAX(rss_mb) rss_max, MAX(heap_used_mb) heap_max, MAX(heap_limit_mb) heap_limit,
+                                   COUNT(DISTINCT pid) procs, MIN(uptime_s) min_uptime
+                              FROM server_memory WHERE at >= :since GROUP BY hour ORDER BY hour DESC`, { since }).catch(() => []);
+  const restarts = await q(`SELECT COUNT(*) n FROM (SELECT pid FROM server_memory WHERE at >= :since GROUP BY pid HAVING MIN(uptime_s) < 600) x`, { since }).catch(() => [{ n: 0 }]);
+
   let lastWatch = null;
   try { [lastWatch] = await q(`SELECT started_at, status, summary FROM job_runs WHERE job_key = 'server-watch' ORDER BY id DESC LIMIT 1`); } catch (_) { /* no runs yet */ }
 
@@ -741,6 +801,12 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
       window: { hours: h, ...window },
       memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
     },
+    memory: {
+      now: memNow(),
+      processes: memProcs.map((p) => ({ pid: p.pid, rss_mb: num(p.rss_mb), heap_used_mb: num(p.heap_used_mb), heap_total_mb: num(p.heap_total_mb), external_mb: num(p.external_mb), heap_limit_mb: num(p.heap_limit_mb), uptime_s: num(p.uptime_s), at: p.at })),
+      hours: memHours.map((h) => ({ hour: h.hour, rss_max: num(h.rss_max), heap_max: num(h.heap_max), heap_limit: num(h.heap_limit), procs: num(h.procs) })),
+      started_in_range: num(restarts[0]?.n),
+    },
     series: series.map((r) => ({ hour: r.hour, grp: r.grp, requests: num(r.requests), fail5xx: num(r.fail5xx), blocked: num(r.blocked), dur_sum: num(r.dur_sum) })),
     orders_by_hour: ordersByHour.map((r) => ({ hour: r.hour, n: num(r.n) })),
     events: logEvents.map((e) => ({ ...e, count: num(e.count), brand_name: e.brand ? brandName(e.brand) : null })),
@@ -759,5 +825,5 @@ async function sendTest() {
 module.exports = {
   DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, start,
   getSettings, saveSettings, overview, sendTest,
-  _internal: { dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
+  _internal: { memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
 };
