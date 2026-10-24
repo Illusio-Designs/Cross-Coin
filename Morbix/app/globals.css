@@ -1584,11 +1584,16 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
   margin: 0;
   width: 100%;
   container-type: inline-size;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
 }
 .benefit-trust-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--teal-050);
 }
 .benefit-trust-summary > div {
   display: grid;
@@ -1597,14 +1602,14 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
   justify-items: center;
   gap: 4px;
   min-width: 0;
-  padding: 12px 4px;
+  padding: 10px 4px;
   text-align: center;
 }
 .benefit-trust-summary > div + div { border-left: 1px solid var(--line); }
 .benefit-trust-summary strong {
   margin: 0;
   color: var(--teal-600);
-  font-size: clamp(16px, 4.7cqw, 28px);
+  font-size: clamp(14px, 4cqw, 22px);
   line-height: 1.2;
   font-weight: 800;
   white-space: nowrap;
@@ -1612,7 +1617,7 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
 .benefit-trust-summary span {
   margin: 0;
   color: var(--ink-soft);
-  font-size: clamp(8px, 2.8cqw, 17px);
+  font-size: clamp(8px, 2.4cqw, 14px);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -1620,7 +1625,7 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 14px 0 8px;
+  padding: 12px;
 }
 .benefit-trust-icons > .benefit-trust-item {
   display: grid;
@@ -1630,19 +1635,23 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
   gap: 8px;
   min-width: 0;
   text-align: center;
+  padding: 10px 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--card);
 }
-.benefit-trust-icons svg {
+.benefit-trust-icons img {
   display: block;
-  width: clamp(36px, 13cqw, 72px);
-  height: clamp(36px, 13cqw, 72px);
-  color: var(--teal-600);
+  width: clamp(32px, 11cqw, 50px);
+  height: clamp(32px, 11cqw, 50px);
+  object-fit: contain;
 }
 .benefit-trust-icons strong {
   display: block;
   margin: 0;
   width: 100%;
   color: var(--ink);
-  font-size: clamp(9px, 2.8cqw, 16px);
+  font-size: clamp(8px, 2.5cqw, 14px);
   line-height: 1.4;
   text-transform: uppercase;
   font-weight: 800;
