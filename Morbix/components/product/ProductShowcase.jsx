@@ -544,8 +544,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     {/* ── About + Specifications (specs track the selected variation) ── */}
     <section className="pdp-details">
       <div className="pdp-about">
-        <span className="eyebrow">Details</span>
-        <h2>About this product</h2>
+        <h2>Product description</h2>
         {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
           ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
           : product.description
