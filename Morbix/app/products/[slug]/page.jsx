@@ -119,10 +119,10 @@ export default async function ProductPage({ params, searchParams }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
-      {/* ── Conditions it can help with (before "Ideal for") ── */}
+      {/* ── Conditions it can help with ── */}
       <ConditionsSection />
 
-      {/* ── Ideal for, care and manufacturing ── */}
+      {/* ── Manufacturing details ── */}
       <div className="pdd-wrap">
         <ProductDetailBlocks product={product} />
       </div>
