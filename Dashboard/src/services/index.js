@@ -403,9 +403,10 @@ export const systemHealthService = {
 // Server Watch (Settings → Server logs): request counts, logged problems,
 // alerts and the alert settings. Admin only.
 export const serverLogsService = {
-  get: async ({ hours = 24, brand = '', level = '', q = '' } = {}) => {
+  // app: 'store' (storefront server) or 'admin' (admin server).
+  get: async ({ app = 'store', hours = 24, brand = '', level = '', q = '' } = {}) => {
     try {
-      const { data } = await adminApi.get('/api/admin/system/server-logs', { params: { hours, brand: brand || undefined, level: level || undefined, q: q || undefined } });
+      const { data } = await adminApi.get('/api/admin/system/server-logs', { params: { app, hours, brand: brand || undefined, level: level || undefined, q: q || undefined } });
       if (!data?.success) throw new Error(data?.message || 'Failed to load server logs');
       return data;
     } catch (error) {

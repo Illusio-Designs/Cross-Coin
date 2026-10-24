@@ -33,12 +33,12 @@ router.post('/jobs/:key/run', authenticate, isAdmin, async (req, res) => {
 // ── Server logs (Server Watch) ─────────────────────────────────────────────
 const serverWatch = require('../services/serverWatchService');
 
-// GET /api/admin/system/server-logs?hours=24&brand=morbix&level=error&q=checkout
+// GET /api/admin/system/server-logs?app=store|admin&hours=24&brand=morbix&level=error&q=checkout
 // Request counts per hour and per store, logged problems, alerts and the
 // alert settings. brand: a store slug, '-' for requests without a store.
 router.get('/server-logs', authenticate, isAdmin, async (req, res) => {
   try {
-    const data = await serverWatch.overview({ hours: req.query.hours, level: String(req.query.level || ''), search: String(req.query.q || ''), brand: String(req.query.brand || '') });
+    const data = await serverWatch.overview({ hours: req.query.hours, level: String(req.query.level || ''), search: String(req.query.q || ''), brand: String(req.query.brand || ''), app: String(req.query.app || 'store') });
     res.set('Cache-Control', 'no-store');
     return res.json({ success: true, ...data });
   } catch (error) {
