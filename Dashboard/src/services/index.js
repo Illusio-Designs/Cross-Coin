@@ -1617,6 +1617,17 @@ export const productService = {
     }
   },
 
+  uploadVideos: async (files) => {
+    try {
+      const formData = new FormData();
+      for (const file of files) formData.append('videos', file);
+      const response = await adminApi.post('/api/products/upload-videos', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000,
+      });
+      return response.data;
+    } catch (error) { throw error.response?.data || error; }
+  },
+
   uploadImages: async (files) => {
     try {
       const formData = new FormData();

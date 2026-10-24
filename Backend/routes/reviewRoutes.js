@@ -7,7 +7,7 @@ const {
     bulkUploadReviews, bulkModerateReviews
 } = require('../controller/reviewController.js');
 const { authenticate, isOrderManager } = require('../middleware/authMiddleware.js');
-const { upload } = require('../middleware/uploadMiddleware.js');
+const { upload, validateMagicBytes } = require('../middleware/uploadMiddleware.js');
 
 const router = express.Router();
 
@@ -31,7 +31,10 @@ const sheetUpload = multer({
 // Public
 router.get('/all',                  getAllPublicReviews);
 router.get('/product/:productId',   getPublicProductReviews);
-router.post('/submit',              upload.array('files', 5), createPublicReview);
+router.post('/submit', upload.array('files', 5), validateMagicBytes, (error, req, res, next) => {
+    if (error) return res.status(400).json({ success: false, message: error.message });
+    next();
+}, createPublicReview);
 
 // Admin
 router.post('/admin/bulk-upload',   authenticate, isOrderManager, sheetUpload.single('file'), bulkUploadReviews);

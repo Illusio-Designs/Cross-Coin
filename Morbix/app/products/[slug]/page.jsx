@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ConditionsSection from '@/components/product/ConditionsSection';
+import CustomerComfortInsights from '@/components/product/CustomerComfortInsights';
+import ProductVideos from '@/components/product/ProductVideos';
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
@@ -119,10 +121,13 @@ export default async function ProductPage({ params, searchParams }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
-      {/* ── Conditions it can help with (before "Ideal for") ── */}
-      <ConditionsSection />
+      <ProductVideos videos={product.videos} />
 
-      {/* ── Ideal for, care and manufacturing ── */}
+      {/* ── Conditions it can help with ── */}
+      <ConditionsSection />
+      <CustomerComfortInsights />
+
+      {/* ── Manufacturing details ── */}
       <div className="pdd-wrap">
         <ProductDetailBlocks product={product} />
       </div>

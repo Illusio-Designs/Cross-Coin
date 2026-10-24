@@ -605,6 +605,7 @@ module.exports.getAllPublicReviews = async (req, res) => {
         // Default raised 20 → 60 so the homepage review slider / testimonials
         // reflect a realistic brand-wide count (pagination.total has the exact).
         const { page = 1, limit = 60, sort = 'recent' } = req.query;
+        const includeMedia = req.query.includeMedia === '1';
         let order = [['createdAt', 'DESC']];
         if (sort === 'highest') order = [['rating', 'DESC'], ['createdAt', 'DESC']];
         if (sort === 'lowest') order = [['rating', 'ASC'], ['createdAt', 'DESC']];
@@ -624,13 +625,8 @@ module.exports.getAllPublicReviews = async (req, res) => {
             include: [
                 { model: User, as: 'User', attributes: ['id', 'username', 'profileImage'] },
                 { model: Product, as: 'Product', attributes: ['id', 'name'] },
-                // ReviewImages are deliberately NOT joined here. This brand-wide
-                // feed powers only the home testimonials marquees/sliders, which
-                // render text + name + rating (never review photos). Joining the
-                // hasMany ReviewImages forced `distinct` + a large payload on
-                // every homepage fetch; dropping it makes the query and response
-                // far lighter. The PDP review list (which does show photos) uses
-                // the separate /api/reviews/product/:id endpoint.
+                // Load photos separately only for storefronts that display them.
+                ...(includeMedia ? [{ model: ReviewImage, as: 'ReviewImages', separate: true, attributes: ['id', 'fileName', 'fileType'], limit: 5, order: [['id', 'ASC']] }] : []),
             ],
             order,
             limit: parseInt(limit),
@@ -643,6 +639,10 @@ module.exports.getAllPublicReviews = async (req, res) => {
                 ...r.toJSON(),
                 reviewerName: r.User ? r.User.username : r.guestName,
                 productName: r.Product ? r.Product.name : 'N/A',
+                ...(includeMedia ? { ReviewImages: (r.ReviewImages || []).map((image) => ({
+                    ...image.toJSON(),
+                    url: imagekitService.getOptimizedUrl(image.fileName, 'medium'),
+                })) } : {}),
             })),
             pagination: {
                 total: reviewsData.count,

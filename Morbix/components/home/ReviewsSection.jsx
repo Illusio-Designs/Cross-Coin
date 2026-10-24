@@ -24,6 +24,11 @@ export default function ReviewsSection({ reviews = [], total: totalProp, product
       </div>
       {r.title && <b className="review-title">{r.title}</b>}
       <p>{r.text}</p>
+      {r.images?.length > 0 && <div className="review-customer-photos">
+        {r.images.map((src, index) => <a key={`${src}-${index}`} href={src} target="_blank" rel="noopener noreferrer" aria-label={`Open photo ${index + 1} from ${r.author}'s review`}>
+          <img src={src} alt={`Photo ${index + 1} shared by ${r.author}`} width="72" height="72" loading="lazy" />
+        </a>)}
+      </div>}
       <div className="review-head" style={{ marginTop: 14, marginBottom: 0 }}>
         <div className="review-av">{(r.author || '?').charAt(0)}</div>
         <div className="review-who"><b style={{ fontSize: 13 }}>{r.author}</b><span className="muted" style={{ fontSize: 12 }}>{r.date}</span></div>

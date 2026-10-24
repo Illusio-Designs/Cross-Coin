@@ -1,0 +1,30 @@
+/* Product page: Ideal for, care and manufacturing blocks (.pdd). */
+.pdd { --ink: #11100E; --mut: #777168; --line: #E6DED0; --card: #ffffff; --acc: #B89A63; --acc2: #8F7548; --soft: #EFEAE2;
+  display: flex; flex-direction: column; gap: 30px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.pdd, .pdd * { box-sizing: border-box; }
+.pdd-blk { min-width: 0; }
+.pdd-h { margin: 0 0 14px; font-family: var(--font-bodoni, 'Bodoni Moda', Georgia, serif); font-weight: 500; font-size: 24px; line-height: 1.2; color: var(--ink); letter-spacing: 0; text-transform: none; }
+.pdd-eyebrow { display: block; margin-bottom: 8px; font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; font-weight: 600; color: var(--mut); }
+.pdd-ic { display: inline-block; flex: none; }
+.pdd-ic svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.pdd-lab { font-size: 12.5px; line-height: 1.4; color: var(--mut); white-space: pre-line; }
+.pdd-addr { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink); max-width: 62ch; }
+.pdd-flag { display: inline-block; width: 22px; height: 15px; border-radius: 2px; background: linear-gradient(#ff9933 33%, #fff 33% 66%, #138808 66%); box-shadow: 0 0 0 1px rgba(0,0,0,.12); flex: none; }
+.pdd-origin { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.pdd-chips { display: flex; flex-wrap: wrap; }
+.pdd-care { display: grid; }
+@media (prefers-reduced-motion: reduce) { .pdd * { transition: none !important; } }
+
+.pdd-vm .pdd-blk { text-align: center; }
+.pdd-vm .pdd-chips { justify-content: center; align-items: center; gap: 10px 18px; font-size: 12px; letter-spacing: .24em; text-transform: uppercase; }
+.pdd-vm .pdd-chip { display: inline-flex; align-items: center; gap: 18px; }
+.pdd-vm .pdd-chip:not(:last-child)::after { content: '\25C6'; color: var(--acc); font-size: 8px; }
+.pdd-vm .pdd-chip .pdd-ic { display: none; }
+.pdd-vm .pdd-care { display: flex; justify-content: center; flex-wrap: wrap; gap: 26px 0; }
+.pdd-vm .pdd-care > div { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 33.333%; min-width: 0; padding: 0 6px; }
+.pdd-vm .pdd-care .pdd-ic { width: 52px; height: 52px; padding: 13px; border: 1px solid var(--acc); border-radius: 50%; color: var(--acc2); }
+.pdd-vm .pdd-care .pdd-ic svg { stroke-width: 1; }
+.pdd-vm .pdd-lab { font-style: italic; font-family: var(--font-bodoni, 'Bodoni Moda', Georgia, serif); font-size: 15px; }
+.pdd-vm .pdd-rule { width: 56px; height: 1px; background: var(--acc); margin: 0 auto 18px; }
+.pdd-vm .pdd-addr { margin: 0 auto 16px; }
+.pdd-vm .pdd-origin-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--mut); }

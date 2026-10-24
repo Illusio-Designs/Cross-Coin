@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES, VIDEO_MIME_TYPES, matchesVideoHeader } = require('../utils/productVideos.js');
 
 // In CommonJS, __filename and __dirname are available
 
@@ -130,6 +131,30 @@ const productUpload = withCleanup(multer({
     }
 }));
 
+// Dedicated video uploads keep product-photo size/type limits unchanged.
+const productVideoUpload = withCleanup(multer({
+    storage,
+    limits: { fileSize: MAX_PRODUCT_VIDEO_BYTES, files: MAX_PRODUCT_VIDEOS },
+    fileFilter: (req, file, cb) => VIDEO_MIME_TYPES.includes(file.mimetype)
+        ? cb(null, true) : cb(new Error('Upload an MP4 or WebM video.')),
+}));
+
+const validateProductVideos = (req, res, next) => {
+    try {
+        for (const file of uploadedFiles(req)) {
+            const fd = fs.openSync(file.path, 'r');
+            const header = Buffer.alloc(12);
+            let length;
+            try { length = fs.readSync(fd, header, 0, header.length, 0); }
+            finally { fs.closeSync(fd); }
+            if (!matchesVideoHeader(file.mimetype, header.subarray(0, length))) {
+                return next(new Error('Invalid video: file content does not match its type.'));
+            }
+        }
+        next();
+    } catch (error) { next(error); }
+};
+
 const categoryUpload = withCleanup(multer({
     storage: storage,
     fileFilter: fileFilter,
@@ -179,4 +204,4 @@ const validateMagicBytes = (req, res, next) => {
   }
 };
 
-module.exports = { upload, productUpload, categoryUpload, validateMagicBytes, ALLOWED_MIME_TYPES };
+module.exports = { upload, productUpload, productVideoUpload, validateProductVideos, categoryUpload, validateMagicBytes, ALLOWED_MIME_TYPES };

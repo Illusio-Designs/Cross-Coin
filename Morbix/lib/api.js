@@ -7,6 +7,7 @@
  * empty state.
  */
 import { ikSrc } from './image';
+import { videosForProduct } from './productVideos';
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
 import { plainText } from './plainText';
@@ -192,11 +193,11 @@ export async function getStoreReviews(revalidate) {
   // (or errors) on a given request, fall back to the recent list so the wall
   // never shows "No reviews yet" when the store actually has reviews.
   try {
-    const out = reviewsPayload(await brandFetch('/api/reviews/all?limit=30&sort=random', revalidate ?? 300));
+    const out = reviewsPayload(await brandFetch('/api/reviews/all?limit=30&sort=random&includeMedia=1', revalidate ?? 300));
     if (out.reviews.length) return out;
   } catch { /* fall through to recent */ }
   try {
-    return reviewsPayload(await brandFetch('/api/reviews/all?limit=30', revalidate ?? 300));
+    return reviewsPayload(await brandFetch('/api/reviews/all?limit=30&includeMedia=1', revalidate ?? 300));
   } catch { return { reviews: [], total: 0 }; }
 }
 
@@ -526,6 +527,7 @@ function mapProduct(p) {
     // save) — used by the PDP to render rich descriptions. `description` above
     // stays plain text for meta tags / cards.
     descriptionHtml: str(p.description || ''),
+    videos: videosForProduct(p),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,
@@ -607,6 +609,9 @@ function mapReview(r) {
     date: fmtDate(r.createdAt || r.created_at || r.date),
     title: r.title || r.heading || '',
     text: r.review || r.comment || r.text || r.body || '',
+    images: (Array.isArray(r.ReviewImages) ? r.ReviewImages : Array.isArray(r.images) ? r.images : [])
+      .filter((image) => image?.fileType !== 'video')
+      .map((image) => imgUrl(image)).filter(Boolean).slice(0, 5),
   };
 }
 
