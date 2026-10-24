@@ -1714,3 +1714,7 @@ button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .7; cursor:
 .review-customer-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .review-customer-photos a { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
 .review-customer-photos img { width: 72px; height: 72px; object-fit: cover; }
+
+/* Original customer comfort infographic, served by the frontend. */
+.customer-comfort-insights { width: 100%; max-width: var(--maxw); margin: 24px auto 0; overflow: hidden; border-radius: var(--r-lg); }
+.customer-comfort-insights img { display: block; width: 100%; height: auto; }
