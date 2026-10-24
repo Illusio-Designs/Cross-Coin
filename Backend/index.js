@@ -1,3 +1,5 @@
+// Environment first (incl. the admin API copy reading the main app's .env).
+require('./config/loadEnv.js');
 // Sentry — must be first so the SDK instruments everything below it.
 // No-op unless SENTRY_DSN is set (see instrument.js).
 const Sentry = require('./instrument.js');
