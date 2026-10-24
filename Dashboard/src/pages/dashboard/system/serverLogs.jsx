@@ -14,7 +14,8 @@ import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
      also sent by email + WhatsApp, reminded hourly, "Resolved" after).
    · Tiles: requests, server errors, blocked requests, checkout,
      orders, response time, memory.
-   · By store: each storefront's page loads, checkout, errors, orders
+   · By store: each storefront's page loads, checkout, errors, orders,
+     plus the Obzus admin panel (same server) as its own row
      (stores send X-Brand-Name). The store filter narrows everything.
    · Hour by hour: requests per group, errors, blocked, orders.
    · Logged problems: errors and blocked requests, grouped.
@@ -90,7 +91,7 @@ function tilesFrom(d) {
     { label: 'Server errors', value: `${k.error_pct_15m}%`, tone: k.error_pct_15m > r.errorPct ? 'bad' : k.error_pct_15m > 0 ? 'warn' : 'ok', note: 'of requests, last 15 min' },
     { label: 'Blocked', value: num(k.blocked_15m), tone: k.blocked_15m >= r.blockedCount ? 'bad' : k.blocked_15m > 0 ? 'warn' : 'ok', note: 'rate-limited or CORS, last 15 min' },
     { label: 'Checkout', value: k.checkout_1h ? `${k.checkout_fail_pct_1h}% failed` : 'No tries', tone: !k.checkout_1h ? 'muted' : k.checkout_fail_pct_1h > r.checkoutFailPct ? 'bad' : k.checkout_fail_pct_1h > 0 ? 'warn' : 'ok', note: `${num(k.checkout_1h)} checkout requests, last hour` },
-    { label: 'Orders', value: num(k.orders_1h), tone: lastOrderAge == null ? 'muted' : lastOrderAge > r.ordersStoppedHours * HOUR ? 'warn' : 'ok', note: `last hour · last order ${ago(k.last_order_at)}` },
+    { label: 'Orders', value: num(k.orders_1h), tone: lastOrderAge == null ? 'muted' : lastOrderAge > r.ordersStoppedHours * HOUR ? 'warn' : 'ok', note: `last hour${d.orders_all_stores && d.brand ? ' · all stores' : ''} · last order ${ago(k.last_order_at)}` },
     { label: 'Response time', value: k.requests_1h ? secs(k.avg_ms_1h) : '—', tone: k.requests_1h ? avgTone : 'muted', note: 'average, last hour' },
     { label: 'Memory', value: `${num(k.memory_mb)} MB`, tone: k.memory_mb >= r.memoryMb ? 'bad' : k.memory_mb >= r.memoryMb * 0.8 ? 'warn' : 'ok', note: `this server process · alert at ${num(r.memoryMb)} MB` },
   ];
@@ -186,7 +187,7 @@ function StoresTable({ stores, onPick }) {
     <div className="rep-tbl-wrap">
       <table className="rep-table sl-events">
         <thead>
-          <tr><th>Store</th><th className="num">Page loads</th><th className="num">Checkout tries</th><th className="num">Checkout failed</th><th className="num">Orders</th><th>Last order</th><th className="num">Server errors</th><th className="num">Blocked</th></tr>
+          <tr><th>Store</th><th className="num">Requests</th><th className="num">Page loads</th><th className="num">Checkout tries</th><th className="num">Checkout failed</th><th className="num">Orders</th><th>Last order</th><th className="num">Server errors</th><th className="num">Blocked</th></tr>
         </thead>
         <tbody>
           {stores.map((s) => (
@@ -196,6 +197,7 @@ function StoresTable({ stores, onPick }) {
                   ? <button type="button" className="sl-link" onClick={() => onPick(s.brand)}>{s.name}</button>
                   : <span className="mut">{s.name}</span>}
               </td>
+              <td className="num">{num(s.requests)}</td>
               <td className="num">{num(s.visits)}</td>
               <td className="num">{num(s.checkout)}</td>
               <td className={`num${s.checkout_failed ? ' sl-bad' : ' mut'}`}>{num(s.checkout_failed)}</td>
@@ -452,7 +454,7 @@ export default function ServerLogs() {
 
           <div className="sl-range" role="group" aria-label="Store">
             <span className="sl-lbl">Store</span>
-            {[{ slug: '', name: 'All stores' }, ...data.brands, { slug: '-', name: 'No store (admin, webhooks)' }].map((b) => (
+            {[{ slug: '', name: 'All stores' }, ...data.brands, { slug: '-', name: 'No store (webhooks, other)' }].map((b) => (
               <button key={b.slug || 'all'} type="button" className={`rep-chip${brand === b.slug ? ' is-active' : ''}`} aria-pressed={brand === b.slug} onClick={() => setBrand(b.slug)}>{b.name}</button>
             ))}
           </div>
@@ -473,7 +475,7 @@ export default function ServerLogs() {
 
           {!brand && (
             <section className="rep-panel rep-panel--flush">
-              <div className="rep-ph"><h3>By store</h3><span className="hint">Over the time range · click a store to see only its numbers</span></div>
+              <div className="rep-ph"><h3>By store</h3><span className="hint">Over the time range · click a row to see only its numbers</span></div>
               <StoresTable stores={data.stores} onPick={setBrand} />
             </section>
           )}

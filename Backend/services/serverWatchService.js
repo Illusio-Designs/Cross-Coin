@@ -196,11 +196,37 @@ async function brands() {
 function brandOf(raw) {
   const slug = String(raw || '').trim().toLowerCase();
   if (!slug) return '';
+  if (slug === ADMIN_SOURCE) return ADMIN_SOURCE;
   refreshBrands();
   if (!brandCache.at) return /^[a-z0-9-]{1,32}$/.test(slug) ? slug : 'other'; // before the first load
   return brandCache.bySlug.has(slug) ? slug : 'other';
 }
-const brandName = (slug) => (slug === 'other' ? 'Unknown store' : slug ? brandCache.bySlug.get(slug)?.name || slug : 'No store (admin, webhooks)');
+const brandName = (slug) => (slug === ADMIN_SOURCE ? 'Obzus admin' : slug === 'other' ? 'Unknown store' : slug ? brandCache.bySlug.get(slug)?.name || slug : 'No store (webhooks, other)');
+
+// The Obzus admin panel runs on this same server, so its requests are
+// counted as their own source ('obzus', group 'admin'): sent from the admin
+// site (Origin / Referer), made with a staff login, or the admin login itself.
+const ADMIN_SOURCE = 'obzus';
+const ADMIN_HOSTS = new Set(['obzus.vercel.app', ...[process.env.ADMIN_URL, process.env.DASHBOARD_URL, process.env.ADMIN_DASHBOARD_URL]
+  .filter(Boolean).map((u) => { try { return new URL(u).host; } catch (_) { return null; } }).filter(Boolean)]);
+const hostOf = (u) => { try { return new URL(u).host; } catch (_) { return ''; } };
+let staffRoles = null;
+function isAdminRequest(req) {
+  const host = hostOf(req.headers?.origin) || hostOf(req.headers?.referer);
+  if (host && (ADMIN_HOSTS.has(host) || /(^|\.)obzus\b/.test(host))) return true;
+  if (/^\/api(\/v1)?\/users\/admin\//.test(req.originalUrl || '')) return true;
+  const u = req.user || req._rlUser;
+  if (!u) return false;
+  try {
+    if (!staffRoles) staffRoles = require('../middleware/authMiddleware.js');
+    return staffRoles.hasAnyRole(u, staffRoles.STAFF_ROLES);
+  } catch (_) { return false; }
+}
+/** Store slug, 'obzus' for the admin panel, 'other' or '' (no store). */
+function sourceOf(req) {
+  if (req.swSource !== undefined) return req.swSource;
+  return isAdminRequest(req) ? ADMIN_SOURCE : brandOf(req.headers?.['x-brand-name']);
+}
 
 // ── Recorder (in memory, flushed every minute) ─────────────────────────────
 const stats = new Map(); // `${bucketMs}|${grp}|${brand}` → counters
@@ -265,7 +291,7 @@ function noteLog(level, message, data) {
 /** Called from the error middleware when CORS refuses an origin. */
 function noteCors(req) {
   if (req) req.swCors = true;
-  noteEvent({ level: 'warn', kind: 'cors', brand: brandOf(req?.headers?.['x-brand-name']) || null, method: req?.method, path: normPath(req?.originalUrl), message: `CORS blocked origin ${req?.headers?.origin || '(none)'}` });
+  noteEvent({ level: 'warn', kind: 'cors', brand: (req && sourceOf(req)) || null, method: req?.method, path: normPath(req?.originalUrl), message: `CORS blocked origin ${req?.headers?.origin || '(none)'}` });
 }
 
 function recorder(req, res, next) {
@@ -276,11 +302,12 @@ function recorder(req, res, next) {
       const path = url.split('?')[0];
       if (path === '/api/health' || path === '/health') return;
       const method = (req.method || 'GET').toUpperCase();
-      const grp = groupOf(method, path);
       const status = res.statusCode;
       const dur = Date.now() - start;
       const bucketMs = start - (start % BUCKET_MS);
-      const brand = brandOf(req.headers['x-brand-name']);
+      const brand = sourceOf(req);
+      req.swSource = brand; // the request log line (config/logging.js) reuses it
+      const grp = brand === ADMIN_SOURCE && !/webhook/i.test(path) ? 'admin' : groupOf(method, path);
       bump(bucketMs, grp, brand, (s) => {
         s.requests += 1;
         if (status >= 500) s.fail5xx += 1;
@@ -574,6 +601,8 @@ async function dailySummary() {
   const sv = await q(`SELECT brand, SUM(CASE WHEN grp = 'visit' THEN requests ELSE 0 END) visits, SUM(fail5xx) fail5xx
                         FROM server_stats WHERE bucket >= :from AND bucket < :to AND brand NOT IN ('', 'other') GROUP BY brand`, { from, to });
   const so = await q('SELECT brand_id, COUNT(*) n FROM orders WHERE created_at >= :from AND created_at < :to GROUP BY brand_id', { from, to });
+  const [adm] = await q(`SELECT COALESCE(SUM(requests),0) requests, COALESCE(SUM(fail5xx),0) fail5xx FROM server_stats
+                          WHERE bucket >= :from AND bucket < :to AND brand = :admin`, { from, to, admin: ADMIN_SOURCE });
   const perStore = [...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => {
     const st = sv.find((r) => r.brand === slug) || {};
     const n = num(so.find((r) => r.brand_id === v.id)?.n);
@@ -585,6 +614,7 @@ async function dailySummary() {
     + `${req.toLocaleString('en-IN')} requests, ${pct(num(t.fail5xx), req)}% server errors, ${num(t.rl429) + num(t.cors)} blocked, ${num(a.n)} alerts.`;
   const lines = [`Daily summary for ${day}`, detail,
     ...(perStore.length ? ['By store:', ...perStore.map((x) => `${x.name}: ${x.orders} orders, ${x.visits.toLocaleString('en-IN')} page loads${x.errors ? `, ${x.errors} server errors` : ''}`)] : []),
+    ...(num(adm?.requests) ? [`Obzus admin: ${num(adm.requests).toLocaleString('en-IN')} requests${num(adm.fail5xx) ? `, ${num(adm.fail5xx)} server errors` : ''}`] : []),
     ...(top.length ? ['Most common errors:', ...top.map((e) => `${num(e.c)}× ${e.message}`)] : ['No errors logged.'])];
 
   try { await sendEmail(s.emails, `[Obzus] Daily server summary · ${day}`, lines); } catch (e) { console.error('[server-watch] summary email:', e.message); }
@@ -626,6 +656,8 @@ function start() {
 }
 
 // ── Admin page data ────────────────────────────────────────────────────────
+const rank = (slug) => (slug === ADMIN_SOURCE ? 1 : slug === 'other' ? 2 : slug === '' ? 3 : 0);
+
 async function overview({ hours = 24, level = '', search = '', brand = '' } = {}) {
   await ensureSchema();
   await flush();
@@ -633,8 +665,9 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
   const since = new Date(Date.now() - h * HOUR_MS);
   const byBrand = await brands();
   // One store, or all of them. '' = all; '-' = requests without a store.
-  const b = brand === '-' ? '' : brand && byBrand.has(String(brand).toLowerCase()) ? String(brand).toLowerCase() : null;
-  const brandId = b ? byBrand.get(b).id : null;
+  const wanted = String(brand || '').toLowerCase();
+  const b = brand === '-' ? '' : wanted === ADMIN_SOURCE || (wanted && byBrand.has(wanted)) ? wanted : null;
+  const brandId = b && b !== ADMIN_SOURCE ? byBrand.get(b).id : null;
   const oWhere = brandId ? 'AND brand_id = :brandId' : '';
   const sWhere = b != null ? 'AND brand = :b' : '';
 
@@ -691,8 +724,10 @@ async function overview({ hours = 24, level = '', search = '', brand = '' } = {}
   const settings = await getSettings();
   return {
     brand: b,
-    brands: [...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => ({ slug, name: v.name })),
-    stores: [...stores.values()].sort((x, y) => (x.brand === '') - (y.brand === '') || y.requests - x.requests),
+    brands: [...[...byBrand.entries()].filter(([slug]) => !slug.startsWith('zz-')).map(([slug, v]) => ({ slug, name: v.name })), { slug: ADMIN_SOURCE, name: brandName(ADMIN_SOURCE) }],
+    orders_all_stores: !brandId,
+    // Stores first (busiest on top), then the admin panel, unknown, no store.
+    stores: [...stores.values()].sort((x, y) => rank(x.brand) - rank(y.brand) || y.requests - x.requests),
     kpis: {
       requests_15m: last15.requests,
       error_pct_15m: pct(last15.fail5xx, last15.requests),
@@ -724,5 +759,5 @@ async function sendTest() {
 module.exports = {
   DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, start,
   getSettings, saveSettings, overview, sendTest,
-  _internal: { dbPing, brandOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
+  _internal: { dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
 };

@@ -140,7 +140,7 @@ function requestLogger(req, res, next) {
       duration: `${duration}ms`,
       ip: req.ip,
       userId: req.user?.id || null,
-      brand: req.headers['x-brand-name'] || null,
+      brand: req.swSource !== undefined ? req.swSource || null : req.headers['x-brand-name'] || null,
     };
 
     if (res.statusCode >= 500) logger.error('Request failed', entry);
