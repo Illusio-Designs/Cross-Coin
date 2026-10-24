@@ -156,7 +156,7 @@ export const getCSPHeaders = () => {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.crosscoin.in",
+      "connect-src 'self' https://api.crosscoin.in https://admin-api.crosscoin.in",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
