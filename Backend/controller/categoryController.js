@@ -11,7 +11,7 @@ const imagekitService = require('../services/imagekitService.js');
 const { logger } = require('../config/logging.js');
 
 // In CommonJS, __filename and __dirname are available
-const imageHandler = new ImageHandler(path.join(__dirname, '../uploads/categories'));
+const imageHandler = new ImageHandler(path.join(require('../utils/uploadsDir.js'), 'categories'));
 
 // Helper function to format category response
 const formatCategoryResponse = (category) => {

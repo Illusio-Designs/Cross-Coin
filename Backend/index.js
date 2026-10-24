@@ -288,7 +288,7 @@ app.use(requestLogger);
 // Passport + session removed — using JWT-only auth
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = join(__dirname, process.env.UPLOAD_PATH || 'uploads');
+const uploadsDir = require('./utils/uploadsDir.js');
 const seoUploadsDir = join(uploadsDir, 'seo');
 
 if (!fs.existsSync(uploadsDir)) {
@@ -1803,12 +1803,20 @@ const startServer = async () => {
         }
 
         // ── Run cron jobs in-process (saves ~80MB vs child process) ─────────
-        try {
-          const { initCronJobs } = require('./worker.js');
-          initCronJobs();
-          logger.info('✓ Cron jobs initialized in-process');
-        } catch (err) {
-          logger.error('[Worker] Failed to initialize cron jobs:', err.message);
+        // APP_ROLE=admin is the second copy of this API that serves only the
+        // admin panel (admin-api.crosscoin.in). It never runs the scheduled
+        // jobs: they stay on the main app, so no job (and no customer
+        // WhatsApp message) ever runs twice.
+        if (String(process.env.APP_ROLE || '').toLowerCase() === 'admin') {
+          logger.info('✓ APP_ROLE=admin: scheduled jobs run on the main API, not here');
+        } else {
+          try {
+            const { initCronJobs } = require('./worker.js');
+            initCronJobs();
+            logger.info('✓ Cron jobs initialized in-process');
+          } catch (err) {
+            logger.error('[Worker] Failed to initialize cron jobs:', err.message);
+          }
         }
 
         // ── Integration retry queue workers (Bull on Redis) ───────────────

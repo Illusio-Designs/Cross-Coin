@@ -38,7 +38,7 @@ class ImageHandler {
                 ? imageUrl.substring(9) // Remove '/uploads/'
                 : imageUrl;
             
-            const fullPath = path.join(__dirname, '..', 'uploads', relativePath);
+            const fullPath = path.join(require('../utils/uploadsDir.js'), relativePath);
             return await this.deleteFile(fullPath);
         } catch (error) {
             console.error('Error deleting image:', error);

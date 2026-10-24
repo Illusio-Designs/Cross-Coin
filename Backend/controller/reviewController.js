@@ -81,7 +81,7 @@ const removeReviewFile = (fileName) => {
             logger.error('Failed to delete review image from ImageKit:', err.message));
     }
     if (/^https?:\/\//i.test(fileName)) return Promise.resolve();
-    const imagePath = path.join(__dirname, '../uploads/reviews', path.basename(fileName));
+    const imagePath = path.join(require('../utils/uploadsDir.js'), 'reviews', path.basename(fileName));
     return fs.promises.unlink(imagePath).catch(err => {
         if (err.code !== 'ENOENT') logger.error('Failed to delete review image file:', err.message);
     });

@@ -39,8 +39,41 @@ function waitOn(set, timeoutMs) {
   });
 }
 
-function waitForNotification(timeoutMs = 25000) { return waitOn(waiters, timeoutMs); }
-function waitForWhatsApp(timeoutMs = 25000)     { return waitOn(waWaiters, timeoutMs); }
+// Cross-process wake-up. emitNewOrder / emitNewWhatsApp only reach waiters in
+// THIS process, but an order can be placed through another one (the store
+// API while the admin panel talks to admin-api, or a second Passenger
+// process). So while anyone is waiting, check every 3 s for a new order or
+// WhatsApp message id (MAX(id), primary key: cheap) and wake them.
+const DB_CHECK_MS = 3000;
+let dbTimer = null;
+let lastIds = null; // { order, wa }
+async function checkDb() {
+  if (!waiters.size && !waWaiters.size) {
+    clearInterval(dbTimer); dbTimer = null; lastIds = null;
+    return;
+  }
+  try {
+    const { sequelize } = require('../config/db.js');
+    const [[o]] = await sequelize.query('SELECT MAX(id) AS id FROM orders');
+    let wa = null;
+    try { [[{ id: wa }]] = await sequelize.query('SELECT MAX(id) AS id FROM whatsapp_messages'); } catch (_) { /* no WhatsApp tables */ }
+    const now = { order: Number(o?.id) || 0, wa: Number(wa) || 0 };
+    if (lastIds) {
+      if (now.order > lastIds.order || now.wa > lastIds.wa) notifyAll(waiters);
+      if (now.wa > lastIds.wa) notifyAll(waWaiters);
+    }
+    lastIds = now;
+  } catch (_) { /* database busy: try again on the next tick */ }
+}
+function watchDb() {
+  if (dbTimer) return;
+  dbTimer = setInterval(() => { checkDb(); }, DB_CHECK_MS);
+  if (dbTimer.unref) dbTimer.unref();
+  checkDb(); // baseline right away
+}
+
+function waitForNotification(timeoutMs = 25000) { const p = waitOn(waiters, timeoutMs); watchDb(); return p; }
+function waitForWhatsApp(timeoutMs = 25000)     { const p = waitOn(waWaiters, timeoutMs); watchDb(); return p; }
 
 function emitNewOrder(order) {
   broadcast('new_order', {

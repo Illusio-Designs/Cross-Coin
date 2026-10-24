@@ -8,7 +8,7 @@ const { logger } = require('../config/logging.js');
 // /api/uploads (index.js). Used whenever ImageKit refuses an upload — most
 // often "Upload Limit Exceeded" when the account's plan quota is full — so no
 // upload in the admin or the stores ever fails because of ImageKit.
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const UPLOADS_DIR = require('../utils/uploadsDir.js');
 const apiBase = () => (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
 // After a quota error, skip ImageKit for a while instead of waiting on a
 // request that will fail again.
