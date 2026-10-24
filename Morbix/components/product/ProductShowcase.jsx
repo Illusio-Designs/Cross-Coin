@@ -8,7 +8,6 @@ import { ikSrc } from '@/lib/image';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
-import { checkServiceability } from '@/lib/api/serviceability';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
@@ -48,28 +47,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const [showChart, setShowChart] = useState(false);   // size chart modal visibility
   const actionsRef = useRef(null);                      // the main buy buttons
   const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
-
-  // Delivery / pincode serviceability check.
-  const [pincode, setPincode] = useState('');
-  const [serviceability, setServiceability] = useState(null);
-  const [checkingPin, setCheckingPin] = useState(false);
-  const handlePincodeCheck = async () => {
-    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return; }
-    setCheckingPin(true);
-    setServiceability(null);
-    try { setServiceability(await checkServiceability(pincode)); }
-    catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
-    finally { setCheckingPin(false); }
-  };
-  // Estimated delivery date — uses the serviceable ETA when known, else 5 days.
-  const eta = (() => {
-    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    const day = d.getDate();
-    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
-    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
-  })();
 
   // Match the thumbnail rail's height to the main image so it never runs longer
   // than the photo — extra thumbnails scroll inside it instead.
@@ -559,34 +536,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           )}
         </div>
 
-        {/* Delivery / pincode serviceability (after the trust badges) */}
-        <div className="pdp-pin">
-          <span className="pdp-pin-label">Delivery Details</span>
-          <div className="pdp-pin-row">
-            <input
-              className="pdp-pin-input"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="Enter Pincode"
-              value={pincode}
-              onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-              aria-label="Pincode"
-            />
-            <button type="button" className="pdp-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
-              {checkingPin ? '…' : 'CHECK'}
-            </button>
-          </div>
-          {serviceability && (
-            <div className={`pdp-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
-              {serviceability.error ? (
-                <span>{serviceability.error}</span>
-              ) : (
-                <><Icon name="Check" size={14} /> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdp-cod">COD available</span>}</>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
 
