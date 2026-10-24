@@ -21,6 +21,20 @@ function normalizePhone(value) {
   return p || undefined;
 }
 
+/**
+ * The page a server-side Purchase reports as its source: the store's own
+ * thank-you page (https://<store domain>/order-confirmation; every storefront
+ * has it), so Meta ties the conversion to that store's domain instead of one
+ * shared address.
+ */
+async function thankYouUrl(brandId) {
+  try {
+    const domain = await require('../services/whatsappService.js').getBrandDomain(brandId);
+    if (domain) return `https://${domain}/order-confirmation`;
+  } catch (_) { /* fall through */ }
+  return `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/order-confirmation`;
+}
+
 /** Resolve the brand id from the X-Brand-Name header (defaults to 1 = Crosscoin). */
 async function resolveBrandId(req) {
   const slug = (req.headers["x-brand-name"] || "").toLowerCase();
@@ -106,7 +120,8 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     client_user_agent: order.user_agent || null,
     // Hashed PII
     em: sha256(order.email),
-    ph: sha256(order.phone),
+    // Digits with the country code (91…), as Meta matches phone numbers.
+    ph: sha256(normalizePhone(order.phone)),
     fn: sha256(order.first_name),
     ln: sha256(order.last_name),
     // Address fields — hashed
@@ -134,12 +149,13 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
   const eventData = {
     event_name: eventName,
     event_time: Math.floor(Date.now() / 1000),
-    event_source_url: extraData.event_source_url || `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/ThankYou`,
+    event_source_url: extraData.event_source_url || order.event_source_url || await thankYouUrl(brandId),
     action_source: 'website',
     event_id: order.order_number ? `${eventName}_${order.order_number}` : `${eventName}_${Date.now()}`,
     user_data: userData,
     custom_data: {
-      value: parseFloat(order.total_amount || order.final_amount || 0),
+      // What the shopper paid (after discounts), like the browser Purchase.
+      value: parseFloat(order.final_amount || order.total_amount || 0),
       currency: order.currency || 'INR',
       order_id: order.order_number || '',
       contents: items,
@@ -276,7 +292,7 @@ router.post('/test', isAuthenticated, isAdmin, async (req, res) => {
       items: [{ id: 'TEST-SKU', quantity: 1 }],
       marketing_consent: true,
     };
-    const result = await sendFacebookEvent('Purchase', sampleOrder, { event_source_url: 'https://crosscoin.in/ThankYou' });
+    const result = await sendFacebookEvent('Purchase', sampleOrder);
     res.json({ ok: !!(result && result.events_received) , result });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.response?.data || error.message });

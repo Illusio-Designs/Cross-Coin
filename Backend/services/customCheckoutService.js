@@ -334,15 +334,30 @@ Product.addHook('afterSave', 'customCheckoutPush', (p) => { if (p?.id) setImmedi
 Category.addHook('afterSave', 'customCheckoutPush', (c) => { if (c?.id) setImmediate(() => pushCollectionAllBrands(c.id)); });
 
 // Tracking the store can pass in cart_data.custom_attributes at token time
-// (fbp, fbc, ga_client_id, marketing_consent), read back from the order.
+// (fbp, fbc, ga_client_id, marketing_consent, plus the shopper's IP + browser
+// the token endpoint adds), read back from the order.
 function trackingFromAttributes(p) {
   const ca = p?.cart_data?.custom_attributes || p?.custom_attributes || {};
   const out = {};
+  if (ca.client_ip) out.ip_address = String(ca.client_ip);
+  if (ca.user_agent) out.user_agent = String(ca.user_agent);
   if (ca.fbp) out.fbp = String(ca.fbp);
   if (ca.fbc) out.fbc = String(ca.fbc);
   if (ca.ga_client_id) out.ga_client_id = String(ca.ga_client_id);
   if (ca.marketing_consent === true || ca.marketing_consent === 'true') out.marketing_consent = true;
   return out;
+}
+
+// The store account with this email, if the shopper has one: its id is the
+// external_id the store's browser pixel sends for logged-in shoppers, so the
+// server Purchase links to the same person. Checkout orders come in as guests.
+async function customerIdFor(brandId, email) {
+  if (!email) return null;
+  try {
+    const { User } = require('../model/userModel.js');
+    const u = await User.findOne({ where: { email: String(email).trim().toLowerCase(), source_brand_id: brandId }, attributes: ['id'] });
+    return u ? u.id : null;
+  } catch (_) { return null; }
 }
 
 // Purchase payload for an already-saved checkout order (Meta CAPI fields).
@@ -357,8 +372,10 @@ async function purchasePayload(brandId, orderNumber) {
     order.shipping_address_id ? ShippingAddress.findByPk(order.shipping_address_id) : null,
   ]);
   const amount = Number(order.final_amount) || 0;
+  const email = guest?.email || null;
   return {
     brand_id: brandId, order_number: order.order_number,
+    external_id: order.user_id || await customerIdFor(brandId, email),
     total_amount: amount, final_amount: amount, currency: 'INR',
     email: guest?.email || null, phone: addr?.phone || guest?.phone || null,
     first_name: guest?.firstName || null, last_name: guest?.lastName || null,
@@ -490,6 +507,7 @@ async function ingestCheckoutOrder(brandId, p) {
       brand_id: brandId, order_number: order.order_number,
       total_amount: finalAmount, final_amount: finalAmount, currency: 'INR',
       email: p.email || ship.email || null, phone: phone || null,
+      external_id: await customerIdFor(brandId, p.email || ship.email || null),
       first_name: firstName || null, last_name: lastName || null,
       zip_code: String(ship.pincode || '') || null, city: ship.city || null, state: ship.state || null, country: 'in',
       items: lines.map((l) => ({ product_id: l.product_id, quantity: l.quantity, price: l.price, name: '' })),
@@ -576,5 +594,6 @@ module.exports = {
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
   initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
+  trackingFromAttributes, customerIdFor,
   getPushConfig,
 };
