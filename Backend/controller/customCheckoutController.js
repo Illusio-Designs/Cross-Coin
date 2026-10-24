@@ -109,9 +109,16 @@ exports.createToken = async (req, res) => {
       .map((i) => ({ variant_id: String(i.variant_id ?? i.variationId ?? ''), quantity: Math.max(1, parseInt(i.quantity, 10) || 1) }))
       .filter((i) => i.variant_id) : [];
     if (!items.length) return res.status(400).json({ success: false, message: 'items are required' });
+    // The shopper's own IP + browser, captured here (the request comes from
+    // their browser) and carried through the checkout, so the server Purchase
+    // matches them as well as a native order's does. The order webhook comes
+    // from the provider's server, which can't tell us these.
+    const custom = (req.body.custom_attributes && typeof req.body.custom_attributes === 'object') ? { ...req.body.custom_attributes } : {};
+    if (req.ip) custom.client_ip = String(req.ip).slice(0, 64);
+    if (req.headers['user-agent']) custom.user_agent = String(req.headers['user-agent']).slice(0, 400);
     const cartData = {
       items,
-      custom_attributes: (req.body.custom_attributes && typeof req.body.custom_attributes === 'object') ? req.body.custom_attributes : {},
+      custom_attributes: custom,
       mobile_app: !!req.body.mobile_app,
     };
     const redirectUrl = String(req.body.redirect_url || '');
