@@ -103,6 +103,10 @@ const staticAllowedOrigins = [
     'https://gripzus.com',
     'https://www.gripzus.com',
 
+    // Admin dashboard (Obzus) — also covered by the *.vercel.app suffix check,
+    // listed so it never depends on that rule
+    'https://obzus.vercel.app',
+
     // Brand Vercel deployments (also covered by the *.vercel.app suffix check
     // below, listed explicitly so they work regardless of that rule)
     'https://soxbae.vercel.app',
