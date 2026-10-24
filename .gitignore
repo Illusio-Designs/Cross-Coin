@@ -21,6 +21,7 @@ deploy/
 .env.test
 .env.test.local
 .env.production.local
+.env.shared.json
 
 # IDE
 .vscode/
