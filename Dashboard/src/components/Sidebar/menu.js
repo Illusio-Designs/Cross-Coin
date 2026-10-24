@@ -17,7 +17,7 @@ import {
   UserMultiple02Icon, Target02Icon, GiftIcon, Package01Icon, Folder01Icon,
   Tag01Icon, Layers01Icon, Image01Icon, Discount01Icon, StarIcon,
   ChartLineData01Icon, SlidersHorizontalIcon, News01Icon, Search01Icon,
-  File01Icon, Store01Icon, DeliveryTruck01Icon, UserCheck01Icon, Activity01Icon,
+  File01Icon, Store01Icon, DeliveryTruck01Icon, UserCheck01Icon, Activity01Icon, ServerStack01Icon,
 } from '@hugeicons/core-free-icons';
 
 const ORDERS = ['admin', 'order_manager'];
@@ -79,6 +79,7 @@ export const MENU = [
       { key: 'shipping', label: 'Shipping & courier', view: 'shippingFees', also: ['webhook-events'], icon: DeliveryTruck01Icon, roles: ADMIN },
       { key: 'staff', label: 'Staff', view: 'staff-users', icon: UserCheck01Icon, roles: ADMIN },
       { key: 'health', label: 'System health', view: 'system-health', icon: Activity01Icon, roles: ADMIN, count: 'health', countText: 'failed job in the last 24 hours', alert: true },
+      { key: 'server-logs', label: 'Server logs', view: 'server-logs', icon: ServerStack01Icon, roles: ADMIN },
     ],
   },
 ];

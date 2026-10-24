@@ -30,4 +30,43 @@ router.post('/jobs/:key/run', authenticate, isAdmin, async (req, res) => {
   }
 });
 
+// ── Server logs (Server Watch) ─────────────────────────────────────────────
+const serverWatch = require('../services/serverWatchService');
+
+// GET /api/admin/system/server-logs?hours=24&brand=morbix&level=error&q=checkout
+// Request counts per hour and per store, logged problems, alerts and the
+// alert settings. brand: a store slug, '-' for requests without a store.
+router.get('/server-logs', authenticate, isAdmin, async (req, res) => {
+  try {
+    const data = await serverWatch.overview({ hours: req.query.hours, level: String(req.query.level || ''), search: String(req.query.q || ''), brand: String(req.query.brand || '') });
+    res.set('Cache-Control', 'no-store');
+    return res.json({ success: true, ...data });
+  } catch (error) {
+    logger.error('Server logs error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load server logs' });
+  }
+});
+
+// PUT /api/admin/system/server-logs/settings — recipients, alert hours, rules.
+router.put('/server-logs/settings', authenticate, isAdmin, async (req, res) => {
+  try {
+    const settings = await serverWatch.saveSettings(req.body || {}, req.user?.id);
+    return res.json({ success: true, settings });
+  } catch (error) {
+    logger.error('Server logs settings error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to save the settings' });
+  }
+});
+
+// POST /api/admin/system/server-logs/test — send a test alert to everyone.
+router.post('/server-logs/test', authenticate, isAdmin, async (req, res) => {
+  try {
+    const result = await serverWatch.sendTest();
+    return res.json({ success: true, result });
+  } catch (error) {
+    logger.error('Server logs test error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to send the test alert' });
+  }
+});
+
 module.exports = router;

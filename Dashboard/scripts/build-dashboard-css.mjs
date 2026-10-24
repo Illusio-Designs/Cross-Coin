@@ -51,6 +51,7 @@ const FILES = [
   'exceptions.css',
   'reviews.css',
   'systemHealth.css',
+  'serverLogs.css',
   'customers.css',
   'opsSettings.css',
   'website.css',

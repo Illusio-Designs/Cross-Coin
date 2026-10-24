@@ -811,6 +811,20 @@ function buildTemplates(storeName, storeUrl) {
       ],
     },
     {
+      // Server Watch alert to the store team (dashboard → Server logs). Body
+      // must not start or end with a variable (Meta rule) and params carry no
+      // newlines: {{1}}=title, {{2}}=what happened, {{3}}=time (IST).
+      name: tName('server_alert'), category: 'UTILITY', language: 'en',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Server Alert' },
+        {
+          type: 'BODY',
+          text: `Server alert: *{{1}}*\n\n{{2}}\n\nTime: {{3}} (India time).\n\nOpen the admin panel, Settings, Server logs for details.`,
+          example: { body_text: [['Checkout is failing', '8 of 20 checkout requests failed in the last 30 minutes.', '24 Oct, 2:15 pm']] },
+        },
+      ],
+    },
+    {
       name: tName('popup_coupon'), category: 'MARKETING', language: 'en',
       components: [
         { type: 'HEADER', format: 'TEXT', text: 'Exclusive Offer Just for You!' },

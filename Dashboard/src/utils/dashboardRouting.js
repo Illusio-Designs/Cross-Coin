@@ -48,6 +48,7 @@ export const getPageTitle = (view) => {
     'loyalty': 'Loyalty',
     'staff-users': 'Staff',
     'system-health': 'System health',
+    'server-logs': 'Server logs',
   };
   return titles[view] || 'Today';
 };
