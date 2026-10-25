@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import TrustBadges from '@/components/product/TrustBadges';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { ikSrc } from '@/lib/image';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
-import { checkServiceability } from '@/lib/api/serviceability';
+import { getDeliveryEstimate } from '@/lib/deliveryEstimate';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
@@ -46,26 +47,13 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const [showSticky, setShowSticky] = useState(false);
   const actionsRef = useRef(null);
 
-  // Delivery / pincode serviceability check.
-  const [pincode, setPincode] = useState('');
-  const [serviceability, setServiceability] = useState(null);
-  const [checkingPin, setCheckingPin] = useState(false);
-  const handlePincodeCheck = async () => {
-    if (!/^\d{6}$/.test(pincode)) { setServiceability({ error: 'Enter a valid 6-digit pincode.' }); return; }
-    setCheckingPin(true);
-    setServiceability(null);
-    try { setServiceability(await checkServiceability(pincode)); }
-    catch { setServiceability({ error: 'Unable to check. Please try again.' }); }
-    finally { setCheckingPin(false); }
-  };
-  const eta = (() => {
-    const days = (serviceability?.serviceable && serviceability?.estimated_delivery_days) || 5;
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    const day = d.getDate();
-    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
-    return { day, suffix, month: d.toLocaleString('en-IN', { month: 'long' }) };
-  })();
+  const [deliveryEstimate, setDeliveryEstimate] = useState(null);
+  useEffect(() => {
+    const refresh = () => setDeliveryEstimate(getDeliveryEstimate());
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const stripRef = useRef(null);
   const mainRef = useRef(null);
@@ -399,7 +387,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <div className="pdx-ship">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             <span><strong>Free shipping</strong> on all orders</span>
-            <span className="pdx-ship-eta">· Delivered by {eta.day}{eta.suffix} {eta.month}</span>
           </div>
 
           {/* Honest low-stock — only when the selected variant is genuinely low */}
@@ -446,24 +433,28 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             </div>
           )}
 
+          <TrustBadges />
           {hasPacks && (
             <div className="pdx-opt pdx-packs">
-              <span className="pdx-opt-label">Choose your pack</span>
+              <h3 className="bundle-heading">Bundle &amp; Save</h3>
               <div className="pdx-pack-list">
                 {packOptions.map((t, i) => {
                   const per = t.pairs > 0 ? t.price / t.pairs : t.price;
-                  const mrp = Number(price) * t.pairs;
-                  const disc = !t.base && t.price < mrp;
+                  const mrp = Math.max(Number(oldPrice) || Number(price), Number(price)) * t.pairs;
+                  const disc = t.price < mrp;
+                  const discount = disc ? Math.round((1 - t.price / mrp) * 100) : 0;
+                  const badge = t.badge || (t.pairs === 2 ? 'Most popular' : t.pairs >= 3 ? 'Best value' : null);
                   return (
                     <button type="button" key={i} className={`pdx-pack${i === pack ? ' active' : ''}`} onClick={() => setPack(i)} aria-pressed={i === pack}>
-                      <span className="pdx-pack-radio" aria-hidden="true" />
-                      <span className="pdx-pack-body">
-                        <span className="pdx-pack-name">{t.label}{t.badge ? <span className="pdx-pack-badge">{t.badge}</span> : null}</span>
-                        <span className="pdx-pack-per">₹{per.toFixed(2)} / pair</span>
-                      </span>
-                      <span className="pdx-pack-price">
-                        <span className="pdx-pack-now">₹{t.price.toFixed(0)}</span>
-                        {disc ? <span className="pdx-pack-mrp">₹{mrp.toFixed(0)}</span> : null}
+                      <span className={`bundle-banner${badge ? '' : ' empty'}`}>{badge || '\u00a0'}</span>
+                      <span className="bundle-content">
+                        <span className="bundle-name">{t.label}</span>
+                        <span className="bundle-unit">₹{per.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className="bundle-per">per pair</span>
+                        <span className="bundle-total">₹{t.price.toLocaleString('en-IN', { maximumFractionDigits: 0 })} total</span>
+                        <span className={`bundle-mrp${disc ? '' : ' bundle-placeholder'}`} aria-hidden={!disc}>₹{mrp.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                        <span className={`bundle-discount${disc ? '' : ' bundle-placeholder'}`} aria-hidden={!disc}>{discount}% OFF</span>
+                        <span className="bundle-caption">{t.pairs === 1 ? 'For you' : t.pairs === 2 ? 'You + Mom' : 'Whole family'}</span>
                       </span>
                     </button>
                   );
@@ -532,44 +523,10 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                   <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
                 </button>
               )}
+              {deliveryEstimate && <p className="pdp-delivery-estimate">Estimated delivery: <time dateTime={deliveryEstimate.earliest.dateTime}>{deliveryEstimate.earliest.label}</time>{' – '}<time dateTime={deliveryEstimate.latest.dateTime}>{deliveryEstimate.latest.label}</time></p>}
             </div>
           )}
 
-          <div className="pdx-trust">
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Secure Checkout</div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cash on Delivery</div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> 7-Day Returns</div>
-            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><polyline points="9 12 11 14 15 10"/></svg> 100% Genuine</div>
-          </div>
-
-          {/* Delivery / pincode serviceability — below the trust row */}
-          <div className="pdx-pin">
-            <span className="pdx-pin-label">Delivery Details</span>
-            <div className="pdx-pin-row">
-              <input
-                className="pdx-pin-input"
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="Enter Pincode"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                aria-label="Pincode"
-              />
-              <button type="button" className="pdx-pin-btn" onClick={handlePincodeCheck} disabled={checkingPin}>
-                {checkingPin ? '…' : 'CHECK'}
-              </button>
-            </div>
-            {serviceability && (
-              <div className={`pdx-pin-result${serviceability.error ? '' : serviceability.serviceable ? ' ok' : ' fail'}`}>
-                {serviceability.error ? (
-                  <span>{serviceability.error}</span>
-                ) : (
-                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Delivery to <strong>{pincode}</strong> in ~{serviceability.estimated_delivery_days || 5} days{serviceability.cod_available && <span className="pdx-cod">COD available</span>}</>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -577,10 +534,9 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
              tracks the SELECTED colour / size / SKU, beside the description) ── */}
       {((product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml)) || product.description || specs.length > 0) && (
         <section className="pdx-about-band">
-          <span className="eyebrow">Details</span>
-          <h2 className="pdx-about-title">About this product</h2>
           <div className="pdx-about-grid">
             <div className="pdx-about-main">
+              <h2 className="pdx-description-title">Product description</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
                 ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
                 : product.description

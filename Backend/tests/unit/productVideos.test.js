@@ -68,3 +68,16 @@ describe('JSON-text product attributes from database reads', () => {
     expect(videosFromAttributes(null)).toEqual([]);
   });
 });
+
+describe('Admin-managed product section image', () => {
+  const image = { url: 'https://cdn.example.com/soxbae.png', alt: 'Soxbae product highlights' };
+  test('round-trips the section image alongside videos and preserves it for older clients', () => {
+    const attributes = parseProductAttributes({ notes: [], _videos: [video], _detailImage: image });
+    expect(attributes._detailImage).toEqual(image);
+    expect(mergeProductAttributes({ notes: ['Cotton'] }, JSON.stringify(attributes))._detailImage).toEqual(image);
+    expect(mergeProductAttributes({ _detailImage: null }, attributes)._detailImage).toBeNull();
+  });
+  test('rejects unsafe section image URLs', () => {
+    expect(() => parseProductAttributes({ _detailImage: { url: 'javascript:alert(1)' } })).toThrow();
+  });
+});

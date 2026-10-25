@@ -7,6 +7,7 @@
  * empty state.
  */
 import { ikSrc } from './image';
+import { videosForProduct, detailImageForProduct } from './productVideos';
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
 import { plainText } from './plainText';
@@ -194,7 +195,7 @@ export async function getStoreReviews(revalidate) {
   try {
     // Home testimonials marquee only shows a handful; cap at 20 (exact total
     // still comes from pagination.total inside reviewsPayload).
-    return reviewsPayload(await brandFetch('/api/reviews/all?limit=20', revalidate ?? 300));
+    return reviewsPayload(await brandFetch('/api/reviews/all?limit=20&includeMedia=1', revalidate ?? 300));
   } catch { return { reviews: [], total: 0 }; }
 }
 
@@ -541,6 +542,8 @@ function mapProduct(p) {
     badge: (typeof p.badge === 'string' && BADGE_LABELS[p.badge]) || null,
     description: plainText(str(p.description)),
     descriptionHtml: str(p.description || ''),
+    videos: videosForProduct(p),
+    detailImage: detailImageForProduct(p),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,
@@ -622,6 +625,8 @@ function mapReview(r) {
     date: fmtDate(r.createdAt || r.created_at || r.date),
     title: r.title || r.heading || '',
     text: r.review || r.comment || r.text || r.body || '',
+    images: (Array.isArray(r.ReviewImages) ? r.ReviewImages : Array.isArray(r.images) ? r.images : [])
+      .filter(image => image?.fileType !== 'video').map(image => imgUrl(image)).filter(Boolean).slice(0, 5),
   };
 }
 

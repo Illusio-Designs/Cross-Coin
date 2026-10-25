@@ -125,7 +125,7 @@ export default async function ProductPage({ params, searchParams }) {
 
       {/* ── Conditions it can help with ── */}
       <ConditionsSection />
-      <CustomerComfortInsights />
+      <CustomerComfortInsights image={product.detailImage} />
 
       {/* ── Manufacturing details ── */}
       <div className="pdd-wrap">

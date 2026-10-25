@@ -24,3 +24,13 @@ export function videosForProduct(product) {
   }
   return productVideos(attributes?._videos);
 }
+
+export function detailImageForProduct(product) {
+  let attributes = product?.attributes;
+  if (typeof attributes === 'string') {
+    try { attributes = JSON.parse(attributes); } catch { attributes = null; }
+  }
+  const image = product?.detailImage || attributes?._detailImage;
+  const url = mediaUrl(image?.url);
+  return url ? { url, alt: String(image.alt || '').trim().slice(0, 300) } : null;
+}

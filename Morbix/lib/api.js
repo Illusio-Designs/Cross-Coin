@@ -7,7 +7,7 @@
  * empty state.
  */
 import { ikSrc } from './image';
-import { videosForProduct } from './productVideos';
+import { videosForProduct, detailImageForProduct } from './productVideos';
 import { heroFeatures, technologies } from './content';
 import { getColorHex } from './colorMap';
 import { plainText } from './plainText';
@@ -528,6 +528,7 @@ function mapProduct(p) {
     // stays plain text for meta tags / cards.
     descriptionHtml: str(p.description || ''),
     videos: videosForProduct(p),
+    detailImage: detailImageForProduct(p),
     image: typeof image === 'string' ? image : null,
     images: allUrls,
     colorImages,

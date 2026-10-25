@@ -1,11 +1,13 @@
 import { useId, useState } from 'react';
 import { productService } from '../../services';
+import ExistingProductVideoPicker from './ExistingProductVideoPicker';
 
 const MAX_VIDEOS = 4;
 const MAX_BYTES = 50 * 1024 * 1024;
 
-export default function ProductVideoFields({ videos = [], onChange, onUploadingChange, disabled = false }) {
+export default function ProductVideoFields({ productId, videos = [], onChange, onUploadingChange, disabled = false }) {
   const fieldId = useId();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const update = (index, patch) => onChange(videos.map((video, i) => i === index ? { ...video, ...patch } : video));
@@ -39,11 +41,15 @@ export default function ProductVideoFields({ videos = [], onChange, onUploadingC
   return (
     <section id="pst-sec-videos" className="pst-panel pst-sec">
       <h2>Product videos</h2>
-      <p className="pst-help">Add up to 4 portrait videos (MP4 or WebM, 50 MB each). They appear as playable cards on the Morbix product page. Save the product to publish your changes.</p>
+      <p className="pst-help">Add up to 4 portrait videos (MP4 or WebM, 50 MB each). They appear as playable cards on Morbix and Soxbae product pages. Save the product to publish your changes.</p>
       <label className="pst-btn pst-video-upload">
         {busy ? 'Uploading…' : 'Upload videos'}
         <input aria-label="Upload product videos" type="file" accept="video/mp4,video/webm" multiple disabled={locked || videos.length >= MAX_VIDEOS} onChange={upload} />
       </label>
+      <button type="button" className="pst-btn" disabled={locked || videos.length >= MAX_VIDEOS} onClick={() => setPickerOpen(value => !value)}>Choose from another product</button>
+      {pickerOpen && <ExistingProductVideoPicker productId={productId} videos={videos} disabled={locked}
+        onClose={() => setPickerOpen(false)}
+        onAdd={(selected) => { onChange([...videos, ...selected]); setPickerOpen(false); }} />}
       {error && <p role="alert" className="pst-video-error">{error}</p>}
       {!videos.length && <p className="pst-help">No videos added. The video section stays hidden until you add one.</p>}
       <div className="pst-video-grid">

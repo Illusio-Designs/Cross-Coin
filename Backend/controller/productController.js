@@ -1,5 +1,5 @@
 const { parseProductAttributes, mergeProductAttributes } = require('../utils/productAttributes.js');
-const { videosFromAttributes } = require('../utils/productVideos.js');
+const { videosFromAttributes, detailImageFromAttributes } = require('../utils/productVideos.js');
 const {
   Product,
   ProductVariation,
@@ -62,6 +62,7 @@ const uploadFileToImageKit = async (file) => {
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
   productData.videos = videosFromAttributes(productData.attributes);
+  productData.detailImage = detailImageFromAttributes(productData.attributes);
 
   // Heal local fallback image URLs embedded in the rich-text description:
   // rewrite /uploads/ → /api/uploads/ (unless already /api/uploads/) so images
