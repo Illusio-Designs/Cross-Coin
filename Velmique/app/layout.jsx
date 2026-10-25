@@ -17,6 +17,7 @@ import ScrollToTop from '@/components/ui/ScrollToTop';
 import ScrollProgress from '@/components/ui/ScrollProgress';
 import WhatsAppChat from '@/components/ui/WhatsAppChat';
 import VisitTracker from '@/components/common/VisitTracker';
+import SmoothScroll from '@/components/SmoothScroll';
 import MintShell from './_components/MintShell';
 import { SITE_URL } from '@/lib/site';
 
@@ -129,7 +130,7 @@ export default function RootLayout({ children }) {
             <StoreProvider>
               <ScrollProgress />
               <div className="m-root">
-                <MintShell>{children}</MintShell>
+                <SmoothScroll><MintShell>{children}</MintShell></SmoothScroll>
               </div>
               <ExitIntentModal />
               <ScrollToTop />

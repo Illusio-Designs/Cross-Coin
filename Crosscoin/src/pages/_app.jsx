@@ -21,6 +21,7 @@ import { installApiInterceptors } from '../utils/apiInterceptors';
 import { installErrorReporter } from '../utils/errorReporter';
 import { tryInitSentry } from '../utils/sentryAdapter';
 import SentryInit from '../components/SentryInit';
+import SmoothScroll from '../components/SmoothScroll';
 // Global CSS — all imports must live here (Next.js Pages Router rule)
 import "../styles/common/globals.css";
 import "../styles/common/responsive.css";
@@ -141,7 +142,7 @@ function AppContent({ Component, pageProps, progressRef }) {
   if (isTestPreview) {
     return (
       <>
-        <Component {...pageProps} />
+        <SmoothScroll><Component {...pageProps} /></SmoothScroll>
         <ToastContainer position="top-right" autoClose={1500} hideProgressBar newestOnTop closeOnClick theme="light" limit={3} />
       </>
     );
@@ -161,7 +162,7 @@ function AppContent({ Component, pageProps, progressRef }) {
       <Header />
       <Breadcrumb />
       <main id="main-content">
-        <Component {...pageProps} />
+        <SmoothScroll><Component {...pageProps} /></SmoothScroll>
       </main>
       <Footer />
       <CartDrawer
