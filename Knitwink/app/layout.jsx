@@ -22,6 +22,7 @@ import VisitTracker from '@/components/common/VisitTracker';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import CookieBanner from '@/components/ui/CookieBanner';
 import Analytics from '@/components/layout/Analytics';
+import SmoothScroll from '@/components/SmoothScroll';
 import { SITE_NAME } from '@/lib/constants';
 
 const inter = Inter({
@@ -136,7 +137,7 @@ export default function RootLayout({ children }) {
               <CartDrawerMount />
               <ExitIntentModal />
               <main id="main" className="flex-1 pb-1">
-                {children}
+                <SmoothScroll>{children}</SmoothScroll>
               </main>
               <Footer />
               <BackToTop />

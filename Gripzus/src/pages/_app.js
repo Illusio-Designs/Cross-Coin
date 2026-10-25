@@ -19,6 +19,7 @@ import VisitTracker from '../components/common/VisitTracker'
 import SentryInit from '../components/SentryInit'
 import ConsentSpeedInsights from '../components/common/ConsentSpeedInsights'
 import CookieBanner from '../components/ui/CookieBanner'
+import SmoothScroll from '../components/SmoothScroll'
 import { useEffect } from 'react'
 
 /* App shell — mirrors Crosscoin: every page is wrapped with the
@@ -47,7 +48,7 @@ function MyApp({ Component, pageProps }) {
                   pages sit below it. Full-bleed heros opt out with a negative
                   top margin so they start behind the header. */}
               <main className="flex-1 pt-[116px] md:pt-[124px]">
-                <Component {...pageProps} />
+                <SmoothScroll><Component {...pageProps} /></SmoothScroll>
               </main>
               <Footer />
             </div>

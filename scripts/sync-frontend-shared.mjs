@@ -56,6 +56,11 @@ const LEGACY_PATHS = {
 // (brands omitted = all 7; vars = extra placeholder → value replacements)
 const FILES = [
   {
+    // Lenis smooth scroll, mounted once in each store's root layout / _app.
+    source: 'shared/frontend/SmoothScroll.jsx',
+    dest: (base) => `${base}components/SmoothScroll.jsx`,
+  },
+  {
     source: 'shared/frontend/GoogleTagManager.jsx',
     dest: (base) => `${base}components/GoogleTagManager.jsx`,
     brands: ['Gripzus', 'Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira'],
