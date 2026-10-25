@@ -17,6 +17,15 @@ import BundleCards from '../../components/test/BundleCards';
 import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 
+const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
+const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+// Format a review's timestamp as "Mon YYYY" (e.g. "Oct 2026"); blank if unparseable.
+const fmtReviewDate = (d) => {
+  if (!d) return '';
+  const t = new Date(d);
+  return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+};
+
 export default function TestProduct({ preview = true }) {
   const router = useRouter();
   const [p, setP] = useState(null);
@@ -72,7 +81,7 @@ export default function TestProduct({ preview = true }) {
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
           setPackTiers([]); setPackSel(1);
           setRevLoading(true); setTiersLoading(true);
-          fetchProductReviews(prod.id, 5).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
+          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
           fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {}).finally(() => { if (!off) setTiersLoading(false); });
         }
@@ -165,9 +174,9 @@ export default function TestProduct({ preview = true }) {
   const add = (buyNow) => {
     if (hasPacks && selOpt) {
       const perPair = Math.round(selOpt.total / selOpt.pairs);
-      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: `${selOpt.pairs} Pack${selOpt.pairs > 1 ? 's' : ''}`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
+      addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: `${selOpt.pairs} Pack${selOpt.pairs > 1 ? 's' : ''}`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
     } else {
-      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
+      addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     }
     // Buy-now opens the real drawer straight to checkout (places a genuine
     // order); plain add opens it at the cart step. Both use the real drawer —
@@ -178,7 +187,7 @@ export default function TestProduct({ preview = true }) {
 
   // Multi-pair packs keep using our own checkout: Shiprocket prices each pair
   // from the catalog (no pack price) and can't carry a colour per pair.
-  const useShiprocket = srOn && !(hasPacks && selOpt && selOpt.pairs > 1);
+  const useShiprocket = srOn && !p.raw?.brandPriceOverride && !(hasPacks && selOpt && selOpt.pairs > 1);
   const onBuyNow = async (e) => {
     if (srBusy) return;
     const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty };
@@ -275,6 +284,7 @@ export default function TestProduct({ preview = true }) {
               <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
               <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
             </>)}
+            {prodReviews.items.length > 0 && <div style={{ marginTop: 18 }}><ProductReviewCarousel key={p.id} reviews={prodReviews.items} /></div>}
           </div>
         </div>
 
@@ -401,7 +411,21 @@ export default function TestProduct({ preview = true }) {
           {revLoading && prodReviews.items.length === 0 ? (
             <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
           ) : prodReviews.items.length > 0 ? (
-            <ProductReviewCarousel key={p.id} reviews={prodReviews.items} />
+            // Show the ACTUAL reviews once each, in a tidy grid. (Previously
+            // these were rotated across 3 rows and doubled, which turned a
+            // couple of real reviews into a wall of repeats that read as fake.)
+            <div className="revgrid">
+              {prodReviews.items.map((r, i) => (
+                <div className="rev" key={i}>
+                  <div className="rev__top">
+                    <div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div>
+                    <div className="who"><b>{r.name}</b>{r.date ? <span>{fmtReviewDate(r.date)}</span> : null}</div>
+                  </div>
+                  <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}<small> {Number(r.rating).toFixed(1)}</small></div>
+                  <p>&ldquo;{r.text}&rdquo;</p>
+                </div>
+              ))}
+            </div>
           ) : (
             <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '6px 0 10px' }}>No reviews yet — be the first to write one.</p>
           )}

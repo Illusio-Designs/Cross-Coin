@@ -716,8 +716,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
               </div>
             )}
             <p className="pst-note-box">
-              Price and stock limit per site are saved with the product, but checkout still charges each size’s own price and uses its real stock.
-              Leave them empty unless you are preparing per-site prices.
+              The site price overrides each size’s price on that site, including checkout. Stock still uses each size’s real inventory.
+              Leave the site price empty to use each size’s own price.
             </p>
           </section>
 

@@ -1,4 +1,5 @@
 'use strict';
+const { createBrandPriceResolver } = require('../utils/brandPrice.js');
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -220,6 +221,7 @@ exports.initiateCheckout = async (req, res) => {
     const mixPctByGroup = {};
     for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(brandId, mixQtyByGroup[g]); }
 
+    const sitePrice = createBrandPriceResolver(brandId);
     for (const item of items) {
       const { product_id, quantity } = item;
       let { variation_id } = item;
@@ -245,7 +247,7 @@ exports.initiateCheckout = async (req, res) => {
         return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${quantity}.`, product_id, variation_id: variation.id, available });
       }
 
-      let price = parseFloat(variation.price);
+      let price = await sitePrice(product_id, variation.price);
       if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
         // Build-Your-Pack line: apply the group's % off (mutually exclusive with
         // the per-product exact-price pack path below).

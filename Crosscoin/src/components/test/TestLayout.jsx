@@ -659,7 +659,7 @@ export default function TestLayout({ children }) {
   const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.packId && !(i.unit < i.base));
+  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.sitePriced && !i.packId && !(i.unit < i.base));
   useEffect(() => { if (useShiprocket && coupon) setCoupon(null); }, [useShiprocket, coupon]);
 
   // Order math (same rules as the live cart): free-shipping threshold + fees come
@@ -1068,7 +1068,7 @@ export default function TestLayout({ children }) {
                                 {save > 0 && <span className="bms__save">Save {inr(save)}</span>}
                               </div>
                             </div>
-                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add to cart</button>
+                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add to cart</button>
                           </div>
                         );
                       })}

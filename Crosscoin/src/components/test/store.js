@@ -49,12 +49,12 @@ export const cartSubtotal = (c = cart) => c.reduce((s, i) => s + i.unit * i.qty,
 
 const uid = () => 'pk_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 7);
 
-export function addItem({ id, vid, name, brand, color, size, pack, packq, unit, was, base, img, packId, packSize }, qty = 1) {
+export function addItem({ id, vid, name, brand, color, size, pack, packq, unit, was, base, img, packId, packSize, sitePriced = false }, qty = 1) {
   hydrate();
   const key = [id, vid || '', color, size, packq, packId || ''].join('|');
   const ex = cart.find((i) => i.key === key);
-  if (ex) ex.qty += qty;
-  else cart = [...cart, { key, id, vid: vid || null, name, brand, color, size, pack, packq, unit, was: was || 0, base: base || unit, img: img || '', qty, packId: packId || null, packSize: packSize || null }];
+  if (ex) { ex.qty += qty; ex.unit = unit; ex.base = base || unit; ex.sitePriced = sitePriced; }
+  else cart = [...cart, { key, id, sitePriced, vid: vid || null, name, brand, color, size, pack, packq, unit, was: was || 0, base: base || unit, img: img || '', qty, packId: packId || null, packSize: packSize || null }];
   emit();
   fireAddToCart({ id, name, unit, qty });
 }
