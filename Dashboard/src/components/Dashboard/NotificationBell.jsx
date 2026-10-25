@@ -3,8 +3,8 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import { useNotifications } from '../../hooks/useNotifications';
 import { SkeletonList } from '../ui/Skeleton';
-import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
-import { showError } from '../../utils/toastNotification';
+import { enablePush, sendTestPush, pushSupported, pushPermission } from '../../utils/pushNotifications';
+import { showError, showSuccess } from '../../utils/toastNotification';
 
 function timeAgo(date) {
   const s = Math.floor((Date.now() - new Date(date)) / 1000);
@@ -28,16 +28,29 @@ export default function NotificationBell() {
   // an already-opted-in browser stays registered after a redeploy.
   const [pushOn, setPushOn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushEndpoint, setPushEndpoint] = useState('');
+  const [testBusy, setTestBusy] = useState(false);
   useEffect(() => {
     if (pushSupported() && pushPermission() === 'granted') {
-      enablePush().then(r => setPushOn(!!r.ok)).catch(() => {});
+      enablePush().then(r => { setPushOn(!!r.ok); if (r.endpoint) setPushEndpoint(r.endpoint); }).catch(() => {});
     }
   }, []);
+  // Push a test alert to this device, so staff see right away that alerts
+  // arrive (and, if not, why the push service refused it).
+  const runTest = async (endpoint) => {
+    if (!endpoint) return;
+    setTestBusy(true);
+    try {
+      const t = await sendTestPush(endpoint);
+      if (t.ok) showSuccess('notifyTest', 'Test alert sent. It should appear in a few seconds.');
+      else showError('notifyFailed', t.message || 'The test alert could not be sent.');
+    } finally { setTestBusy(false); }
+  };
   const handleEnablePush = async () => {
     setPushBusy(true);
     try {
       const r = await enablePush();
-      if (r.ok) setPushOn(true);
+      if (r.ok) { setPushOn(true); setPushEndpoint(r.endpoint || ''); runTest(r.endpoint); }
       else if (r.reason === 'denied') showError('notifyFailed', 'Notifications are blocked. Enable them for this site in your browser settings.');
       else if (r.reason === 'disabled') showError('notifyFailed', 'Push is not configured on the server yet (VAPID keys missing).');
       else if (r.reason === 'unsupported') showError('notifyFailed', 'This browser does not support push notifications.');
@@ -105,7 +118,12 @@ export default function NotificationBell() {
             <div className="notif-h-actions">
               {pushSupported() && (
                 pushOn ? (
-                  <span className="notif-alerts"><HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} /> Alerts on</span>
+                  <>
+                    <span className="notif-alerts"><HugeiconsIcon icon={Tick02Icon} size={12} strokeWidth={3} /> Alerts on</span>
+                    <button className="notif-enable" onClick={() => runTest(pushEndpoint)} disabled={testBusy || !pushEndpoint}>
+                      {testBusy ? 'Sending…' : 'Send test'}
+                    </button>
+                  </>
                 ) : (
                   <button className="notif-enable" onClick={handleEnablePush} disabled={pushBusy}>
                     {pushBusy ? 'Enabling…' : 'Enable alerts'}

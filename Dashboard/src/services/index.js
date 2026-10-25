@@ -2551,6 +2551,10 @@ export const whatsappService = {
     const response = await adminApi.post('/api/notifications/push/subscribe', { subscription });
     return response.data;
   },
+  testPush: async (endpoint) => {
+    const response = await adminApi.post('/api/notifications/push/test', { endpoint });
+    return response.data;
+  },
 
   // Attach & send a file (image / video / audio / document) to the customer.
   sendMedia: async (conversationId, file, brandId = 1, caption = '') => {
