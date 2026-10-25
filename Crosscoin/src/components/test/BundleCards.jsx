@@ -1,6 +1,6 @@
 import { inr } from './data';
 
-export default function BundleCards({ options, selected, onSelect, comparePrice }) {
+export default function BundleCards({ options, selected, onSelect, comparePrice, pairsPerPack }) {
   return (
     <section className="ccbundles" aria-label="Bundle and save">
       <h2 className="ccbundles__title">Bundle &amp; Save</h2>
@@ -15,8 +15,9 @@ export default function BundleCards({ options, selected, onSelect, comparePrice 
               <span className={`ccbundles__badge${badge ? '' : ' is-empty'}`}>{badge || '\u00a0'}</span>
               <span className="ccbundles__content">
                 <strong className="ccbundles__quantity">{option.pairs} Pack{option.pairs > 1 ? 's' : ''}</strong>
-                <strong className="ccbundles__price">{inr(option.total / option.pairs)}</strong>
-                <span className="ccbundles__unit">per pack</span>
+                <strong className="ccbundles__price">{inr(option.total / (option.pairs * (pairsPerPack || 1)))}</strong>
+                <span className="ccbundles__unit">per {pairsPerPack ? 'pair' : 'pack'}</span>
+                {pairsPerPack && <span className="ccbundles__contents">{option.pairs * pairsPerPack} pair{option.pairs * pairsPerPack > 1 ? 's' : ''} total</span>}
                 <strong className="ccbundles__total">{inr(option.total)} total</strong>
                 <span className="ccbundles__mrp">{discount > 0 ? <s>{inr(mrp)}</s> : '\u00a0'}</span>
                 <span className={`ccbundles__discount${discount ? '' : ' is-empty'}`}>{discount ? `${discount}% OFF` : '\u00a0'}</span>
@@ -41,12 +42,14 @@ export default function BundleCards({ options, selected, onSelect, comparePrice 
         .ccbundles__quantity { font-size: 17px; line-height: 1.3; }
         .ccbundles__price { margin-top: 10px; color: var(--crimson); font-size: clamp(22px,2.5vw,32px); line-height: 1.15; }
         .ccbundles__unit { margin-top: 4px; color: var(--ink-soft); font-size: 12px; }
+        .ccbundles__contents { margin-top: 5px; color: var(--ink-soft); font-size: 11px; }
         .ccbundles__total { margin-top: 10px; font-size: 14px; }
         .ccbundles__mrp { margin-top: 8px; color: var(--ink-faint); font-size: 12px; }
         .ccbundles__discount { margin-top: 10px; padding: 4px 7px; border-radius: 20px; color: var(--crimson); background: color-mix(in srgb,var(--crimson) 9%,var(--surface)); font-size: 12px; font-weight: 800; }
         .is-empty { visibility: hidden; }
         .ccbundles__caption { margin-top: 14px; font-size: 12px; line-height: 1.4; }
-        @media(max-width:380px) { .ccbundles__grid { gap: 6px; } .ccbundles__quantity { font-size: 14px; } .ccbundles__total { font-size: 12px; } .ccbundles__badge { font-size: 9px; } .ccbundles__price { font-size: 22px; } .ccbundles__caption { font-size: 11px; } }
+        @media(max-width:380px) { .ccbundles__grid { gap: 6px; } .ccbundles__quantity { font-size: 14px; } .ccbundles__contents { margin-top: 5px; color: var(--ink-soft); font-size: 11px; }
+        .ccbundles__total { font-size: 12px; } .ccbundles__badge { font-size: 9px; } .ccbundles__price { font-size: 22px; } .ccbundles__caption { font-size: 11px; } }
       `}</style>
     </section>
   );

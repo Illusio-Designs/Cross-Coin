@@ -12,6 +12,7 @@ import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import { packPairCount } from '../../components/test/packPairCount';
 import BundleCards from '../../components/test/BundleCards';
 import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
@@ -260,7 +261,7 @@ export default function TestProduct({ preview = true }) {
               </SkBusy>
             )}
 
-            {hasPacks && <BundleCards options={packOptions} selected={packSel} onSelect={setPackSel} comparePrice={Math.max(basePair, cur.comparePrice || 0)} />}
+            {hasPacks && <BundleCards options={packOptions} selected={packSel} onSelect={setPackSel} comparePrice={Math.max(basePair, cur.comparePrice || 0)} pairsPerPack={packPairCount(p.raw, cur.id)} />}
 
             <div className="qtyrow">
               {!hasPacks && <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>}
