@@ -12,6 +12,7 @@ import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import BundleCards from '../../components/test/BundleCards';
 import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 
@@ -259,30 +260,7 @@ export default function TestProduct({ preview = true }) {
               </SkBusy>
             )}
 
-            {/* CHOOSE YOUR PACK — admin pack-pricing ladder (per-pair + total, badges) */}
-            {hasPacks && (<>
-              <div className="optlabel">Choose your pack</div>
-              <div className="packlad">
-                {packOptions.map((o) => {
-                  const perPair = o.total / o.pairs;
-                  const mrp = basePair * o.pairs;
-                  const on = packSel === o.pairs;
-                  return (
-                    <button type="button" key={o.pairs} className={`packopt${on ? ' on' : ''}`} onClick={() => setPackSel(o.pairs)}>
-                      <span className="packopt__radio" />
-                      <span className="packopt__l">
-                        <b>{o.pairs} Pack{o.pairs > 1 ? 's' : ''}{o.badge ? <em className="packopt__badge">{o.badge}</em> : null}</b>
-                        <span className="packopt__pp">{inr(perPair)} / pack</span>
-                      </span>
-                      <span className="packopt__p">
-                        <span className="packopt__now">{inr(o.total)}</span>
-                        {mrp > o.total ? <span className="packopt__was">{inr(mrp)}</span> : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>)}
+            {hasPacks && <BundleCards options={packOptions} selected={packSel} onSelect={setPackSel} comparePrice={Math.max(basePair, cur.comparePrice || 0)} />}
 
             <div className="qtyrow">
               {!hasPacks && <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))}>−</button><span>{qty}</span><button onClick={() => setQty(qty + 1)}>+</button></div>}
