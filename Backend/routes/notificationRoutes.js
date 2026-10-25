@@ -111,4 +111,21 @@ router.post('/push/subscribe', authenticate, isStaff, async (req, res) => {
   }
 });
 
+// Send a test alert to the calling browser/phone and report what the push
+// service answered (sent, or why Apple/Google refused it).
+router.post('/push/test', authenticate, isStaff, async (req, res) => {
+  try {
+    const endpoint = req.body?.endpoint;
+    if (!endpoint) return res.status(400).json({ success: false, message: 'endpoint is required' });
+    const r = await pushService.sendTest(endpoint);
+    if (r.skipped) return res.json({ success: false, message: 'Push is not configured on the server (VAPID keys missing).' });
+    if (r.notFound) return res.json({ success: false, message: 'This device is not registered yet. Turn alerts on again.' });
+    const f = r.failures?.[0];
+    if (!r.sent) return res.json({ success: false, message: f ? `Push service refused it (${f.status || '?'}): ${f.reason}` : 'Not sent.', result: r });
+    res.json({ success: true, result: r });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

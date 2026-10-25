@@ -50,7 +50,48 @@ async function saveSubscription(sub, userId = null) {
   return { ok: true };
 }
 
-// Send a notification to every saved subscription. Prunes dead ones (404/410).
+// Order alerts go out with high urgency: Apple (iPhone home-screen apps) and
+// Android may hold "normal" pushes back while the phone is idle or in
+// low-power mode, so an order alert would arrive late or not show at all.
+const SEND_OPTIONS = { TTL: 24 * 60 * 60, urgency: 'high' };
+
+function pushHost(endpoint) {
+  try { return new URL(endpoint).host; } catch (_) { return '?'; }
+}
+
+// Deliver one payload to the given subscription rows. Prunes dead ones
+// (404/410) and returns why any others were refused, e.g. Apple's
+// {"reason":"BadJwtToken"}, so a failed alert can be explained.
+async function deliver(subs, payload) {
+  const { PushSubscription } = require('../model/pushSubscriptionModel.js');
+  const body = JSON.stringify(payload);
+  let sent = 0;
+  const dead = [];
+  const failures = [];
+  await Promise.all(subs.map(async (s) => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        body,
+        SEND_OPTIONS,
+      );
+      sent++;
+    } catch (err) {
+      const code = err.statusCode;
+      const reason = String(err.body || err.message || '').slice(0, 200);
+      if (code === 404 || code === 410) dead.push(s.id); // gone — remove it
+      else logger.warn(`[Push] send failed to ${pushHost(s.endpoint)} (${code || '?'}): ${reason}`);
+      failures.push({ host: pushHost(s.endpoint), status: code || null, reason });
+    }
+  }));
+
+  if (dead.length) {
+    try { await PushSubscription.destroy({ where: { id: dead } }); } catch (_) {}
+  }
+  return { sent, pruned: dead.length, failures };
+}
+
+// Send a notification to every saved subscription.
 async function sendToAll(payload) {
   if (!isEnabled()) return { skipped: true };
   const { PushSubscription } = require('../model/pushSubscriptionModel.js');
@@ -60,28 +101,21 @@ async function sendToAll(payload) {
     return { error: e.message };
   }
   if (!subs.length) return { sent: 0 };
-
-  const body = JSON.stringify(payload);
-  let sent = 0;
-  const dead = [];
-  await Promise.all(subs.map(async (s) => {
-    try {
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        body,
-      );
-      sent++;
-    } catch (err) {
-      const code = err.statusCode;
-      if (code === 404 || code === 410) dead.push(s.id); // gone — remove it
-      else logger.warn(`[Push] send failed (${code || '?'}): ${err.message}`);
-    }
-  }));
-
-  if (dead.length) {
-    try { await PushSubscription.destroy({ where: { id: dead } }); } catch (_) {}
-  }
-  return { sent, pruned: dead.length };
+  return deliver(subs, payload);
 }
 
-module.exports = { isEnabled, getPublicKey, saveSubscription, sendToAll };
+// "Send test" from the dashboard bell: push to this one browser/phone only.
+async function sendTest(endpoint) {
+  if (!isEnabled()) return { skipped: true };
+  const { PushSubscription } = require('../model/pushSubscriptionModel.js');
+  const sub = await PushSubscription.findOne({ where: { endpoint_hash: hashEndpoint(endpoint) } });
+  if (!sub) return { notFound: true };
+  return deliver([sub], {
+    title: 'Obzus alerts are on',
+    body: 'New orders will show up here, even when the app is closed.',
+    url: '/dashboard/orders',
+    tag: 'push-test',
+  });
+}
+
+module.exports = { isEnabled, getPublicKey, saveSubscription, sendToAll, sendTest };
