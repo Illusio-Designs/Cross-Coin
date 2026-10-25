@@ -1,10 +1,10 @@
+import SocksComparison from '../../components/test/SocksComparison';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, toast, SkeletonCards, Thumb, Sk, SkBusy, CatTileSkeletons, PostCardSkeletons, ReviewCardSkeletons } from '../../components/test/ui';
 import { fetchProducts, fetchCategories, fetchReviews, fetchCoupons, fetchFaqs, fetchBlogs, fetchSliders } from '../../components/test/real';
-import { BENEFITS } from '../../components/test/data';
 import { HERO_WIDTHS, HERO_SIZES } from '../../utils/imageUtils';
 import { R, shopUrl } from '../../components/test/routes';
 
@@ -142,25 +142,7 @@ export default function TestHome({ preview = true, initialData = null }) {
         </div>
       </section>
 
-      {/* the standard — image-based benefit grid (real product photos in gold rings) */}
-      <section className="tech">
-        <div className="wrap">
-          <div className="benefithead">
-            <span className="eyebrow" style={{ color: 'var(--gold)' }}>[ 03 ] The standard</span>
-            <h2>Comfort you feel every day</h2>
-            <p>Everyday essentials, minted to a standard — soft, breathable and built to last, at an honest price.</p>
-          </div>
-          <div className="benefitgrid">
-            {BENEFITS.map((b, i) => (
-              <div className="benefit" key={b.t}>
-                <span className="benefit__img"><Thumb src={rail[i]?.img} color={rail[i]?.colors?.[0]?.name} w={300} /></span>
-                <b>{b.t}</b>
-                <span className="benefit__d">{b.d}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <SocksComparison />
 
       {/* reviews — real store reviews, auto-scrolling marquee (Morbix-style) */}
       {!fetched && reviews.length === 0 && (
