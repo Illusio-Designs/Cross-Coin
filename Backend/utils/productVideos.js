@@ -38,10 +38,28 @@ function videosFromAttributes(attributes) {
   return normalizeProductVideos(parsed?._videos);
 }
 
+function normalizeProductDetailImage(value, { strict = false } = {}) {
+  if (!value) return null;
+  const url = mediaUrl(value.url);
+  if (!url) {
+    if (strict) throw new Error('The product section image needs a valid HTTP or HTTPS URL.');
+    return null;
+  }
+  return { url, alt: String(value.alt || '').trim().slice(0, 300) };
+}
+
+function detailImageFromAttributes(attributes) {
+  let parsed = attributes;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { return null; }
+  }
+  return normalizeProductDetailImage(parsed?._detailImage);
+}
+
 function matchesVideoHeader(mime, bytes) {
   if (mime === 'video/mp4') return bytes.length >= 12 && bytes.toString('ascii', 4, 8) === 'ftyp';
   if (mime === 'video/webm') return bytes.length >= 4 && bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
   return false;
 }
 
-module.exports = { MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES, VIDEO_MIME_TYPES, normalizeProductVideos, videosFromAttributes, matchesVideoHeader };
+module.exports = { MAX_PRODUCT_VIDEOS, MAX_PRODUCT_VIDEO_BYTES, VIDEO_MIME_TYPES, normalizeProductVideos, videosFromAttributes, normalizeProductDetailImage, detailImageFromAttributes, matchesVideoHeader };

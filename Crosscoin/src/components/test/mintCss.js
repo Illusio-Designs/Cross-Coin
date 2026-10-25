@@ -424,7 +424,7 @@ export const MINT_CSS = `.cc-test-root{
 
 /* --- PDP: gallery zoom, lightbox, sticky buy bar, size-chart modal, review form --- */
 .cc-test-root .gmain{ position: relative; }
-.cc-test-root .gzoom{ position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 50%; color: var(--ink); box-shadow: var(--stamp-sm); pointer-events: none; }
+.cc-test-root .gmain > .gzoom{ position: absolute; left: auto; top: auto; right: 12px; bottom: 12px; transform: none; width: 34px; height: 34px; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 50%; color: var(--ink); box-shadow: var(--stamp-sm); pointer-events: none; }
 
 .cc-test-root .pdpsticky{ position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; transform: translateY(120%); transition: transform .28s var(--ease); background: var(--surface); border-top: 2px solid var(--line-ink); box-shadow: 0 -6px 20px rgba(24,13,62,.16); padding-bottom: env(safe-area-inset-bottom,0px); }
 .cc-test-root .pdpsticky.on{ transform: translateY(0); }

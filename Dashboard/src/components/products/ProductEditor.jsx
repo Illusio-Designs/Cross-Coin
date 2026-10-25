@@ -8,7 +8,8 @@ import { ConfirmModal } from '../common/AlertModal';
 import { productService, categoryService, attributeService, brandService } from '../../services';
 import AttributeSelector from './AttributeSelector';
 import ProductVideoFields from './ProductVideoFields';
-import { videosForProduct } from './productVideoData';
+import ProductDetailImageField from './ProductDetailImageField';
+import { videosForProduct, detailImageForProduct } from './productVideoData';
 import ExistingImageSelector from './ExistingImageSelector';
 import SerpPreview, { brandSiteName, brandUrl } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
@@ -51,7 +52,7 @@ const EMPTY_SEO = { metaTitle: '', metaDescription: '', metaKeywords: '', ogTitl
 const emptyVariation = () => ({ price: '', comparePrice: '', cost_price: '', stock: '', sku: '', attributes: {} });
 const emptyForm = () => ({
   id: null, slug: '', name: '', description: '', categoryId: '', status: 'active',
-  videos: [], images: [], imagesToDelete: [], variationImagesToDelete: [],
+  detailImage: null, videos: [], images: [], imagesToDelete: [], variationImagesToDelete: [],
   weight: '', weightUnit: 'g', dimensions: { length: '', width: '', height: '' }, dimensionUnit: 'cm', gst_rate: '5',
   attributes: [{ key: 'notes', values: [] }],
   variations: [emptyVariation()], variationImages: [],
@@ -110,6 +111,7 @@ function productToForm(product, admin = null) {
     name: product.name || '',
     description: product.description || '',
     videos: videosForProduct(product),
+    detailImage: detailImageForProduct(product),
     categoryId: product.categoryId != null ? String(product.categoryId) : '',
     status: product.status || 'active',
     images: (product.images || []).filter((img) => !img.product_variation_id).map(toFormImage),
@@ -178,6 +180,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [videosUploading, setVideosUploading] = useState(false);
+  const [detailImageUploading, setDetailImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [openVar, setOpenVar] = useState(() => (isNew ? { 0: true } : {}));
   const [imagePicker, setImagePicker] = useState(null); // null | 'product' | <variation index>
@@ -308,7 +311,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
 
   // ── save (same multipart payload as the old modal + brandSettings/badge_locked) ──
   const handleSubmit = async () => {
-    if (videosUploading) { setError('Please wait for the video upload to finish.'); return; }
+    if (videosUploading || detailImageUploading) { setError('Please wait for the upload to finish.'); return; }
     setError('');
     const variations = form.variations.map((variation) => {
       const processed = {};
@@ -395,6 +398,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
     });
     if (!attributesObj.notes) attributesObj.notes = [];
     attributesObj._videos = form.videos || [];
+    attributesObj._detailImage = form.detailImage || null;
     fd.append('attributes', JSON.stringify(attributesObj));
 
     fd.append('brandIds', JSON.stringify(selectedBrands.map((b) => b.id)));
@@ -712,8 +716,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
               </div>
             )}
             <p className="pst-note-box">
-              Price and stock limit per site are saved with the product, but checkout still charges each size’s own price and uses its real stock.
-              Leave them empty unless you are preparing per-site prices.
+              The site price overrides each size’s price on that site, including checkout. Stock still uses each size’s real inventory.
+              Leave the site price empty to use each size’s own price.
             </p>
           </section>
 
@@ -733,11 +737,13 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             </div>
           </section>
 
+          <ProductDetailImageField image={form.detailImage} onChange={(detailImage) => edit(previous => ({ ...previous, detailImage }))} onUploadingChange={setDetailImageUploading} disabled={saving || videosUploading || detailImageUploading} />
           <ProductVideoFields
+            productId={form.id}
             videos={form.videos}
             onChange={(videos) => edit((previous) => ({ ...previous, videos }))}
             onUploadingChange={setVideosUploading}
-            disabled={saving}
+            disabled={saving || detailImageUploading}
           />
 
           {/* ── SEO ── */}
@@ -816,8 +822,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             {error && <span className="pst-err" role="alert">{error}</span>}
             <span className="pst-savebar-sp" />
             {dirty && !error && <span className="pst-dirty">Unsaved changes</span>}
-            <button type="button" className="pst-btn" onClick={leave} disabled={saving || videosUploading}>{isNew ? 'Cancel' : 'Back to list'}</button>
-            <button type="submit" className="pst-btn pst-btn--primary" disabled={saving || videosUploading}>{saving ? 'Saving…' : isNew ? 'Create product' : 'Save'}</button>
+            <button type="button" className="pst-btn" onClick={leave} disabled={saving || videosUploading || detailImageUploading}>{isNew ? 'Cancel' : 'Back to list'}</button>
+            <button type="submit" className="pst-btn pst-btn--primary" disabled={saving || videosUploading || detailImageUploading}>{saving ? 'Saving…' : isNew ? 'Create product' : 'Save'}</button>
           </div>
         </form>
       )}

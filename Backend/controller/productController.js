@@ -1,5 +1,6 @@
+const { applyBrandPrice } = require('../utils/brandPrice.js');
 const { parseProductAttributes, mergeProductAttributes } = require('../utils/productAttributes.js');
-const { videosFromAttributes } = require('../utils/productVideos.js');
+const { videosFromAttributes, detailImageFromAttributes } = require('../utils/productVideos.js');
 const {
   Product,
   ProductVariation,
@@ -62,6 +63,7 @@ const uploadFileToImageKit = async (file) => {
 const formatProductResponse = (product) => {
   const productData = product.toJSON();
   productData.videos = videosFromAttributes(productData.attributes);
+  productData.detailImage = detailImageFromAttributes(productData.attributes);
 
   // Heal local fallback image URLs embedded in the rich-text description:
   // rewrite /uploads/ → /api/uploads/ (unless already /api/uploads/) so images
@@ -1905,6 +1907,7 @@ module.exports.getPublicProductBySlug = async (req, res) => {
     // Reusable include block — same shape for the exact + sanitized + LIKE lookups.
     const includeBlock = [
       { model: Category },
+      { model: Brand, as: 'Brands', through: { attributes: ['price_override'] } },
       {
         model: ProductVariation,
         as: "ProductVariations",
@@ -1986,7 +1989,7 @@ module.exports.getPublicProductBySlug = async (req, res) => {
     }
 
     // Format the product response
-    const formattedProduct = formatProductResponse(product);
+    const formattedProduct = applyBrandPrice(formatProductResponse(product), req.brand?.id || req.brandId);
 
     // Add full image URLs
     if (formattedProduct.images) {
@@ -2109,14 +2112,14 @@ module.exports.getAllPublicProducts = async (req, res) => {
       };
       
       // Apply formatting which includes price population from variations
-      const formatted = formatProductResponse(tempProduct);
+      const formatted = applyBrandPrice(formatProductResponse(tempProduct), req.brand?.id || req.brandId);
       
       return formatted;
     });
 
     // Set caching headers
     const crypto = require('crypto');
-    const etagHash = crypto.createHash('md5').update(JSON.stringify({ page, limit, total: result.pagination.total })).digest('hex').slice(0, 16);
+    const etagHash = crypto.createHash('md5').update(JSON.stringify({ page, limit, products: formattedProducts, total: result.pagination.total })).digest('hex').slice(0, 16);
     res.set({
       "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=600", // browser 5m, edge 10m + SWR
       ETag: `"products-${etagHash}"`,

@@ -22,7 +22,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 
 async function fetchJson(url) {
   try {
-    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
+    const r = await fetch(url, { cache: 'no-store', headers: { 'X-Brand-Name': 'crosscoin' } });
     if (!r.ok) return null;
     return await r.json();
   } catch {
@@ -59,11 +59,10 @@ export async function getServerSideProps({ params, res }) {
     `${API_URL}/api/public/faqs?type=product&id=${productResp.data.id}`
   );
 
-  // CDN caching: product pages change rarely; let the edge serve a stale
-  // copy while we revalidate in the background.
+  // Price edits must be reflected in the next product-page response.
   res?.setHeader?.(
     'Cache-Control',
-    'public, s-maxage=300, stale-while-revalidate=86400'
+    'private, no-store'
   );
 
   return {

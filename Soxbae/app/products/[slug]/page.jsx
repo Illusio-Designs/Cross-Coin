@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { PDP_COLOR_COOKIE, pdpColorFor } from '@/lib/pdpColor';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import ProductDetailImage from '@/components/product/ProductDetailImage';
+import ProductVideos from '@/components/product/ProductVideos';
 import ProductShowcase from '@/components/product/ProductShowcase';
 import ProductStory from '@/components/product/ProductStory';
 import ProductBenefits from '@/components/product/ProductBenefits';
@@ -114,9 +116,12 @@ export default async function ProductPage({ params, searchParams }) {
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
+      <ProductVideos videos={product.videos} />
+
 
       {/* ── "What Soxbae Socks Are Made For" benefits band (before the details) ── */}
       <ProductBenefits />
+      <ProductDetailImage image={product.detailImage} />
 
       {/* ── Full description + Ideal for / care / manufacturing (FAQ moved below) ── */}
       <ProductStory product={product} faqs={faqs} showFaq={false} />

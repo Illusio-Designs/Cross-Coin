@@ -7,3 +7,11 @@ export function videosForProduct(product) {
   }
   return Array.isArray(attributes?._videos) ? attributes._videos : [];
 }
+
+export function detailImageForProduct(product) {
+  let attributes = product?.attributes;
+  if (typeof attributes === 'string') {
+    try { attributes = JSON.parse(attributes); } catch { attributes = null; }
+  }
+  return product?.detailImage || attributes?._detailImage || null;
+}

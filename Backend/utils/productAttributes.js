@@ -1,4 +1,4 @@
-const { normalizeProductVideos, videosFromAttributes } = require('./productVideos');
+const { normalizeProductVideos, videosFromAttributes, normalizeProductDetailImage, detailImageFromAttributes } = require('./productVideos');
 
 function parseProductAttributes(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -21,6 +21,7 @@ function parseProductAttributes(raw) {
   const result = {};
   // `notes` first and always present — preserves the existing storefront contract.
   result.notes = sanitizeGroup(obj.notes);
+  if (Object.prototype.hasOwnProperty.call(obj, '_detailImage')) result._detailImage = normalizeProductDetailImage(obj._detailImage, { strict: true });
   if (Object.prototype.hasOwnProperty.call(obj, '_videos')) {
     result._videos = normalizeProductVideos(obj._videos, { strict: true });
   }
@@ -47,6 +48,8 @@ function mergeProductAttributes(raw, previous) {
   if (!Object.prototype.hasOwnProperty.call(next || {}, '_videos') && previousVideos.length) {
     next = { ...(next || {}), _videos: previousVideos };
   }
+  const previousImage = detailImageFromAttributes(previous);
+  if (!Object.prototype.hasOwnProperty.call(next || {}, '_detailImage') && previousImage) next = { ...(next || {}), _detailImage: previousImage };
   return next;
 }
 

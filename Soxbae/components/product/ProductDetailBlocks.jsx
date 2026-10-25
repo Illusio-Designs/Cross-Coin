@@ -85,7 +85,6 @@ function stepsFor(care) {
 }
 
 export default function ProductDetailBlocks({ product }) {
-  const steps = stepsFor(product && product.care);
   const origin = String((product && product.origin) || '').trim() || 'India';
   const badge = (
     <span className="pdd-origin">
@@ -96,25 +95,6 @@ export default function ProductDetailBlocks({ product }) {
 
   return (
     <section className="pdd pdd-sx" aria-label="Product details">
-      <div className="pdd-blk">
-        <span className="pdd-eyebrow">{IDEAL_TITLE}</span>
-        <div className="pdd-chips">
-          {IDEAL.map(([icon, label]) => (
-            <span className="pdd-chip" key={label}><Icon name={icon} />{label}</span>
-          ))}
-        </div>
-      </div>
-      <div className="pdd-blk">
-        <h3 className="pdd-h">{CARE_TITLE}</h3>
-        <div className="pdd-care">
-          {steps.map(([icon, label]) => (
-            <div key={label}>
-              <Icon name={icon} />
-              <span className="pdd-lab">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
       <div className="pdd-blk">
         <h3 className="pdd-h">{MFG_TITLE}</h3>
         <div className="pdd-mfg">

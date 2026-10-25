@@ -44,8 +44,8 @@ function CartPairStepper({ item, tiers, onSet }) {
     <div className="ccps">
       <div className="ccps__msg"><span className="ccps__spark">✦</span>
         <span>{next
-          ? <>Add <b>{next.pairs - q} pair{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pair pack{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
-          : <span className="hi">🎉 Best value — {maxP}-pair pack applied!</span>}</span>
+          ? <>Add <b>{next.pairs - q} pack{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pack bundle{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
+          : <span className="hi">🎉 Best value — {maxP}-pack bundle applied!</span>}</span>
       </div>
       <div className="ccps__track">
         <div className="ccps__line"><span style={{ width: `${fillPct}%` }} /></div>
@@ -55,7 +55,7 @@ function CartPairStepper({ item, tiers, onSet }) {
             return (
               <button type="button" key={i} className={`ccps__dot${on ? ' on' : ''}${sel ? ' sel' : ''}`} onClick={() => onSet(m.pairs, m.total)}>
                 <span className="d">{on ? I.check(11) : ''}</span>
-                <span className="l">{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                <span className="l">{m.pairs} Pack{m.pairs > 1 ? 's' : ''}</span>
                 {sv > 0 ? <span className="sv">save {inr(sv)}</span> : null}
               </button>
             );
@@ -391,7 +391,7 @@ const MOBILE_CSS = `
 .cc-test-root .post__img img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
+.cc-test-root .gmain > span:not(.gzoom){ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
 /* Buy More, Save More pair stepper in the cart drawer. */
 .cc-test-root .ccps{ padding:14px 16px; background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:2px solid var(--line-ink); border-radius:4px; margin-bottom:16px; box-shadow:var(--stamp-sm); }
 .cc-test-root .ccps__msg{ display:flex; align-items:center; gap:7px; font-size:12.5px; line-height:1.35; }
@@ -659,7 +659,7 @@ export default function TestLayout({ children }) {
   const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.packId && !(i.unit < i.base));
+  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.sitePriced && !i.packId && !(i.unit < i.base));
   useEffect(() => { if (useShiprocket && coupon) setCoupon(null); }, [useShiprocket, coupon]);
 
   // Order math (same rules as the live cart): free-shipping threshold + fees come
@@ -732,7 +732,7 @@ export default function TestLayout({ children }) {
 
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
-    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
+    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Packs` });
   };
 
   const applyPromo = async (codeArg) => {
@@ -835,7 +835,6 @@ export default function TestLayout({ children }) {
       <Link href={R.journal} onClick={() => setMnav(false)}>Journal</Link>
       <Link href={R.about} onClick={() => setMnav(false)}>About</Link>
       <Link href={R.contact} onClick={() => setMnav(false)}>Contact</Link>
-      <Link href={R.wishlist} onClick={() => setMnav(false)}>Wishlist</Link>
       <Link href={`${R.home}#faq`} onClick={() => setMnav(false)}>Help</Link>
     </>
   );
@@ -996,13 +995,13 @@ export default function TestLayout({ children }) {
                           <span className="citem__nm">{g.name}</span>
                           <button className="citem__rm" onClick={() => { removePack(g.packId); showToast('Pack removed'); }} aria-label="Remove pack">{I.trash(16)}</button>
                         </div>
-                        <div className="citem__var"><span className="packchip">{g.packSize}-pair pack</span>{g.size ? ` · ${g.size}` : ''}</div>
+                        <div className="citem__var"><span className="packchip">{g.packSize}-pack bundle</span>{g.size ? ` · ${g.size}` : ''}</div>
                         <div className="packcolors">{g.lines.map((l) => <span className="packcolors__c" key={l.key}><i style={{ background: colorToCss(l.color) }} />{l.qty}× {l.color || '—'}</span>)}</div>
                         {tiersMap[g.lines[0].id] && tiersMap[g.lines[0].id].length > 0 && (
                           <div className="packstep"><CartPairStepper item={{ base: g.lines[0].base, unit: g.perPair, qty: g.pairs }} tiers={tiersMap[g.lines[0].id]} onSet={(p, t) => setPackTier(g.packId, p, t)} /></div>
                         )}
                         <div className="citem__bot">
-                          <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pair</span></div>
+                          <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pack</span></div>
                         </div>
                       </div>
                     </div>
@@ -1019,13 +1018,13 @@ export default function TestLayout({ children }) {
                         <span className="citem__nm">{i.name}</span>
                         <button className="citem__rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} aria-label="Remove">{I.trash(16)}</button>
                       </div>
-                      <div className="citem__var">{i.color || i.brand}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pair pack</span> : (i.size ? ` · ${i.size}` : '')}</div>
+                      <div className="citem__var">{i.color || i.brand}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pack bundle</span> : (i.size ? ` · ${i.size}` : '')}</div>
                       <div className="citem__bot">
-                        <div className="citem__pr"><b>{inr(i.unit)}{hasTiers ? <span className="citem__per"> / pair</span> : null}</b>{i.was > i.unit && <s>{inr(i.was)}</s>}{off > 0 && <em>{off}% off</em>}</div>
+                        <div className="citem__pr"><b>{inr(i.unit)}{hasTiers ? <span className="citem__per"> / pack</span> : null}</b>{i.was > i.unit && <s>{inr(i.was)}</s>}{off > 0 && <em>{off}% off</em>}</div>
                         <div className="qty citem__qty">
-                          <button onClick={() => changeQty(i.key, -1)} aria-label={hasTiers ? 'One pair fewer' : 'One fewer'}>−</button>
-                          <span>{hasTiers ? `${i.qty} pr` : i.qty}</span>
-                          <button onClick={() => changeQty(i.key, 1)} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
+                          <button onClick={() => changeQty(i.key, -1)} aria-label={hasTiers ? 'One pack fewer' : 'One fewer'}>−</button>
+                          <span>{hasTiers ? `${i.qty} pack${i.qty > 1 ? 's' : ''}` : i.qty}</span>
+                          <button onClick={() => changeQty(i.key, 1)} aria-label={hasTiers ? 'One more pack' : 'One more'}>+</button>
                         </div>
                       </div>
                     </div>
@@ -1068,7 +1067,7 @@ export default function TestLayout({ children }) {
                                 {save > 0 && <span className="bms__save">Save {inr(save)}</span>}
                               </div>
                             </div>
-                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add to cart</button>
+                            <button className="bms__add" aria-label={`Add ${p.name}`} onClick={() => { addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: v?.id || null, name: p.name, brand: p.brand, color: p.colors?.[0]?.name || '', size: v?.size || p.sizes?.[0] || '', pack: v?.label || 'Single', packq: v?.pairs || 1, unit: v?.price || p.now, was: v?.comparePrice || p.was, base: v?.price || p.now, img: p.img }, 1); showToast('Added ✓'); }}>+ Add to cart</button>
                           </div>
                         );
                       })}

@@ -2,14 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
-import { getBlogBySlug, getBlogPosts } from '@/lib/api';
+import { getBlogBySlug } from '@/lib/api';
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.map((p) => ({ slug: p.slug }));
-}
+// Resolve published articles at request time, including newly published slugs.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;

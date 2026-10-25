@@ -279,3 +279,13 @@
 .pst-video-upload:has(input:disabled) { opacity: .5; cursor: not-allowed; }
 .pst-video-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .pst-video-error { color: var(--ds-color-danger); }
+
+.pst-video-picker { display: grid; gap: 14px; margin: 14px 0; padding: 16px; min-width: 0; border: 1px solid var(--ds-color-border); border-radius: 12px; background: var(--ds-color-surface-soft); }
+.pst-video-picker h3 { margin: 0; font-size: 16px; }
+.pst-video-picker .pst-field { min-width: 0; }
+.pst-video-picker input[type="search"], .pst-video-picker select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--ds-color-border); border-radius: 8px; background: var(--ds-color-surface); color: var(--ds-color-text); font: inherit; }
+.pst-video-picker .pst-video-card label { overflow-wrap: anywhere; }
+
+.pst-detail-image { display: grid; gap: 12px; margin-top: 12px; }
+.pst-detail-image img { width: min(100%, 360px); height: auto; border-radius: 10px; }
+.pst-detail-image label { display: grid; gap: 6px; }

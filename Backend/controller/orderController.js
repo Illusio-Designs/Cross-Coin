@@ -1,3 +1,4 @@
+const { createBrandPriceResolver } = require('../utils/brandPrice.js');
   /**
    * ┌────────────────────────────────────────────────────────────────┐
    * │ DOMAIN MAP — this file is being split incrementally.           │
@@ -327,7 +328,9 @@
       for (const it of items) { if (it.pack_group) mixQtyByGroup[it.pack_group] = (mixQtyByGroup[it.pack_group] || 0) + (Number(it.quantity) || 0); }
       const mixPctByGroup = {};
       for (const g of Object.keys(mixQtyByGroup)) { mixPctByGroup[g] = await _bundleCtrl.packDiscountPercent(req.brand?.id || 1, mixQtyByGroup[g]); }
+      const sitePrice = createBrandPriceResolver(req.brand?.id || req.brandId);
       const linePrice = async (item, product_id, basePrice) => {
+        basePrice = await sitePrice(product_id, basePrice);
         if (item.pack_group && mixPctByGroup[item.pack_group] > 0) {
           return Math.round(parseFloat(basePrice) * (1 - mixPctByGroup[item.pack_group] / 100) * 100) / 100;
         }
