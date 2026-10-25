@@ -391,7 +391,7 @@ const MOBILE_CSS = `
 .cc-test-root .post__img img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; }
 .cc-test-root .gmain{ aspect-ratio:auto !important; display:block !important; height:0; padding-top:100%; position:relative; overflow:hidden; }
 .cc-test-root .gmain img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.cc-test-root .gmain > span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
+.cc-test-root .gmain > span:not(.gzoom){ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
 /* Buy More, Save More pair stepper in the cart drawer. */
 .cc-test-root .ccps{ padding:14px 16px; background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:2px solid var(--line-ink); border-radius:4px; margin-bottom:16px; box-shadow:var(--stamp-sm); }
 .cc-test-root .ccps__msg{ display:flex; align-items:center; gap:7px; font-size:12.5px; line-height:1.35; }
