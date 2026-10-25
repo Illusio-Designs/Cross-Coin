@@ -29,7 +29,11 @@ export async function brandFetch(path, revalidate) {
       ...(controller ? { signal: controller.signal } : {}),
       ...(cached ? { next: { revalidate } } : { cache: 'no-store' }),
     });
-    if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+    if (!res.ok) {
+      const error = new Error(`Failed to fetch ${path}`);
+      error.status = res.status;
+      throw error;
+    }
     return res.json();
   } finally {
     if (timer) clearTimeout(timer);
@@ -256,11 +260,18 @@ export async function getBlogPage({ page = 1, limit = 12 } = {}) {
 }
 
 export async function getBlogBySlug(slug) {
+  if (typeof slug !== 'string' || !slug.trim()) return null;
   try {
-    const data = await brandFetch(`/api/blogs/by-slug/${slug}`, 300);
+    // Read fresh so publishing or restoring an article needs no new deployment.
+    const data = await brandFetch(`/api/blogs/by-slug/${encodeURIComponent(slug)}`);
     const post = data?.data || data;
-    return post?.slug ? mapBlog(post) : null;
-  } catch { return null; }
+    if (!post?.slug) throw new Error('The article API returned an invalid response.');
+    return mapBlog(post);
+  } catch (error) {
+    if (error.status === 404) return null;
+    // Network, timeout and server errors belong in the retryable error page.
+    throw error;
+  }
 }
 
 // ---- Policies (privacy / terms / shipping / returns) ----------------------
