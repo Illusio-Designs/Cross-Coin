@@ -290,8 +290,10 @@ export async function fetchProductReviews(productId, limit = 8) {
       rating: Number(v.rating) || 5,
       text: v.comment || v.review || v.message || v.body || '',
       date: v.createdAt || v.created_at || '',
-    })).filter((v) => v.text);
-    const count = r?.total ?? r?.count ?? r?.data?.total ?? items.length;
+      image: (v.ReviewImages || []).find((image) => image.url && image.fileType !== 'video')?.url || '',
+      verified: v.verified_purchase === true || v.verified_purchase === 1,
+    })).filter((v) => v.text).slice(0, limit);
+    const count = r?.pagination?.total ?? r?.total ?? r?.count ?? r?.data?.total ?? items.length;
     const avg = items.length ? items.reduce((s, x) => s + x.rating, 0) / items.length : null;
     return { items, avg, count };
   } catch (_) { return { items: [], avg: null, count: 0 }; }

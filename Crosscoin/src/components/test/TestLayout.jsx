@@ -44,8 +44,8 @@ function CartPairStepper({ item, tiers, onSet }) {
     <div className="ccps">
       <div className="ccps__msg"><span className="ccps__spark">✦</span>
         <span>{next
-          ? <>Add <b>{next.pairs - q} pair{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pair pack{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
-          : <span className="hi">🎉 Best value — {maxP}-pair pack applied!</span>}</span>
+          ? <>Add <b>{next.pairs - q} pack{next.pairs - q > 1 ? 's' : ''}</b> → {next.pairs}-pack bundle{savedFor(next.pairs, next.price) > 0 ? <>, <span className="hi">save {inr(savedFor(next.pairs, next.price))}</span></> : ''}</>
+          : <span className="hi">🎉 Best value — {maxP}-pack bundle applied!</span>}</span>
       </div>
       <div className="ccps__track">
         <div className="ccps__line"><span style={{ width: `${fillPct}%` }} /></div>
@@ -55,7 +55,7 @@ function CartPairStepper({ item, tiers, onSet }) {
             return (
               <button type="button" key={i} className={`ccps__dot${on ? ' on' : ''}${sel ? ' sel' : ''}`} onClick={() => onSet(m.pairs, m.total)}>
                 <span className="d">{on ? I.check(11) : ''}</span>
-                <span className="l">{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                <span className="l">{m.pairs} Pack{m.pairs > 1 ? 's' : ''}</span>
                 {sv > 0 ? <span className="sv">save {inr(sv)}</span> : null}
               </button>
             );
@@ -732,7 +732,7 @@ export default function TestLayout({ children }) {
 
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
-    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Pairs` });
+    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Packs` });
   };
 
   const applyPromo = async (codeArg) => {
@@ -996,13 +996,13 @@ export default function TestLayout({ children }) {
                           <span className="citem__nm">{g.name}</span>
                           <button className="citem__rm" onClick={() => { removePack(g.packId); showToast('Pack removed'); }} aria-label="Remove pack">{I.trash(16)}</button>
                         </div>
-                        <div className="citem__var"><span className="packchip">{g.packSize}-pair pack</span>{g.size ? ` · ${g.size}` : ''}</div>
+                        <div className="citem__var"><span className="packchip">{g.packSize}-pack bundle</span>{g.size ? ` · ${g.size}` : ''}</div>
                         <div className="packcolors">{g.lines.map((l) => <span className="packcolors__c" key={l.key}><i style={{ background: colorToCss(l.color) }} />{l.qty}× {l.color || '—'}</span>)}</div>
                         {tiersMap[g.lines[0].id] && tiersMap[g.lines[0].id].length > 0 && (
                           <div className="packstep"><CartPairStepper item={{ base: g.lines[0].base, unit: g.perPair, qty: g.pairs }} tiers={tiersMap[g.lines[0].id]} onSet={(p, t) => setPackTier(g.packId, p, t)} /></div>
                         )}
                         <div className="citem__bot">
-                          <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pair</span></div>
+                          <div className="citem__pr"><b>{inr(g.total)}</b><span className="citem__per"> · {inr(g.perPair)}/pack</span></div>
                         </div>
                       </div>
                     </div>
@@ -1019,13 +1019,13 @@ export default function TestLayout({ children }) {
                         <span className="citem__nm">{i.name}</span>
                         <button className="citem__rm" onClick={() => { removeItem(i.key); showToast('Removed'); }} aria-label="Remove">{I.trash(16)}</button>
                       </div>
-                      <div className="citem__var">{i.color || i.brand}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pair pack</span> : (i.size ? ` · ${i.size}` : '')}</div>
+                      <div className="citem__var">{i.color || i.brand}{((hasTiers && i.qty > 1) || i.packq > 1) ? <span className="packchip">{(hasTiers ? i.qty : i.packq)}-pack bundle</span> : (i.size ? ` · ${i.size}` : '')}</div>
                       <div className="citem__bot">
-                        <div className="citem__pr"><b>{inr(i.unit)}{hasTiers ? <span className="citem__per"> / pair</span> : null}</b>{i.was > i.unit && <s>{inr(i.was)}</s>}{off > 0 && <em>{off}% off</em>}</div>
+                        <div className="citem__pr"><b>{inr(i.unit)}{hasTiers ? <span className="citem__per"> / pack</span> : null}</b>{i.was > i.unit && <s>{inr(i.was)}</s>}{off > 0 && <em>{off}% off</em>}</div>
                         <div className="qty citem__qty">
-                          <button onClick={() => changeQty(i.key, -1)} aria-label={hasTiers ? 'One pair fewer' : 'One fewer'}>−</button>
-                          <span>{hasTiers ? `${i.qty} pr` : i.qty}</span>
-                          <button onClick={() => changeQty(i.key, 1)} aria-label={hasTiers ? 'One more pair' : 'One more'}>+</button>
+                          <button onClick={() => changeQty(i.key, -1)} aria-label={hasTiers ? 'One pack fewer' : 'One fewer'}>−</button>
+                          <span>{hasTiers ? `${i.qty} pack${i.qty > 1 ? 's' : ''}` : i.qty}</span>
+                          <button onClick={() => changeQty(i.key, 1)} aria-label={hasTiers ? 'One more pack' : 'One more'}>+</button>
                         </div>
                       </div>
                     </div>

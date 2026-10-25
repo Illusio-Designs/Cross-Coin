@@ -5,23 +5,15 @@ import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons } from '../../components/test/ui';
 import { inr, BENEFITS } from '../../components/test/data';
 import { R } from '../../components/test/routes';
-import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, checkPincode, colorToCss, submitProductReview } from '../../components/test/real';
-import { addItem, addPack } from '../../components/test/store';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, submitProductReview } from '../../components/test/real';
+import { addItem } from '../../components/test/store';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { richHtml } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
-
-const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
-const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-// Format a review's timestamp as "Mon YYYY" (e.g. "Oct 2026"); blank if unparseable.
-const fmtReviewDate = (d) => {
-  if (!d) return '';
-  const t = new Date(d);
-  return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-};
 
 export default function TestProduct({ preview = true }) {
   const router = useRouter();
@@ -41,10 +33,6 @@ export default function TestProduct({ preview = true }) {
   const [faqOpen, setFaqOpen] = useState(0);
   const [packTiers, setPackTiers] = useState([]); // admin "Buy More, Save More" ladder
   const [packSel, setPackSel] = useState(1); // selected number of pairs
-  const [packColors, setPackColors] = useState([]); // one colour name per pair (multi-pair packs)
-  const [pin, setPin] = useState('');
-  const [pinRes, setPinRes] = useState(null); // { ok, text }
-  const [pinBusy, setPinBusy] = useState(false);
   const [lightbox, setLightbox] = useState(-1); // index into thumbs, -1 = closed
   const [sizeChart, setSizeChart] = useState(false);
   const [sticky, setSticky] = useState(false); // sticky buy bar visibility
@@ -80,9 +68,9 @@ export default function TestProduct({ preview = true }) {
             });
           } catch (_) { /* analytics never blocks the page */ }
           setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
-          setPackTiers([]); setPackSel(1); setPin(''); setPinRes(null);
+          setPackTiers([]); setPackSel(1);
           setRevLoading(true); setTiersLoading(true);
-          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
+          fetchProductReviews(prod.id, 5).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
           fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
           fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {}).finally(() => { if (!off) setTiersLoading(false); });
         }
@@ -109,13 +97,6 @@ export default function TestProduct({ preview = true }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox]);
-
-  // Default a colour for each pair when a multi-pair pack is selected.
-  useEffect(() => {
-    const names = (p?.colors || []).map((c) => c.name).filter(Boolean);
-    if (packSel > 1 && names.length) setPackColors((prev) => Array.from({ length: packSel }, (_, i) => prev[i] || names[0]));
-    else setPackColors([]);
-  }, [packSel, p]);
 
   // Page skeleton in the real PDP layout: crumbs stay, gallery (square main
   // image + thumbnails), buy panel (brand, title, rating, price, sizes,
@@ -178,20 +159,11 @@ export default function TestProduct({ preview = true }) {
   const selOpt = packOptions.find((o) => o.pairs === packSel) || packOptions[0] || null;
   const payable = hasPacks && selOpt ? selOpt.total : total;
 
-  const pickVariant = (v) => { setVariant(v); if (v.img) setMainImg(v.img); if (v.sizes?.length) setSize(v.sizes[0]); };
-
-  const colourNames = (p.colors || []).map((c) => c.name).filter(Boolean);
-  const perPairPackers = hasPacks && selOpt && selOpt.pairs > 1 && colourNames.length > 0;
 
   const add = (buyNow) => {
     if (hasPacks && selOpt) {
       const perPair = Math.round(selOpt.total / selOpt.pairs);
-      if (perPairPackers && packColors.length === selOpt.pairs) {
-        // Multi-pair pack with a colour chosen per pair → one bundle group.
-        addPack({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, size, img: cur.img || mainImg || p.img, perPair, was: cur.comparePrice || basePair, base: basePair, packSize: selOpt.pairs, colors: packColors });
-      } else {
-        addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: selOpt.pairs === 1 ? 'Single' : `${selOpt.pairs} Pairs`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
-      }
+      addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: `${selOpt.pairs} Pack${selOpt.pairs > 1 ? 's' : ''}`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
     } else {
       addItem({ id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
     }
@@ -299,8 +271,8 @@ export default function TestProduct({ preview = true }) {
                     <button type="button" key={o.pairs} className={`packopt${on ? ' on' : ''}`} onClick={() => setPackSel(o.pairs)}>
                       <span className="packopt__radio" />
                       <span className="packopt__l">
-                        <b>{o.pairs} Pair{o.pairs > 1 ? 's' : ''}{o.badge ? <em className="packopt__badge">{o.badge}</em> : null}</b>
-                        <span className="packopt__pp">{inr(perPair)} / pair</span>
+                        <b>{o.pairs} Pack{o.pairs > 1 ? 's' : ''}{o.badge ? <em className="packopt__badge">{o.badge}</em> : null}</b>
+                        <span className="packopt__pp">{inr(perPair)} / pack</span>
                       </span>
                       <span className="packopt__p">
                         <span className="packopt__now">{inr(o.total)}</span>
@@ -309,43 +281,6 @@ export default function TestProduct({ preview = true }) {
                     </button>
                   );
                 })}
-              </div>
-            </>)}
-
-            {/* Per-pair colour picker — Morbix-style: choose a colour for each pair */}
-            {perPairPackers && (
-              <div className="perpair">
-                <div className="optlabel">Choose a colour for each pair</div>
-                {Array.from({ length: selOpt.pairs }).map((_, i) => (
-                  <div className="perpair__row" key={i}>
-                    <span className="perpair__n">Pair {i + 1}</span>
-                    <div className="perpair__sw">
-                      {(p.colors || []).map((c) => (
-                        <button type="button" key={c.name} title={c.name} aria-label={c.name}
-                          className={`perpair__dot${packColors[i] === c.name ? ' on' : ''}`}
-                          style={{ background: c.hex || colorToCss(c.name) }}
-                          onClick={() => setPackColors((prev) => { const n = [...prev]; n[i] = c.name; return n; })} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {variants.length > 1 && !hasPacks && !tiersLoading && (<>
-              <div className="optlabel">Choose your option</div>
-              <div className="packs">
-                {variants.map((v) => (
-                  <div key={v.id} className={`pack${variant && v.id === variant.id ? ' on' : ''}`} onClick={() => pickVariant(v)}>
-                    {v.isPack && <span className="tagbest">PACK OF {v.pairs}</span>}
-                    <span className="radio" />
-                    <span style={{ display: 'inline-flex', gap: 4, flexShrink: 0 }}>
-                      {(v.colors.length ? v.colors : ['']).slice(0, 4).map((c, ci) => <span key={ci} title={c} style={{ width: 18, height: 18, borderRadius: '50%', background: colorToCss(c), border: '2px solid var(--line-ink)' }} />)}
-                    </span>
-                    <div style={{ minWidth: 0 }}><b>{v.label}</b><div className="d" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.colors.join(', ') || 'Single pair'}</div></div>
-                    <div className="pp"><div className="pnow">{inr(v.price)}</div>{v.off > 0 ? <div className="psave">{v.off}% off</div> : <div className="psave">&nbsp;</div>}</div>
-                  </div>
-                ))}
               </div>
             </>)}
 
@@ -361,23 +296,6 @@ export default function TestProduct({ preview = true }) {
               <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
               <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
             </>)}
-
-            <div className="pdptrust">
-              <div className="pdptrust__row">
-                <div className="pdptrust__i">{I.lock(20)}<span>Secure Checkout</span></div>
-                <div className="pdptrust__i">{I.card(20)}<span>Cash on Delivery</span></div>
-                <div className="pdptrust__i">{I.ret(20)}<span>7-Day Returns</span></div>
-                <div className="pdptrust__i">{I.shield(20)}<span>100% Genuine</span></div>
-              </div>
-              <div className="pdpdeliv">
-                <span className="pdpdeliv__l">Delivery details</span>
-                <form className="pdpdeliv__row" onSubmit={async (e) => { e.preventDefault(); setPinBusy(true); setPinRes(null); const r = await checkPincode(pin); setPinRes(r); setPinBusy(false); }}>
-                  <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter pincode" inputMode="numeric" aria-label="Pincode" />
-                  <button className="btn" type="submit" disabled={pinBusy}>{pinBusy ? '…' : 'Check'}</button>
-                </form>
-                {pinRes && <div className="pdpdeliv__msg" style={{ color: pinRes.ok ? 'var(--ink-soft)' : 'var(--crimson)' }}>{pinRes.ok ? '✓ ' : ''}{pinRes.text}</div>}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -504,21 +422,7 @@ export default function TestProduct({ preview = true }) {
           {revLoading && prodReviews.items.length === 0 ? (
             <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
           ) : prodReviews.items.length > 0 ? (
-            // Show the ACTUAL reviews once each, in a tidy grid. (Previously
-            // these were rotated across 3 rows and doubled, which turned a
-            // couple of real reviews into a wall of repeats that read as fake.)
-            <div className="revgrid">
-              {prodReviews.items.map((r, i) => (
-                <div className="rev" key={i}>
-                  <div className="rev__top">
-                    <div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div>
-                    <div className="who"><b>{r.name}</b>{r.date ? <span>{fmtReviewDate(r.date)}</span> : null}</div>
-                  </div>
-                  <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}<small> {Number(r.rating).toFixed(1)}</small></div>
-                  <p>&ldquo;{r.text}&rdquo;</p>
-                </div>
-              ))}
-            </div>
+            <ProductReviewCarousel key={p.id} reviews={prodReviews.items} />
           ) : (
             <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '6px 0 10px' }}>No reviews yet — be the first to write one.</p>
           )}

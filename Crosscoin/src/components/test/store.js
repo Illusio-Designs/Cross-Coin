@@ -59,7 +59,7 @@ export function addItem({ id, vid, name, brand, color, size, pack, packq, unit, 
   fireAddToCart({ id, name, unit, qty });
 }
 
-// Add a multi-pair pack as one bundle group: mint a packId and create one line
+// Add a multi-pack bundle as one bundle group: mint a packId and create one line
 // per chosen colour (merging duplicate colours), each priced at the per-pair
 // rate, all sharing the packId + packSize. This is how Crosscoin/Morbix move a
 // mixed-colour pack — the backend reprices the whole group by pack_id at checkout.
@@ -73,7 +73,7 @@ export function addPack({ id, vid, name, brand, size, img, perPair, was, base, p
     lines.push({
       key: [id, vid || '', color, size, 1, packId].join('|'),
       id, vid: vid || null, name, brand, color, size,
-      pack: `${packSize} Pairs`, packq: 1, unit: perPair, was: was || 0, base: base || perPair,
+      pack: `${packSize} Packs`, packq: 1, unit: perPair, was: was || 0, base: base || perPair,
       img: img || '', qty, packId, packSize,
     });
   });
@@ -119,7 +119,7 @@ export function setPackTier(packId, tierPairs, tierTotal) {
   const newAnchorQty = Math.max(1, tierPairs - others);
   cart = cart.map((i) => {
     if (i.packId !== packId) return i;
-    return { ...i, qty: i.key === anchor.key ? newAnchorQty : i.qty, unit: perPair, packSize: tierPairs, pack: `${tierPairs} Pairs` };
+    return { ...i, qty: i.key === anchor.key ? newAnchorQty : i.qty, unit: perPair, packSize: tierPairs, pack: `${tierPairs} Packs` };
   });
   emit();
 }
@@ -152,7 +152,7 @@ export function restoreCart(lines) {
     return {
       key: [l.productId, l.variationId || '', color, size, 1, l.packId || ''].join('|'),
       id: l.productId, vid: l.variationId || null, name: l.name || '', brand: '',
-      color, size, pack: l.packSize ? `${l.packSize} Pairs` : 'Single', packq: 1,
+      color, size, pack: l.packSize ? `${l.packSize} Packs` : 'Single', packq: 1,
       unit: price, was: Number(l.comparePrice) || 0, base: price, img: l.image || '',
       qty: l.quantity || 1, packId: l.packId || null, packSize: l.packSize || null,
     };
