@@ -18,7 +18,47 @@ import Lenis from 'lenis';
  *   smoothing steps aside so the page underneath doesn't move.
  * - In-page "#section" links glide instead of jumping.
  * - Shoppers who ask for reduced motion get normal scrolling.
+ * - Pop-up scroll lock that holds: the stores lock the page by hiding
+ *   overflow on <body>, but once <html> has an overflow of its own (the
+ *   stores' CSS gives it one) that never reaches the page, and the page kept
+ *   scrolling under the cart, menus and pop-ups. While <body> is locked we
+ *   lock <html> too (keeping the scrollbar's space so nothing shifts) and
+ *   release it the moment <body> is released.
  */
+function bodyLocked() {
+  const body = getComputedStyle(document.body);
+  return body.overflowY === 'hidden' || body.position === 'fixed';
+}
+
+// Mirror the stores' <body> lock onto <html>, where it actually stops the
+// page. Returns the cleanup.
+function holdPopupLocks() {
+  const html = document.documentElement;
+  let held = null; // the html styles we replaced, while locked
+  const sync = () => {
+    const locked = bodyLocked();
+    if (locked && !held) {
+      held = { overflow: html.style.overflow, gutter: html.style.scrollbarGutter, pad: html.style.paddingRight };
+      const bar = window.innerWidth - html.clientWidth;
+      if (window.CSS?.supports?.('scrollbar-gutter', 'stable')) html.style.scrollbarGutter = 'stable';
+      else if (bar > 0) html.style.paddingRight = `${bar}px`;
+      html.style.overflow = 'hidden';
+    } else if (!locked && held) {
+      html.style.overflow = held.overflow;
+      html.style.scrollbarGutter = held.gutter;
+      html.style.paddingRight = held.pad;
+      held = null;
+    }
+  };
+  const mo = new MutationObserver(sync);
+  mo.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
+  sync();
+  return () => {
+    mo.disconnect();
+    if (held) { html.style.overflow = held.overflow; html.style.scrollbarGutter = held.gutter; html.style.paddingRight = held.pad; }
+  };
+}
+
 function pageLocked() {
   const html = getComputedStyle(document.documentElement);
   const body = getComputedStyle(document.body);
@@ -28,7 +68,8 @@ function pageLocked() {
 export default function SmoothScroll({ children }) {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const releaseLocks = holdPopupLocks();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return releaseLocks;
 
     const lenis = new Lenis({
       duration: 1.1,
@@ -56,6 +97,7 @@ export default function SmoothScroll({ children }) {
       cancelAnimationFrame(rafId);
       lenis.destroy();
       document.documentElement.style.scrollBehavior = prevBehavior;
+      releaseLocks();
     };
   }, []);
 

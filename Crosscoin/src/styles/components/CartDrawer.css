@@ -26,6 +26,8 @@
 }
 .cd-drawer-open { transform: translateX(0); }
 .cd-drawer-open-body .back-to-top { display: none !important; }
+/* Cart open: the page behind it stays still (SmoothScroll also locks <html>). */
+body.cd-drawer-open-body { overflow: hidden; }
 
 /* ── Header ───────────────────────────────────────────────────────────────── */
 .cd-header {
