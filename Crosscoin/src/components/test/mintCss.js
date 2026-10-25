@@ -49,6 +49,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root{ margin: 0; background: var(--bg); color: var(--fg);
     font-family: "Inter", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
     -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+/* \`clip\` (not \`hidden\`) so the root is not a scroll container: \`hidden\` here
+   silently disabled every position: sticky inside it (PDP gallery, cart summary). */
+@supports (overflow: clip){ .cc-test-root{ overflow-x: clip; } }
 .cc-test-root h1, .cc-test-root h2, .cc-test-root h3, .cc-test-root h4, .cc-test-root .disp{ font-family: "Fraunces", system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
 .cc-test-root a{ color: inherit; text-decoration: none; }
 .cc-test-root img{ max-width: 100%; display: block; }
@@ -266,6 +269,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .sortsel{ margin-left: auto; font-family:"Space Mono"; font-size: 12px; padding: 9px 12px; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); color: var(--ink); box-shadow: var(--stamp-sm); }
 .cc-test-root .pd{ display: grid; grid-template-columns: 1.05fr .95fr; gap: 42px; padding-block: 36px; align-items: start; }
 .cc-test-root .gallery{ position: sticky; top: 90px; }
+/* Pinned gallery must fit the screen: on short laptop screens narrow the column
+   (the square main image sizes from its width) so the thumbnail row stays visible. */
+@media (min-width: 861px){ .cc-test-root .gallery{ max-width: calc(100vh - 200px); } }
 .cc-test-root .gmain{ aspect-ratio: 1/1; border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); position: relative; display: grid; place-items: center; overflow: hidden; }
 .cc-test-root .gmain .mint{ width: 62%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 3px rgba(255,255,255,.3), inset 0 0 0 14px rgba(0,0,0,.08); }
 .cc-test-root .gthumbs{ display: flex; gap: 10px; margin-top: 12px; }
