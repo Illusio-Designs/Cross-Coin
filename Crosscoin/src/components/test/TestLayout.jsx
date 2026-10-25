@@ -835,7 +835,6 @@ export default function TestLayout({ children }) {
       <Link href={R.journal} onClick={() => setMnav(false)}>Journal</Link>
       <Link href={R.about} onClick={() => setMnav(false)}>About</Link>
       <Link href={R.contact} onClick={() => setMnav(false)}>Contact</Link>
-      <Link href={R.wishlist} onClick={() => setMnav(false)}>Wishlist</Link>
       <Link href={`${R.home}#faq`} onClick={() => setMnav(false)}>Help</Link>
     </>
   );
