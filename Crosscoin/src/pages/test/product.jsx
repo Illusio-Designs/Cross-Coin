@@ -411,20 +411,26 @@ export default function TestProduct({ preview = true }) {
           {revLoading && prodReviews.items.length === 0 ? (
             <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
           ) : prodReviews.items.length > 0 ? (
-            // Show the ACTUAL reviews once each, in a tidy grid. (Previously
-            // these were rotated across 3 rows and doubled, which turned a
-            // couple of real reviews into a wall of repeats that read as fake.)
-            <div className="revgrid">
-              {prodReviews.items.map((r, i) => (
-                <div className="rev" key={i}>
-                  <div className="rev__top">
-                    <div className="av" style={{ background: AVBG[i % AVBG.length] }}>{initials(r.name)}</div>
-                    <div className="who"><b>{r.name}</b>{r.date ? <span>{fmtReviewDate(r.date)}</span> : null}</div>
+            <div className="revscroll" aria-label="Product reviews">
+              {[0, 1, 2].map((row) => {
+                const offset = row % prodReviews.items.length;
+                const rotated = [...prodReviews.items.slice(offset), ...prodReviews.items.slice(0, offset)];
+                return (
+                  <div className={`revscroll__track${row === 1 ? ' revscroll__track--rev' : ''}`} key={row}>
+                    {[...rotated, ...rotated].map((r, i) => (
+                      <div className="rev" key={i} aria-hidden={row > 0 || i >= rotated.length ? true : undefined}>
+                        <div className="rev__top">
+                          <div className="av" style={{ background: AVBG[(row + i) % AVBG.length] }}>{initials(r.name)}</div>
+                          <div className="who"><b>{r.name}</b>{r.date ? <span>{fmtReviewDate(r.date)}</span> : null}</div>
+                          {r.verified && <span className="vbadge">VERIFIED</span>}
+                        </div>
+                        <div className="stars" aria-label={`${r.rating} out of 5 stars`}>{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}</div>
+                        <p>&ldquo;{r.text}&rdquo;</p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="stars">{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}<small> {Number(r.rating).toFixed(1)}</small></div>
-                  <p>&ldquo;{r.text}&rdquo;</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="mono" style={{ color: 'var(--ink-faint)', fontSize: 13, padding: '6px 0 10px' }}>No reviews yet — be the first to write one.</p>
