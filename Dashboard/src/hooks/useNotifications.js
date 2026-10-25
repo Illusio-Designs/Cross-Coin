@@ -20,12 +20,10 @@ let audioCtx = null;
 let orderBuffer = null;
 let bufferLoading = null;
 let audioUnlocked = false;
-const soundListeners = new Set();
 
 function setUnlocked(v) {
   if (audioUnlocked === v) return;
   audioUnlocked = v;
-  soundListeners.forEach((fn) => { try { fn(v); } catch (_) {} });
 }
 function getCtx() {
   if (audioCtx || typeof window === 'undefined') return audioCtx;
@@ -136,8 +134,8 @@ function playSynth(type) {
 }
 
 // Last resort when the engine isn't running yet: a plain <audio> play, which
-// some browsers allow for sites you use often. If it's refused, the bell shows
-// "Turn on sound".
+// some browsers allow for sites you use often. If it's refused, the next
+// click anywhere starts the engine.
 let fallbackAudio = null;
 function playHtmlAudio() {
   if (typeof Audio === 'undefined') return;
@@ -146,7 +144,7 @@ function playHtmlAudio() {
     fallbackAudio.currentTime = 0;
     const p = fallbackAudio.play();
     // It played → this browser allows sound here (as it did before the engine
-    // existed), so don't show "Turn on sound"; refused → show it.
+    // existed); refused → wait for the next click.
     if (p && p.then) {
       p.then(() => setUnlocked(true), () => setUnlocked(false));
     }
@@ -193,8 +191,6 @@ function clearHiddenFlag() {
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
-  // Whether the browser lets the dashboard play sound right now.
-  const [soundOn, setSoundOn] = useState(audioUnlocked);
   const [unreadCount, setUnreadCount] = useState(0);
   // True until the one-time 24h seed below has answered (the bell shows
   // skeleton rows instead of "No notifications yet" meanwhile).
@@ -208,22 +204,6 @@ export function useNotifications() {
     playSound(type);
     flagHidden(type, data);
     notifyEvent(type, data); // gooey toast with a "View" action
-  }, []);
-
-  // "Turn on sound": runs inside the click, so the engine starts right here,
-  // then plays the order sound once (the bell tones stand in if the mp3 is
-  // still loading) so staff hear exactly what an order sounds like.
-  const enableSound = useCallback(() => {
-    unlockAudio();
-    const ctx = getCtx();
-    const play = () => {
-      if (!playOrderBuffer() && !playSynth('order')) playHtmlAudio();
-    };
-    if (!ctx) { playHtmlAudio(); return; }
-    (ctx.state === 'running' ? Promise.resolve() : ctx.resume())
-      .then(() => (orderBuffer ? null : loadOrderSound()))
-      .then(play)
-      .catch(() => { setUnlocked(false); playHtmlAudio(); });
   }, []);
 
   useEffect(() => {
@@ -362,23 +342,19 @@ export function useNotifications() {
 
     // Create the engine and fetch the order sound straight away. Where the
     // browser already allows sound (as it did before this engine), the engine
-    // starts running by itself and "Turn on sound" never appears.
+    // starts running by itself.
     if (getCtx()) {
       setUnlocked(engineRunning());
       loadOrderSound();
     }
 
-    // Start the sound engine on any click / key / tap until it's running; the
-    // bell shows "Turn on sound" while it isn't.
+    // Start the sound engine on any click / key / tap until it's running.
     const evts = ['pointerdown', 'keydown', 'touchend'];
     const onGesture = () => {
       unlockAudio();
       if (engineRunning()) evts.forEach((e) => window.removeEventListener(e, onGesture));
     };
     evts.forEach((e) => window.addEventListener(e, onGesture, { passive: true }));
-    const onSound = (v) => { if (alive) setSoundOn(v); };
-    soundListeners.add(onSound);
-    setSoundOn(audioUnlocked); // pick up the engine's state from just above
 
     return () => {
       alive = false;
@@ -386,7 +362,6 @@ export function useNotifications() {
       if (controller) { try { controller.abort(); } catch (_) {} }
       document.removeEventListener('visibilitychange', onVisible);
       evts.forEach((e) => window.removeEventListener(e, onGesture));
-      soundListeners.delete(onSound);
     };
   }, [addNotification]);
 
@@ -400,5 +375,5 @@ export function useNotifications() {
     setUnreadCount(0);
   }, []);
 
-  return { notifications, unreadCount, markAllRead, clearAll, seeding, soundOn, enableSound };
+  return { notifications, unreadCount, markAllRead, clearAll, seeding };
 }

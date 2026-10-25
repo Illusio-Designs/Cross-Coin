@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon, VolumeOffIcon, VolumeHighIcon } from '@hugeicons/core-free-icons';
+import { Notification01Icon, Package01Icon, WhatsappIcon, Tick02Icon } from '@hugeicons/core-free-icons';
 import { useNotifications } from '../../hooks/useNotifications';
 import { SkeletonList } from '../ui/Skeleton';
 import { enablePush, pushSupported, pushPermission } from '../../utils/pushNotifications';
@@ -20,17 +20,9 @@ const ICONS = {
 };
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAllRead, clearAll, seeding, soundOn, enableSound } = useNotifications();
+  const { notifications, unreadCount, markAllRead, clearAll, seeding } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
-  // Start sound on PRESS, not on click: pressing anywhere already switches the
-  // engine on, which hides "Turn on sound" before its click would fire — so the
-  // confirmation chime never played. onClick stays for the keyboard (Enter /
-  // Space), skipping a click that directly follows a press.
-  const pressedAt = useRef(0);
-  const soundPress = () => { pressedAt.current = Date.now(); enableSound(); };
-  const soundClick = () => { if (Date.now() - pressedAt.current > 1000) enableSound(); };
 
   // Web Push: "on" once granted + subscribed. Re-subscribes silently on load so
   // an already-opted-in browser stays registered after a redeploy.
@@ -89,14 +81,6 @@ export default function NotificationBell() {
 
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      {/* Browsers keep a page silent until it has been clicked. Until sound
-          really works, say so — one click here (or anywhere) turns it on. */}
-      {!soundOn && (
-        <button type="button" className="dh-sound-off" onPointerDown={soundPress} onClick={soundClick} title="New-order sound is off until you click the page">
-          <HugeiconsIcon icon={VolumeOffIcon} size={15} strokeWidth={2} aria-hidden="true" />
-          <span>Turn on sound</span>
-        </button>
-      )}
       <button
         type="button"
         className="dh-action dh-bell"
@@ -132,12 +116,6 @@ export default function NotificationBell() {
                 <button className="notif-clear" onClick={clearAll}>Clear all</button>
               )}
             </div>
-          </div>
-
-          <div className={`notif-sound${soundOn ? ' is-on' : ''}`}>
-            <HugeiconsIcon icon={soundOn ? VolumeHighIcon : VolumeOffIcon} size={14} strokeWidth={2} aria-hidden="true" />
-            <span>{soundOn ? 'Sound on: new orders play a chime.' : 'Sound is off: your browser blocks it until you click the page.'}</span>
-            {!soundOn && <button type="button" onPointerDown={soundPress} onClick={soundClick}>Turn on</button>}
           </div>
 
           {iosNeedsInstall && (
