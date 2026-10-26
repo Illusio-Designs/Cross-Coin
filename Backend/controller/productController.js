@@ -1012,7 +1012,13 @@ module.exports.updateProduct = async (req, res) => {
     const incomingVariationIds = variations.map((v) => v.id).filter(id => id);
 
     // 2. Update or create incoming variations
-    for (const variation of variations) {
+    // Size photos arrive keyed by the size's POSITION in the form
+    // (variation_<i>_image files, variationLibraryImages[i]) — the same index
+    // the create handler uses. Matching by id/SKU instead attached a new size's
+    // photos to every other new size (both have no id and an empty SKU) and
+    // re-read an upload that had already been moved, which saved broken images.
+    const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
+    for (const [variationIdx, variation] of variations.entries()) {
       let dbVariation = null;
       
       // If variation has an ID, try to find existing variation by ID
@@ -1068,82 +1074,34 @@ module.exports.updateProduct = async (req, res) => {
         await handleProductAttributes(variation, transaction);
       }
       
-      // Handle NEW variation images only (existing ones are preserved automatically)
-      if (images && images.length > 0) {
-        // Get existing variation images to avoid duplicates
+      // New photos for this size (uploads + picked from the library), skipping
+      // any URL this size already has.
+      const ownFiles = (images || []).filter((image) => image.fieldname === `variation_${variationIdx}_image`);
+      const ownLibrary = Array.isArray(variationLibraryImages[variationIdx]) ? variationLibraryImages[variationIdx] : [];
+      if (ownFiles.length || ownLibrary.length) {
         const existingVariationImages = await ProductImage.findAll({
-          where: { 
-            product_id: product.id,
-            product_variation_id: dbVariation.id 
-          },
-          transaction
+          where: { product_id: product.id, product_variation_id: dbVariation.id },
+          transaction,
         });
-        const existingVariationImageUrls = new Set(existingVariationImages.map(img => img.image_url));
-        
-        for (const image of images) {
-          const match = image.fieldname.match(/^variation_(\d+)_image$/);
-          if (match) {
-            const variationIdx = parseInt(match[1], 10);
-            if (
-              variations[variationIdx] &&
-              (variations[variationIdx].id === variation.id || variations[variationIdx].sku === variation.sku)
-            ) {
-              const imageUrl = await uploadFileToImageKit(image);
-              
-              // Only add if this image URL doesn't already exist for this variation
-              if (!existingVariationImageUrls.has(imageUrl)) {
-                await ProductImage.create(
-                  {
-                    product_id: product.id,
-                    product_variation_id: dbVariation.id,
-                    image_url: imageUrl,
-                    alt_text: name,
-                    display_order: 0,
-                    is_primary: false,
-                    status: "active",
-                  },
-                  { transaction }
-                );
-              }
-            }
-          }
-        }
-      }
-      
-      // Handle variation library images (existing images from uploads folder)
-      const variationLibraryImages = JSON.parse(req.body.variationLibraryImages || "[]");
-      if (variationLibraryImages.length > 0) {
-        const variationIndex = variations.findIndex(v => v.id === variation.id || v.sku === variation.sku);
-        if (variationIndex !== -1 && variationLibraryImages[variationIndex]) {
-          // Get existing variation images to avoid duplicates
-          const existingVariationImages = await ProductImage.findAll({
-            where: { 
+        const have = new Set(existingVariationImages.map((img) => img.image_url));
+        const urls = [];
+        for (const image of ownFiles) urls.push(await uploadFileToImageKit(image));
+        for (const libraryImage of ownLibrary) urls.push(libraryImage.image_url || libraryImage.url);
+        for (const imageUrl of urls) {
+          if (!imageUrl || have.has(imageUrl)) continue;
+          have.add(imageUrl);
+          await ProductImage.create(
+            {
               product_id: product.id,
-              product_variation_id: dbVariation.id 
+              product_variation_id: dbVariation.id,
+              image_url: imageUrl,
+              alt_text: name,
+              display_order: 0,
+              is_primary: false,
+              status: "active",
             },
-            transaction
-          });
-          const existingVariationImageUrls = new Set(existingVariationImages.map(img => img.image_url));
-          
-          for (const libraryImage of variationLibraryImages[variationIndex]) {
-            const imageUrl = libraryImage.image_url || libraryImage.url;
-            
-            // Only add if this image URL doesn't already exist for this variation
-            if (!existingVariationImageUrls.has(imageUrl)) {
-              await ProductImage.create(
-                {
-                  product_id: product.id,
-                  product_variation_id: dbVariation.id,
-                  image_url: imageUrl,
-                  alt_text: name,
-                  display_order: 0,
-                  is_primary: false,
-                  status: "active",
-                },
-                { transaction }
-              );
-            }
-          }
+            { transaction }
+          );
         }
       }
     }
