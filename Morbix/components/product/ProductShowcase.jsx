@@ -25,6 +25,12 @@ const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
 // Prepaid incentive is NOT a hard-coded instant discount — it is a real,
 // admin-created coupon (paymentModeRestriction === 'prepaid') passed in from the
 // page, surfaced above Buy now so the shopper knows the code to apply at checkout.
+// "pack_size" / "packSize" → "Pack size" for a specification row.
+function specLabel(key) {
+  const t = String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return t ? t[0].toUpperCase() + t.slice(1) : String(key);
+}
+
 export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
   const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -311,18 +317,37 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   }, []);
 
   // Specification rows reflect the SELECTED variation (colour / size / SKU /
-  // material change as you pick), then fall back to product-level details.
-  const specs = [
-    ['Color', selectedColorName],
-    ['Size', effectiveSize],
-    ['Material', activeVariant?.material || product.material],
-    ['Care', product.care],
-    ['Fit', product.fit],
-    ['Cushioning', product.cushioning],
-    ['Category', product.category],
-    ['SKU', sku],
-    ['Origin', product.origin],
-  ].filter(([, v]) => v);
+  // material change as you pick), then every other attribute: the selected
+  // variation's own attributes first, then the product's (from the admin).
+  // One row per attribute name; a variation value wins over the product's.
+  const specs = (() => {
+    const rows = [
+      ['Color', selectedColorName],
+      ['Size', effectiveSize],
+      ['Material', activeVariant?.material || product.material],
+    ];
+    // Skip what the rows above already show (only when they have a value).
+    const seen = new Set(['sku', 'category']);
+    if (rows[0][1]) { seen.add('color'); seen.add('colour'); }
+    if (rows[1][1]) seen.add('size');
+    if (rows[2][1]) seen.add('material');
+    for (const [k, v] of [...(activeVariant?.attrs || []), ...(product.attrs || [])]) {
+      const key = String(k).trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push([specLabel(k), v]);
+    }
+    rows.push(
+      ['Care', product.care],
+      ['Fit', product.fit],
+      ['Cushioning', product.cushioning],
+      ['Category', product.category],
+      ['SKU', sku],
+      ['Origin', product.origin],
+    );
+    const shown = new Set();
+    return rows.filter(([k, v]) => v && !shown.has(k.toLowerCase()) && shown.add(k.toLowerCase()));
+  })();
 
   return (
     <>

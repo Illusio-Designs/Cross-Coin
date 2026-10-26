@@ -344,6 +344,26 @@ function parseAttrs(v) {
   return a;
 }
 
+// Every attribute as [key, "value, value"] pairs, for the Specifications box.
+// Accepts a JSON string or object; values may be a string, a list of strings,
+// or a list of { name } (product-level groups from the admin). Keys starting
+// with "_" are internal (images, videos, detail image) and are skipped.
+function attrPairs(raw) {
+  let a = raw;
+  if (typeof a === 'string') { try { a = JSON.parse(a); } catch { return []; } }
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return [];
+  const out = [];
+  for (const [k, v] of Object.entries(a)) {
+    if (!k || k.startsWith('_')) continue;
+    const list = (Array.isArray(v) ? v : [v])
+      .map((x) => (x && typeof x === 'object' ? x.name ?? x.label ?? x.value : x))
+      .map((x) => (x == null ? '' : String(x).trim()))
+      .filter(Boolean);
+    if (list.length) out.push([k, [...new Set(list)].join(', ')]);
+  }
+  return out;
+}
+
 // Some backend image URLs are accidentally doubled (…https://…https://…);
 // keep only the last real URL. Same guard the other brands use.
 function cleanUrl(url) {
@@ -511,6 +531,7 @@ function mapProduct(p) {
       price: num(v.price ?? p.price ?? 0),
       oldPrice: v.comparePrice ? num(v.comparePrice) : undefined,
       stock: num(v.stock),
+      attrs: attrPairs(v.attributes),
     };
   });
 
@@ -550,6 +571,8 @@ function mapProduct(p) {
     cushioning: str(p.cushioning),
     origin: str(p.origin),
     features: normalizeFeatures(p.features),
+    // Product-level attributes from the admin (material, pattern, …).
+    attrs: attrPairs(p.attributes),
   };
 }
 
