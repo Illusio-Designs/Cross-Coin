@@ -32,7 +32,7 @@ const IK_URL = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || 'https://ik.imag
 
 const SECTIONS = [
   ['details', 'Details'],
-  ['sizes', 'Sizes & stock'],
+  ['sizes', 'Variations & stock'],
   ['brands', 'Prices per brand'],
   ['photos', 'Photos'],
   ['videos', 'Videos'],
@@ -150,8 +150,16 @@ function productToForm(product, admin = null) {
   };
 }
 
+// "Black · M" from a variation's attributes, else its SKU, else "Variation 2".
+function sizeLabel(v, index) {
+  const attrs = Object.entries(v?.attributes || {})
+    .filter(([k, val]) => k !== '_images' && (Array.isArray(val) ? val.join('') : String(val || '')).trim())
+    .map(([, val]) => (Array.isArray(val) ? val.join(', ') : val)).join(' · ');
+  return { attrs, label: attrs || v?.sku || `Variation ${index + 1}` };
+}
+
 // Preview for a File or a stored image (revokes its object URL).
-function ImageThumb({ img, alt, onRemove }) {
+function ImageThumb({ img, alt, onRemove, tag = null }) {
   const [src, setSrc] = useState(() => (img instanceof File ? '' : (img.url || img.image_url)));
   useEffect(() => {
     if (!(img instanceof File)) { setSrc(img.url || img.image_url); return undefined; }
@@ -162,6 +170,7 @@ function ImageThumb({ img, alt, onRemove }) {
   return (
     <div className="pst-img">
       {src ? <img src={src} alt={alt} /> : null}
+      {tag ? <span className="pst-img-tag" title={tag}>{tag}</span> : null}
       <button type="button" className="pst-img-x" onClick={onRemove} aria-label={`Remove ${alt}`}>×</button>
     </div>
   );
@@ -350,9 +359,9 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
     // Validation
     if (!form.name.trim()) return failValidation('Give the product a name.', 'details');
     if (!form.categoryId) return failValidation('Pick a category.', 'details');
-    if (!variations.length) return failValidation('Add at least one size.', 'sizes');
+    if (!variations.length) return failValidation('Add at least one variation.', 'sizes');
     for (const v of variations) {
-      if (!v.price || Number.isNaN(Number(v.price)) || Number(v.price) <= 0) return failValidation('Every size needs a price above ₹0.', 'sizes');
+      if (!v.price || Number.isNaN(Number(v.price)) || Number(v.price) <= 0) return failValidation('Every variation needs a price above ₹0.', 'sizes');
       if (v.stock !== '' && v.stock != null && !/^\d+$/.test(String(v.stock).trim())) return failValidation('Stock must be a whole number, 0 or more.', 'sizes');
     }
     if (!selectedBrands.length) return failValidation('Pick at least one brand to sell this product on.', 'brands');
@@ -480,7 +489,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
 
   const askRegenerate = () => setConfirm({
     title: 'Refill SEO from product data?',
-    message: 'Replace every SEO field below with values worked out from the name, brand, description and sizes? Nothing is saved until you press Save.',
+    message: 'Replace every SEO field below with values worked out from the name, brand, description and variations? Nothing is saved until you press Save.',
     confirmLabel: 'Refill fields',
     tone: 'primary',
     onConfirm: async () => {
@@ -498,6 +507,39 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
         setRegenerating(false);
       }
     },
+  });
+
+  // Every variation's photos for the Photos section, each photo once: a photo
+  // that is also a product photo is already shown; one shared by several variations is
+  // shown once, tagged with all of them, and × removes it from all of them.
+  const photoKey = (img) => (img instanceof File ? img : String(img?.url || img?.image_url || '').split('?')[0]);
+  const sizePhotos = (() => {
+    const seen = new Map(form.images.map((img) => [photoKey(img), null]));
+    const out = [];
+    (form.variationImages || []).forEach((imgs, vIdx) => {
+      const { label } = sizeLabel(form.variations[vIdx], vIdx);
+      (imgs || []).forEach((img, iIdx) => {
+        const key = photoKey(img);
+        if (seen.has(key)) {
+          const entry = seen.get(key);
+          if (entry && !entry.labels.includes(label)) { entry.labels.push(label); entry.refs.push([vIdx, img]); }
+          return;
+        }
+        const entry = { img, vIdx, iIdx, labels: [label], refs: [[vIdx, img]] };
+        seen.set(key, entry);
+        out.push(entry);
+      });
+    });
+    return out.map((e) => ({ ...e, label: e.labels.join(', ') }));
+  })();
+  const removeSizePhoto = (refs) => edit((f) => {
+    const vi = (f.variationImages || []).map((imgs) => [...(imgs || [])]);
+    let toDelete = [...(f.variationImagesToDelete || [])];
+    refs.forEach(([vIdx, img]) => {
+      vi[vIdx] = (vi[vIdx] || []).filter((x) => x !== img);
+      if (img?.existing && img.id) toDelete = [...toDelete, img.id];
+    });
+    return { ...f, variationImages: vi, variationImagesToDelete: toDelete };
   });
 
   const onPickImages = (picked) => {
@@ -547,7 +589,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       <header className="pst-head">
         <div>
           <h1 className="pst-title">{loading ? <Skeleton w="min(320px, 70%)" h={26} /> : title}</h1>
-          <p className="pst-sub">{isNew ? 'Fill in the details, add at least one size with its price, and pick the brands that sell it.' : 'Changes are saved when you press Save.'}</p>
+          <p className="pst-sub">{isNew ? 'Fill in the details, add at least one variation with its price, and pick the brands that sell it.' : 'Changes are saved when you press Save.'}</p>
         </div>
       </header>
 
@@ -564,7 +606,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             <SkeletonForm fields={4} />
           </section>
           <section className="pst-panel pst-sec" aria-hidden="true">
-            <h2>Sizes &amp; stock</h2>
+            <h2>Variations &amp; stock</h2>
             <SkeletonList rows={3} />
           </section>
           <section className="pst-panel pst-sec" aria-hidden="true">
@@ -614,20 +656,18 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
             </div>
           </section>
 
-          {/* ── Sizes & stock ── */}
+          {/* ── Variations & stock ── */}
           <section id="pst-sec-sizes" className="pst-panel pst-sec">
-            <h2>Sizes &amp; stock</h2>
-            <p className="pst-help">Each size (or colour) has its own SKU, price and stock. Stock can also be changed straight from the products list.</p>
+            <h2>Variations &amp; stock</h2>
+            <p className="pst-help">Each variation (size, colour…) has its own SKU, price and stock. Stock can also be changed straight from the products list.</p>
             {form.variations.map((v, index) => {
               const isOpen = !!openVar[index];
-              const attrs = Object.entries(v.attributes || {})
-                .filter(([k, val]) => k !== '_images' && (Array.isArray(val) ? val.join('') : String(val || '')).trim())
-                .map(([, val]) => (Array.isArray(val) ? val.join(', ') : val)).join(' · ');
+              const { attrs } = sizeLabel(v, index);
               return (
                 <div key={v.id || `new-${index}`} className={`pst-var-card${isOpen ? ' is-open' : ''}`}>
                   <div className="pst-var-head">
                     <button type="button" className="pst-var-toggle" onClick={() => setOpenVar((o) => ({ ...o, [index]: !o[index] }))} aria-expanded={isOpen}>
-                      <b>{attrs || v.sku || `Size ${index + 1}`}</b>
+                      <b>{attrs || v.sku || `Variation ${index + 1}`}</b>
                       <span>{[v.sku && attrs ? v.sku : null, v.price ? `₹${Number(v.price).toLocaleString('en-IN')}` : 'No price yet', v.stock !== '' && v.stock != null ? `${v.stock} in stock` : null].filter(Boolean).join(' · ')}</span>
                       <HugeiconsIcon icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon} size={14} strokeWidth={2} />
                     </button>
@@ -648,16 +688,16 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                       </div>
                       <AttributeSelector variationIndex={index} attributes={attributes} loading={!attrsLoaded} selectedAttributes={v.attributes || {}} onChange={onAttrChange} />
                       <div className="pst-field">
-                        <span className="pst-label">Photos of this size</span>
+                        <span className="pst-label">Photos of this variation</span>
                         <div className="pst-upload">
-                          <input type="file" multiple accept="image/*" aria-label={`Upload photos for size ${index + 1}`} onChange={(e) => { addVariationImages(index, Array.from(e.target.files || [])); e.target.value = ''; }} />
+                          <input type="file" multiple accept="image/*" aria-label={`Upload photos for variation ${index + 1}`} onChange={(e) => { addVariationImages(index, Array.from(e.target.files || [])); e.target.value = ''; }} />
                           <button type="button" className="pst-btn pst-btn--sm" onClick={() => setImagePicker(index)}>Pick from library</button>
                         </div>
                         <div className="pst-imgs">
                           {(form.variationImages?.[index] || []).length === 0
-                            ? <p className="pst-help">No photos for this size yet.</p>
+                            ? <p className="pst-help">No photos for this variation yet.</p>
                             : form.variationImages[index].map((img, i) => (
-                              <ImageThumb key={img.id || `${img.name}-${i}`} img={img} alt={`Size ${index + 1} photo ${i + 1}`} onRemove={() => removeVariationImage(index, i)} />
+                              <ImageThumb key={img.id || `${img.name}-${i}`} img={img} alt={`Variation ${index + 1} photo ${i + 1}`} onRemove={() => removeVariationImage(index, i)} />
                             ))}
                         </div>
                       </div>
@@ -666,7 +706,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                 </div>
               );
             })}
-            <button type="button" className="pst-btn" onClick={addVariation}>+ Add size</button>
+            <button type="button" className="pst-btn" onClick={addVariation}>+ Add variation</button>
           </section>
 
           {/* ── Prices per brand ── */}
@@ -716,8 +756,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
               </div>
             )}
             <p className="pst-note-box">
-              The site price overrides each size’s price on that site, including checkout. Stock still uses each size’s real inventory.
-              Leave the site price empty to use each size’s own price.
+              The site price overrides each variation’s price on that site, including checkout. Stock still uses each variation’s real inventory.
+              Leave the site price empty to use each variation’s own price.
             </p>
           </section>
 
@@ -728,12 +768,21 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
               <input type="file" multiple accept="image/*" aria-label="Upload product photos" onChange={(e) => { addProductImages(Array.from(e.target.files || [])); e.target.value = ''; }} />
               <button type="button" className="pst-btn pst-btn--sm" onClick={() => setImagePicker('product')}>Pick from library</button>
             </div>
+            <p className="pst-help">All photos of this product: its own photos first (the first one is the main photo), then each variation’s photos, tagged with the variation. Removing a variation photo here removes it from that variation.</p>
             <div className="pst-imgs">
-              {form.images.length === 0
+              {form.images.length === 0 && sizePhotos.length === 0
                 ? <p className="pst-help">No photos yet. The first photo is the main one.</p>
-                : form.images.map((img, i) => (
-                  <ImageThumb key={img.id || `${img.name}-${i}`} img={img} alt={`Product photo ${i + 1}`} onRemove={() => removeProductImage(i)} />
-                ))}
+                : (
+                  <>
+                    {form.images.map((img, i) => (
+                      <ImageThumb key={img.id || `${img.name}-${i}`} img={img} alt={`Product photo ${i + 1}`} onRemove={() => removeProductImage(i)} />
+                    ))}
+                    {sizePhotos.map(({ img, vIdx, iIdx, label, refs }) => (
+                      <ImageThumb key={`v${vIdx}-${img.id || `${img.name}-${iIdx}`}`} img={img} tag={label}
+                        alt={`${label} photo ${iIdx + 1}`} onRemove={() => removeSizePhoto(refs)} />
+                    ))}
+                  </>
+                )}
             </div>
           </section>
 
@@ -754,7 +803,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                 {regenerating ? 'Refilling…' : '↻ Refill from product data'}
               </button>
             </div>
-            <p className="pst-help">Leave a field empty to use the automatic value (from the name, brand, description, sizes and your SEO settings).</p>
+            <p className="pst-help">Leave a field empty to use the automatic value (from the name, brand, description, variations and your SEO settings).</p>
             <Input label="Meta title" name="seo.metaTitle" value={form.seo.metaTitle} onChange={(e) => setSeo('metaTitle', e.target.value)} placeholder={`Auto: ${form.name || 'Product name'} | ${brandSiteName(previewBrand)}`} />
             <SeoLengthMeter value={form.seo.metaTitle || ''} type="title" />
             <Input label="Meta description" multiline rows={3} name="seo.metaDescription" value={form.seo.metaDescription} onChange={(e) => setSeo('metaDescription', e.target.value)} placeholder="Auto: trimmed from the description, about 160 characters" />
