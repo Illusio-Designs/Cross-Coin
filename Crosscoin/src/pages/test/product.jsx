@@ -27,6 +27,12 @@ const fmtReviewDate = (d) => {
   return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 };
 
+// "pack_size" / "packSize" → "Pack size" for a specification row.
+function specLabel(key) {
+  const t = String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return t ? t[0].toUpperCase() + t.slice(1) : String(key);
+}
+
 export default function TestProduct({ preview = true }) {
   const router = useRouter();
   const [p, setP] = useState(null);
@@ -154,6 +160,43 @@ export default function TestProduct({ preview = true }) {
   // to the product's own price when a product has no structured variants.
   const variants = p.variants || [];
   const cur = variant || { id: 0, price: p.now, comparePrice: p.was, off: p.off, pairs: 1, colors: [], sizes: p.sizes, label: 'Single', img: p.img };
+
+  // Specifications: the SELECTED variation's colour / size / material, then
+  // every other attribute (the selected variation's first, then the product's
+  // from the admin), one row per name. SKU and category are not shown.
+  const specs = (() => {
+    const pairsOf = (list) => list || [];
+    const find = (list, key) => pairsOf(list).find(([k]) => String(k).trim().toLowerCase() === key)?.[1];
+    const rows = [
+      ['Colour', (cur.colors?.length ? cur.colors.join(', ') : '') || p.colors.map((c) => c.name).join(', ')],
+      ['Size', size || (p.sizes.length ? p.sizes.join(', ') : '')],
+      ['Material', find(cur.attrs, 'material') || find(p.attrs, 'material') || p.materials.join(', ')],
+    ];
+    const seen = new Set(['sku', 'category']);
+    if (rows[0][1]) { seen.add('color'); seen.add('colour'); }
+    if (rows[1][1]) seen.add('size');
+    if (rows[2][1]) seen.add('material');
+    // This page has no variation picker, so an attribute set only on another
+    // variation (e.g. Length on the Black pair) is listed too, values merged.
+    const others = new Map();
+    for (const vr of variants) {
+      if (vr === cur) continue;
+      for (const [k, v] of pairsOf(vr.attrs)) {
+        const key = String(k).trim().toLowerCase();
+        const e = others.get(key) || { k, vals: [] };
+        String(v).split(', ').forEach((x) => { if (x && !e.vals.includes(x)) e.vals.push(x); });
+        others.set(key, e);
+      }
+    }
+    const merged = [...others.values()].map((e) => [e.k, e.vals.join(', ')]);
+    for (const [k, v] of [...pairsOf(cur.attrs), ...merged, ...pairsOf(p.attrs)]) {
+      const key = String(k).trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push([specLabel(k), v]);
+    }
+    return rows.filter(([, v]) => v);
+  })();
   const sizeOpts = (cur.sizes && cur.sizes.length) ? cur.sizes : p.sizes;
   const total = cur.price * qty;
   const thumbs = (p.images && p.images.length ? p.images : variants.map((v) => v.img).filter(Boolean));
@@ -300,12 +343,7 @@ export default function TestProduct({ preview = true }) {
             <aside className="pdpspecs">
               <h3>Specifications</h3>
               <dl>
-                <div className="specrow"><dt>Brand</dt><dd>{p.brand}</dd></div>
-                {p.cat ? <div className="specrow"><dt>Category</dt><dd>{p.cat}</dd></div> : null}
-                <div className="specrow"><dt>Colours</dt><dd>{p.colors.length ? p.colors.map((c) => c.name).join(', ') : '—'}</dd></div>
-                <div className="specrow"><dt>Sizes</dt><dd>{p.sizes.length ? p.sizes.join(', ') : 'One size'}</dd></div>
-                <div className="specrow"><dt>Shipping</dt><dd>Free over ₹799 · 24h dispatch</dd></div>
-                <div className="specrow"><dt>Returns</dt><dd>7-day easy returns</dd></div>
+                {specs.map(([k, v]) => <div className="specrow" key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
               </dl>
             </aside>
           </div>

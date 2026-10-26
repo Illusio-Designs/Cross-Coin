@@ -23,6 +23,12 @@ const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
 // full-width "details" band pairing the story with a specifications card.
 // Gallery + colour + size share one selection so price, SKU and stock always
 // reflect the exact variation, and Add to cart sends that variation.
+// "pack_size" / "packSize" → "Pack size" for a specification row.
+function specLabel(key) {
+  const t = String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return t ? t[0].toUpperCase() + t.slice(1) : String(key);
+}
+
 export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
   const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -294,17 +300,38 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
 
   const hasSizeGuide = SIZE_GUIDE.rows.length > 0;
 
-  const specs = [
-    ['Colour', selectedColorName],
-    ['Size', effectiveSize],
-    ['Material', activeVariant?.material || product.material],
-    ['Care', product.care],
-    ['Fit', product.fit],
-    ['Cushioning', product.cushioning],
-    ['Category', product.category],
-    ['SKU', sku],
-    ['Origin', product.origin],
-  ].filter(([, v]) => v);
+  // Specification rows reflect the SELECTED variation (colour / size /
+  // material change as you pick), then every other attribute: the selected
+  // variation's own attributes first, then the product's (from the admin).
+  // One row per attribute name; a variation value wins over the product's.
+  const specs = (() => {
+    const productMaterial = (product.attrs || []).find(([k]) => String(k).trim().toLowerCase() === 'material')?.[1];
+    const rows = [
+      ['Colour', selectedColorName],
+      ['Size', effectiveSize],
+      ['Material', activeVariant?.material || productMaterial || product.material],
+    ];
+    // Skip what the rows above already show (only when they have a value);
+    // SKU and category are not shown to shoppers.
+    const seen = new Set(['sku', 'category']);
+    if (rows[0][1]) { seen.add('color'); seen.add('colour'); }
+    if (rows[1][1]) seen.add('size');
+    if (rows[2][1]) seen.add('material');
+    for (const [k, v] of [...(activeVariant?.attrs || []), ...(product.attrs || [])]) {
+      const key = String(k).trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push([specLabel(k), v]);
+    }
+    rows.push(
+      ['Care', product.care],
+      ['Fit', product.fit],
+      ['Cushioning', product.cushioning],
+      ['Origin', product.origin],
+    );
+    const shown = new Set();
+    return rows.filter(([k, v]) => v && !shown.has(k.toLowerCase()) && shown.add(k.toLowerCase()));
+  })();
 
   return (
     <>
@@ -329,7 +356,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]}
                   sizes="(max-width: 900px) 100vw, 640px" priority
                   fallback={<span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5, display: 'grid', placeItems: 'center', height: '100%' }}><Icon name="Footprints" size={80} /></span>} />
-                {sku && <span className="pdx-style-badge">Style: #{sku}</span>}
                 <span className="pdx-zoom-hint" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
                 </span>

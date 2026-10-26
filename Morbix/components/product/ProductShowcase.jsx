@@ -386,7 +386,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
               <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]}
                 sizes="(max-width: 760px) 100vw, 600px" priority
                 fallback={<span aria-hidden style={{ color: '#c3ccd2', display: 'grid', placeItems: 'center', height: '100%' }}><Icon name="Footprints" size={72} /></span>} />
-              {sku && <span className="pdp-style-badge">Style: #{sku}</span>}
               <span className="pdp-zoom-hint" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
               </span>
@@ -420,7 +419,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         <div className="pdp-meta">
           <span className="rating"><Icon name="Star" size={14} color="var(--star)" /> {product.rating}</span>
           <a href="#reviews" className="muted">{product.reviews} reviews</a>
-          {sku && <span className="muted">SKU: {sku}</span>}
         </div>
         <div className="pdp-price">
           ₹{Number(hasPacks ? packTotal : price).toFixed(0)}
