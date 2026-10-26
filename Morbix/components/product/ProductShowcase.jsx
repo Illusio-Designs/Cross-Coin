@@ -321,12 +321,14 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   // variation's own attributes first, then the product's (from the admin).
   // One row per attribute name; a variation value wins over the product's.
   const specs = (() => {
+    const productMaterial = (product.attrs || []).find(([k]) => String(k).trim().toLowerCase() === 'material')?.[1];
     const rows = [
       ['Color', selectedColorName],
       ['Size', effectiveSize],
-      ['Material', activeVariant?.material || product.material],
+      ['Material', activeVariant?.material || productMaterial || product.material],
     ];
-    // Skip what the rows above already show (only when they have a value).
+    // Skip what the rows above already show (only when they have a value);
+    // SKU and category are not shown to shoppers.
     const seen = new Set(['sku', 'category']);
     if (rows[0][1]) { seen.add('color'); seen.add('colour'); }
     if (rows[1][1]) seen.add('size');
@@ -341,8 +343,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       ['Care', product.care],
       ['Fit', product.fit],
       ['Cushioning', product.cushioning],
-      ['Category', product.category],
-      ['SKU', sku],
       ['Origin', product.origin],
     );
     const shown = new Set();
