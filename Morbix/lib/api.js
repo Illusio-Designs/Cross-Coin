@@ -521,7 +521,8 @@ function mapProduct(p) {
     const a = parseAttrs(v);
     const cV = Array.isArray(a.color) ? a.color[0] : a.color;
     const sV = Array.isArray(a.size) ? a.size[0] : a.size;
-    const mV = Array.isArray(a.material) ? a.material[0] : a.material;
+    // Every material of this variation ("Cotton, Spandex"), not just the first.
+    const mV = Array.isArray(a.material) ? a.material.map((x) => String(x).trim()).filter(Boolean).join(', ') : a.material;
     return {
       id: v.id,
       color: str(cV),
