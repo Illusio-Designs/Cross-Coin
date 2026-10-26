@@ -4,6 +4,7 @@ import { RefreshIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { Switch, Skeleton, SkeletonForm, SkeletonList } from '../ui';
 import Dropdown from '../ui/Dropdown';
+import AiChatSettings from './AiChatSettings';
 import { showSuccess, showError } from '../../utils/toastNotification';
 
 /* ──────────────────────────────────────────────────────────────
@@ -351,6 +352,8 @@ export default function SettingsPage({ brandId = '', brands = [], isAdmin = fals
           </section>
         </>
       )}
+
+      <AiChatSettings awayHours={saved?.away?.enabled ? { start: niceTime(saved.away.start), end: niceTime(saved.away.end) } : null} />
 
       <div className="wpb-two wpb-two--top">
         <div className="wpb-col wpb-stack">
