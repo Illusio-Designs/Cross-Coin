@@ -60,6 +60,31 @@ router.get('/conversations/:id/context',        isAuthenticated, isWhatsappManag
   }
 });
 router.post('/conversations/:id/reply',         isAuthenticated, isWhatsappManager, ctrl.sendReply);
+
+// AI auto chat, per chat: state + team summary, pause/resume, refresh summary.
+const aiChat = require('../services/whatsappAiService.js');
+router.get('/conversations/:id/ai', isAuthenticated, isWhatsappManager, async (req, res) => {
+  try {
+    const state = await aiChat.chatState(req.params.id);
+    if (!state) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, ai: state });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+router.put('/conversations/:id/ai', isAuthenticated, isWhatsappManager, async (req, res) => {
+  try {
+    const state = await aiChat.setPaused(req.params.id, !!req.body?.paused);
+    if (!state) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, ai: state });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+router.post('/conversations/:id/ai/summarize', isAuthenticated, isWhatsappManager, async (req, res) => {
+  try {
+    if (!aiChat.isReady()) return res.status(400).json({ success: false, message: 'AI is not set up yet: add ANTHROPIC_API_KEY on the server.' });
+    const state = await aiChat.summarize(req.params.id);
+    if (!state) return res.status(404).json({ success: false, message: 'Conversation not found' });
+    res.json({ success: true, ai: state });
+  } catch (err) { res.status(502).json({ success: false, message: err.message }); }
+});
 // Approved template in a chat — the only thing allowed after the 24 h window.
 router.get('/conversations/:id/template-options', isAuthenticated, isWhatsappManager, ctrl.getTemplateOptions);
 router.post('/conversations/:id/template',      isAuthenticated, isWhatsappManager, ctrl.sendTemplateMessage);

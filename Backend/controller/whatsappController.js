@@ -47,7 +47,10 @@ function windowClosedResponse(res, win) {
 }
 
 // Stamp a staff reply on the conversation (inbox "waiting" + SLA first response).
+// Every staff send goes through here, so it is also where the AI auto chat
+// steps back from the chat (paused for a while, hand-over flag cleared).
 function staffReplyUpdate(conv, preview) {
+  require('../services/whatsappAiService.js').onStaffReply(conv.id).catch(() => {});
   const now = new Date();
   const upd = { last_message: preview, last_message_at: now, last_reply_at: now };
   if (!conv.first_response_at) upd.first_response_at = now;
@@ -344,7 +347,7 @@ exports.getStats = async (req, res) => {
 // number), status + quick filters, per-filter counts and per-row reply-window,
 // waiting and latest-order info. Two indexed SQL statements + one model read +
 // one grouped order lookup per page (no per-row queries).
-const CONV_FILTERS = new Set(['all', 'unread', 'waiting', 'window_closed', 'has_order']);
+const CONV_FILTERS = new Set(['all', 'unread', 'waiting', 'window_closed', 'has_order', 'needs_you']);
 
 // whatsapp_conversations is utf8mb4_unicode_ci while users / shipping_addresses
 // / guest_users may be utf8mb4_general_ci; comparing their columns directly
@@ -391,6 +394,9 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const limit   = Math.min(100, Math.max(1, parseInt(query.limit, 10) || defaultLimit));
   const q       = String(query.q || '').trim().slice(0, 100);
   const cut24   = new Date(Date.now() - WINDOW_MS);
+  const aiService = require('../services/whatsappAiService.js');
+  let aiCols = true; // ai_* columns (AI auto chat) — present after its first schema check
+  try { await aiService.ensureSchema(); } catch (_) { aiCols = false; }
 
   const base = [];
   const repl = { cut24, limit, offset: (page - 1) * limit };
@@ -421,7 +427,9 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
     ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = ${asColumn('c.phone_hash', col.sa_hash)})
           OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = ${asColumn('c.phone_hash', col.gu_hash)})))`
     : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = ${asColumn(P10, col.sa_phone)})`})`;
-  const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER }[filter];
+  // Chats the AI auto chat handed to the team.
+  const NEEDS_YOU = aiCols ? 'c.ai_needs_human = 1' : '0';
+  const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER, needs_you: NEEDS_YOU }[filter];
 
   const [countRow] = await sequelize.query(
     `SELECT COUNT(*) AS all_n,
@@ -429,6 +437,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
             SUM(${WAITING}) AS waiting_n,
             SUM(${CLOSED}) AS closed_n,
             SUM(${HAS_ORDER}) AS has_order_n,
+            SUM(${NEEDS_YOU}) AS needs_you_n,
             SUM(${filterSql}) AS filtered_n
        FROM whatsapp_conversations c WHERE ${baseSql}`,
     { replacements: repl, type: QueryTypes.SELECT });
@@ -453,6 +462,8 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   let stageOf = null;
   try { stageOf = require('../services/chatContextService.js').stageOf; } catch (_) {}
 
+  const aiFlags = await aiService.flagsFor(ids);
+
   const now = Date.now();
   const conversations = ordered.map((c) => {
     const j = c.toJSON();
@@ -467,6 +478,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
       window_closes_at: closes,
       last_inbound_at: li,
       waiting_since: li && (!lr || lr < li) ? li : null,
+      ai: aiFlags.get(c.id) || null,
       latest_order: o ? {
         order_number: o.order_number,
         stage: st ? st.key : null,
@@ -502,6 +514,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
       waiting: Number(countRow?.waiting_n) || 0,
       window_closed: Number(countRow?.closed_n) || 0,
       has_order: Number(countRow?.has_order_n) || 0,
+      needs_you: Number(countRow?.needs_you_n) || 0,
     },
   };
 }
@@ -768,6 +781,7 @@ exports.resolveConversation = async (req, res) => {
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
     await conv.update({ status: target });
+    if (target === 'resolved') await require('../services/whatsappAiService.js').onResolved(conv.id);
     logger.info(`[WhatsApp] conversation ${id} → ${target}`);
     res.json({ success: true, status: conv.status });
   } catch (err) {
@@ -1100,6 +1114,9 @@ async function handleAutoReply(phone, text, brandId) {
     logger.warn('Auto-reply error: ' + err.message);
   }
 }
+
+// Words with fixed handling (opt-in/out, COD cancel) that the AI never answers.
+const AI_FIXED_WORDS = /^(stop|unsubscribe|start|subscribe|cancel|cancel order)[.!]*$/i;
 
 // Patch receiveWebhook to call auto-reply
 // ─── COD address confirmation from a customer's WhatsApp reply ────────────────
@@ -1496,11 +1513,21 @@ exports.receiveWebhook = async (req, res) => {
           // keyword bot. Plain text that isn't a captured address only, and only
           // on a verified webhook (never let a spoofed inbound make our number
           // send to an attacker-chosen recipient).
+          //
+          // With the AI auto chat active for this chat it answers instead of the
+          // keyword bot, away message and order-status reply; opt-out words,
+          // STOP/START/CANCEL and button taps (COD / failed delivery) keep their
+          // fixed handling and the AI stays out of those.
           if (trusted && msgType !== 'reaction') {
             setImmediate(async () => {
+              const ai = require('../services/whatsappAiService.js');
+              const aiOn = await ai.isActiveFor(conv);
               let auto = { handled: false };
-              try { auto = await require('../services/whatsappInsightsService.js').handleInboundAutomation(conv, { type: msgType, body: text, awaitingAddress: !!conv.awaiting_address_for }); } catch (e) { logger.warn('[WhatsApp] inbound automation error: ' + e.message); }
-              if (!auto.handled && msg.type === 'text' && !conv.awaiting_address_for) await handleAutoReply(phone, text, effectiveBrand).catch(() => {});
+              try { auto = await require('../services/whatsappInsightsService.js').handleInboundAutomation(conv, { type: msgType, body: text, awaitingAddress: !!conv.awaiting_address_for, aiActive: aiOn }); } catch (e) { logger.warn('[WhatsApp] inbound automation error: ' + e.message); }
+              if (auto.handled || conv.awaiting_address_for) return;
+              const fixedWord = msg.type === 'text' && AI_FIXED_WORDS.test(String(text || '').trim());
+              if (msg.type === 'text' && (!aiOn || fixedWord)) await handleAutoReply(phone, text, effectiveBrand).catch(() => {});
+              if (aiOn && msgType !== 'button' && !fixedWord) ai.onInbound(conv);
             });
           }
          } catch (msgErr) {

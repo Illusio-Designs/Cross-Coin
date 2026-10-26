@@ -16,6 +16,7 @@ import Dropdown from '../ui/Dropdown';
 import { useAuth } from '../../context/AuthContext';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { MsgContent, msgPreview, FormattedText, API_BASE } from './InboxMedia';
+import AiChatBar from './AiChatBar';
 
 const W = '/api/whatsapp';
 const PAGE_SIZE = 30;
@@ -25,6 +26,7 @@ const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
   { key: 'waiting', label: 'Waiting for us' },
+  { key: 'needs_you', label: 'Needs you' }, // handed over by the AI auto chat
   { key: 'window_closed', label: 'Window closed' },
   { key: 'has_order', label: 'Has order' },
 ];
@@ -892,6 +894,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     ? `No chats match “${qDeb}”.`
     : filter === 'unread' ? 'No unread chats. Nice work.'
       : filter === 'waiting' ? 'Nobody is waiting for a reply.'
+        : filter === 'needs_you' ? 'Nothing handed over by the AI right now.'
         : filter === 'window_closed' ? 'No chats with a closed reply window.'
           : filter === 'has_order' ? 'No chats from customers with an order.'
             : status === 'resolved' ? 'No resolved chats yet.' : 'No chats yet. New WhatsApp messages will show up here.';
@@ -977,8 +980,9 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                           <span className="wib-row-preview">{c.last_message || 'No messages yet'}</span>
                           {c.unread_count > 0 && <span className="wib-unread" aria-label={`${c.unread_count} unread`}>{c.unread_count}</span>}
                         </span>
-                        {(wait || stage || closed || (!brandId && c.brand_id)) && (
+                        {(wait || stage || closed || c.ai?.needs_human || (!brandId && c.brand_id)) && (
                           <span className="wib-row-tags">
+                            {c.ai?.needs_human && <Pill tone="danger" title={c.ai.summary || undefined}>Needs you</Pill>}
                             {wait && <Pill tone={wait.tone}>{wait.text}</Pill>}
                             {stage && <Pill tone={stage.tone} title={c.latest_order.order_number}>{stage.label}</Pill>}
                             {closed && <Pill tone="muted">Window closed</Pill>}
@@ -1048,6 +1052,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               )}
             </header>
 
+            {!convPending && <AiChatBar convId={activeConv.id} refreshKey={messages.length ? messages[messages.length - 1].id : 0} />}
+
             <div className="wib-msgs" ref={messagesBoxRef} onScroll={onMessagesScroll}>
               {!msgLoading && hasMoreMsgs && (loadingOlder ? (
                 <ThreadSkeleton rows={SKEL_OLDER} day={false} label="Loading older messages…" />
@@ -1083,6 +1089,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                               )}
                               <MsgContent msg={m} brandId={activeConv.brand_id || brandId} />
                               <div className="wib-meta">
+                                {m.automation_key === 'ai_chat' && <span className="wib-ai-tag" title="Written and sent by the AI auto chat">AI</span>}
                                 {msgTime(m.sent_at || m.createdAt)}
                                 {out && (
                                   m.status === 'sending' ? <HugeiconsIcon icon={Clock01Icon} size={11} strokeWidth={2} aria-label="Sending" />

@@ -54,7 +54,7 @@ async function getChatContext(conversationId) {
   const orders = await sequelize.query(
     `SELECT o.id, o.order_number, o.status, o.payment_type, o.payment_status, o.final_amount,
             o.created_at, o.shipping_waybill, o.courier_name, o.shipping_label_url,
-            o.user_id, o.guest_user_id, o.shipping_address_id,
+            o.user_id, o.guest_user_id, o.shipping_address_id, o.brand_id,
             COALESCE(b.display_name, b.name) AS brand
        FROM orders o
        LEFT JOIN brands b ON b.id = o.brand_id
@@ -121,6 +121,7 @@ async function getChatContext(conversationId) {
         id: o.id,
         orderNumber: o.order_number,
         brand: o.brand,
+        brandId: o.brand_id,
         status: o.status,
         stage: st.key,
         stageLabel: st.label,

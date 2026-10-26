@@ -24,6 +24,7 @@
   "email": "info@illusiodesigns.agency",
   "website": "https://www.illusiodesigns.agency",
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@sentry/node": "^10.69.0",
     "axios": "^1.14.0",
     "bcrypt": "^6.0.0",

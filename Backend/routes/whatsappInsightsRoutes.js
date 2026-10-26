@@ -24,6 +24,19 @@ router.get('/settings/health',      isAuthenticated, isAdmin, ctrl.getHealth);
 router.get('/settings/failed',      isAuthenticated, isAdmin, ctrl.getFailed);
 router.get('/settings/opted-out',   isAuthenticated, isAdmin, ctrl.getOptedOut);
 router.post('/settings/test',       isAuthenticated, isAdmin, ctrl.sendTest);
+// AI auto chat settings (on/off, when, extra notes for the AI).
+const aiChat = require('../services/whatsappAiService.js');
+router.get('/settings/ai', isAuthenticated, isAdmin, async (req, res) => {
+  try { res.json({ success: true, ready: aiChat.isReady(), settings: await aiChat.getSettings() }); }
+  catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+router.put('/settings/ai', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const r = await aiChat.saveSettings(req.body);
+    if (r.error) return res.status(400).json({ success: false, message: r.error });
+    res.json({ success: true, ready: aiChat.isReady(), settings: r.settings });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
 router.get('/settings',             isAuthenticated, isAdmin, ctrl.getSettings);
 router.put('/settings',             isAuthenticated, isAdmin, ctrl.saveSettings);
 

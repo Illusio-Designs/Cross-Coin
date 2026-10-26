@@ -1170,7 +1170,8 @@ async function handleInboundAutomation(conversation, message, deps = {}) {
     }
 
     // 2) "Where is my order?" → latest order stage + tracking link (max once an hour).
-    if (isText && isOrderStatusQuery(text)) {
+    // (Skipped while the AI auto chat answers this chat — it covers both.)
+    if (isText && isOrderStatusQuery(text) && !message.aiActive) {
       if (!settings.auto_order_status.enabled) return { handled: true, action: 'order_status_off' };
       const lockKey = `${conv.id}:order_status`;
       if (_autoLocks.has(lockKey) || await recentAuto(conv.id, 'order_status', HOUR)) return { handled: true, action: 'order_status_limited' };
@@ -1203,7 +1204,7 @@ async function handleInboundAutomation(conversation, message, deps = {}) {
     }
 
     // 3) Away message — outside opening hours, once per chat every 12 hours.
-    if (settings.away.enabled && !isWithinHours(now, settings.away.start, settings.away.end)) {
+    if (!message.aiActive && settings.away.enabled && !isWithinHours(now, settings.away.start, settings.away.end)) {
       const lockKey = `${conv.id}:away`;
       if (_autoLocks.has(lockKey) || await recentAuto(conv.id, 'away', 12 * HOUR)) return none;
       _autoLocks.add(lockKey);

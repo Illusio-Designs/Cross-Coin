@@ -443,6 +443,34 @@
   border-bottom: 1px solid var(--ds-color-border);
 }
 .wib-back, .wib-info-btn { display: none; }
+
+/* ── AI strip above the chat (AiChatBar) ── */
+.wai {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-soft);
+}
+.wai.is-alert { background: var(--ds-color-danger-bg); border-bottom-color: var(--ds-color-danger-bd); }
+.wai-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
+.wai-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; color: var(--ds-color-info); background: var(--ds-color-info-bg);
+  border: 1px solid var(--ds-color-info-bd);
+}
+.wai-state { font-size: 12.5px; color: var(--ds-color-text-muted); }
+.wai-alert { font-size: 13px; color: var(--ds-color-danger); min-width: 0; overflow-wrap: anywhere; }
+.wai-actions { margin-left: auto; display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.wai-actions .wib-btn { gap: 5px; }
+.wai-ghost { background: none; border-color: transparent; }
+.wai-body { display: flex; flex-direction: column; gap: 6px; }
+.wai-summary { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ds-color-text); overflow-wrap: anywhere; }
+.wai-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.wai-when { font-size: 11.5px; color: var(--ds-color-text-muted); }
+.wib-ai-tag {
+  padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ds-color-info); background: var(--ds-color-info-bg); border: 1px solid var(--ds-color-info-bd);
+}
+@media (max-width: 640px) { .wai-actions { margin-left: 0; } }
 .wib-chat-title { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 1px; }
 .wib-chat-title b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wib-chat-title span { font-size: 12.5px; color: var(--ds-color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
