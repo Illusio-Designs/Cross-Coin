@@ -134,7 +134,7 @@ function OrderDetail({ id }) {
           <h3>Summary</h3>
           <div className="row"><span className="muted">Subtotal</span><b>₹{Number(order.total_amount || order.subtotal || 0).toFixed(0)}</b></div>
           {order.shipping_fee != null && <div className="row"><span className="muted">Shipping</span><b>₹{Number(order.shipping_fee).toFixed(0)}</b></div>}
-          {Number(order.discount_amount) > 0 && <div className="row"><span className="muted">Discount</span><b style={{ color: 'var(--teal-600)' }}>−₹{Number(order.discount_amount).toFixed(0)}</b></div>}
+          {Number(order.discount_amount) > 0 && <div className="row"><span className="muted">Discount</span><b style={{ color: 'var(--teal-text)' }}>−₹{Number(order.discount_amount).toFixed(0)}</b></div>}
           <div className="row total"><span>Total</span><b>₹{Number(order.final_amount || order.total_amount || 0).toFixed(0)}</b></div>
           {order.payment_type && <div className="row"><span className="muted">Payment</span><b>{paymentSummary(order.payment_type, order.payment_status)}</b></div>}
 

@@ -42,7 +42,7 @@
   line-height: 1.65;
   color: #6a7186;
 }
-.cb__text a { color: #268b84; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.cb__text a { color: var(--teal-text, #1c726c); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 
 .cb__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .cb__btn {
