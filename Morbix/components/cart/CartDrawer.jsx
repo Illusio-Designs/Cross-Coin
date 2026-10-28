@@ -914,7 +914,7 @@ export default function CartDrawer() {
   return (
     <>
       <div className={`cd-backdrop${open ? ' show' : ''}`} onClick={closeCart} />
-      <aside className={`cd-drawer${open ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden={!open}>
+      <aside className={`cd-drawer${open ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden={!open} inert={!open}>
 
         {/* Address validation popup — lists EVERY problem at once (not just the
             first) plus advisory tips. Shown on a failed save / checkout. */}

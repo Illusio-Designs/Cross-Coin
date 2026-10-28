@@ -1840,6 +1840,12 @@ const startServer = async () => {
           } catch (err) {
             logger.error('[Worker] Failed to initialize cron jobs:', err.message);
           }
+          // Give older product-description pictures their width/height + alt
+          // (does nothing once every picture has them).
+          setTimeout(() => {
+            require('./utils/descriptionImages.js').backfillProductDescriptions()
+              .catch((e) => logger.warn('[descImages] backfill failed: ' + e.message));
+          }, 60 * 1000).unref();
         }
 
         // ── Integration retry queue workers (Bull on Redis) ───────────────

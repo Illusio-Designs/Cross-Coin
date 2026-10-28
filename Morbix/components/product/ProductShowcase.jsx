@@ -25,6 +25,21 @@ const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
 // Prepaid incentive is NOT a hard-coded instant discount — it is a real,
 // admin-created coupon (paymentModeRestriction === 'prepaid') passed in from the
 // page, surfaced above Buy now so the shopper knows the code to apply at checkout.
+// The admin's rich description sits under the page's "Product description"
+// (h2), so its own headings become h3/h4 (in order for screen readers and
+// page checks); .rt-lg keeps a former h1/h2 looking as it did. Its pictures
+// load lazily (they are below the gallery).
+function tidyDescription(html) {
+  return String(html || '')
+    .replace(/<(\/?)h([1-6])(\s[^>]*)?>/gi, (m, close, lvl, attrs = '') => {
+      const n = Number(lvl);
+      const to = n <= 3 ? 3 : 4;
+      if (close) return `</h${to}>`;
+      return n <= 2 ? `<h3 class="rt-lg"${attrs}>` : `<h${to}${attrs}>`;
+    })
+    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"');
+}
+
 // "pack_size" / "packSize" → "Pack size" for a specification row.
 function specLabel(key) {
   const t = String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
@@ -475,7 +490,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <TrustBadges />
           {hasPacks && (
             <div className="opt pdp-packs">
-              <h3 className="bundle-heading">Bundle &amp; Save</h3>
+              <h2 className="bundle-heading">Bundle &amp; Save</h2>
               <div className="pack-list">
                 {packOptions.map((t, i) => {
                   const per = t.pairs > 0 ? t.price / t.pairs : t.price;
@@ -583,7 +598,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       <div className="pdp-about">
         <h2>Product description</h2>
         {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-          ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+          ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: tidyDescription(product.descriptionHtml) }} />
           : product.description
             ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
             : <p className="muted">No description available for this product yet.</p>}
@@ -608,7 +623,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     </section>
 
     {/* Sticky buy bar — appears on mobile once the main buy buttons scroll out of view */}
-    <div className={`pdp-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
+    <div className={`pdp-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)} inert={!(showSticky && !lightbox && !cartOpen)}>
       <div className="pdp-sticky-info">
         {mainSrc && <span className="pdp-sticky-thumb"><ShimmerImg src={mainSrc} alt="" width={200} /></span>}
         <div>

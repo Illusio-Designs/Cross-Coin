@@ -43,13 +43,13 @@ export default function Footer() {
 
           {COLS.map((col) => (
             <div key={col.title}>
-              <h4>{col.title}</h4>
+              <h2 className="footer-title">{col.title}</h2>
               <ul>{col.links.map((l) => <li key={l.label}>{l.cookie ? <CookieSettingsButton className="footer-cookie-btn" /> : <Link href={l.href}>{l.label}</Link>}</li>)}</ul>
             </div>
           ))}
 
           <div>
-            <h4>Contacts</h4>
+            <h2 className="footer-title">Contacts</h2>
             <ul className="footer-contacts">
               <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
               <li><a href="mailto:obzusindia@gmail.com"><Icon name="Mail" size={15} /><span>obzusindia@gmail.com</span></a></li>
