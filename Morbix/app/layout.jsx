@@ -50,6 +50,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        {/* Product photos come from the API host: open that connection at once
+            so the main photo starts downloading as soon as it is found. */}
+        <link rel="preconnect" href={new URL(process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in').origin} />
+        <link rel="dns-prefetch" href={new URL(process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in').origin} />
         {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
         <noscript><style>{'.shimmer-img{opacity:1!important}.shimmer-img-skeleton{display:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll

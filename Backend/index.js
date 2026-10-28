@@ -331,7 +331,9 @@ if (!fs.existsSync(seoUploadsDir)) {
 // everywhere, matching how ImageKit's CDN serves them. (ImageKit was never
 // blocked because its responses already send cross-origin.)
 const uploadsHeaders = (req, res, next) => {
-    res.set('Cache-Control', 'public, max-age=86400');
+    // Product photos get unique timestamped names, so browsers may keep them
+    // for a year; everything else for a day.
+    res.set('Cache-Control', /^\/products\//.test(req.path) ? 'public, max-age=31536000, immutable' : 'public, max-age=86400');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.set('Access-Control-Allow-Origin', '*');
     next();
@@ -345,8 +347,11 @@ const uploadsHeaders = (req, res, next) => {
 // /api/uploads guarantees the request reaches Node. When ImageKit is over quota
 // and images fall back to local storage, their URLs use /api/uploads so they
 // load reliably from the server.
-app.use('/uploads', uploadsHeaders, express.static(uploadsDir));
-app.use('/api/uploads', uploadsHeaders, express.static(uploadsDir));
+// ?tr=w-…,q-…,f-auto on an uploaded image → a resized WebP copy (see
+// utils/imageResizer.js); without a transform the original file is served.
+const resizeUpload = require('./utils/imageResizer.js')(uploadsDir);
+app.use('/uploads', resizeUpload, uploadsHeaders, express.static(uploadsDir));
+app.use('/api/uploads', resizeUpload, uploadsHeaders, express.static(uploadsDir));
 
 // Handle trailing slashes in uploads URLs - ONLY if URL actually ends with /
 const uploadsTrailingSlash = (req, res, next) => {
