@@ -403,7 +403,7 @@ button { font-family: inherit; cursor: pointer; }
   /* Give the wordmark room on phones: left-align it and cap its height so it
      never gets crushed into the centre column or overflow into the icons. */
   .logo { justify-self: start; }
-  .header .logo img { height: 30px !important; }
+  .header .logo img { height: 30px !important; width: 107px !important; } /* 30 × 455/128: keep the logo's shape */
   /* Wishlist + Sign in live in the hamburger menu on mobile — keep only search
      and cart in the top bar so the logo has space. */
   .header-actions .wl-link,
