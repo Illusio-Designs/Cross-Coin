@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Skeleton, PdpSkeleton, ReviewsSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/pdp.css';
 
 // Product page while it loads: breadcrumbs stay, the gallery reserves the real
 // 1:1 main image + thumbnail rail, the buy panel and reviews show their shapes.

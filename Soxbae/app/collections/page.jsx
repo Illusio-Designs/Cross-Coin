@@ -1,6 +1,7 @@
 import CollectionCard from '@/components/CollectionCard';
 import { getCategories, getAllProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/catalog.css';
 
 export const dynamic = 'force-dynamic';
 

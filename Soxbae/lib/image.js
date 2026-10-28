@@ -6,9 +6,14 @@
    Widths used in Soxbae: cards ~600, product main image 1200, thumbnails 200,
    blog covers 800 (cards) / 1400 (article), collection tiles 600, hero 1600
    (mobile 800). */
+// Our own uploads (/api/uploads/…, used when ImageKit is over quota) take the
+// same transform: the API resizes them and serves WebP (Backend
+// utils/imageResizer.js). Without it they downloaded at full size.
+const resizable = (src) => src.includes('ik.imagekit.io') || src.includes('/api/uploads/');
+
 export function ikSrc(src, width) {
   if (!src || typeof src !== 'string' || !width) return src;
-  if (!src.includes('ik.imagekit.io')) return src;
+  if (!resizable(src)) return src;
   const [base, query = ''] = src.split('?');
   const rest = query.split('&').filter((p) => p && !/^tr=/.test(p));
   return `${base}?${[`tr=w-${Math.round(width)},q-78,f-auto`, ...rest].join('&')}`;
@@ -16,7 +21,7 @@ export function ikSrc(src, width) {
 
 /** `srcSet` for an ImageKit URL at the given widths; undefined otherwise. */
 export function ikSrcSet(src, widths) {
-  if (!src || typeof src !== 'string' || !src.includes('ik.imagekit.io') || !widths?.length) return undefined;
+  if (!src || typeof src !== 'string' || !resizable(src) || !widths?.length) return undefined;
   return widths.map((w) => `${ikSrc(src, w)} ${w}w`).join(', ');
 }
 

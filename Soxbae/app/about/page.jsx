@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/content.css';
 
 export async function generateMetadata() {
   return buildMetadata('about', { title: 'About' });

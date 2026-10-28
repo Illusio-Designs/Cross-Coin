@@ -9,6 +9,7 @@ import ShimmerImg from '@/components/ui/ShimmerImg';
 import { useAuth } from '@/context/AuthContext';
 import { getOrder, cancelOrder } from '@/lib/api/orders';
 import { orderStatusLabel, orderStatusTone, orderStatusNote, paymentSummary, canCancelOrder, canRequestReturn } from '@/utils/orderStatus';
+import '@/app/styles/account.css';
 
 // Order-item images are ImageKit assets. Absolute URLs pass through; relative
 // paths get the ImageKit endpoint (NOT the API host, which 404s on these paths

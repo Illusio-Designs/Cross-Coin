@@ -8,8 +8,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import CartDrawer from '@/components/cart/CartDrawer';
-import ExitIntentModal from '@/components/cart/ExitIntentModal';
+import LazyCartLayer from '@/components/cart/LazyCartLayer';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
@@ -54,6 +53,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <head>
+        {/* Product photos come from the API host: open that connection at once
+            so the main photo starts downloading as soon as it is found. */}
+        <link rel="preconnect" href={new URL(process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in').origin} />
+        <link rel="dns-prefetch" href={new URL(process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in').origin} />
         {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
         <noscript><style>{'.shimmer-img{opacity:1!important}.shimmer-img-skeleton{display:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
@@ -77,8 +80,7 @@ export default function RootLayout({ children }) {
               <Header />
               <main id="main">{children}</main>
               <Footer />
-              <CartDrawer />
-              <ExitIntentModal />
+              <LazyCartLayer />
             </SmoothScroll>
             <FloatingWidgets />
             <ToastHost />

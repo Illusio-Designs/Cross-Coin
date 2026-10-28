@@ -1,4 +1,5 @@
 import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/catalog.css';
 
 export default function SearchLoading() {
   return (

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { HeroSkeleton, CollectionGridSkeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/home.css';
 
 // Home while its server data loads: the cover hero, the "Find your fit"
 // collection squares and the "most-loved" rail, each in its real place/shape.

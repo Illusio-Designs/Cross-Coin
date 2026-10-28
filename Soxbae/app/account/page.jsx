@@ -1,4 +1,5 @@
 import AccountClient from '@/components/account/AccountClient';
+import '@/app/styles/account.css';
 
 export const metadata = { title: 'Account' };
 

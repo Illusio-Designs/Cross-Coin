@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 /**
  * MSG91 OTP widget loader — the SAME shared widget the other brands use.
- * Loads the provider on idle and exposes window.sendOtp / window.verifyOtp
+ * Loads the provider after page load (see below) and exposes window.sendOtp / window.verifyOtp
  * (exposeMethods:true) for the login + register OTP steps.
  */
 const CONFIG = {
@@ -36,11 +36,24 @@ function loadMsg91() {
   tryLoad(0);
 }
 
-export default function Msg91Loader() {
+// Everywhere else the widget waits until the page has fully loaded and the
+// browser is idle (plus a few seconds), so it never competes with the page's
+// own pictures and code; the login/register pages pass `eager` because the
+// shopper is about to ask for an OTP there.
+export default function Msg91Loader({ eager = false }) {
   useEffect(() => {
-    const ric = window.requestIdleCallback || ((cb) => window.setTimeout(cb, 2000));
-    const id = ric(loadMsg91);
-    return () => { if (window.cancelIdleCallback && typeof id === 'number') window.cancelIdleCallback(id); };
-  }, []);
+    if (eager) { loadMsg91(); return undefined; }
+    let timer;
+    let idle;
+    const ric = window.requestIdleCallback || ((cb) => window.setTimeout(cb, 1));
+    const start = () => { timer = window.setTimeout(() => { idle = ric(loadMsg91); }, 4000); };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => {
+      window.removeEventListener('load', start);
+      window.clearTimeout(timer);
+      if (window.cancelIdleCallback && typeof idle === 'number') window.cancelIdleCallback(idle);
+    };
+  }, [eager]);
   return null;
 }

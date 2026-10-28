@@ -198,7 +198,7 @@ export default function CatalogClient({ products = [], chips: rawChips = [], ini
 
       {/* Filter drawer */}
       <div className={`filter-overlay${filterOpen ? ' show' : ''}`} onClick={() => setFilterOpen(false)} />
-      <aside className={`filter-drawer${filterOpen ? ' show' : ''}`} aria-hidden={!filterOpen} data-lenis-prevent>
+      <aside className={`filter-drawer${filterOpen ? ' show' : ''}`} aria-hidden={!filterOpen} inert={!filterOpen} data-lenis-prevent>
         <div className="filter-head">
           <b>Filters</b>
           <button className="hamburger" aria-label="Close filters" onClick={() => setFilterOpen(false)}><Icon name="X" size={20} /></button>
