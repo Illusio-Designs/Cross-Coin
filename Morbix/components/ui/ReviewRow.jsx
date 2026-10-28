@@ -12,7 +12,7 @@ export default function ReviewRow({ items = [], render, staticClassName = '', mi
       <div className={`rv-track${direction === 'right' ? ' rv-rtl' : ''}`}>
         {items.map((r, i) => render(r, i))}
         {items.map((r, i) => (
-          <div className="rv-dup" aria-hidden="true" key={`dup-${i}`}>{render(r, `d${i}`)}</div>
+          <div className="rv-dup" aria-hidden="true" inert key={`dup-${i}`}>{render(r, `d${i}`)}</div>
         ))}
       </div>
     </div>

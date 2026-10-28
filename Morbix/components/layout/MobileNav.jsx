@@ -28,7 +28,7 @@ export default function MobileNav({ items = [] }) {
       </button>
 
       <div className={`drawer-overlay${open ? ' show' : ''}`} onClick={() => setOpen(false)} />
-      <aside className={`drawer${open ? ' show' : ''}`} aria-hidden={!open}>
+      <aside className={`drawer${open ? ' show' : ''}`} aria-hidden={!open} inert={!open}>
         <div className="drawer-head">
           <BrandLogo height={30} />
           <button className="hamburger" aria-label="Close menu" onClick={() => setOpen(false)}><Icon name="X" size={22} /></button>

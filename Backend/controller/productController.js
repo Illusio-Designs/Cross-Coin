@@ -363,7 +363,8 @@ module.exports.createProduct = async (req, res) => {
     const name = sanitize(req.body.name?.trim());
     // Description is rich-text HTML (formatting + uploaded images) — keep a safe
     // tag subset instead of stripping every tag (which deleted images on save).
-    const description = sanitizeRichText(req.body.description?.trim());
+    // Pictures in it get their real width/height + alt (no layout shift).
+    const description = await require('../utils/descriptionImages.js').addImageSizes(sanitizeRichText(req.body.description?.trim()), name);
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");
@@ -834,7 +835,10 @@ module.exports.updateProduct = async (req, res) => {
     // Parse form data
     const name = req.body.name ? sanitize(req.body.name.trim()) : undefined;
     // Rich-text HTML — keep safe formatting + images (see create handler note).
-    const description = req.body.description ? sanitizeRichText(req.body.description.trim()) : undefined;
+    // Pictures in it get their real width/height + alt (no layout shift).
+    const description = req.body.description
+      ? await require('../utils/descriptionImages.js').addImageSizes(sanitizeRichText(req.body.description.trim()), name)
+      : undefined;
     const categoryId = req.body.categoryId;
     const status = req.body.status || "active";
     const variations = JSON.parse(req.body.variations || "[]");
