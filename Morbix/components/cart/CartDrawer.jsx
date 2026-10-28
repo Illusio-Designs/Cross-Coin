@@ -1056,12 +1056,12 @@ export default function CartDrawer() {
                   const saved = savedFor(nextTier.pairs, nextTier.price);
                   msg = <>Add <b>{need} pair{need > 1 ? 's' : ''}</b> → {nextTier.pairs}-pair pack{saved > 0 ? <>, save ₹{saved}</> : ''}</>;
                 } else {
-                  msg = <span style={{ color: 'var(--teal-600)', fontWeight: 700 }}>🎉 Best value — {maxPairs}-pair pack applied!</span>;
+                  msg = <span style={{ color: 'var(--teal-text)', fontWeight: 700 }}>🎉 Best value — {maxPairs}-pair pack applied!</span>;
                 }
                 return (
                   <div className="cd-pairstep" style={{ padding: '14px 16px', background: 'var(--teal-050)', border: '1px solid var(--line-soft)', borderRadius: 16, marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'nowrap', gap: 7, fontSize: 13, color: 'var(--ink)', lineHeight: 1.35 }}>
-                      <span style={{ color: 'var(--teal-600)', flex: '0 0 auto', display: 'inline-flex' }}><Icon name="Sparkles" size={15} /></span>
+                      <span style={{ color: 'var(--teal-text)', flex: '0 0 auto', display: 'inline-flex' }}><Icon name="Sparkles" size={15} /></span>
                       <span style={{ minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg}</span>
                     </div>
                     <div style={{ position: 'relative', height: 50, marginTop: 14 }}>
@@ -1086,7 +1086,7 @@ export default function CartDrawer() {
                             <span aria-hidden="true" style={{ width: 18, height: 18, borderRadius: '50%', display: 'grid', placeItems: 'center', background: reached ? 'var(--teal)' : '#fff', border: `2px solid ${reached ? 'var(--teal)' : '#cfe6e2'}`, color: '#fff', boxShadow: selected ? '0 0 0 3px var(--teal-050), 0 0 0 4px var(--teal)' : 'none' }}>
                               {reached ? <Icon name="Check" size={11} /> : null}
                             </span>
-                            <span style={{ fontSize: 11, fontWeight: 700, marginTop: 6, color: reached ? 'var(--teal-600)' : 'var(--ink)', whiteSpace: 'nowrap' }}>{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, marginTop: 6, color: reached ? 'var(--teal-text)' : 'var(--ink)', whiteSpace: 'nowrap' }}>{m.pairs} Pair{m.pairs > 1 ? 's' : ''}</span>
                             {saved > 0 && <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--sale)', marginTop: 1, whiteSpace: 'nowrap' }}>save ₹{saved}</span>}
                           </button>
                         );
@@ -1324,7 +1324,7 @@ export default function CartDrawer() {
                     <style>{`.cd-bms-scroll::-webkit-scrollbar{width:0;height:0;display:none}`}</style>
                     <div className="cd-section-title">Buy More, Save More</div>
                     <div style={{ background: 'var(--teal-050)', border: '1px solid #cfe6e2', borderRadius: 16, padding: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--teal-600)', marginBottom: 10, textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--teal-text)', marginBottom: 10, textAlign: 'center' }}>
                         <Icon name="Sparkles" size={14} /> Add one more &amp; save — bundle prices unlocked
                       </div>
                       <div className="cd-bms-scroll" dir="rtl" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2, scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
@@ -1343,7 +1343,7 @@ export default function CartDrawer() {
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
                                   <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--sale)' }}>₹{r.price.toFixed(0)}</span>
                                   {r.mrp > r.price && <span style={{ fontSize: 11, color: 'var(--ink-soft)', textDecoration: 'line-through' }}>₹{r.mrp.toFixed(0)}</span>}
-                                  {save > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--teal-600)', background: '#fff', border: '1px solid #bfe3dd', borderRadius: 999, padding: '1px 6px' }}>Save ₹{save}</span>}
+                                  {save > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--teal-text)', background: '#fff', border: '1px solid #bfe3dd', borderRadius: 999, padding: '1px 6px' }}>Save ₹{save}</span>}
                                 </div>
                               </div>
                               <button type="button" className="btn btn-primary" style={{ flexShrink: 0, padding: '7px 12px', fontSize: 12 }} onClick={r.onAdd} aria-label={`Add ${r.name} to cart`}>+ Add</button>
@@ -1361,8 +1361,8 @@ export default function CartDrawer() {
               {/* Order summary — visible on both steps so pricing is always clear */}
               <div className="cd-co-section cd-co-summary">
                 <div className="cd-summary-row"><span>Subtotal</span><span>₹{displaySubtotal.toFixed(0)}</span></div>
-                <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-600)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
-                {effectiveCouponDiscount > 0 && <div className="cd-summary-row"><span>Coupon ({appliedCoupon?.code})</span><span style={{ color: 'var(--teal-600)' }}>−₹{effectiveCouponDiscount.toFixed(0)}</span></div>}
+                <div className="cd-summary-row"><span>Shipping</span><span>{shippingFee === 0 ? <b style={{ color: 'var(--teal-text)' }}>FREE</b> : `₹${shippingFee.toFixed(0)}`}</span></div>
+                {effectiveCouponDiscount > 0 && <div className="cd-summary-row"><span>Coupon ({appliedCoupon?.code})</span><span style={{ color: 'var(--teal-text)' }}>−₹{effectiveCouponDiscount.toFixed(0)}</span></div>}
                 <div className="cd-summary-row cd-summary-total"><span>Total</span><span>₹{total.toFixed(0)}</span></div>
               </div>
 
