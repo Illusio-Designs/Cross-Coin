@@ -25,7 +25,7 @@ const { logger } = require('../config/logging.js');
 const RASTER = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.tif', '.tiff']);
 // Requested widths snap UP to one of these, so a handful of copies per image
 // cover every layout (and the cache can't be filled with arbitrary sizes).
-const WIDTHS = [64, 128, 200, 300, 400, 500, 600, 800, 900, 1000, 1200, 1400, 1600, 2000];
+const WIDTHS = [64, 112, 128, 144, 200, 216, 300, 400, 450, 480, 500, 600, 640, 800, 900, 960, 1000, 1100, 1200, 1400, 1448, 1600, 2000];
 const MAX_JOBS = 2; // at most this many resizes at once (shared 2 GB host)
 
 let active = 0;

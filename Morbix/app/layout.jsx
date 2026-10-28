@@ -2,7 +2,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import './cookie-banner.css';
 import SmoothScroll from '@/components/SmoothScroll';
-import Msg91Loader from '@/components/Msg91Loader';
 import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -13,6 +12,7 @@ import LazyCartLayer from '@/components/cart/LazyCartLayer';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
+import Msg91Loader from '@/components/Msg91Loader';
 import SentryInit from '@/components/SentryInit';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import CookieBanner from '@/components/ui/CookieBanner';
@@ -67,8 +67,8 @@ export default function RootLayout({ children }) {
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
-        <ConsentSpeedInsights />
         <Msg91Loader />
+        <ConsentSpeedInsights />
         <AuthProvider>
           <CartProvider>
             <SmoothScroll>

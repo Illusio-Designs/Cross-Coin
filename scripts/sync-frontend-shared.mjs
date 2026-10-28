@@ -52,6 +52,11 @@ const LEGACY_PATHS = {
   },
 };
 
+// Stores whose product page is cached (ISR) and gets the colour of the card
+// that was clicked through an edge rewrite to /products/<slug>/c/<colour>
+// (see shared/frontend/visitCounter.js). Each needs that route.
+const PDP_COLOR_REWRITE = { Morbix: true };
+
 // Shared file → { source, dest(base, brand), brands?, vars?(brand) }
 // (brands omitted = all 7; vars = extra placeholder → value replacements)
 const FILES = [
@@ -97,7 +102,7 @@ const FILES = [
     // `proxy` (export `proxy`); Next 14/15 use `middleware`.
     source: 'shared/frontend/visitCounter.js',
     dest: (base, brand) => `${base}${EDGE_FILE[brand]}.js`,
-    vars: (brand) => ({ __HANDLER__: EDGE_FILE[brand], __LEGACY_PATHS__: JSON.stringify(LEGACY_PATHS[brand] || {}) }),
+    vars: (brand) => ({ __HANDLER__: EDGE_FILE[brand], __LEGACY_PATHS__: JSON.stringify(LEGACY_PATHS[brand] || {}), __PDP_COLOR_REWRITE__: String(!!PDP_COLOR_REWRITE[brand]) }),
   },
 ];
 
