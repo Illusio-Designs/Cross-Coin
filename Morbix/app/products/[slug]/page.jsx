@@ -1,6 +1,4 @@
 import { Suspense } from 'react';
-import { cookies } from 'next/headers';
-import { PDP_COLOR_COOKIE, pdpColorFor } from '@/lib/pdpColor';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductShowcase from '@/components/product/ProductShowcase';
@@ -11,18 +9,29 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers, getPublicCoupons } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers, brandFetch } from '@/lib/api';
 
-// Incrementally static (ISR): cache each product page and revalidate it every
-// 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
-export const revalidate = 300;
+// Incrementally static (ISR): each product page is built once, served from
+// Vercel's cache, and rebuilt in the background at most once a minute, so
+// price/stock edits show within about a minute. It must not read cookies,
+// headers or the query string, or fetch with no-store: any of those makes
+// Next build it on every visit again (that cost ~2 s per page load). The
+// clicked card's colour arrives through the edge middleware as
+// /products/<slug>/c/<colour> (c/[color]/page.jsx), a cached copy per colour.
+export const revalidate = 60;
+const PRODUCT_TTL = 60;
+
+// No product is built ahead at deploy; each is built on its first visit.
+export async function generateStaticParams() {
+  return [];
+}
 
 const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.morbixsocks.com').replace(/\/+$/, '');
 const BRAND = 'Morbix';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const p = await getProductBySlug(slug);
+  const p = await getProductBySlug(slug, PRODUCT_TTL);
   if (!p) return { title: 'Product' };
   const url = `${SITE_URL}/products/${p.slug || slug}`;
   const img = (Array.isArray(p.images) && p.images[0]) || p.image || undefined;
@@ -76,12 +85,12 @@ function buildProductJsonLd(product) {
   return [productLd, breadcrumbLd];
 }
 
-export default async function ProductPage({ params, searchParams }) {
-  const { slug } = await params;
-  const sp = (await searchParams) || {};
-  // The colour of the card that was clicked (lib/pdpColor); ?color= from old links wins.
-  const pickedColor = pdpColorFor(slug, (await cookies()).get(PDP_COLOR_COOKIE)?.value);
-  const product = await getProductBySlug(slug);
+export default async function ProductPage({ params }) {
+  const { slug, color } = await params;
+  // The colour of the card that was clicked (only on the c/[color] route).
+  let pickedColor = null;
+  if (color) { try { pickedColor = decodeURIComponent(color); } catch { pickedColor = color; } }
+  const product = await getProductBySlug(slug, PRODUCT_TTL);
   if (!product) notFound();
 
   // Only what the first screen needs (gallery + buy panel) is awaited here, so
@@ -90,7 +99,7 @@ export default async function ProductPage({ params, searchParams }) {
   // own data and stream in after, each in its own <Suspense>.
   const [bundleTiers, couponsRes] = await Promise.all([
     getBundleTiers(product.id),
-    getPublicCoupons().catch(() => ({ coupons: [] })),
+    brandFetch('/api/coupons/listing', 300).catch(() => ({ coupons: [] })),
   ]);
   // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
   // hard-coded discount. Shoppers apply the code at checkout to get the offer.
@@ -110,7 +119,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
+      <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
       <ProductVideos videos={product.videos} />
 
@@ -149,7 +158,7 @@ async function PdpReviews({ productId }) {
 // Prefer same-category products; fall back to any other products so the rail
 // always shows (some products' category has no other items).
 async function PdpRelated({ product }) {
-  const all = await getAllProducts();
+  const all = await getAllProducts(300);
   const pickOthers = (pool) => {
     const seen = new Set();
     return pool

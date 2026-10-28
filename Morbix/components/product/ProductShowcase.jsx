@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { preload } from 'react-dom';
 import TrustBadges from '@/components/TrustBadges';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
-import { ikSrc } from '@/lib/image';
+import { ikSrc, ikSrcSet } from '@/lib/image';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
@@ -39,9 +40,27 @@ function tidyDescription(html) {
     })
     .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"')
     // Ask for a column-sized copy (ImageKit or our own uploads), not the
-    // original upload (one description picture was a 1.8 MB PNG).
-    .replace(/(<img\b[^>]*\ssrc=")([^"]+)(")/gi, (m, a, src, b) => `${a}${ikSrc(src.replace(/&amp;/g, '&'), 1100).replace(/&/g, '&amp;')}${b}`);
+    // original upload (one description picture was a 1.8 MB PNG); the browser
+    // picks the width that fits the screen from DESC_WIDTHS.
+    .replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
+      const src = raw.replace(/&amp;/g, '&');
+      const set = ikSrcSet(src, DESC_WIDTHS);
+      const attr = (v) => v.replace(/&/g, '&amp;');
+      return `${a}src="${attr(ikSrc(src, 1100))}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+    });
 }
+
+// Description pictures fill the "About" card: the screen width less the page
+// and card padding on phones, about 680px beside the specs on desktop.
+const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_SIZES = '(max-width: 760px) calc(100vw - 96px), 680px';
+
+// Main photo: the screen width less the page padding on phones, 600px on
+// desktop. Thumbnails are 62px (phones) / 72px squares.
+const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MAIN_SIZES = '(max-width: 760px) calc(100vw - 48px), 600px';
+const THUMB_WIDTHS = [112, 144, 216];
+const THUMB_SIZES = '(max-width: 600px) 62px, 72px';
 
 // "pack_size" / "packSize" → "Pack size" for a specification row.
 function specLabel(key) {
@@ -194,6 +213,15 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const gallery = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
+  // Tell the browser about the main photo in the page <head>, so it starts
+  // downloading before the stylesheets and the gallery markup are processed
+  // (it is the page's largest paint).
+  if (mainSrc) {
+    preload(ikSrc(mainSrc, 1200), {
+      as: 'image', fetchPriority: 'high',
+      imageSrcSet: ikSrcSet(mainSrc, MAIN_WIDTHS), imageSizes: MAIN_SIZES,
+    });
+  }
 
   // Preload the ACTIVE colour's gallery (not every colour's images), and only
   // when the browser is idle — so thumbnail swaps still feel instant without a
@@ -203,12 +231,19 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     const perColorImgs = product.colorImages?.[color];
     const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
     if (!urls.length) return;
-    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = u; });
+    // Same sized copies the main photo uses (srcset/sizes), so a swap finds
+    // them cached; the original URLs would be other (bigger) files.
+    const warm = () => urls.forEach((u) => {
+      const im = new Image();
+      im.sizes = MAIN_SIZES;
+      im.srcset = ikSrcSet(u, MAIN_WIDTHS) || '';
+      im.src = ikSrc(u, 1200);
+    });
     if (window.requestIdleCallback) {
-      const id = window.requestIdleCallback(preload, { timeout: 1500 });
+      const id = window.requestIdleCallback(warm, { timeout: 1500 });
       return () => window.cancelIdleCallback?.(id);
     }
-    const t = setTimeout(preload, 400);
+    const t = setTimeout(warm, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color, product?.id]);
@@ -392,7 +427,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 onClick={() => setActive(i)}
                 aria-label={`View image ${i + 1}`}
               >
-                <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} width={200} />
+                <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} width={144} widths={THUMB_WIDTHS} sizes={THUMB_SIZES} />
               </button>
             ))}
           </div>
@@ -401,8 +436,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         <div className="pdp-main" ref={mainRef}>
           {mainSrc ? (
             <button type="button" className="pdp-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-              <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]}
-                sizes="(max-width: 760px) 100vw, 600px" priority
+              <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={MAIN_WIDTHS}
+                sizes={MAIN_SIZES} priority
                 fallback={<span aria-hidden style={{ color: '#c3ccd2', display: 'grid', placeItems: 'center', height: '100%' }}><Icon name="Footprints" size={72} /></span>} />
               <span className="pdp-zoom-hint" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>

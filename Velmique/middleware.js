@@ -11,15 +11,24 @@ import { NextResponse } from 'next/server';
 // It never changes headers or caching: it returns NextResponse.next(), only
 // adds the first-party `_cv` session cookie, and the ping is sent in the
 // background (event.waitUntil), so the page is never delayed. Any failure is
-// swallowed. The one routing change: a store's retired mixed-case paths
+// swallowed. The routing changes: a store's retired mixed-case paths
 // (LEGACY_PATHS, e.g. /Products → /products) get a permanent redirect,
-// matched case-exactly — next.config redirects ignore case and would loop.
+// matched case-exactly — next.config redirects ignore case and would loop;
+// and, where enabled, a product page opened from a coloured card is rewritten
+// to that colour's cached copy (PDP_COLOR_REWRITE below).
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'velmique';
 const COOKIE = '_cv';
 // Retired page path → its current one (exact case), per store.
 const LEGACY_PATHS = {};
+// Product pages are cached (ISR), so they can't read the colour cookie
+// themselves. When a shopper opened /products/<slug> from a card of one colour
+// (cookie "pdp_color" = "<slug>:<colour>", set on click) or an old ?color=
+// link, the request is rewritten to /products/<slug>/c/<colour>: a cached
+// copy of the same page that opens on that colour. The address bar doesn't
+// change.
+const PDP_COLOR_REWRITE = false;
 const SESSION_SECONDS = 30 * 60; // sliding 30-minute session
 const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|lighthouse|headless|monitor|curl|wget|python/i;
 
@@ -62,6 +71,23 @@ function decode(v) {
   try { return decodeURIComponent(v); } catch (_) { return v; }
 }
 
+function pdpColorRewrite(request) {
+  const m = /^\/products\/([^/]+)\/?$/.exec(request.nextUrl.pathname);
+  if (!m) return null;
+  const slug = decode(m[1]);
+  let color = request.nextUrl.searchParams.get('color') || '';
+  if (!color) {
+    const v = decode(request.cookies.get('pdp_color')?.value || '');
+    const i = v.indexOf(':');
+    if (i > 0 && v.slice(0, i) === slug) color = v.slice(i + 1);
+  }
+  if (!color || color.length > 80) return null;
+  const url = request.nextUrl.clone();
+  url.pathname = `/products/${m[1]}/c/${encodeURIComponent(color)}`;
+  url.searchParams.delete('color');
+  return NextResponse.rewrite(url);
+}
+
 function setSessionCookie(res, id) {
   res.cookies.set(COOKIE, id, {
     maxAge: SESSION_SECONDS,
@@ -79,7 +105,7 @@ export function middleware(request, event) {
     url.pathname = moved;
     return NextResponse.redirect(url, 301);
   }
-  const res = NextResponse.next();
+  const res = (PDP_COLOR_REWRITE && pdpColorRewrite(request)) || NextResponse.next();
   try {
     if (request.method !== 'GET') return res; // also skips HEAD
     const h = request.headers;

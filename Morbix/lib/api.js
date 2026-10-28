@@ -53,26 +53,27 @@ export async function getBestsellers() {
   } catch { return getAllProducts(); }
 }
 
-export async function getAllProducts() {
+export async function getAllProducts(revalidate) {
   try {
-    const data = await brandFetch('/api/products/catalog?limit=48');
+    const data = await brandFetch('/api/products/catalog?limit=48', revalidate);
     const list = data?.data?.products || data?.products || data?.data || [];
     return explodeColorVariants(Array.isArray(list) ? list.map(mapProduct).filter(Boolean) : []);
   } catch { return []; }
 }
 
-export async function getProductBySlug(slug) {
-  // Fetched fresh (no revalidate → cache: 'no-store') so a newly-added or
-  // just-edited product is never hidden behind a stale server cache.
+export async function getProductBySlug(slug, revalidate) {
+  // Fetched fresh by default (no revalidate → cache: 'no-store') so a
+  // newly-added or just-edited product is never hidden behind a stale server
+  // cache. The cached product page passes a short revalidate instead.
   try {
-    const data = await brandFetch(`/api/products/by-slug/${slug}`);
+    const data = await brandFetch(`/api/products/by-slug/${slug}`, revalidate);
     const p = data?.data || data;
     if (p?.id) return mapProduct(p);
   } catch { /* fall through to id lookup */ }
   // A product with no slug resolves by its numeric id instead.
   if (/^\d+$/.test(String(slug))) {
     try {
-      const data = await brandFetch(`/api/products/${slug}`);
+      const data = await brandFetch(`/api/products/${slug}`, revalidate);
       const p = data?.data || data;
       if (p?.id) return mapProduct(p);
     } catch { /* not found */ }
