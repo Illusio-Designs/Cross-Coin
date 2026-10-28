@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import Lenis from 'lenis';
 
 /**
  * Lenis smooth-scroll — shared by all 7 storefronts (shared/frontend, stamped
@@ -16,6 +15,10 @@ import Lenis from 'lenis';
  *   smoothing steps aside so the page underneath doesn't move.
  * - In-page "#section" links glide instead of jumping.
  * - Shoppers who ask for reduced motion get normal scrolling.
+ * - Phones and tablets (touch only, no mouse) get normal scrolling too: Lenis
+ *   only smooths the mouse wheel, yet its every-frame loop kept running and
+ *   cost first-load speed on mobile. Its code is also loaded on demand, so
+ *   touch devices never download it.
  * - Pop-up scroll lock that holds: the stores lock the page by hiding
  *   overflow on <body>, but once <html> has an overflow of its own (the
  *   stores' CSS gives it one) that never reaches the page, and the page kept
@@ -68,33 +71,42 @@ export default function SmoothScroll({ children }) {
     if (typeof window === 'undefined') return undefined;
     const releaseLocks = holdPopupLocks();
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return releaseLocks;
+    if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) return releaseLocks;
 
-    const lenis = new Lenis({
-      duration: 1.1,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      touchMultiplier: 1.5,
-      allowNestedScroll: true,
-      autoToggle: true,
-      anchors: true,
-      prevent: () => pageLocked(),
-    });
-    // Lenis animates the scroll itself; CSS smooth scrolling on top of it
-    // would make every step lag twice.
-    const prevBehavior = document.documentElement.style.scrollBehavior;
-    document.documentElement.style.scrollBehavior = 'auto';
-
-    let rafId;
-    const raf = (time) => {
-      lenis.raf(time);
+    let cancelled = false;
+    let lenis = null;
+    let rafId = null;
+    let prevBehavior = null;
+    import('lenis').then(({ default: Lenis }) => {
+      if (cancelled) return;
+      lenis = new Lenis({
+        duration: 1.1,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        touchMultiplier: 1.5,
+        allowNestedScroll: true,
+        autoToggle: true,
+        anchors: true,
+        prevent: () => pageLocked(),
+      });
+      // Lenis animates the scroll itself; CSS smooth scrolling on top of it
+      // would make every step lag twice.
+      prevBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = 'auto';
+      const raf = (time) => {
+        lenis.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
       rafId = requestAnimationFrame(raf);
-    };
-    rafId = requestAnimationFrame(raf);
+    }).catch(() => { /* normal scrolling */ });
 
     return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      document.documentElement.style.scrollBehavior = prevBehavior;
+      cancelled = true;
+      if (rafId != null) cancelAnimationFrame(rafId);
+      if (lenis) {
+        lenis.destroy();
+        document.documentElement.style.scrollBehavior = prevBehavior;
+      }
       releaseLocks();
     };
   }, []);

@@ -28,12 +28,31 @@ export function syncGoogleTagManager(containerId, consent) {
   if (!validId || window.__brandGtm.containers[containerId]) return;
   window.__brandGtm.containers[containerId] = true;
   window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`;
-  script.onerror = () => {
-    delete window.__brandGtm.containers[containerId];
-    script.remove();
+  // The container (and every tag in it) loads once the page has finished
+  // loading and the browser is idle, so it never competes with the first
+  // paint. Nothing is lost: everything pushed to dataLayer before then is
+  // processed when the container starts.
+  const inject = () => {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`;
+    script.onerror = () => {
+      delete window.__brandGtm.containers[containerId];
+      script.remove();
+    };
+    document.head.appendChild(script);
   };
-  document.head.appendChild(script);
+  afterPageLoad(inject);
+}
+
+// Run `fn` after the window load event, a short pause and an idle moment.
+export function afterPageLoad(fn, delayMs = 1500) {
+  if (typeof window === 'undefined') return;
+  const idle = () => {
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(fn, { timeout: 4000 });
+    else fn();
+  };
+  const go = () => setTimeout(idle, delayMs);
+  if (document.readyState === 'complete') go();
+  else window.addEventListener('load', go, { once: true });
 }

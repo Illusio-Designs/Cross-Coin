@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { PDP_COLOR_COOKIE, pdpColorFor } from '@/lib/pdpColor';
 import Link from 'next/link';
@@ -83,27 +84,17 @@ export default async function ProductPage({ params, searchParams }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [all, storeReviews, faqs, bundleTiers, couponsRes] = await Promise.all([
-    getAllProducts(),
-    getStoreReviews(300),
-    getFaqs('global'),
+  // Only what the first screen needs (gallery + buy panel) is awaited here, so
+  // the product photo and price reach the shopper as soon as possible. The
+  // sections further down (reviews, "You might also like", FAQs) fetch their
+  // own data and stream in after, each in its own <Suspense>.
+  const [bundleTiers, couponsRes] = await Promise.all([
     getBundleTiers(product.id),
     getPublicCoupons().catch(() => ({ coupons: [] })),
   ]);
   // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
   // hard-coded discount. Shoppers apply the code at checkout to get the offer.
   const prepaidCoupon = (couponsRes?.coupons || []).find((c) => c.paymentModeRestriction === 'prepaid') || null;
-  // "You might also like" — one card per product (not every colour variation).
-  // Prefer same-category products; fall back to any other products so the rail
-  // always shows (some products' category has no other items).
-  const pickOthers = (pool) => {
-    const seen = new Set();
-    return pool
-      .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
-      .slice(0, 5);
-  };
-  let related = pickOthers(all.filter((p) => p.categorySlug === product.categorySlug));
-  if (related.length === 0) related = pickOthers(all);
 
   const jsonLd = buildProductJsonLd(product);
 
@@ -133,19 +124,52 @@ export default async function ProductPage({ params, searchParams }) {
       </div>
 
       {/* ── Reviews: brand-wide moving wall + Write-a-review for this product ── */}
-      <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} productId={product.id} />
+      <Suspense fallback={null}>
+        <PdpReviews productId={product.id} />
+      </Suspense>
 
-      {related.length > 0 && (
-        <section className="section" style={{ paddingBottom: 0 }}>
-          <div className="section-head"><h2>You might also like</h2></div>
-          <div className="product-grid">
-            {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <PdpRelated product={product} />
+      </Suspense>
 
       {/* ── FAQ (admin-managed) — last section before the footer ── */}
-      {faqs.length > 0 && <FaqSection faqs={faqs} />}
+      <Suspense fallback={null}>
+        <PdpFaqs />
+      </Suspense>
     </div>
   );
+}
+
+async function PdpReviews({ productId }) {
+  const storeReviews = await getStoreReviews(300);
+  return <ReviewsSection reviews={storeReviews.reviews} total={storeReviews.total} productId={productId} />;
+}
+
+// "You might also like" — one card per product (not every colour variation).
+// Prefer same-category products; fall back to any other products so the rail
+// always shows (some products' category has no other items).
+async function PdpRelated({ product }) {
+  const all = await getAllProducts();
+  const pickOthers = (pool) => {
+    const seen = new Set();
+    return pool
+      .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
+      .slice(0, 5);
+  };
+  let related = pickOthers(all.filter((p) => p.categorySlug === product.categorySlug));
+  if (related.length === 0) related = pickOthers(all);
+  if (related.length === 0) return null;
+  return (
+    <section className="section" style={{ paddingBottom: 0 }}>
+      <div className="section-head"><h2>You might also like</h2></div>
+      <div className="product-grid">
+        {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+      </div>
+    </section>
+  );
+}
+
+async function PdpFaqs() {
+  const faqs = await getFaqs('global');
+  return faqs.length > 0 ? <FaqSection faqs={faqs} /> : null;
 }

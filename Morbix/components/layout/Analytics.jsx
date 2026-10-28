@@ -57,6 +57,9 @@ export default function Analytics() {
   return (
     <>
       <GoogleTagManager containerId={gtmId} />
+      {/* The pixel queue (fbq) is ready at once; the ~100 KB pixel library
+          itself loads after the page has loaded and the browser is idle, then
+          sends everything queued. The Conversions API copy is unaffected. */}
       {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="afterInteractive"
@@ -65,9 +68,11 @@ export default function Analytics() {
               {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
               n.callMethod.apply(n,arguments):n.queue.push(arguments)};
               if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-              n.queue=[];t=b.createElement(e);t.async=!0;
+              n.queue=[];var L=function(){t=b.createElement(e);t.async=!0;
               t.src=v;s=b.getElementsByTagName(e)[0];
-              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              s.parentNode.insertBefore(t,s)};
+              var G=function(){setTimeout(function(){f.requestIdleCallback?f.requestIdleCallback(L,{timeout:4000}):L()},1500)};
+              b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               window._fbqId='${fbId}';fbq('init', '${fbId}');
               window.dispatchEvent(new Event('brand-fbq-ready'));
