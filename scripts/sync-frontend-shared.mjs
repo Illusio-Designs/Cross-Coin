@@ -55,7 +55,7 @@ const LEGACY_PATHS = {
 // Stores whose product page is cached (ISR) and gets the colour of the card
 // that was clicked through an edge rewrite to /products/<slug>/c/<colour>
 // (see shared/frontend/visitCounter.js). Each needs that route.
-const PDP_COLOR_REWRITE = { Morbix: true };
+const PDP_COLOR_REWRITE = { Morbix: true, Soxbae: true };
 
 // Shared file → { source, dest(base, brand), brands?, vars?(brand) }
 // (brands omitted = all 7; vars = extra placeholder → value replacements)

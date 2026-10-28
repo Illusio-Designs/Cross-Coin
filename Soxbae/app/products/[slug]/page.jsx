@@ -1,5 +1,4 @@
-import { cookies } from 'next/headers';
-import { PDP_COLOR_COOKIE, pdpColorFor } from '@/lib/pdpColor';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ProductDetailImage from '@/components/product/ProductDetailImage';
@@ -10,19 +9,30 @@ import ProductBenefits from '@/components/product/ProductBenefits';
 import ProductFaq from '@/components/product/ProductFaq';
 import Reviews from '@/components/reviews/Reviews';
 import ProductCard from '@/components/home/ProductCard';
-import { getProductBySlug, getAllProducts, getStoreReviews, getProductFaqs, getBundleTiers } from '@/lib/api';
-import { getPublicCoupons } from '@/lib/api/orders';
+import { getProductBySlug, getAllProducts, getStoreReviews, getProductFaqs, getBundleTiers, brandFetch } from '@/lib/api';
+import '@/app/styles/pdp.css';
 
-// Incrementally static (ISR): cache each product page and revalidate it every
-// 5 minutes, so PDPs serve fast from cache while staying reasonably fresh.
-export const revalidate = 300;
+// Incrementally static (ISR): each product page is built once, served from
+// Vercel's cache, and rebuilt in the background at most once a minute, so
+// price/stock edits show within about a minute. It must not read cookies,
+// headers or the query string, or fetch with no-store: any of those makes
+// Next build it on every visit again. The clicked card's colour arrives
+// through the edge middleware as /products/<slug>/c/<colour>
+// (c/[color]/page.jsx), a cached copy per colour.
+export const revalidate = 60;
+const PRODUCT_TTL = 60;
+
+// No product is built ahead at deploy; each is built on its first visit.
+export async function generateStaticParams() {
+  return [];
+}
 
 const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com').replace(/\/+$/, '');
 const BRAND = 'Soxbae';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const p = await getProductBySlug(slug);
+  const p = await getProductBySlug(slug, PRODUCT_TTL);
   if (!p) return { title: 'Product' };
   const url = `${SITE_URL}/products/${p.slug || slug}`;
   const img = (Array.isArray(p.images) && p.images[0]) || p.image || undefined;
@@ -76,30 +86,25 @@ function buildProductJsonLd(product) {
   return [productLd, breadcrumbLd];
 }
 
-export default async function ProductPage({ params, searchParams }) {
-  const { slug } = await params;
-  const sp = (await searchParams) || {};
-  // The colour of the card that was clicked (lib/pdpColor); ?color= from old links wins.
-  const pickedColor = pdpColorFor(slug, (await cookies()).get(PDP_COLOR_COOKIE)?.value);
-  const product = await getProductBySlug(slug);
+export default async function ProductPage({ params }) {
+  const { slug, color } = await params;
+  // The colour of the card that was clicked (only on the c/[color] route).
+  let pickedColor = null;
+  if (color) { try { pickedColor = decodeURIComponent(color); } catch { pickedColor = color; } }
+  const product = await getProductBySlug(slug, PRODUCT_TTL);
   if (!product) notFound();
 
-  const [all, reviewsData, faqs, bundleTiers, coupons] = await Promise.all([getAllProducts(), getStoreReviews(300), getProductFaqs(product.id), getBundleTiers(product.id), getPublicCoupons().catch(() => [])]);
-  const reviews = reviewsData.reviews;
+  // Only what the first screen needs (gallery + buy panel) is awaited here, so
+  // the product photo and price reach the shopper as soon as possible. Reviews,
+  // "You might also like" and the FAQ fetch their own data and stream in
+  // after, each in its own <Suspense>.
+  const [bundleTiers, coupons] = await Promise.all([
+    getBundleTiers(product.id),
+    brandFetch('/api/coupons/listing', 300).then((r) => r?.coupons || r).catch(() => []),
+  ]);
   // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
   // hard-coded discount. Shoppers apply the code at checkout to get the offer.
   const prepaidCoupon = (Array.isArray(coupons) ? coupons : []).find((c) => c.paymentModeRestriction === 'prepaid') || null;
-  // "You might also like" — one card per product (not every colour variation).
-  // Prefer same-category products; fall back to any other products so the rail
-  // always shows (some products' category has no other items).
-  const pickOthers = (pool) => {
-    const seen = new Set();
-    return pool
-      .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
-      .slice(0, 5);
-  };
-  let related = pickOthers(all.filter((p) => p.categorySlug === product.categorySlug));
-  if (related.length === 0) related = pickOthers(all);
 
   const jsonLd = buildProductJsonLd(product);
 
@@ -115,7 +120,7 @@ export default async function ProductPage({ params, searchParams }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={sp.color || pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
+      <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
       <ProductVideos videos={product.videos} />
 
 
@@ -124,22 +129,55 @@ export default async function ProductPage({ params, searchParams }) {
       <ProductDetailImage image={product.detailImage} />
 
       {/* ── Full description + Ideal for / care / manufacturing (FAQ moved below) ── */}
-      <ProductStory product={product} faqs={faqs} showFaq={false} />
+      <ProductStory product={product} showFaq={false} />
 
       {/* ── Reviews: moving wall + Write-a-review for this product ── */}
-      <Reviews reviews={reviews} total={reviewsData.total} title="Customer reviews" productId={product.id} showWrite />
+      <Suspense fallback={null}>
+        <PdpReviews productId={product.id} />
+      </Suspense>
 
-      {related.length > 0 && (
-        <section className="section" style={{ paddingBottom: 0 }}>
-          <div className="section-head"><h2>You might also like</h2></div>
-          <div className="product-grid">
-            {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <PdpRelated product={product} />
+      </Suspense>
 
       {/* ── FAQ — last section before the footer (Morbix parity) ── */}
-      <ProductFaq faqs={faqs} />
+      <Suspense fallback={null}>
+        <PdpFaq productId={product.id} />
+      </Suspense>
     </div>
   );
+}
+
+async function PdpReviews({ productId }) {
+  const reviewsData = await getStoreReviews(300);
+  return <Reviews reviews={reviewsData.reviews} total={reviewsData.total} title="Customer reviews" productId={productId} showWrite />;
+}
+
+// "You might also like" — one card per product (not every colour variation).
+// Prefer same-category products; fall back to any other products so the rail
+// always shows (some products' category has no other items).
+async function PdpRelated({ product }) {
+  const all = await getAllProducts(300);
+  const pickOthers = (pool) => {
+    const seen = new Set();
+    return pool
+      .filter((p) => p.slug && p.slug !== product.slug && !seen.has(p.slug) && seen.add(p.slug))
+      .slice(0, 5);
+  };
+  let related = pickOthers(all.filter((p) => p.categorySlug === product.categorySlug));
+  if (related.length === 0) related = pickOthers(all);
+  if (related.length === 0) return null;
+  return (
+    <section className="section" style={{ paddingBottom: 0 }}>
+      <div className="section-head"><h2>You might also like</h2></div>
+      <div className="product-grid">
+        {related.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+      </div>
+    </section>
+  );
+}
+
+async function PdpFaq({ productId }) {
+  const faqs = await getProductFaqs(productId);
+  return <ProductFaq faqs={faqs} />;
 }

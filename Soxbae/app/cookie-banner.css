@@ -26,7 +26,7 @@
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #75716a;
+  color: #69665f;
 }
 .cb__title {
   margin: 0 0 10px;
@@ -40,9 +40,9 @@
   margin: 0 0 18px;
   font-size: 13px;
   line-height: 1.65;
-  color: #75716a;
+  color: #69665f;
 }
-.cb__text a { color: #b9571f; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.cb__text a { color: #a74e1c; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 
 .cb__actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .cb__btn {
@@ -71,7 +71,7 @@
   flex-basis: 100%;
   background: none; border: 0; padding: 4px 0 0;
   font: inherit; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
-  color: #75716a; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: center;
+  color: #69665f; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: center;
 }
 .cb__link:hover { color: #1c1b19; }
 
@@ -81,7 +81,7 @@
   padding: 12px 0; border-bottom: 1px solid #e4dfd3;
 }
 .cb__cat strong { display: block; font-size: 13px; color: #1c1b19; }
-.cb__cat small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.5; color: #75716a; }
+.cb__cat small { display: block; margin-top: 2px; font-size: 12px; line-height: 1.5; color: #69665f; }
 
 .cb__switch { position: relative; flex: none; width: 42px; height: 24px; cursor: pointer; }
 .cb__switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: inherit; }

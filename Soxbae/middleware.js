@@ -28,7 +28,7 @@ const LEGACY_PATHS = {};
 // link, the request is rewritten to /products/<slug>/c/<colour>: a cached
 // copy of the same page that opens on that colour. The address bar doesn't
 // change.
-const PDP_COLOR_REWRITE = false;
+const PDP_COLOR_REWRITE = true;
 const SESSION_SECONDS = 30 * 60; // sliding 30-minute session
 const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|lighthouse|headless|monitor|curl|wget|python/i;
 

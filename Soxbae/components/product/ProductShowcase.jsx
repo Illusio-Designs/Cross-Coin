@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { preload } from 'react-dom';
 import TrustBadges from '@/components/product/TrustBadges';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
-import { ikSrc } from '@/lib/image';
+import { ikSrc, ikSrcSet } from '@/lib/image';
 import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
@@ -17,6 +18,41 @@ import { cleanColorParam } from '@/lib/pdpColor';
 
 // Right-size ImageKit images per slot with f-auto (same as the CrossCoin gallery).
 const ik = ikSrc; // lightbox only — the gallery itself uses ShimmerImg
+
+// Main photo: the screen width less the page padding on phones, about 620px
+// beside the buy panel on desktop. Thumbnails are 62px (phones) / 64px squares.
+const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MAIN_SIZES = '(max-width: 900px) calc(100vw - 40px), 620px';
+const THUMB_WIDTHS = [112, 144, 216];
+const THUMB_SIZES = '(max-width: 900px) 62px, 64px';
+// Description pictures: the text column (66ch, ~600px) or the screen width
+// less the padding on phones.
+const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_SIZES = '(max-width: 860px) calc(100vw - 40px), 600px';
+
+// The admin's rich description sits under the page's "Product description"
+// (h2), so its own headings become h3/h4 (in order for screen readers and
+// page checks); a class keeps each former level looking as it did (rt-h1,
+// rt-lg for h2, rt-h5, rt-h6; app/globals.css .pdx-desc-rich). Its pictures
+// load lazily (they are below the gallery) and come in screen-sized copies
+// (ImageKit or our own uploads), not the original upload.
+function tidyDescription(html) {
+  return String(html || '')
+    .replace(/<(\/?)h([1-6])(\s[^>]*)?>/gi, (m, close, lvl, attrs = '') => {
+      const n = Number(lvl);
+      const to = n <= 3 ? 3 : 4;
+      if (close) return `</h${to}>`;
+      const cls = { 1: 'rt-h1', 2: 'rt-lg', 5: 'rt-h5', 6: 'rt-h6' }[n];
+      return cls ? `<h${to} class="${cls}"${attrs}>` : `<h${to}${attrs}>`;
+    })
+    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"')
+    .replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
+      const src = raw.replace(/&amp;/g, '&');
+      const set = ikSrcSet(src, DESC_WIDTHS);
+      const attr = (v) => v.replace(/&/g, '&amp;');
+      return `${a}src="${attr(ikSrc(src, 1100))}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+    });
+}
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
 // strip beneath it (left), a calm serif buy panel (right, sticky), then a
@@ -163,6 +199,15 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   const gallery = (Array.isArray(perColor) && perColor.length ? perColor : product.images) || [];
   const shown = gallery.length ? gallery : (product.image ? [product.image] : []);
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
+  // Tell the browser about the main photo in the page <head>, so it starts
+  // downloading before the stylesheets and the gallery markup are processed
+  // (it is the page's largest paint).
+  if (mainSrc) {
+    preload(ikSrc(mainSrc, 1200), {
+      as: 'image', fetchPriority: 'high',
+      imageSrcSet: ikSrcSet(mainSrc, MAIN_WIDTHS), imageSizes: MAIN_SIZES,
+    });
+  }
 
   // Preload the ACTIVE colour's gallery (not every colour's images), and only
   // when the browser is idle — so thumbnail swaps still feel instant without a
@@ -172,12 +217,19 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     const perColorImgs = product.colorImages?.[color];
     const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
     if (!urls.length) return;
-    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = u; });
+    // Same sized copies the main photo uses (srcset/sizes), so a swap finds
+    // them cached; the original URLs would be other (bigger) files.
+    const warm = () => urls.forEach((u) => {
+      const im = new Image();
+      im.sizes = MAIN_SIZES;
+      im.srcset = ikSrcSet(u, MAIN_WIDTHS) || '';
+      im.src = ikSrc(u, 1200);
+    });
     if (window.requestIdleCallback) {
-      const id = window.requestIdleCallback(preload, { timeout: 1500 });
+      const id = window.requestIdleCallback(warm, { timeout: 1500 });
       return () => window.cancelIdleCallback?.(id);
     }
-    const t = setTimeout(preload, 400);
+    const t = setTimeout(warm, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [color, product?.id]);
@@ -344,7 +396,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
                 <button key={src + i} type="button" data-thumb={i}
                   className={`pdx-thumb${i === active ? ' active' : ''}`}
                   onClick={() => setActive(i)} aria-label={`View image ${i + 1}`}>
-                  <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} width={200} />
+                  <ShimmerImg src={src} alt={`${product.name} view ${i + 1}`} width={144} widths={THUMB_WIDTHS} sizes={THUMB_SIZES} />
                 </button>
               ))}
             </div>
@@ -353,8 +405,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <div className="pdx-main" ref={mainRef}>
             {mainSrc ? (
               <button type="button" className="pdx-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-                <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={[600, 900, 1200]}
-                  sizes="(max-width: 900px) 100vw, 640px" priority
+                <ShimmerImg src={mainSrc} alt={product.name} width={1200} widths={MAIN_WIDTHS}
+                  sizes={MAIN_SIZES} priority
                   fallback={<span aria-hidden style={{ color: 'var(--accent-600)', opacity: .5, display: 'grid', placeItems: 'center', height: '100%' }}><Icon name="Footprints" size={80} /></span>} />
                 <span className="pdx-zoom-hint" aria-hidden="true">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -462,7 +514,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           <TrustBadges />
           {hasPacks && (
             <div className="pdx-opt pdx-packs">
-              <h3 className="bundle-heading">Bundle &amp; Save</h3>
+              <h2 className="bundle-heading">Bundle &amp; Save</h2>
               <div className="pdx-pack-list">
                 {packOptions.map((t, i) => {
                   const per = t.pairs > 0 ? t.price / t.pairs : t.price;
@@ -564,7 +616,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div className="pdx-about-main">
               <h2 className="pdx-description-title">Product description</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-                ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />
+                ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: tidyDescription(product.descriptionHtml) }} />
                 : product.description
                   ? <p className="pdx-about-desc">{product.description}</p>
                   : <p className="pdx-about-desc muted">No description available for this product yet.</p>}
@@ -586,7 +638,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       {showChart && <SizeChartModal onClose={() => setShowChart(false)} />}
 
       {/* Sticky buy bar — appears when the main buy buttons scroll out of view */}
-      <div className={`pdx-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)}>
+      <div className={`pdx-sticky${showSticky && !lightbox && !cartOpen ? ' show' : ''}`} aria-hidden={!(showSticky && !lightbox && !cartOpen)} inert={!(showSticky && !lightbox && !cartOpen)}>
         <div className="pdx-sticky-info">
           {mainSrc && <span className="pdx-sticky-thumb"><ShimmerImg src={mainSrc} alt="" width={200} /></span>}
           <div>

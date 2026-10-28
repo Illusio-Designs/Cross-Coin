@@ -10,6 +10,7 @@ import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getGlobalFaqs, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/home.css';
 
 // Static/ISR — regenerate every 60s so dashboard edits (hero slider, featured
 // products, etc.) reflect on the homepage within about a minute.

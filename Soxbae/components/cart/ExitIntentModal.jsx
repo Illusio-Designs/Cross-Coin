@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { getPublicCoupons } from '@/lib/api/orders';
+import '@/app/styles/cart.css';
 
 /* Exit-intent cart recovery — desktop only, once per browser session.
  *

@@ -43,12 +43,12 @@ export default function Footer() {
           <div className="sx-footer-cols">
             {COLS.map((col) => (
               <div className="sx-footer-col" key={col.title}>
-                <h4>{col.title}</h4>
+                <h2 className="footer-title">{col.title}</h2>
                 <ul>{col.links.map((l) => <li key={l.label}>{l.cookie ? <CookieSettingsButton className="sx-footer-cookie" /> : <Link href={l.href}>{l.label}</Link>}</li>)}</ul>
               </div>
             ))}
             <div className="sx-footer-col">
-              <h4>Contact</h4>
+              <h2 className="footer-title">Contact</h2>
               <ul className="sx-footer-contact">
                 <li><a href="tel:+919712891700"><Icon name="Phone" size={15} /><span>+91 97128 91700</span></a></li>
                 <li><a href="mailto:obzusindia@gmail.com"><Icon name="Mail" size={15} /><span>obzusindia@gmail.com</span></a></li>

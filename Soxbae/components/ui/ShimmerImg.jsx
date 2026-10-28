@@ -58,7 +58,11 @@ export default function ShimmerImg({
 
   if (!resolved || phase === 'error') return fallback;
 
-  const state = phase === 'fade' ? ' is-loaded is-fading' : phase === 'shown' ? ' is-loaded' : '';
+  // The LCP image (`priority`) is visible from the very first paint: it is not
+  // hidden until React hydrates and the decode finishes, which pushed Largest
+  // Contentful Paint past the JS download. It paints as it arrives, over the
+  // skeleton, like a normal <img>.
+  const state = priority ? ' is-loaded' : phase === 'fade' ? ' is-loaded is-fading' : phase === 'shown' ? ' is-loaded' : '';
   return (
     <>
       {phase === 'wait' && <span className="sk shimmer-img-skeleton" aria-hidden="true" />}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductsByCategory, getCategories } from '@/lib/api';
+import '@/app/styles/catalog.css';
 
 // Render on-demand with fresh collection products (no stale server cache).
 export const dynamic = 'force-dynamic';

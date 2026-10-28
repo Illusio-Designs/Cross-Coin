@@ -1,0 +1,128 @@
+/* Styles used only by account, login/register, order tracking and order confirmation.
+   Imported by those routes (and their loading screens), so other pages don't
+   download them. Site-wide styles (header, footer, buttons, product cards,
+   skeletons, ...) stay in app/globals.css. A rule used by more than one of
+   these page groups belongs in globals.css. */
+
+.phone-input input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 40px #fff inset; box-shadow: 0 0 0 40px #fff inset;
+  -webkit-text-fill-color: var(--ink); caret-color: var(--ink);
+}
+.auth-wrap { max-width: 420px; margin: 0 auto; }
+.auth-form { margin-top: 4px; }
+@media (max-width: 760px) {
+  .account-nav-btn { white-space: nowrap; }
+  .account-nav-btn.danger { border-top: 0; border-radius: 12px; }
+  .acc-signout { order: 3; width: 100%; justify-content: center; }
+  /* Track order — stack the search form + tighten the card on phones */
+  .track-form { flex-direction: column; }
+  .track-form .btn { width: 100%; justify-content: center; }
+  .track-step-label { font-size: 10px; word-break: break-word; }
+}
+
+/* ============================================================================
+   AUTH (login / register / track)
+   ========================================================================== */
+.auth-error { color: var(--sale); font-size: 13px; margin: 0; }
+.phone-input { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.phone-input:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(32,44,110,.08); }
+.phone-input span { color: var(--ink); font-size: 14px; font-weight: 600; padding-right: 10px; border-right: 1px solid var(--line); }
+/* Reset the inner input so it doesn't render its own bordered/focus box on top
+   of the .phone-input wrapper (avoids the nested "double box" look). */
+.phone-input input,
+.contact-form .phone-input input { border: 0; outline: 0; flex: 1; width: 100%; padding: 13px 0; border-radius: 0; font-family: inherit; font-size: 14px; background: transparent; color: var(--ink); }
+.phone-input input:focus, .contact-form .phone-input input:focus { border: 0; box-shadow: none; }
+.otp-row { display: flex; gap: 10px; justify-content: center; }
+.otp-row input { width: 48px; height: 56px; border: 1px solid var(--line); border-radius: 12px; text-align: center; font-size: 20px; font-weight: 800; color: var(--ink); outline: 0; }
+.otp-row input:focus { border-color: var(--navy); }
+
+.track-form { display: flex; gap: 10px; }
+.track-form input { flex: 1; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-family: inherit; font-size: 14px; color: var(--ink); outline: 0; }
+.track-form input:focus { border-color: var(--navy); }
+.track-status { padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: var(--line-soft); color: var(--ink-soft); }
+.track-status-delivered { background: #e7f6ec; color: #1f9d55; }
+.track-status-cancelled { background: #fdeaea; color: var(--sale); }
+.track-dot { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; background: var(--line-soft); color: var(--ink-soft); font-weight: 700; font-size: 13px; }
+.track-step.done .track-dot { background: var(--navy); color: #fff; }
+.track-step-label { font-size: 11px; text-transform: capitalize; color: var(--ink-soft); }
+.acc-hero-greeting { font-size: 13px; font-weight: 600; opacity: .85; }
+.acc-hero-name { font-size: clamp(24px, 3.4vw, 34px); font-weight: 900; margin: 2px 0 4px; color: #fff; }
+.acc-hero-sub { font-size: 14px; opacity: .9; margin: 0; word-break: break-word; }
+.acc-signout {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.32);
+  border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 700;
+  transition: background .15s ease, transform .1s ease;
+}
+.acc-signout:hover { background: rgba(255,255,255,.28); }
+.acc-signout:active { transform: translateY(1px); }
+.acc-stat-val { font-size: 26px; font-weight: 900; color: var(--ink); line-height: 1; }
+.acc-stat-label { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; text-transform: uppercase; letter-spacing: .06em; }
+.acc-stat-points { border-color: var(--teal); background: var(--teal-050); }
+.acc-stat-points .acc-stat-val { color: var(--teal-600); }
+.acc-stat-points .acc-stat-label { color: var(--teal-600); }
+.acc-order-num { font-size: 15px; }
+.acc-order-date { font-size: 12px; color: var(--ink-soft); }
+.acc-order-total { font-size: 16px; }
+.acc-order-link {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700;
+  color: var(--teal-600); border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 14px; transition: border-color .15s ease, background .15s ease;
+}
+.acc-order-link:hover { border-color: var(--teal); background: var(--teal-050); }
+.acc-badge {
+  padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  text-transform: capitalize; background: var(--line-soft); color: var(--ink-soft);
+}
+.acc-badge.ok { background: #e7f6ec; color: #1f9d55; }
+.acc-badge.bad { background: #fdeaea; color: var(--sale); }
+.acc-badge.pending { background: var(--teal-050); color: var(--teal-600); }
+.account-nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; transition: background .15s ease, color .15s ease; }
+.account-nav-btn:hover { background: var(--line-soft); }
+.account-nav-btn.active { background: var(--navy); color: #fff; }
+.account-nav-btn.active svg { color: #fff; }
+.account-nav-btn svg { color: var(--ink-soft); flex-shrink: 0; }
+.account-nav-btn.danger { color: var(--sale); margin-top: 4px; border-top: 1px solid var(--line-soft); border-radius: 0 0 12px 12px; }
+.account-nav-btn.danger svg { color: var(--sale); }
+.acct-detail { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.acct-detail:last-child { border-bottom: 0; }
+.order-status { padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: capitalize; background: var(--line-soft); color: var(--ink-soft); }
+.order-status.ok { background: #e7f6ec; color: #1f9d55; }
+.order-status.bad { background: #fdeaea; color: var(--sale); }
+.order-status.pending { background: #eef1f8; color: var(--navy); }
+.default-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; background: var(--teal-050); color: var(--teal-600); padding: 2px 8px; border-radius: 999px; }
+.addr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.addr-actions button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--ink); }
+.addr-actions button:hover { border-color: var(--navy); color: var(--navy); }
+.addr-actions button.danger:hover { border-color: var(--sale); color: var(--sale); }
+.settings-single { margin-top: 24px; max-width: 520px; }
+/* Checkbox + label on ONE line. `.contact-form label { display:grid }` and
+   `.contact-form input { width:100% }` would otherwise stack the text below a
+   full-width checkbox — override both here. */
+.co-checkbox, .contact-form .co-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.contact-form .co-checkbox input[type="checkbox"], .co-checkbox input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex-shrink: 0; margin: 0; padding: 0; border-radius: 12px; accent-color: var(--navy); cursor: pointer; }
+.order-address { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 14px; }
+.order-address p { font-size: 13px; color: var(--ink-soft); margin: 6px 0 0; line-height: 1.5; }
+
+@media (max-width: 900px) {
+  .account-nav-btn { white-space: nowrap; width: auto; }
+  .account-nav-btn.danger { border-top: 0; border-radius: 12px; margin-top: 0; }
+}
+@media (max-width: 460px) {
+  .order-row .order-status { order: 3; }
+}
+@media (max-width: 520px) {
+  .otp-row input { width: 42px; height: 50px; }
+}
+
+/* Track-order: header meta + tracking timeline */
+.track-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12.5px; color: var(--ink-soft); }
+.track-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.track-timeline { list-style: none; margin: 18px 0 4px; padding: 16px 0 4px; border-top: 1px solid var(--line); display: grid; gap: 14px; }
+.track-timeline li { position: relative; padding-left: 20px; display: grid; gap: 2px; }
+.track-timeline li::before { content: ''; position: absolute; left: 2px; top: 5px; width: 9px; height: 9px; border-radius: 999px; background: var(--line); }
+.track-timeline li.first::before { background: var(--ink); }
+.track-timeline .tl-status { font-size: 13px; font-weight: 600; text-transform: capitalize; }
+.track-timeline .tl-note { font-size: 12px; color: var(--ink-soft); }
+.track-timeline .tl-time { font-size: 11px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
+.order-address .muted { display: inline-flex; align-items: center; gap: 5px; }

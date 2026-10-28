@@ -28,6 +28,7 @@ import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecove
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import '@/app/styles/cart.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 // Optional instant discount for paying online (prepaid) — same env-gated
@@ -962,7 +963,7 @@ export default function CartDrawer() {
   return (
     <>
       <div className={`cd-backdrop${open ? ' show' : ''}`} onClick={closeCart} />
-      <aside className={`cd-drawer${open ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden={!open}>
+      <aside className={`cd-drawer${open ? ' show' : ''}`} role="dialog" aria-modal="true" aria-label="Shopping cart" aria-hidden={!open} inert={!open}>
 
         {/* Address validation popup — lists EVERY problem at once (not just the
             first) plus advisory tips. Shown on a failed save / checkout. */}

@@ -12,7 +12,7 @@ export default function ReviewRow({ items = [], render, staticClassName = '', mi
       <div className={`sxrv-track${direction === 'right' ? ' sxrv-rtl' : ''}`}>
         {items.map((r, i) => render(r, i))}
         {items.map((r, i) => (
-          <div className="sxrv-dup" aria-hidden="true" key={`dup-${i}`}>{render(r, `d${i}`)}</div>
+          <div className="sxrv-dup" aria-hidden="true" inert key={`dup-${i}`}>{render(r, `d${i}`)}</div>
         ))}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Skeleton, SkeletonRegion, TextSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/content.css';
 
 export default function ArticleLoading() {
   return (

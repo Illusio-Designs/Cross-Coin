@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getBlogBySlug } from '@/lib/api';
+import '@/app/styles/content.css';
 
 // Resolve published articles at request time, including newly published slugs.
 export const dynamic = 'force-dynamic';

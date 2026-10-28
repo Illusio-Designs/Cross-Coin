@@ -10,6 +10,7 @@ import OrdersLoading from './loading';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders } from '@/lib/api/orders';
 import { orderStatusLabel, orderStatusTone, canRequestReturn } from '@/utils/orderStatus';
+import '@/app/styles/account.css';
 
 function statusClass(s) {
   const tone = orderStatusTone(s);
