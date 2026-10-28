@@ -10,6 +10,7 @@ import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
 import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers, brandFetch } from '@/lib/api';
+import '@/app/styles/pdp.css';
 
 // Incrementally static (ISR): each product page is built once, served from
 // Vercel's cache, and rebuilt in the background at most once a minute, so

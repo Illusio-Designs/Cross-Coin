@@ -1,5 +1,6 @@
 import LoginClient from './LoginClient';
 import Msg91Loader from '@/components/Msg91Loader';
+import '@/app/styles/account.css';
 
 export const metadata = { title: 'Sign in' };
 

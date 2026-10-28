@@ -1,5 +1,6 @@
 import RegisterClient from './RegisterClient';
 import Msg91Loader from '@/components/Msg91Loader';
+import '@/app/styles/account.css';
 
 export const metadata = { title: 'Create account' };
 

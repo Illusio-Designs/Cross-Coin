@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { updateProfile } from '@/lib/api/auth';
 import { toast } from '@/lib/toast';
 import SettingsLoading from './loading';
+import '@/app/styles/account.css';
 
 function Settings() {
   const router = useRouter();

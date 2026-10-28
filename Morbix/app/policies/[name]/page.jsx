@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getPolicy } from '@/lib/api';
+import '@/app/styles/content.css';
 
 export const revalidate = 300;
 

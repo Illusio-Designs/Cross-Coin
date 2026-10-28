@@ -1,5 +1,6 @@
 import JournalClient from './JournalClient';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/content.css';
 
 export const revalidate = 300;
 

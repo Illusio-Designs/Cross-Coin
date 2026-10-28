@@ -1,4 +1,5 @@
 import { ProductGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/catalog.css';
 
 export default function WishlistLoading() {
   return (

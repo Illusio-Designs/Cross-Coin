@@ -28,6 +28,7 @@ import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecove
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import '@/app/styles/cart.css';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 

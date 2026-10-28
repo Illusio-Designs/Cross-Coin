@@ -1,4 +1,5 @@
 import SearchClient from './SearchClient';
+import '@/app/styles/catalog.css';
 
 export const metadata = { title: 'Search' };
 

@@ -9,6 +9,7 @@ import BlogSection from '@/components/home/BlogSection';
 import Reveal from '@/components/Reveal';
 import { getBestsellers, getHeroFeatures, getCategories, getStoreReviews, getBlogPosts, getSliders, getFaqs, getSeoOrg } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/home.css';
 
 // Static/ISR — regenerate every 1 min.
 export const revalidate = 60;

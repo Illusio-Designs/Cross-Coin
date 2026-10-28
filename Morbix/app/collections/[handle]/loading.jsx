@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Skeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/catalog.css';
 
 export default function CollectionLoading() {
   return (

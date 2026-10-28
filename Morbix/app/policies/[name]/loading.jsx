@@ -1,4 +1,5 @@
 import { Skeleton, TextSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/content.css';
 
 export default function PolicyLoading() {
   return (

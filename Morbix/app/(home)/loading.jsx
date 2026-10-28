@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { HeroSkeleton, CollectionGridSkeleton, ProductGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/home.css';
 
 // Home while its server data loads: the hero band, "Shop by collection" tiles
 // and the "Pick your colour" rail, each in its real place and shape.

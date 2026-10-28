@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Icon from '@/components/Icon';
+import '@/app/styles/pdp.css';
 
 // Segment error boundary for /products/[slug]. If anything in the product
 // render throws (an unexpected backend shape, a transient data issue), the
