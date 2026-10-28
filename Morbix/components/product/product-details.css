@@ -1,5 +1,5 @@
 /* Product page: Ideal for, care and manufacturing blocks (.pdd). */
-.pdd { --ink: #1b2340; --mut: #6a7186; --line: #e6eaee; --card: #ffffff; --acc: #2fa39b; --acc2: #268b84; --soft: #e7f4f2;
+.pdd { --ink: #1b2340; --mut: #5d6478; --line: #e6eaee; --card: #ffffff; --acc: #2fa39b; --acc2: #268b84; --soft: #e7f4f2;
   display: flex; flex-direction: column; gap: 30px; color: var(--ink); font-size: 14px; line-height: 1.5; }
 .pdd, .pdd * { box-sizing: border-box; }
 .pdd-blk { min-width: 0; }
@@ -16,7 +16,7 @@
 @media (prefers-reduced-motion: reduce) { .pdd * { transition: none !important; } }
 
 .pdd-mb .pdd-chips { gap: 10px; }
-.pdd-mb .pdd-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; background: var(--soft); color: var(--acc2); font-weight: 600; font-size: 13.5px; }
+.pdd-mb .pdd-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px; background: var(--soft); color: #1c726c; font-weight: 600; font-size: 13.5px; }
 .pdd-mb .pdd-chip .pdd-ic { width: 17px; height: 17px; }
 .pdd-mb .pdd-care { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
 .pdd-mb .pdd-care > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }

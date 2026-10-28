@@ -17,12 +17,12 @@
   --bg:          #f5f7f8;   /* cool off-white page */
   --card:        #ffffff;
   --ink:         #1b2340;   /* headings / body */
-  --ink-soft:    #6a7186;   /* muted text */
+  --ink-soft:    #5d6478;   /* muted text (5.2:1+ on white, paper and teal-050) */
   --line:        #e6eaee;   /* hairline borders */
   --line-soft:   #eef1f4;
 
   /* Feedback */
-  --sale:        #d8663f;   /* discount badge */
+  --sale:        #b84d29;   /* discount badge / sale text (white on it 5.1:1) */
   --star:        #f5a623;
 
   /* Shape */
