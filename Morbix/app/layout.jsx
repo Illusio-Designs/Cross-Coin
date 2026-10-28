@@ -9,8 +9,7 @@ import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Marquee from '@/components/home/Marquee';
-import CartDrawer from '@/components/cart/CartDrawer';
-import ExitIntentModal from '@/components/cart/ExitIntentModal';
+import LazyCartLayer from '@/components/cart/LazyCartLayer';
 import FloatingWidgets from '@/components/layout/FloatingWidgets';
 import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
@@ -73,8 +72,7 @@ export default function RootLayout({ children }) {
               <Header />
               <main id="main">{children}</main>
               <Footer />
-              <CartDrawer />
-              <ExitIntentModal />
+              <LazyCartLayer />
             </SmoothScroll>
             <FloatingWidgets />
             <ToastHost />
