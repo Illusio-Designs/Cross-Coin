@@ -225,7 +225,10 @@ export function Thumb({ src, color, className, style, alt = '', w, widths, sizes
     return (
       <img
         ref={ref}
-        className={`ccimg${shown ? ' is-on' : ''}${className ? ` ${className}` : ''}`}
+        // The LCP image (`priority`) is visible from the first paint: it is
+        // not hidden until the page's scripts reveal it after decoding, which
+        // pushed Largest Contentful Paint behind the JavaScript start-up.
+        className={`ccimg${shown || priority ? ' is-on' : ''}${className ? ` ${className}` : ''}`}
         src={url}
         srcSet={srcSet}
         sizes={srcSet ? sizes : undefined}

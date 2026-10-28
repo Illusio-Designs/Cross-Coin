@@ -45,9 +45,6 @@
 }
 
 /* Fade-in transition for skeleton to content */
-.skeleton-fade-out {
-  animation: skeleton-fade-out 0.3s ease-in-out forwards;
-}
 
 @keyframes skeleton-fade-out {
   from {
@@ -58,10 +55,6 @@
     opacity: 0;
     visibility: hidden;
   }
-}
-
-.skeleton-content-fade-in {
-  animation: skeleton-content-fade-in 0.3s ease-in-out forwards;
 }
 
 @keyframes skeleton-content-fade-in {
@@ -83,19 +76,38 @@
   --sk-base: #eef0f3;
   --sk-hi: #f8f9fb;
 }
+/* The light sweep is a pseudo-element moved with `transform`, which the GPU
+   animates without repainting (animating background-position repainted every
+   skeleton on every frame and kept phones' main thread busy). */
 .sk {
   display: block;
   max-width: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-hi) 40%, var(--sk-base) 80%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  background: var(--sk-base);
+}
+.sk::after, .cc-test-root .cc-skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--sk-hi) 40%, transparent 80%);
+  transform: translateX(-100%);
+  animation: sk-sweep 1.3s ease-in-out infinite;
+  will-change: transform;
+  pointer-events: none;
 }
 .sk--circle { border-radius: 50%; flex: none; }
+@keyframes sk-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+/* Older name, still used by a few legacy screens. */
 @keyframes sk-shimmer {
   from { background-position: 100% 0; }
   to   { background-position: -100% 0; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .sk::after, .cc-test-root .cc-skel::after { animation: none; display: none; }
   .sk { animation: none; background: var(--sk-base); }
 }

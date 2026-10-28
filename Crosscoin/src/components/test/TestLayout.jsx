@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Head from 'next/head';
+import { Fraunces, Inter, Space_Mono } from 'next/font/google';
 import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups, getCart, restoreCart } from './store';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart } from '../../utils/cartRecovery';
@@ -22,6 +22,16 @@ import { getConsent, setConsent } from '../../lib/consent';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { savePurchaseForThankYou } from '../../lib/thankYou';
 import ShiprocketButton from '../checkout/ShiprocketButton';
+
+// Mint fonts, self-hosted by next/font (served from our domain, preloaded,
+// with size-matched fallbacks) instead of a render-blocking Google Fonts
+// stylesheet. The Mint CSS reads them through --ff-display / --ff-body /
+// --ff-mono, set on .cc-test-root below. `subsets` is only what is preloaded;
+// other characters (e.g. ₹) load from their own subset when used.
+const fraunces = Fraunces({ subsets: ['latin'], axes: ['opsz'], display: 'swap', variable: '--ff-display' });
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--ff-body' });
+const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], display: 'swap', variable: '--ff-mono' });
+const FONT_VARS = `${fraunces.variable} ${inter.variable} ${spaceMono.variable}`;
 
 // Fallbacks used only until the live /api/shipping-fees response arrives.
 const FREE_SHIP = 799;
@@ -127,9 +137,9 @@ const MOBILE_CSS = `
 .cc-test-root .ctile:hover{ transform:translate(-4px,-4px); box-shadow:8px 8px 0 var(--line-ink); }
 .cc-test-root .ctile__coin{ position:absolute; right:-26px; top:-26px; width:110px; height:110px; border-radius:50%; border:2px dashed color-mix(in srgb, var(--c,var(--crimson)) 40%, transparent); }
 .cc-test-root .ctile__coin::after{ content:''; position:absolute; inset:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%, var(--c,var(--crimson)), transparent 70%); opacity:.5; }
-.cc-test-root .ctile__no{ font-family:"Space Mono",monospace; font-size:12px; color:var(--ink-faint); }
-.cc-test-root .ctile__nm{ font-family:"Fraunces",serif; font-weight:700; font-size:19px; line-height:1.1; max-width:76%; margin-top:4px; }
-.cc-test-root .ctile__go{ font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:var(--crimson); display:inline-flex; align-items:center; gap:7px; }
+.cc-test-root .ctile__no{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:12px; color:var(--ink-faint); }
+.cc-test-root .ctile__nm{ font-family:var(--ff-display, "Fraunces"),serif; font-weight:700; font-size:19px; line-height:1.1; max-width:76%; margin-top:4px; }
+.cc-test-root .ctile__go{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; color:var(--crimson); display:inline-flex; align-items:center; gap:7px; }
 .cc-test-root .ctile__dot{ width:12px; height:12px; border-radius:50%; background:var(--c,var(--crimson)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.4); }
 @media (max-width:820px){ .cc-test-root .cgrid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:480px){ .cc-test-root .cgrid{ grid-template-columns:1fr; } }
@@ -165,7 +175,7 @@ const MOBILE_CSS = `
 .cc-test-root .sk{ border-radius:var(--r); }
 .cc-test-root .sk--circle{ border-radius:50%; }
 /* stamped skeleton box (ink border + stamp shadow) for whole blocks */
-.cc-test-root .cc-skel{ position:relative; overflow:hidden; border:2px solid var(--line-ink); border-radius:var(--r); box-shadow:var(--stamp-sm); background:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%); background-size:200% 100%; animation:sk-shimmer 1.3s ease-in-out infinite; }
+.cc-test-root .cc-skel{ position:relative; overflow:hidden; border:2px solid var(--line-ink); border-radius:var(--r); box-shadow:var(--stamp-sm); background:var(--sk-base); } /* sweep: ::after in styles/common/skeleton.css */
 .cc-test-root .cc-skelblock{ border-radius:var(--r); }
 .cc-test-root .sk-frame, .cc-test-root .sk-frame:hover{ transform:none !important; box-shadow:var(--stamp-sm); cursor:default; pointer-events:none; }
 .cc-test-root .sk.sk-fill{ position:absolute; inset:0; left:0; top:0; width:100%; height:100%; transform:none; border-radius:0; }
@@ -175,22 +185,28 @@ const MOBILE_CSS = `
 .cc-test-root .sk-stack{ display:flex; flex-direction:column; gap:9px; }
 .cc-test-root .sk-dim{ opacity:.55; transition:opacity .2s var(--ease); pointer-events:none; }
 /* No half-drawn images (ui.jsx → Thumb): the picture stays transparent until it
-   is fully downloaded + decoded, while its (already sized) box shimmers. */
+   is fully downloaded + decoded, while its (already sized) box shows the
+   skeleton tint. Not animated: these boxes are any element holding an image
+   (positioned or not), and a background-position animation repainted every
+   one of them on every frame — including lazy images far down the page,
+   which kept the phone's main thread busy for the whole visit. */
 .cc-test-root img.ccimg{ opacity:0; transition:opacity .18s ease; }
 .cc-test-root img.ccimg.is-on{ opacity:1; }
-.cc-test-root :has(> img.ccimg:not(.is-on)){ background-image:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%) !important; background-size:200% 100% !important; animation:sk-shimmer 1.3s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce){ .cc-test-root img.ccimg{ transition:none; } .cc-test-root :has(> img.ccimg:not(.is-on)){ animation:none; } }
-@media (prefers-reduced-motion: reduce){ .cc-test-root .cc-skel{ animation:none; background:var(--sk-base); } }
+.cc-test-root :has(> img.ccimg:not(.is-on)){ background-image:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%) !important; background-size:200% 100% !important; }
+@media (prefers-reduced-motion: reduce){ .cc-test-root img.ccimg{ transition:none; } }
 /* cookie preferences modal */
-.cc-test-root .ckmodal{ position:fixed; left:50%; bottom:-100%; transform:translateX(-50%); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); padding:20px; transition:bottom .3s var(--ease); }
-.cc-test-root .ckmodal.on{ bottom:max(18px,env(safe-area-inset-bottom,0px)); }
+/* Slides up with transform (not bottom): moving a box with bottom/top is a
+   layout shift on every frame, which counted against CLS on every first
+   visit (this opens automatically). */
+.cc-test-root .ckmodal{ position:fixed; left:50%; bottom:max(18px,env(safe-area-inset-bottom,0px)); transform:translate(-50%, calc(100% + 60px)); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); padding:20px; transition:transform .3s var(--ease); }
+.cc-test-root .ckmodal.on{ transform:translate(-50%, 0); }
 .cc-test-root .ckmodal__h{ display:flex; align-items:center; justify-content:space-between; }
-.cc-test-root .ckmodal__h b{ font-family:"Fraunces",serif; font-size:19px; }
+.cc-test-root .ckmodal__h b{ font-family:var(--ff-display, "Fraunces"),serif; font-size:19px; }
 .cc-test-root .ckmodal__intro{ font-size:13px; color:var(--ink-soft); line-height:1.55; margin:8px 0 14px; }
 .cc-test-root .ckrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-top:1.5px solid var(--line); cursor:pointer; }
 .cc-test-root .ckrow b{ display:block; font-size:14px; }
 .cc-test-root .ckrow span{ font-size:12px; color:var(--ink-faint); }
-.cc-test-root .ckrow .ckon{ font-family:"Space Mono",monospace; font-size:11px; font-weight:700; color:#0f766e; }
+.cc-test-root .ckrow .ckon{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; color:#0f766e; }
 .cc-test-root .ckrow input[type=checkbox]{ width:20px; height:20px; accent-color:var(--crimson); flex-shrink:0; }
 .cc-test-root .ckmodal__btns{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
 .cc-test-root .ckmodal__btns .btn{ flex:1; min-width:120px; }
@@ -203,9 +219,9 @@ const MOBILE_CSS = `
 .cc-test-root .citem__nm{ font-weight:700; font-size:14px; line-height:1.25; }
 .cc-test-root .citem__rm{ flex:0 0 auto; background:none; border:0; color:var(--ink-faint); cursor:pointer; padding:0; }
 .cc-test-root .citem__rm:hover{ color:var(--crimson); }
-.cc-test-root .citem__var{ font-family:"Space Mono",monospace; font-size:11.5px; color:var(--ink-faint); margin:4px 0 9px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.cc-test-root .citem__var{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; color:var(--ink-faint); margin:4px 0 9px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .cc-test-root .citem__bot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.cc-test-root .citem__pr{ display:flex; align-items:baseline; gap:6px; font-family:"Space Mono",monospace; flex-wrap:wrap; }
+.cc-test-root .citem__pr{ display:flex; align-items:baseline; gap:6px; font-family:var(--ff-mono, "Space Mono"),monospace; flex-wrap:wrap; }
 .cc-test-root .citem__pr b{ font-size:15px; color:var(--crimson); }
 .cc-test-root .citem__per{ font-size:10px; color:var(--ink-faint); font-weight:400; }
 .cc-test-root .citem__pr s{ font-size:11px; color:var(--ink-faint); }
@@ -217,23 +233,23 @@ const MOBILE_CSS = `
 .cc-test-root .couponrow{ display:flex; gap:10px; margin-top:16px; }
 .cc-test-root .couponrow input{ flex:1; min-width:0; padding:13px 15px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); }
 .cc-test-root .couponrow input:focus{ outline:none; border-color:var(--crimson); }
-.cc-test-root .couponrow__btn, .cc-test-root .bestoffer__btn{ flex:0 0 auto; background:#201253; color:#fff; border:2px solid var(--line-ink); border-radius:4px; font-family:"Space Mono",monospace; font-weight:700; font-size:12.5px; padding:0 20px; cursor:pointer; }
+.cc-test-root .couponrow__btn, .cc-test-root .bestoffer__btn{ flex:0 0 auto; background:#201253; color:#fff; border:2px solid var(--line-ink); border-radius:4px; font-family:var(--ff-mono, "Space Mono"),monospace; font-weight:700; font-size:12.5px; padding:0 20px; cursor:pointer; }
 .cc-test-root .bestoffer{ display:flex; align-items:center; gap:10px; margin-top:12px; padding:12px 14px; border:1.5px solid color-mix(in srgb,#0f766e 40%,transparent); background:color-mix(in srgb,#0f766e 8%,var(--surface)); border-radius:4px; }
 .cc-test-root .bestoffer__ic{ color:#0f766e; flex:0 0 auto; }
 .cc-test-root .bestoffer__t{ flex:1; min-width:0; }
 .cc-test-root .bestoffer__t b{ display:block; font-size:13.5px; color:var(--ink); }
 .cc-test-root .bestoffer__t span{ font-size:11.5px; color:var(--ink-faint); }
 .cc-test-root .bestoffer__btn{ padding:9px 15px; font-size:11.5px; }
-.cc-test-root .seeoffers{ display:flex; align-items:center; gap:6px; margin-top:12px; background:none; border:0; padding:0; font-family:"Space Mono",monospace; font-size:12px; font-weight:700; color:#0f766e; cursor:pointer; }
+.cc-test-root .seeoffers{ display:flex; align-items:center; gap:6px; margin-top:12px; background:none; border:0; padding:0; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:12px; font-weight:700; color:#0f766e; cursor:pointer; }
 .cc-test-root .offerlist{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
 .cc-test-root .offerlist__row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1.5px dashed var(--line); border-radius:4px; font-size:12.5px; }
-.cc-test-root .offerlist__row button{ flex:0 0 auto; background:none; border:0; color:var(--crimson); font-family:"Space Mono",monospace; font-weight:700; font-size:11.5px; cursor:pointer; }
+.cc-test-root .offerlist__row button{ flex:0 0 auto; background:none; border:0; color:var(--crimson); font-family:var(--ff-mono, "Space Mono"),monospace; font-weight:700; font-size:11.5px; cursor:pointer; }
 /* checkout trust row */
-.cc-test-root .cotrust{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; font-family:"Space Mono",monospace; font-size:11px; color:var(--ink-faint); }
+.cc-test-root .cotrust{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; color:var(--ink-faint); }
 .cc-test-root .cotrust span{ display:inline-flex; align-items:center; gap:5px; }
 .cc-test-root .cotrust svg{ color:#0f766e; }
 /* cart item pack chip */
-.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:4px; padding:2px 8px; }
+.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:4px; padding:2px 8px; }
 /* Buy More, Save More carousel (Morbix) */
 .cc-test-root .bms{ margin:16px 0 4px; border:2px solid var(--line-ink); border-radius:4px; background:color-mix(in srgb,var(--crimson) 5%,var(--surface)); box-shadow:var(--stamp-sm); padding:12px; }
 .cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson); margin-bottom:10px; }
@@ -245,11 +261,11 @@ const MOBILE_CSS = `
 .cc-test-root .bms__img img{ width:100%; height:100%; object-fit:cover; }
 .cc-test-root .bms__info{ min-width:0; flex:1; }
 .cc-test-root .bms__nm{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:6px; margin-top:3px; font-family:"Space Mono",monospace; }
+.cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:6px; margin-top:3px; font-family:var(--ff-mono, "Space Mono"),monospace; }
 .cc-test-root .bms__pr b{ font-size:13px; color:var(--crimson); }
 .cc-test-root .bms__pr s{ font-size:11px; color:var(--ink-faint); }
-.cc-test-root .bms__save{ display:inline-block; margin-top:6px; font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--teal); background:color-mix(in srgb,var(--teal) 14%,transparent); border-radius:4px; padding:2px 8px; }
-.cc-test-root .bms__add{ width:100%; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:9px; cursor:pointer; }
+.cc-test-root .bms__save{ display:inline-block; margin-top:6px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; color:var(--teal); background:color-mix(in srgb,var(--teal) 14%,transparent); border-radius:4px; padding:2px 8px; }
+.cc-test-root .bms__add{ width:100%; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:9px; cursor:pointer; }
 .cc-test-root .bms__add:hover{ filter:brightness(1.08); }
 /* "Sold in pairs" note at the top of the cart */
 .cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:4px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
@@ -260,13 +276,13 @@ const MOBILE_CSS = `
 .cc-test-root .washbox{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
 .cc-test-root .washitem{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:14px 8px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); }
 .cc-test-root .washitem svg{ color:var(--ink); }
-.cc-test-root .washitem span{ font-family:"Space Mono",monospace; font-size:10.5px; line-height:1.3; color:var(--ink-soft); }
+.cc-test-root .washitem span{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10.5px; line-height:1.3; color:var(--ink-soft); }
 @media (max-width:760px){ .cc-test-root .washbox{ grid-template-columns:repeat(3,1fr); } }
 @media (max-width:420px){ .cc-test-root .washbox{ grid-template-columns:repeat(2,1fr); } }
 .cc-test-root .mfgrow{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:18px 20px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); }
 .cc-test-root .mfgaddr{ flex:1 1 320px; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink-soft); }
 .cc-test-root .origin{ flex:0 0 auto; text-align:right; }
-.cc-test-root .origin__l{ display:block; font-family:"Space Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
+.cc-test-root .origin__l{ display:block; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:5px; }
 .cc-test-root .origin__b{ display:inline-flex; align-items:center; gap:8px; font-weight:700; }
 .cc-test-root .origin__b svg{ border:1px solid var(--line); border-radius:2px; }
 /* Buy it now — solid dark button (Morbix), fixed in both themes */
@@ -302,12 +318,12 @@ const MOBILE_CSS = `
 .cc-test-root .wishsq:hover{ transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--line-ink); }
 .cc-test-root .wishsq.on{ background:var(--crimson); border-color:var(--crimson); color:#fff; }
 /* PREPAID10 chip above Buy it now */
-.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:"Space Mono",monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:4px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
+.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:4px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
 /* button gets a touch more top room so its label clears the overlapping chip */
 .cc-test-root .btn--buynow{ padding-top:20px; }
 /* delivery pincode check */
 .cc-test-root .pdpdeliv{ margin-top:14px; }
-.cc-test-root .pdpdeliv__l{ display:block; font-family:"Space Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
+.cc-test-root .pdpdeliv__l{ display:block; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin-bottom:7px; }
 /* Delivery check — "B": joined input + indigo Check button in one bordered strip. */
 .cc-test-root .pdpdeliv__row{ display:flex; gap:0; width:100%; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
 .cc-test-root .pdpdeliv__row input{ flex:1; min-width:0; padding:12px 14px; border:none; background:transparent; color:var(--ink); font:inherit; font-size:14px; }
@@ -324,7 +340,7 @@ const MOBILE_CSS = `
 .cc-test-root .pdpspecs h3{ font-size:16px; padding:12px 0 4px; }
 .cc-test-root .pdpspecs dl{ margin:0; }
 .cc-test-root .specrow{ display:flex; justify-content:space-between; gap:14px; padding:11px 0; border-top:1px solid var(--line); }
-.cc-test-root .specrow dt{ font-family:"Space Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
+.cc-test-root .specrow dt{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); }
 .cc-test-root .specrow dd{ margin:0; font-size:13.5px; font-weight:600; text-align:right; }
 @media (max-width:760px){ .cc-test-root .pdpdetails{ grid-template-columns:1fr; gap:20px; } }
 /* CHOOSE YOUR PACK ladder (Morbix-style) */
@@ -336,18 +352,18 @@ const MOBILE_CSS = `
 .cc-test-root .packopt.on .packopt__radio::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--crimson); }
 .cc-test-root .packopt__l{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
 .cc-test-root .packopt__l b{ font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px; }
-.cc-test-root .packopt__badge{ font-family:"Space Mono",monospace; font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#fff; background:var(--crimson); padding:3px 7px; border-radius:4px; }
-.cc-test-root .packopt__pp{ font-family:"Space Mono",monospace; font-size:11.5px; color:var(--ink-faint); }
+.cc-test-root .packopt__badge{ font-family:var(--ff-mono, "Space Mono"),monospace; font-style:normal; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#fff; background:var(--crimson); padding:3px 7px; border-radius:4px; }
+.cc-test-root .packopt__pp{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; color:var(--ink-faint); }
 .cc-test-root .packopt__p{ flex:0 0 auto; text-align:right; display:flex; flex-direction:column; align-items:flex-end; }
-.cc-test-root .packopt__now{ font-family:"Space Mono",monospace; font-weight:700; font-size:15px; }
-.cc-test-root .packopt__was{ font-family:"Space Mono",monospace; font-size:11px; color:var(--ink-faint); text-decoration:line-through; }
+.cc-test-root .packopt__now{ font-family:var(--ff-mono, "Space Mono"),monospace; font-weight:700; font-size:15px; }
+.cc-test-root .packopt__was{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; color:var(--ink-faint); text-decoration:line-through; }
 /* Collections grid */
 .cc-test-root .collgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px; }
 .cc-test-root .collcard{ position:relative; min-height:170px; border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); color:#fff; text-align:left; padding:18px; cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; transition:transform .18s var(--ease); font:inherit; }
 .cc-test-root .collcard:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
-.cc-test-root .collcard__no{ position:absolute; top:14px; left:16px; font-family:"Space Mono",monospace; font-size:12px; opacity:.8; }
-.cc-test-root .collcard__name{ font-family:"Fraunces",serif; font-weight:700; font-size:22px; line-height:1.05; }
-.cc-test-root .collcard__ct{ font-family:"Space Mono",monospace; font-size:11px; opacity:.9; margin-top:4px; position:relative; z-index:2; }
+.cc-test-root .collcard__no{ position:absolute; top:14px; left:16px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:12px; opacity:.8; }
+.cc-test-root .collcard__name{ font-family:var(--ff-display, "Fraunces"),serif; font-weight:700; font-size:22px; line-height:1.05; }
+.cc-test-root .collcard__ct{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; opacity:.9; margin-top:4px; position:relative; z-index:2; }
 .cc-test-root .collcard__img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
 .cc-test-root .collcard::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(10,6,24,.15),rgba(10,6,24,.62)); z-index:1; }
 .cc-test-root .collcard__no, .cc-test-root .collcard__name{ position:relative; z-index:2; }
@@ -357,7 +373,7 @@ const MOBILE_CSS = `
 .cc-test-root .acctile{ text-align:left; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); padding:18px; cursor:pointer; font:inherit; color:var(--ink); transition:transform .16s var(--ease); display:flex; flex-direction:column; gap:4px; min-height:120px; }
 .cc-test-root .acctile:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
 .cc-test-root .acctile__ic{ color:var(--crimson); margin-bottom:6px; }
-.cc-test-root .acctile b{ font-family:"Fraunces",serif; font-size:17px; }
+.cc-test-root .acctile b{ font-family:var(--ff-display, "Fraunces"),serif; font-size:17px; }
 .cc-test-root .acctile__d{ font-size:13px; color:var(--ink-soft); }
 /* Legal / policy / article rich text */
 .cc-test-root .legal{ font-size:15px; line-height:1.72; color:var(--ink-soft); }
@@ -368,14 +384,14 @@ const MOBILE_CSS = `
 .cc-test-root .legal img{ border-radius:4px; margin:12px 0; }
 /* Blog article */
 .cc-test-root .artmeta{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; color:var(--ink-faint); }
-.cc-test-root .artcat{ background:var(--crimson); color:#fff; font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:4px; letter-spacing:.04em; }
+.cc-test-root .artcat{ background:var(--crimson); color:#fff; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:4px; letter-spacing:.04em; }
 .cc-test-root .arttitle{ font-size:clamp(28px,5vw,44px); margin:12px 0 16px; }
 .cc-test-root .arthero{ position:relative; height:0; padding-top:56.25%; aspect-ratio:auto !important; border:2px solid var(--line-ink); border-radius:4px; overflow:hidden; box-shadow:var(--stamp); margin-bottom:22px; }
 .cc-test-root .arthero img{ position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; object-fit:cover !important; display:block; }
 /* Order tracking */
 .cc-test-root .trackcard{ border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); background:var(--surface); padding:20px; margin-top:24px; }
 .cc-test-root .trackcard__top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:4px; padding:5px 13px; font-family:"Space Mono",monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
+.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:4px; padding:5px 13px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
 .cc-test-root .trackcard__meta{ display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
 .cc-test-root .trackitems{ margin-top:14px; border-top:2px solid var(--line); padding-top:12px; }
 .cc-test-root .trackitem{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13.5px; }
@@ -405,9 +421,9 @@ const MOBILE_CSS = `
 .cc-test-root .ccps__dot .d{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--surface); border:2px solid var(--line); color:#fff; transition:.2s; }
 .cc-test-root .ccps__dot.on .d{ background:var(--crimson); border-color:var(--crimson); }
 .cc-test-root .ccps__dot.sel .d{ box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 20%,transparent); }
-.cc-test-root .ccps__dot .l{ font-family:"Space Mono",monospace; font-size:10.5px; font-weight:700; color:var(--ink); text-align:center; }
+.cc-test-root .ccps__dot .l{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10.5px; font-weight:700; color:var(--ink); text-align:center; }
 .cc-test-root .ccps__dot.on .l{ color:var(--crimson); }
-.cc-test-root .ccps__dot .sv{ font-family:"Space Mono",monospace; font-size:9.5px; font-weight:700; color:var(--crimson); text-align:center; }
+.cc-test-root .ccps__dot .sv{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; color:var(--crimson); text-align:center; }
 .cc-test-root .offerwrap{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 2px; }
 .cc-test-root .offerwrap .chip{ font-size:11px; padding:6px 11px; cursor:pointer; }
 /* PDP: let the grid columns shrink so the buy column (buttons, option rows)
@@ -471,7 +487,7 @@ const MOBILE_CSS = `
 /* 404 — not found */
 .cc-test-root .nf{ padding-block:72px 92px; border-bottom:2px solid var(--line); }
 .cc-test-root .nf__in{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; }
-.cc-test-root .nf__coin{ width:138px; height:138px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--line-ink); box-shadow:var(--stamp); margin-bottom:10px; color:#fff; font-family:"Fraunces",serif; font-weight:800; font-size:38px; letter-spacing:-.02em; background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.34),transparent 42%),conic-gradient(from 210deg,var(--crimson),var(--indigo) 55%,var(--crimson)); }
+.cc-test-root .nf__coin{ width:138px; height:138px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--line-ink); box-shadow:var(--stamp); margin-bottom:10px; color:#fff; font-family:var(--ff-display, "Fraunces"),serif; font-weight:800; font-size:38px; letter-spacing:-.02em; background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.34),transparent 42%),conic-gradient(from 210deg,var(--crimson),var(--indigo) 55%,var(--crimson)); }
 .cc-test-root .nf h1{ font-size:clamp(26px,4vw,40px); }
 .cc-test-root .nf p{ color:var(--ink-soft); max-width:46ch; font-size:15px; line-height:1.6; }
 .cc-test-root .nf__cta{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
@@ -483,7 +499,7 @@ const MOBILE_CSS = `
 @media(max-width:560px){ .cc-test-root .valgrid{ grid-template-columns:1fr; } }
 .cc-test-root .valcard{ border:2px solid var(--line-ink); border-radius:var(--r); background:var(--surface); box-shadow:var(--stamp-sm); padding:20px 20px 22px; display:flex; flex-direction:column; gap:8px; }
 .cc-test-root .valcard__ic{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; border:2px solid var(--gold); color:var(--gold); margin-bottom:4px; }
-.cc-test-root .valcard b{ font-family:"Fraunces",serif; font-weight:700; font-size:17px; color:var(--ink); line-height:1.25; }
+.cc-test-root .valcard b{ font-family:var(--ff-display, "Fraunces"),serif; font-weight:700; font-size:17px; color:var(--ink); line-height:1.25; }
 .cc-test-root .valcard__d{ color:var(--ink-soft); font-size:13.5px; line-height:1.55; }
 `;
 
@@ -849,12 +865,7 @@ export default function TestLayout({ children }) {
   }, []);
 
   return (
-    <div className="cc-test-root" ref={rootRef}>
-      <Head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" />
-      </Head>
+    <div className={`cc-test-root ${FONT_VARS}`} ref={rootRef}>
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: MINT_CSS }} />
       {/* eslint-disable-next-line react/no-danger */}
@@ -953,7 +964,7 @@ export default function TestLayout({ children }) {
           <div><h4>Policies</h4><a onClick={() => go(R.policy('privacy-policy'))}>Privacy Policy</a><a onClick={() => go(R.contact)}>Grievance</a><a onClick={() => go(R.policy('terms-and-conditions'))}>Terms &amp; Conditions</a><a onClick={() => go(R.policy('shipping-policy'))}>Shipping Policy</a><a onClick={() => go(R.policy('cancellation-and-refund'))}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
-          <div style={{ fontFamily: '"Space Mono", monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
+          <div style={{ fontFamily: 'var(--ff-mono, "Space Mono"), monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
             Contact: <a href="tel:+919712891700" style={{ color: 'var(--crimson)' }}>+91 97128 91700</a> · <a href="mailto:obzusindia@gmail.com" style={{ color: 'var(--crimson)' }}>obzusindia@gmail.com</a>
           </div>
         </div>
@@ -1116,7 +1127,7 @@ export default function TestLayout({ children }) {
 
         {step === 'checkout' && (<>
           <div className="drawer__body">
-            <button type="button" className="coback" onClick={() => setStep('cart')} style={{ background: 'none', border: 'none', color: 'var(--ink-soft)', fontFamily: '"Space Mono",monospace', fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>{I.arrow(14)} Back to cart</button>
+            <button type="button" className="coback" onClick={() => setStep('cart')} style={{ background: 'none', border: 'none', color: 'var(--ink-soft)', fontFamily: 'var(--ff-mono, "Space Mono"),monospace', fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>{I.arrow(14)} Back to cart</button>
             <form ref={formRef}>
               <div className="optlabel">Delivery details</div>
               <div className="ffield"><label>Full name</label><input name="name" required placeholder="Aarav Sharma" /></div>

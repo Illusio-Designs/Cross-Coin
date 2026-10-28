@@ -4,25 +4,31 @@
  * Why this file exists (instead of just reusing /ProductDetails?slug=X):
  *  - Google Ads quality score and organic SEO both reward URLs without
  *    query strings and with the keyword in the path.
- *  - getServerSideProps fetches the product before the page is rendered, so
+ *  - getStaticProps fetches the product before the page is rendered, so
  *    the initial HTML the crawler sees already carries the correct <title>,
  *    <meta description>, OpenGraph tags, canonical, and schema.org JSON-LD
  *    (Product + BreadcrumbList + optional FAQPage).
  *
- * The interactive UI is still ProductDetails.jsx — we just inject the
- * already-fetched product as `initialProduct` so the client doesn't refetch
- * the same payload it already has in the HTML.
+ * Incrementally static (ISR): each product page is built on its first visit,
+ * served from Vercel's cache, and rebuilt in the background at most once a
+ * minute (so price/stock edits show within about a minute). Before, every
+ * visit rendered it again on the server ("private, no-store").
+ *
+ * The interactive UI (pages/test/product.jsx) gets the already-fetched product
+ * as `initialProduct`, so the gallery and buy panel are in that HTML and the
+ * client doesn't fetch the same product again before showing it.
  */
 
 import Head from 'next/head';
-import TestProduct from '../test/product';
+import TestProduct, { MAIN_WIDTHS, MAIN_SIZES, openingImage } from '../test/product';
+import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 
 async function fetchJson(url) {
   try {
-    const r = await fetch(url, { cache: 'no-store', headers: { 'X-Brand-Name': 'crosscoin' } });
+    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
     if (!r.ok) return null;
     return await r.json();
   } catch {
@@ -30,7 +36,13 @@ async function fetchJson(url) {
   }
 }
 
-export async function getServerSideProps({ params, res }) {
+// No product is built ahead at deploy; each is built on its first visit
+// (that visit waits for it, like before; the next ones get the cached copy).
+export async function getStaticPaths() {
+  return { paths: [], fallback: 'blocking' };
+}
+
+export async function getStaticProps({ params }) {
   const slug = params?.slug;
   if (!slug) return { notFound: true };
 
@@ -40,7 +52,7 @@ export async function getServerSideProps({ params, res }) {
   ]);
 
   if (!productResp?.success || !productResp?.data) {
-    return { notFound: true };
+    return { notFound: true, revalidate: 60 };
   }
 
   // SEO win: if the requested slug is a legacy form (e.g. contains parens),
@@ -59,12 +71,6 @@ export async function getServerSideProps({ params, res }) {
     `${API_URL}/api/public/faqs?type=product&id=${productResp.data.id}`
   );
 
-  // Price edits must be reflected in the next product-page response.
-  res?.setHeader?.(
-    'Cache-Control',
-    'private, no-store'
-  );
-
   return {
     props: {
       slug,
@@ -72,6 +78,8 @@ export async function getServerSideProps({ params, res }) {
       productFaqs: productFaqResp?.faqs || [],
       globalFaqs: faqResp?.faqs || [],
     },
+    // Rebuilt in the background at most once a minute after a visit.
+    revalidate: 60,
   };
 }
 
@@ -138,9 +146,18 @@ export default function ProductSlugPage({ slug, initialProduct, productFaqs, glo
     })),
   } : null;
 
+  // The main photo (the page's largest paint): announce it in <head> with the
+  // same srcset/sizes the gallery uses, so it downloads before the page's
+  // scripts and styles are processed.
+  const mainImg = openingImage(initialProduct);
+
   return (
     <>
       <Head>
+        {mainImg && (
+          <link rel="preload" as="image" fetchPriority="high" href={ikTransform(mainImg, 1200)}
+            imageSrcSet={ikSrcSet(mainImg, MAIN_WIDTHS)} imageSizes={MAIN_SIZES} key="lcp-img" />
+        )}
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="keywords" content={seo.metaKeywords || seo.meta_keywords || ''} />
@@ -179,8 +196,8 @@ export default function ProductSlugPage({ slug, initialProduct, productFaqs, glo
 
       {/* Mint product UI. The Head above (server-rendered) is the SEO source
           of truth — meta, canonical, Product/Breadcrumb/FAQ JSON-LD. The Mint
-          page fetches the product client-side from the slug in the URL. */}
-      <TestProduct preview={false} />
+          page starts from the product fetched here (see initialProduct). */}
+      <TestProduct preview={false} initialProduct={initialProduct} />
     </>
   );
 }
