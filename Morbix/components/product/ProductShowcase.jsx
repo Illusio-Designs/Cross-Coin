@@ -37,7 +37,10 @@ function tidyDescription(html) {
       if (close) return `</h${to}>`;
       return n <= 2 ? `<h3 class="rt-lg"${attrs}>` : `<h${to}${attrs}>`;
     })
-    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"');
+    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"')
+    // Ask for a column-sized copy (ImageKit or our own uploads), not the
+    // original upload (one description picture was a 1.8 MB PNG).
+    .replace(/(<img\b[^>]*\ssrc=")([^"]+)(")/gi, (m, a, src, b) => `${a}${ikSrc(src.replace(/&amp;/g, '&'), 1100).replace(/&/g, '&amp;')}${b}`);
 }
 
 // "pack_size" / "packSize" → "Pack size" for a specification row.
