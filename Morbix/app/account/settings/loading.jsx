@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { FormSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/account.css';
 
 export default function SettingsLoading() {
   return (

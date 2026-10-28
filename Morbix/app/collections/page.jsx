@@ -3,6 +3,7 @@ import Icon from '@/components/Icon';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import { getCategories, getAllProducts } from '@/lib/api';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/catalog.css';
 
 export const dynamic = 'force-dynamic';
 

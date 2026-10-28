@@ -1,6 +1,7 @@
 import Icon from '@/components/Icon';
 import ContactForm from '@/components/contact/ContactForm';
 import { buildMetadata } from '@/lib/api/seo';
+import '@/app/styles/content.css';
 
 export async function generateMetadata() {
   return buildMetadata('contact', { title: 'Contact' });

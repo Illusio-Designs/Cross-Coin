@@ -1,4 +1,5 @@
 import { CollectionGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/catalog.css';
 
 export default function CollectionsLoading() {
   return (

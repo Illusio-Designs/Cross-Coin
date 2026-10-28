@@ -10,6 +10,7 @@ import ReturnsLoading from './loading';
 import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
+import '@/app/styles/account.css';
 
 const REASONS = [
   ['damaged', 'Damaged or leaking on arrival'],

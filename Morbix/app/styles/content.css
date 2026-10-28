@@ -1,0 +1,43 @@
+/* Styles used only by about, contact, journal and policy pages.
+   Imported by those routes (and their loading screens), so other pages don't
+   download them. Site-wide styles (header, footer, buttons, product cards,
+   skeletons, ...) stay in app/globals.css. A rule used by more than one of
+   these page groups belongs in globals.css. */
+
+
+/* Fixed 16:9 box so the cover never shifts the article; the whole picture shows (contain). */
+.article-hero { position: relative; aspect-ratio: 16 / 9; margin: 22px 0 10px; border-radius: var(--r-lg); overflow: hidden; background: #f1f4f6; }
+.article-hero img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* About */
+.about-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 34px 0; }
+.about-card { background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 26px; }
+.about-card .ic { width: 46px; height: 46px; border-radius: 14px; background: var(--teal-050); color: var(--teal-text); display: grid; place-items: center; margin-bottom: 14px; }
+.about-card b { font-size: 17px; display: block; margin-bottom: 8px; }
+.about-card p { font-size: 14px; color: var(--ink-soft); }
+.about-band { background: linear-gradient(120deg, var(--navy) 0%, var(--navy-900) 100%); color: #fff; border-radius: var(--r-xl); padding: 44px; }
+.about-band h2 { font-size: 26px; font-weight: 900; max-width: 620px; }
+.about-band p { color: rgba(255,255,255,.75); margin-top: 12px; max-width: 640px; }
+
+/* Contact */
+.contact-layout { display: grid; grid-template-columns: 320px 1fr; gap: 30px; margin-top: 30px; align-items: start; }
+.contact-details { display: grid; gap: 14px; }
+.contact-detail { display: flex; gap: 14px; align-items: center; background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r); padding: 16px 18px; }
+.contact-detail .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--teal-050); color: var(--teal-text); display: grid; place-items: center; flex-shrink: 0; }
+.contact-detail > div { min-width: 0; } .contact-detail b { word-break: break-word; }
+.contact-detail b { display: block; }
+@media (max-width: 760px) {
+  .about-values { grid-template-columns: 1fr; }
+  .contact-layout { grid-template-columns: 1fr; }
+  .about-band { padding: 30px 24px; }
+}
+@media (min-width: 761px) and (max-width: 1040px) {
+  .about-values { grid-template-columns: 1fr 1fr; }
+}
+.article-title { font-size: clamp(28px, 4vw, 40px); font-weight: 900; text-align: center; margin: 14px 0 24px; }
+.article-body { font-size: 15px; line-height: 1.75; color: var(--ink); }
+.article-body h2 { font-size: 22px; font-weight: 800; margin: 28px 0 12px; }
+.article-body p { margin: 0 0 16px; color: var(--ink-soft); }
+.article-body a { color: var(--navy); text-decoration: underline; }
+.article-body ul, .article-body ol { color: var(--ink-soft); padding-left: 22px; margin: 0 0 16px; }
+.article-body img { border-radius: var(--r); margin: 16px 0; }

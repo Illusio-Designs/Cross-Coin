@@ -1,4 +1,5 @@
 import OrderConfirmationClient from './OrderConfirmationClient';
+import '@/app/styles/account.css';
 
 // The thank-you page after every order:
 //   our own checkout      → ?order=<order number>

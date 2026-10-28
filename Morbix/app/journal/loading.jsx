@@ -1,4 +1,5 @@
 import { BlogGridSkeleton } from '@/components/ui/Skeleton';
+import '@/app/styles/content.css';
 
 export default function JournalLoading() {
   return (
