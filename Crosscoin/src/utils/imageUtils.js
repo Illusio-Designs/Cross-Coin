@@ -71,11 +71,16 @@ export function getBlogImageSrc(url, { w, h, q = 80 } = {}) {
   return `${base}?tr=${parts.join(",")}`;
 }
 
-// Add an ImageKit width/quality transform to a single URL. Only rewrites
-// ImageKit URLs (any existing ?tr= is replaced); everything else passes through
-// unchanged. Width-only keeps the aspect ratio intact.
+// Our own uploads (/api/uploads/…, used when ImageKit is over quota) take the
+// same transform: the API resizes them and serves WebP (Backend
+// utils/imageResizer.js). Without it they downloaded at full size.
+const resizable = (url) => url.includes("ik.imagekit.io") || url.includes("/api/uploads/");
+
+// Add a width/quality transform to a single URL. Only rewrites ImageKit URLs
+// and our own /api/uploads (any existing ?tr= is replaced); everything else
+// passes through unchanged. Width-only keeps the aspect ratio intact.
 export function ikTransform(url, w, q = 78) {
-  if (!url || typeof url !== "string" || !url.includes("ik.imagekit.io")) {
+  if (!url || typeof url !== "string" || !resizable(url)) {
     return url || null;
   }
   return `${url.split("?")[0]}?tr=w-${w},q-${q},f-auto`;
@@ -87,11 +92,11 @@ export function ikTransform(url, w, q = 78) {
 export const HERO_WIDTHS = [800, 1200, 1600];
 export const HERO_SIZES = "(max-width: 860px) 400px, 560px";
 
-// srcSet of width-only ImageKit renditions, e.g. ikSrcSet(url, [300, 600]) →
+// srcSet of width-only renditions, e.g. ikSrcSet(url, [300, 600]) →
 // "…?tr=w-300,q-78,f-auto 300w, …?tr=w-600,q-78,f-auto 600w". Returns
-// undefined for non-ImageKit URLs (they have only one size).
+// undefined for other URLs (they have only one size).
 export function ikSrcSet(url, widths, q = 78) {
-  if (!url || typeof url !== "string" || !url.includes("ik.imagekit.io") || !widths?.length) {
+  if (!url || typeof url !== "string" || !resizable(url) || !widths?.length) {
     return undefined;
   }
   return widths.map((w) => `${ikTransform(url, w, q)} ${w}w`).join(", ");

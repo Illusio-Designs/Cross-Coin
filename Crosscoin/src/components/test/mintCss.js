@@ -14,7 +14,7 @@ export const MINT_CSS = `.cc-test-root{
     --surface: #fffdf8;      /* card surface (kept light so cards lift off beige) */
     --ink: #171525;          /* Near Black — text */
     --ink-soft: #514c5e;     /* muted near-black */
-    --ink-faint: #8c879b;    /* faint near-black */
+    --ink-faint: #6d6979;    /* faint near-black (4.7–5.2:1 on paper/cream; was #8c879b, 3.1–3.4) */
     --line: #e5dfd3;         /* hairline on the beige ground */
     --line-ink: #171525;     /* Near Black — bold stamp borders */
     --gold: #e3274c;         /* no gold in this palette → use the red accent */
@@ -47,18 +47,18 @@ export const MINT_CSS = `.cc-test-root{
   }
 .cc-test-root *{ box-sizing: border-box; }
 .cc-test-root{ margin: 0; background: var(--bg); color: var(--fg);
-    font-family: "Inter", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
+    font-family: var(--ff-body, "Inter"), system-ui, sans-serif; font-size: 15px; line-height: 1.6;
     -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 /* \`clip\` (not \`hidden\`) so the root is not a scroll container: \`hidden\` here
    silently disabled every position: sticky inside it (PDP gallery, cart summary). */
 @supports (overflow: clip){ .cc-test-root{ overflow-x: clip; } }
-.cc-test-root h1, .cc-test-root h2, .cc-test-root h3, .cc-test-root h4, .cc-test-root .disp{ font-family: "Fraunces", system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
+.cc-test-root h1, .cc-test-root h2, .cc-test-root h3, .cc-test-root h4, .cc-test-root .disp{ font-family: var(--ff-display, "Fraunces"), system-ui, sans-serif; font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
 .cc-test-root a{ color: inherit; text-decoration: none; }
 .cc-test-root img{ max-width: 100%; display: block; }
-.cc-test-root .mono{ font-family: "Space Mono", ui-monospace, monospace; }
+.cc-test-root .mono{ font-family: var(--ff-mono, "Space Mono"), ui-monospace, monospace; }
 .cc-test-root .wrap{ width: 100%; max-width: var(--maxw); margin-inline: auto;
     padding-left: max(20px, env(safe-area-inset-left,0px)); padding-right: max(20px, env(safe-area-inset-right,0px)); }
-.cc-test-root .eyebrow{ font-family: "Space Mono", monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--crimson); }
+.cc-test-root .eyebrow{ font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--crimson); }
 .cc-test-root .muted{ color: var(--ink-soft); }
 .cc-test-root [hidden]{ display: none !important; }
 .cc-test-root .btn{ display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-weight: 600; font-size: 14px;
@@ -76,12 +76,12 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .coin{ position: relative; border-radius: 50%; background:
       radial-gradient(circle at 34% 30%, #fff5, transparent 42%),
       conic-gradient(from 210deg, var(--crimson), var(--indigo), var(--crimson));
-    display: grid; place-items: center; color: #fff; font-family: "Fraunces"; font-weight: 800;
+    display: grid; place-items: center; color: #fff; font-family: var(--ff-display, "Fraunces"); font-weight: 800;
     box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 6px rgba(0,0,0,.12); }
 .cc-test-root .coin::after{ content: ""; position: absolute; inset: 7%; border-radius: 50%; border: 1px dashed rgba(255,255,255,.4); }
 .cc-test-root .ticker{ background: var(--indigo); color: #efe9ff; border-bottom: 2px solid var(--line-ink); overflow: hidden; }
 .cc-test-root[data-theme="dark"] .ticker, .cc-test-root:not([data-theme="light"]) .ticker{ background: #0b0718; }
-.cc-test-root .ticker__track{ display: flex; gap: 40px; width: max-content; white-space: nowrap; padding: 8px 0; animation: tick 30s linear infinite; font-family: "Space Mono", monospace; font-size: 12px; letter-spacing: .04em; }
+.cc-test-root .ticker__track{ display: flex; gap: 40px; width: max-content; white-space: nowrap; padding: 8px 0; animation: tick 30s linear infinite; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 12px; letter-spacing: .04em; }
 .cc-test-root .ticker:hover .ticker__track{ animation-play-state: paused; }
 .cc-test-root .ticker__track b{ color: #fff; }
 .cc-test-root .ticker__item{ display: inline-flex; align-items: center; gap: 8px; }
@@ -93,7 +93,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root header.site{ position: sticky; top: env(safe-area-inset-top,0px); z-index: 50; background: color-mix(in srgb, var(--surface) 86%, transparent);
     backdrop-filter: blur(12px) saturate(140%); -webkit-backdrop-filter: blur(12px) saturate(140%); border-bottom: 2px solid var(--line-ink); }
 .cc-test-root .nav{ display: flex; align-items: center; gap: 26px; height: 66px; }
-.cc-test-root .brand{ display: flex; align-items: center; gap: 11px; font-family: "Fraunces"; font-weight: 800; font-size: 20px; letter-spacing: -0.03em; }
+.cc-test-root .brand{ display: flex; align-items: center; gap: 11px; font-family: var(--ff-display, "Fraunces"); font-weight: 800; font-size: 20px; letter-spacing: -0.03em; }
 .cc-test-root .brand .coin{ width: 30px; height: 30px; font-size: 13px; }
 .cc-test-root .brand b{ color: var(--crimson); }
 .cc-test-root .nav__links{ display: flex; gap: 22px; margin-left: 6px; }
@@ -105,20 +105,20 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .ibtn{ width: 42px; height: 42px; display: grid; place-items: center; border: none; background: transparent; color: var(--ink); cursor: pointer; border-radius: var(--r); position: relative; transition: background .2s, transform .15s; }
 .cc-test-root .ibtn:hover{ background: var(--paper-2); transform: translateY(-1px); }
 .cc-test-root .ibtn svg{ width: 23px; height: 23px; }
-.cc-test-root .badge-dot{ position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--crimson); color: #fff; font-size: 10.5px; font-weight: 700; line-height: 1; display: grid; place-items: center; font-family: "Space Mono"; border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line-ink); }
+.cc-test-root .badge-dot{ position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--crimson); color: #fff; font-size: 10.5px; font-weight: 700; line-height: 1; display: grid; place-items: center; font-family: var(--ff-mono, "Space Mono"); border: 2px solid var(--paper); box-shadow: 0 0 0 1px var(--line-ink); }
 .cc-test-root .burger{ display: none; }
 .cc-test-root main{ display: block; }
 .cc-test-root section.block{ padding-block: 66px; }
 .cc-test-root .sechead{ display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 30px; }
 .cc-test-root .sechead h2{ font-size: clamp(27px, 4vw, 44px); }
-.cc-test-root .sechead .idx{ font-family: "Space Mono"; font-size: 12px; color: var(--ink-faint); }
+.cc-test-root .sechead .idx{ font-family: var(--ff-mono, "Space Mono"); font-size: 12px; color: var(--ink-faint); }
 .cc-test-root .seelink{ font-weight: 700; color: var(--crimson); font-size: 13.5px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border-bottom: 2px solid transparent; }
 .cc-test-root .seelink:hover{ border-color: var(--crimson); }
 .cc-test-root .hero{ position: relative; border-bottom: 2px solid var(--line-ink); overflow: hidden; background:
       radial-gradient(760px 420px at 88% 12%, color-mix(in srgb,var(--crimson) 16%, transparent), transparent 62%),
       radial-gradient(640px 420px at 2% 100%, color-mix(in srgb,var(--indigo) 20%, transparent), transparent 60%); }
 .cc-test-root .hero .wrap{ display: grid; grid-template-columns: 1.08fr .92fr; gap: 40px; align-items: center; padding-block: 60px 72px; }
-.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; max-width: 100%; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 4px; padding: 6px 13px 6px 7px; font-family: "Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
+.cc-test-root .hero .tagpill{ display: inline-flex; gap: 8px; align-items: center; max-width: 100%; background: var(--surface); border: 2px solid var(--line-ink); border-radius: 4px; padding: 6px 13px 6px 7px; font-family: var(--ff-mono, "Space Mono"); font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
 .cc-test-root .hero .tagpill i{ flex: 0 0 auto; background: var(--crimson); color: #fff; padding: 3px 8px; border-radius: 4px; font-style: normal; }
 /* The category label can be long (real slide data). Truncate it with an
    ellipsis so the pill never forces the hero grid column wider than the
@@ -132,8 +132,8 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .hero .cta{ display: flex; gap: 12px; flex-wrap: wrap; }
 .cc-test-root .hero .denoms{ display: flex; gap: 10px; margin-top: 34px; flex-wrap: wrap; }
 .cc-test-root .denom{ border: 2px solid var(--line-ink); border-radius: var(--r); padding: 9px 13px; background: var(--surface); box-shadow: var(--stamp-sm); }
-.cc-test-root .denom .n{ font-family: "Fraunces"; font-weight: 800; font-size: 20px; }
-.cc-test-root .denom .l{ font-family: "Space Mono"; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
+.cc-test-root .denom .n{ font-family: var(--ff-display, "Fraunces"); font-weight: 800; font-size: 20px; }
+.cc-test-root .denom .l{ font-family: var(--ff-mono, "Space Mono"); font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
 .cc-test-root .hero__art{ position: relative; aspect-ratio: 1/1; display: grid; place-items: center; }
 .cc-test-root .hero__coin{ width: 72%; aspect-ratio: 1; border-radius: 50%; position: relative; animation: spin 26s linear infinite;
     background:
@@ -141,9 +141,9 @@ export const MINT_CSS = `.cc-test-root{
       conic-gradient(from 200deg, var(--crimson), var(--indigo) 55%, var(--crimson-700) 85%, var(--crimson));
     box-shadow: var(--stamp), inset 0 0 0 3px rgba(255,255,255,.35), inset 0 0 0 12px rgba(0,0,0,.12); border: 2px solid var(--line-ink); }
 .cc-test-root .hero__coin::before{ content:""; position:absolute; inset: 9%; border-radius:50%; border: 2px dashed rgba(255,255,255,.4); }
-.cc-test-root .hero__coin span{ position:absolute; inset:0; display:grid; place-items:center; color:#fff; font-family:"Fraunces"; font-weight:800; font-size: clamp(30px,8vw,64px); letter-spacing:-.04em; animation: spin 26s linear infinite reverse; }
+.cc-test-root .hero__coin span{ position:absolute; inset:0; display:grid; place-items:center; color:#fff; font-family:var(--ff-display, "Fraunces"); font-weight:800; font-size: clamp(30px,8vw,64px); letter-spacing:-.04em; animation: spin 26s linear infinite reverse; }
 @keyframes spin{ to { transform: rotate(360deg); } }
-.cc-test-root .hero__chip{ position: absolute; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); padding: 8px 12px; font-family:"Space Mono"; font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
+.cc-test-root .hero__chip{ position: absolute; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); padding: 8px 12px; font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; font-weight: 700; box-shadow: var(--stamp-sm); }
 .cc-test-root .hero__chip.c1{ top: 4%; left: -2%; }
 .cc-test-root .hero__chip.c2{ bottom: 10%; right: -3%; color: var(--crimson); }
 .cc-test-root .hero__chip.c3{ bottom: -2%; left: 12%; }
@@ -152,10 +152,10 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .catrow{ display: grid; grid-template-columns: 54px 1fr auto auto; align-items: center; gap: 18px; padding: 22px 4px;
     border-bottom: 2px solid var(--line-ink); cursor: pointer; transition: padding .3s var(--ease), background .3s; position: relative; }
 .cc-test-root .catrow:hover{ padding-left: 16px; background: var(--surface); }
-.cc-test-root .catrow .no{ font-family: "Space Mono"; font-size: 13px; color: var(--ink-faint); }
+.cc-test-root .catrow .no{ font-family: var(--ff-mono, "Space Mono"); font-size: 13px; color: var(--ink-faint); }
 .cc-test-root .catrow h3{ font-size: clamp(22px, 3.4vw, 36px); transition: color .25s; }
 .cc-test-root .catrow:hover h3{ color: var(--crimson); }
-.cc-test-root .catrow .ct{ font-family: "Space Mono"; font-size: 12px; color: var(--ink-faint); }
+.cc-test-root .catrow .ct{ font-family: var(--ff-mono, "Space Mono"); font-size: 12px; color: var(--ink-faint); }
 .cc-test-root .catrow .arw{ width: 40px; height: 40px; border: 2px solid var(--line-ink); border-radius: 50%; display: grid; place-items: center; transition: transform .25s var(--ease), background .25s, color .25s; }
 .cc-test-root .catrow:hover .arw{ background: var(--crimson); color: #fff; transform: rotate(-45deg); }
 .cc-test-root .catrow .swatch{ position:absolute; right: 150px; top:50%; transform: translateY(-50%) scale(.6); width: 56px; height: 56px; border-radius: var(--r); opacity: 0; transition: .3s var(--ease); box-shadow: var(--stamp-sm); }
@@ -171,22 +171,22 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .cc-card__img{ aspect-ratio: 1/1; position: relative; display: grid; place-items: center; border-bottom: 2px solid var(--line-ink); cursor: pointer; }
 .cc-test-root .cc-card__img .mint{ position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; opacity: .92; box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), inset 0 0 0 10px rgba(0,0,0,.08); }
 .cc-test-root .cc-card__img .ring{ position:absolute; inset: 14%; border-radius: 50%; border: 2px dashed rgba(0,0,0,.15); }
-.cc-test-root .cc-card__img .flag{ position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--surface); font-family:"Space Mono"; font-size: 10px; font-weight:700; padding: 4px 8px; border-radius: 3px; letter-spacing:.04em; }
+.cc-test-root .cc-card__img .flag{ position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--surface); font-family:var(--ff-mono, "Space Mono"); font-size: 10px; font-weight:700; padding: 4px 8px; border-radius: 3px; letter-spacing:.04em; }
 .cc-test-root .cc-card__img .flag.sale{ background: var(--crimson); color: #fff; }
 .cc-test-root .cc-card__wish{ position: absolute; top: 9px; right: 9px; width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line-ink); display: grid; place-items: center; cursor: pointer; transition: .2s; }
 .cc-test-root .cc-card__wish svg{ width: 16px; height: 16px; }
 .cc-test-root .cc-card__wish.on{ background: var(--crimson); color: #fff; }
 .cc-test-root .cc-card__body{ padding: 13px 14px 15px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
-.cc-test-root .cc-card__body .kl{ font-family:"Space Mono"; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
-.cc-test-root .cc-card__body h3{ font-family: "Inter"; font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
+.cc-test-root .cc-card__body .kl{ font-family:var(--ff-mono, "Space Mono"); font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .08em; }
+.cc-test-root .cc-card__body h3{ font-family: var(--ff-body, "Inter"); font-size: 14.5px; font-weight: 650; letter-spacing: 0; cursor: pointer; }
 .cc-test-root .stars{ color: var(--crimson); font-size: 12px; letter-spacing: 1px; }
-.cc-test-root .stars small{ color: var(--ink-faint); font-family: "Space Mono"; margin-left: 5px; }
+.cc-test-root .stars small{ color: var(--ink-faint); font-family: var(--ff-mono, "Space Mono"); margin-left: 5px; }
 /* Rating chip (Option C) — brand-crimson score chip + short review count.
    Shown on product cards and the product page. */
 .cc-test-root .rc-box{ display: inline-flex; align-items: center; gap: 8px; }
-.cc-test-root .rc-box__s{ background: var(--crimson); color: #fff; font-family: "Space Mono"; font-weight: 700; font-size: 12px; line-height: 1.35; padding: 3px 9px; border-radius: 5px; }
-.cc-test-root .rc-box__n{ font-family: "Space Mono"; font-size: 11.5px; color: var(--ink-soft); }
-.cc-test-root .price{ display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 8px; font-family: "Space Mono"; }
+.cc-test-root .rc-box__s{ background: var(--crimson); color: #fff; font-family: var(--ff-mono, "Space Mono"); font-weight: 700; font-size: 12px; line-height: 1.35; padding: 3px 9px; border-radius: 5px; }
+.cc-test-root .rc-box__n{ font-family: var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-soft); }
+.cc-test-root .price{ display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 8px; font-family: var(--ff-mono, "Space Mono"); }
 .cc-test-root .price .now{ font-weight: 700; font-size: 16px; }
 .cc-test-root .price .was{ color: var(--ink-faint); text-decoration: line-through; font-size: 12px; }
 .cc-test-root .price .off{ margin-left: auto; color: var(--crimson); font-weight: 700; font-size: 11px; }
@@ -198,13 +198,13 @@ export const MINT_CSS = `.cc-test-root{
 /* "The standard" — image-based benefit grid (real product photos in gold rings) */
 .cc-test-root .benefithead{ text-align: center; max-width: 60ch; margin: 0 auto 36px; }
 .cc-test-root .benefithead .eyebrow{ display: block; }
-.cc-test-root .benefithead h2{ color: #fff; font-family: "Fraunces"; font-weight: 700; font-size: clamp(26px,4vw,38px); margin: 10px 0 10px; }
+.cc-test-root .benefithead h2{ color: #fff; font-family: var(--ff-display, "Fraunces"); font-weight: 700; font-size: clamp(26px,4vw,38px); margin: 10px 0 10px; }
 .cc-test-root .benefithead p{ color: #c7bfe6; font-size: 15px; line-height: 1.6; margin: 0; }
 .cc-test-root .benefitgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 40px 32px; }
 .cc-test-root .benefit{ text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .cc-test-root .benefit__img{ width: 118px; height: 118px; border-radius: 50%; overflow: hidden; border: 3px solid var(--gold); background: rgba(255,255,255,.05); display: grid; place-items: center; }
 .cc-test-root .benefit__img img{ width: 100%; height: 100%; object-fit: cover; }
-.cc-test-root .benefit b{ color: #fff; font-family: "Fraunces"; font-weight: 700; font-size: 18px; }
+.cc-test-root .benefit b{ color: #fff; font-family: var(--ff-display, "Fraunces"); font-weight: 700; font-size: 18px; }
 .cc-test-root .benefit__d{ color: #b7aed6; font-size: 13.5px; line-height: 1.55; max-width: 30ch; }
 @media (max-width: 820px){ .cc-test-root .benefitgrid{ grid-template-columns: 1fr 1fr; gap: 30px 20px; } }
 @media (max-width: 440px){ .cc-test-root .benefitgrid{ grid-template-columns: 1fr; } .cc-test-root .benefit__img{ width: 104px; height: 104px; } }
@@ -213,7 +213,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .techcard:hover{ transform: translateY(-4px); background: rgba(255,255,255,.08); }
 .cc-test-root .techcard .mk{ width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); color: var(--gold); display: grid; place-items: center; margin-bottom: 14px; }
 .cc-test-root .techcard .mk svg{ width: 22px; height: 22px; }
-.cc-test-root .techcard b{ color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: "Fraunces"; }
+.cc-test-root .techcard b{ color: #fff; font-size: 15px; display: block; margin-bottom: 5px; font-family: var(--ff-display, "Fraunces"); }
 .cc-test-root .techcard span{ color: #c6bce4; font-size: 13px; }
 .cc-test-root .revgrid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .cc-test-root .rev{ border: 2px solid var(--line-ink); border-radius: var(--r); background: linear-gradient(160deg, color-mix(in srgb, var(--crimson) 8%, var(--surface)), var(--surface)); padding: 20px; box-shadow: var(--stamp-sm); }
@@ -221,20 +221,20 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .rev .stars{ margin-bottom: 8px; }
 .cc-test-root .rev p{ margin: 0; font-size: 14px; line-height: 1.55; }
 .cc-test-root .rev .who{ display: flex; flex-direction: column; min-width: 0; }
-.cc-test-root .rev .av{ width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: "Fraunces"; border: 2px solid var(--line-ink); flex: 0 0 auto; }
+.cc-test-root .rev .av{ width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-family: var(--ff-display, "Fraunces"); border: 2px solid var(--line-ink); flex: 0 0 auto; }
 .cc-test-root .rev .who b{ font-size: 13.5px; }
-.cc-test-root .rev .who span{ font-size: 11px; color: var(--ink-faint); font-family: "Space Mono"; }
-.cc-test-root .rev .vbadge{ margin-left: auto; align-self: flex-start; font-family: "Space Mono"; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--teal); padding: 3px 8px; border-radius: 999px; flex: 0 0 auto; }
+.cc-test-root .rev .who span{ font-size: 11px; color: var(--ink-faint); font-family: var(--ff-mono, "Space Mono"); }
+.cc-test-root .rev .vbadge{ margin-left: auto; align-self: flex-start; font-family: var(--ff-mono, "Space Mono"); font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--teal); padding: 3px 8px; border-radius: 999px; flex: 0 0 auto; }
 .cc-test-root .jgrid{ display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .cc-test-root .post{ border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; background: var(--surface); box-shadow: var(--stamp-sm); transition: transform .18s var(--ease), box-shadow .18s var(--ease); cursor: pointer; }
 .cc-test-root .post:hover{ transform: translate(-3px,-3px); box-shadow: 6px 6px 0 var(--line-ink); }
 .cc-test-root .post__img{ aspect-ratio: 16/10; border-bottom: 2px solid var(--line-ink); position: relative; }
 .cc-test-root .post__b{ padding: 16px 16px 18px; }
-.cc-test-root .post__b .m{ font-family:"Space Mono"; font-size: 11px; color: var(--crimson); text-transform: uppercase; letter-spacing: .06em; }
-.cc-test-root .post__b h3{ font-family: "Inter"; font-size: 16px; font-weight: 650; margin-top: 7px; letter-spacing: -.01em; }
+.cc-test-root .post__b .m{ font-family:var(--ff-mono, "Space Mono"); font-size: 11px; color: var(--crimson); text-transform: uppercase; letter-spacing: .06em; }
+.cc-test-root .post__b h3{ font-family: var(--ff-body, "Inter"); font-size: 16px; font-weight: 650; margin-top: 7px; letter-spacing: -.01em; }
 .cc-test-root .faq{ max-width: 820px; margin-inline: auto; }
 .cc-test-root .qa{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); margin-bottom: 12px; box-shadow: var(--stamp-sm); overflow: hidden; }
-.cc-test-root .qa__q{ width: 100%; text-align: left; background: none; border: none; padding: 17px 18px; font-size: 15px; font-weight: 650; font-family: "Fraunces"; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.cc-test-root .qa__q{ width: 100%; text-align: left; background: none; border: none; padding: 17px 18px; font-size: 15px; font-weight: 650; font-family: var(--ff-display, "Fraunces"); color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .cc-test-root .qa__q .pm{ width: 26px; height: 26px; border: 2px solid var(--line-ink); border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; transition: transform .25s var(--ease), background .25s, color .25s; }
 .cc-test-root .qa.open .qa__q .pm{ background: var(--crimson); color: #fff; transform: rotate(45deg); }
 .cc-test-root .qa__a{ max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
@@ -243,12 +243,12 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .mint h2{ color: #fff; font-size: clamp(27px,3.8vw,44px); }
 .cc-test-root .mint p{ color: #ffdbe1; max-width: 46ch; margin: 13px auto 24px; }
 .cc-test-root .mintform{ display: flex; gap: 10px; max-width: 440px; margin: 0 auto; }
-.cc-test-root .mintform input{ flex: 1; min-width: 0; border: 2px solid var(--line-ink); border-radius: var(--r); padding: 14px 16px; font-family: "Space Mono"; font-size: 13px; background: #fff; color: var(--ink); }
+.cc-test-root .mintform input{ flex: 1; min-width: 0; border: 2px solid var(--line-ink); border-radius: var(--r); padding: 14px 16px; font-family: var(--ff-mono, "Space Mono"); font-size: 13px; background: #fff; color: var(--ink); }
 .cc-test-root .mintform .btn{ background: var(--indigo); color: #fff; }
 .cc-test-root[data-theme="dark"] .mintform .btn, .cc-test-root:not([data-theme="light"]) .mintform .btn{ color: var(--paper); }
 .cc-test-root footer.site{ background: var(--surface); border-top: 2px solid var(--line-ink); }
 .cc-test-root .foot{ display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 30px; padding-block: 52px 30px; }
-.cc-test-root .foot h4{ font-family: "Space Mono"; font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint); margin: 0 0 14px; }
+.cc-test-root .foot h4{ font-family: var(--ff-mono, "Space Mono"); font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--ink-faint); margin: 0 0 14px; }
 .cc-test-root .foot a{ display: block; color: var(--ink-soft); font-size: 14px; padding: 5px 0; cursor: pointer; transition: color .2s, transform .2s; }
 .cc-test-root .foot a:hover{ color: var(--crimson); transform: translateX(3px); }
 .cc-test-root .foot .ab p{ color: var(--ink-soft); font-size: 14px; max-width: 32ch; }
@@ -256,17 +256,17 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .foot .soc a{ width: 40px; height: 40px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; box-shadow: var(--stamp-sm); }
 .cc-test-root .foot .soc a:hover{ background: var(--crimson); color: #fff; transform: translate(-2px,-2px); }
 .cc-test-root .foot .soc svg{ width: 18px; height: 18px; }
-.cc-test-root .footend{ border-top: 2px solid var(--line-ink); padding-block: 18px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: "Space Mono"; font-size: 11.5px; color: var(--ink-faint); }
+.cc-test-root .footend{ border-top: 2px solid var(--line-ink); padding-block: 18px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-faint); }
 .cc-test-root .shophead{ border-bottom: 2px solid var(--line-ink); padding-block: 30px; }
-.cc-test-root .crumbs{ font-family:"Space Mono"; font-size: 11.5px; color: var(--ink-faint); }
+.cc-test-root .crumbs{ font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-faint); }
 .cc-test-root .crumbs span{ color: var(--crimson); }
 .cc-test-root .shopbar{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 26px; }
 .cc-test-root .shopbar .dd.sort{ margin-left: auto; }
 @media (max-width: 560px){ .cc-test-root .shopbar .dd.sort{ margin-left: 0; } }
-.cc-test-root .chip{ font-family:"Space Mono"; font-size: 12px; font-weight: 700; padding: 8px 14px; border: 2px solid var(--line-ink); border-radius: 4px; background: var(--surface); cursor: pointer; box-shadow: var(--stamp-sm); transition: transform .14s, background .2s, color .2s; }
+.cc-test-root .chip{ font-family:var(--ff-mono, "Space Mono"); font-size: 12px; font-weight: 700; padding: 8px 14px; border: 2px solid var(--line-ink); border-radius: 4px; background: var(--surface); cursor: pointer; box-shadow: var(--stamp-sm); transition: transform .14s, background .2s, color .2s; }
 .cc-test-root .chip:hover{ transform: translate(-2px,-2px); }
 .cc-test-root .chip.on{ background: var(--ink); color: var(--surface); }
-.cc-test-root .sortsel{ margin-left: auto; font-family:"Space Mono"; font-size: 12px; padding: 9px 12px; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); color: var(--ink); box-shadow: var(--stamp-sm); }
+.cc-test-root .sortsel{ margin-left: auto; font-family:var(--ff-mono, "Space Mono"); font-size: 12px; padding: 9px 12px; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); color: var(--ink); box-shadow: var(--stamp-sm); }
 .cc-test-root .pd{ display: grid; grid-template-columns: 1.05fr .95fr; gap: 42px; padding-block: 36px; align-items: start; }
 .cc-test-root .gallery{ position: sticky; top: 90px; }
 /* Pinned gallery must fit the screen: on short laptop screens narrow the column
@@ -282,20 +282,20 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .gthumb.on{ border-color: var(--crimson); box-shadow: 3px 3px 0 var(--crimson); }
 .cc-test-root .gthumb:hover{ transform: translateY(-2px); }
 .cc-test-root .gthumb .mint{ width: 60%; aspect-ratio: 1; border-radius: 50%; }
-.cc-test-root .buy .kl{ font-family:"Space Mono"; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--crimson); }
+.cc-test-root .buy .kl{ font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--crimson); }
 .cc-test-root .buy h1{ font-size: clamp(26px,4vw,40px); margin: 8px 0 10px; }
-.cc-test-root .buy .prow{ display: flex; align-items: baseline; gap: 12px; font-family:"Space Mono"; margin: 14px 0 6px; }
+.cc-test-root .buy .prow{ display: flex; align-items: baseline; gap: 12px; font-family:var(--ff-mono, "Space Mono"); margin: 14px 0 6px; }
 .cc-test-root .buy .prow .now{ font-size: 26px; font-weight: 700; }
 .cc-test-root .buy .prow .was{ color: var(--ink-faint); text-decoration: line-through; }
 .cc-test-root .buy .prow .off{ background: var(--crimson); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 3px; }
-.cc-test-root .buy .tax{ font-size: 12px; color: var(--ink-faint); font-family:"Space Mono"; }
-.cc-test-root .optlabel{ font-family:"Space Mono"; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); margin: 22px 0 10px; display: flex; justify-content: space-between; }
+.cc-test-root .buy .tax{ font-size: 12px; color: var(--ink-faint); font-family:var(--ff-mono, "Space Mono"); }
+.cc-test-root .optlabel{ font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); margin: 22px 0 10px; display: flex; justify-content: space-between; }
 .cc-test-root .optlabel a{ color: var(--crimson); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 700; }
 .cc-test-root .swatches{ display: flex; gap: 10px; flex-wrap: wrap; }
 .cc-test-root .sw{ width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line-ink); cursor: pointer; position: relative; box-shadow: var(--stamp-sm); }
 .cc-test-root .sw.on::after{ content:""; position: absolute; inset: -6px; border: 2px solid var(--crimson); border-radius: 50%; }
 .cc-test-root .sizes{ display: flex; gap: 8px; flex-wrap: wrap; }
-.cc-test-root .size{ min-width: 52px; padding: 11px 10px; text-align: center; border: 2px solid var(--line-ink); border-radius: var(--r); font-family:"Space Mono"; font-weight: 700; font-size: 13px; cursor: pointer; background: var(--surface); box-shadow: var(--stamp-sm); transition: transform .14s; }
+.cc-test-root .size{ min-width: 52px; padding: 11px 10px; text-align: center; border: 2px solid var(--line-ink); border-radius: var(--r); font-family:var(--ff-mono, "Space Mono"); font-weight: 700; font-size: 13px; cursor: pointer; background: var(--surface); box-shadow: var(--stamp-sm); transition: transform .14s; }
 .cc-test-root .size:hover{ transform: translate(-2px,-2px); }
 .cc-test-root .size.on{ background: var(--ink); color: var(--surface); }
 .cc-test-root .size.off{ opacity: .35; text-decoration: line-through; cursor: not-allowed; box-shadow: none; }
@@ -305,47 +305,47 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .pack.on{ outline: 2px solid var(--crimson); outline-offset: 2px; }
 .cc-test-root .pack .radio{ width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-ink); flex-shrink: 0; display: grid; place-items: center; }
 .cc-test-root .pack.on .radio::after{ content:""; width: 10px; height: 10px; border-radius: 50%; background: var(--crimson); }
-.cc-test-root .pack b{ font-family: "Fraunces"; font-size: 15px; }
+.cc-test-root .pack b{ font-family: var(--ff-display, "Fraunces"); font-size: 15px; }
 .cc-test-root .pack .d{ font-size: 12.5px; color: var(--ink-soft); }
-.cc-test-root .pack .pp{ margin-left: auto; text-align: right; font-family:"Space Mono"; }
+.cc-test-root .pack .pp{ margin-left: auto; text-align: right; font-family:var(--ff-mono, "Space Mono"); }
 .cc-test-root .pack .pp .pnow{ font-weight: 700; font-size: 16px; }
 .cc-test-root .pack .pp .psave{ font-size: 11px; color: var(--crimson); font-weight: 700; }
-.cc-test-root .pack .tagbest{ position: absolute; top: -11px; right: 14px; background: var(--indigo); color: #fff; font-family:"Space Mono"; font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 3px; letter-spacing: .06em; }
+.cc-test-root .pack .tagbest{ position: absolute; top: -11px; right: 14px; background: var(--indigo); color: #fff; font-family:var(--ff-mono, "Space Mono"); font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 3px; letter-spacing: .06em; }
 .cc-test-root[data-theme="dark"] .pack .tagbest, .cc-test-root:not([data-theme="light"]) .pack .tagbest{ color: var(--paper); }
 .cc-test-root .qtyrow{ display: flex; gap: 12px; align-items: center; margin: 22px 0 14px; }
 .cc-test-root .qty{ display: inline-flex; border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); overflow: hidden; }
 .cc-test-root .qty button{ width: 42px; height: 46px; border: none; background: var(--surface); color: var(--ink); font-size: 18px; cursor: pointer; }
 .cc-test-root .qty button:hover{ background: var(--paper-2); }
-.cc-test-root .qty span{ width: 46px; display: grid; place-items: center; font-family:"Space Mono"; font-weight: 700; border-inline: 2px solid var(--line-ink); }
+.cc-test-root .qty span{ width: 46px; display: grid; place-items: center; font-family:var(--ff-mono, "Space Mono"); font-weight: 700; border-inline: 2px solid var(--line-ink); }
 .cc-test-root .usps{ display: grid; gap: 10px; margin-top: 22px; }
 .cc-test-root .usp{ display: flex; gap: 10px; align-items: center; font-size: 13.5px; }
 .cc-test-root .usp svg{ width: 18px; height: 18px; color: var(--crimson); flex-shrink: 0; }
 .cc-test-root .acc{ margin-top: 24px; border-top: 2px solid var(--line-ink); }
 .cc-test-root .acc__i{ border-bottom: 2px solid var(--line-ink); }
-.cc-test-root .acc__q{ width: 100%; background: none; border: none; padding: 16px 2px; font-family:"Fraunces"; font-weight: 650; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; cursor: pointer; }
+.cc-test-root .acc__q{ width: 100%; background: none; border: none; padding: 16px 2px; font-family:var(--ff-display, "Fraunces"); font-weight: 650; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; cursor: pointer; }
 .cc-test-root .acc__a{ max-height: 0; overflow: hidden; transition: max-height .3s var(--ease); }
 .cc-test-root .acc__a > div{ padding: 0 2px 16px; color: var(--ink-soft); font-size: 14px; }
 .cc-test-root .cartpage{ display: grid; grid-template-columns: 1.5fr .9fr; gap: 30px; padding-block: 36px; align-items: start; }
 .cc-test-root .citem{ display: grid; grid-template-columns: 92px 1fr auto; gap: 16px; padding: 18px 0; border-bottom: 2px solid var(--line-ink); align-items: center; }
 .cc-test-root .citem .th{ width: 92px; height: 92px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; box-shadow: var(--stamp-sm); }
 .cc-test-root .citem .th .mint{ width: 62%; aspect-ratio: 1; border-radius: 50%; }
-.cc-test-root .citem h3{ font-family:"Inter"; font-size: 15px; font-weight: 650; }
-.cc-test-root .citem .meta{ font-family:"Space Mono"; font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; }
-.cc-test-root .citem .rm{ background: none; border: none; color: var(--ink-faint); font-family:"Space Mono"; font-size: 11.5px; cursor: pointer; margin-top: 8px; padding: 0; }
+.cc-test-root .citem h3{ font-family:var(--ff-body, "Inter"); font-size: 15px; font-weight: 650; }
+.cc-test-root .citem .meta{ font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-faint); margin-top: 3px; }
+.cc-test-root .citem .rm{ background: none; border: none; color: var(--ink-faint); font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; cursor: pointer; margin-top: 8px; padding: 0; }
 .cc-test-root .citem .rm:hover{ color: var(--crimson); }
 .cc-test-root .citem .right{ text-align: right; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-.cc-test-root .citem .lp{ font-family:"Space Mono"; font-weight: 700; }
+.cc-test-root .citem .lp{ font-family:var(--ff-mono, "Space Mono"); font-weight: 700; }
 .cc-test-root .summary{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); padding: 22px; box-shadow: var(--stamp); position: sticky; top: 90px; }
 .cc-test-root .summary h3{ font-size: 18px; margin-bottom: 14px; }
-.cc-test-root .srow{ display: flex; justify-content: space-between; font-family:"Space Mono"; font-size: 13.5px; padding: 7px 0; color: var(--ink-soft); }
+.cc-test-root .srow{ display: flex; justify-content: space-between; font-family:var(--ff-mono, "Space Mono"); font-size: 13.5px; padding: 7px 0; color: var(--ink-soft); }
 .cc-test-root .srow.total{ border-top: 2px solid var(--line-ink); margin-top: 8px; padding-top: 12px; font-size: 18px; color: var(--ink); font-weight: 700; }
 .cc-test-root .promo{ display: flex; gap: 8px; margin: 14px 0; }
-.cc-test-root .promo input{ flex: 1; min-width: 0; border: 2px solid var(--line-ink); border-radius: var(--r); padding: 11px 12px; font-family:"Space Mono"; font-size: 12px; background: var(--surface); color: var(--ink); text-transform: uppercase; }
+.cc-test-root .promo input{ flex: 1; min-width: 0; border: 2px solid var(--line-ink); border-radius: var(--r); padding: 11px 12px; font-family:var(--ff-mono, "Space Mono"); font-size: 12px; background: var(--surface); color: var(--ink); text-transform: uppercase; }
 .cc-test-root .freebar{ height: 8px; border-radius: 99px; background: var(--paper-2); overflow: hidden; border: 2px solid var(--line-ink); margin: 6px 0 16px; }
 .cc-test-root .freebar span{ display: block; height: 100%; background: var(--crimson); transition: width .4s var(--ease); }
 .cc-test-root .cowrap{ display: grid; grid-template-columns: 1.5fr .9fr; gap: 30px; padding-block: 28px 56px; align-items: start; }
 .cc-test-root .stepper{ display: flex; align-items: center; gap: 12px; margin: 22px 0 26px; }
-.cc-test-root .stepper .st{ display: flex; align-items: center; gap: 10px; font-family: "Space Mono"; font-size: 12px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
+.cc-test-root .stepper .st{ display: flex; align-items: center; gap: 10px; font-family: var(--ff-mono, "Space Mono"); font-size: 12px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em; }
 .cc-test-root .stepper .st .n{ width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line-ink); display: grid; place-items: center; background: var(--surface); box-shadow: var(--stamp-sm); transition: .2s; }
 .cc-test-root .stepper .st.on{ color: var(--ink); }
 .cc-test-root .stepper .st.on .n{ background: var(--crimson); color: #fff; }
@@ -353,9 +353,9 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .stepper .bar{ flex: 1; height: 2px; background: var(--line-ink); }
 .cc-test-root .costep{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); padding: 22px; box-shadow: var(--stamp); }
 .cc-test-root .costep h3{ font-size: 19px; margin-bottom: 4px; }
-.cc-test-root .costep .hint{ font-family:"Space Mono"; font-size: 11.5px; color: var(--ink-faint); margin-bottom: 16px; }
+.cc-test-root .costep .hint{ font-family:var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-faint); margin-bottom: 16px; }
 .cc-test-root .ffield{ display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.cc-test-root .ffield label{ font-family:"Space Mono"; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+.cc-test-root .ffield label{ font-family:var(--ff-mono, "Space Mono"); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
 .cc-test-root .ffield input{ border: 2px solid var(--line-ink); border-radius: var(--r); padding: 12px 13px; font-family: inherit; font-size: 14px; background: var(--surface); color: var(--ink); box-shadow: var(--stamp-sm); }
 .cc-test-root .ffield input:focus{ outline: 2px solid var(--crimson); outline-offset: 1px; }
 .cc-test-root .frow{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -367,18 +367,18 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .payopt.on .radio::after{ content:""; width: 10px; height: 10px; border-radius: 50%; background: var(--crimson); }
 .cc-test-root .payopt .pi{ width: 40px; height: 40px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; flex-shrink: 0; }
 .cc-test-root .payopt .pi svg{ width: 20px; height: 20px; }
-.cc-test-root .payopt b{ font-family: "Fraunces"; font-size: 15px; display: block; }
+.cc-test-root .payopt b{ font-family: var(--ff-display, "Fraunces"); font-size: 15px; display: block; }
 .cc-test-root .payopt .d{ font-size: 12.5px; color: var(--ink-soft); }
-.cc-test-root .payopt .tag{ margin-left: auto; font-family:"Space Mono"; font-size: 10px; font-weight: 700; color: var(--crimson); border: 2px solid var(--crimson); border-radius: 3px; padding: 3px 7px; }
+.cc-test-root .payopt .tag{ margin-left: auto; font-family:var(--ff-mono, "Space Mono"); font-size: 10px; font-weight: 700; color: var(--crimson); border: 2px solid var(--crimson); border-radius: 3px; padding: 3px 7px; }
 .cc-test-root .corow{ display: flex; gap: 10px; margin-top: 20px; }
-.cc-test-root .coback{ background: none; border: none; color: var(--ink-soft); font-family:"Space Mono"; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.cc-test-root .coback{ background: none; border: none; color: var(--ink-soft); font-family:var(--ff-mono, "Space Mono"); font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .cc-test-root .coback:hover{ color: var(--crimson); }
 .cc-test-root .miniitem{ display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 2px solid var(--line); }
 .cc-test-root .miniitem .th{ width: 46px; height: 46px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; flex-shrink: 0; }
 .cc-test-root .miniitem .th .mint{ width: 60%; aspect-ratio:1; border-radius:50%; }
 .cc-test-root .miniitem .nm{ font-size: 13px; font-weight: 600; }
-.cc-test-root .miniitem .mm{ font-family:"Space Mono"; font-size: 10.5px; color: var(--ink-faint); }
-.cc-test-root .miniitem .lp{ margin-left: auto; font-family:"Space Mono"; font-weight: 700; font-size: 13px; }
+.cc-test-root .miniitem .mm{ font-family:var(--ff-mono, "Space Mono"); font-size: 10.5px; color: var(--ink-faint); }
+.cc-test-root .miniitem .lp{ margin-left: auto; font-family:var(--ff-mono, "Space Mono"); font-weight: 700; font-size: 13px; }
 .cc-test-root .cosuccess{ text-align: center; padding: 40px 10px; }
 .cc-test-root .cosuccess .seal{ width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center; background: var(--crimson); color: #fff; box-shadow: var(--stamp); border: 2px solid var(--line-ink); }
 .cc-test-root .cosuccess .seal svg{ width: 40px; height: 40px; }
@@ -390,19 +390,19 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .drawer{ position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); background: var(--surface); border-left: 2px solid var(--line-ink); z-index: 61; transform: translateX(100%); transition: transform .34s var(--ease); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top,0px); }
 .cc-test-root .drawer.on{ transform: none; }
 .cc-test-root .drawer__h{ display: flex; align-items: center; justify-content: space-between; padding: 18px 18px; border-bottom: 2px solid var(--line-ink); }
-.cc-test-root .drawer__h b{ font-family: "Fraunces"; font-size: 18px; }
+.cc-test-root .drawer__h b{ font-family: var(--ff-display, "Fraunces"); font-size: 18px; }
 .cc-test-root .drawer__body{ flex: 1; overflow-y: auto; padding: 8px 18px; }
 .cc-test-root .drawer__foot{ border-top: 2px solid var(--line-ink); padding: 16px 18px calc(16px + env(safe-area-inset-bottom,0px)); }
 .cc-test-root .ditem{ display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; padding: 14px 0; border-bottom: 2px solid var(--line); align-items: center; }
 .cc-test-root .ditem .th{ width: 62px; height: 62px; border: 2px solid var(--line-ink); border-radius: var(--r); display: grid; place-items: center; }
 .cc-test-root .ditem .th .mint{ width: 60%; aspect-ratio:1; border-radius:50%; }
-.cc-test-root .ditem h4{ font-family:"Inter"; font-size: 13.5px; font-weight: 600; margin: 0; }
-.cc-test-root .ditem .m{ font-family:"Space Mono"; font-size: 11px; color: var(--ink-faint); }
-.cc-test-root .ditem .lp{ font-family:"Space Mono"; font-weight: 700; font-size: 13px; }
+.cc-test-root .ditem h4{ font-family:var(--ff-body, "Inter"); font-size: 13.5px; font-weight: 600; margin: 0; }
+.cc-test-root .ditem .m{ font-family:var(--ff-mono, "Space Mono"); font-size: 11px; color: var(--ink-faint); }
+.cc-test-root .ditem .lp{ font-family:var(--ff-mono, "Space Mono"); font-weight: 700; font-size: 13px; }
 .cc-test-root .mnav{ position: fixed; inset: 0; z-index: 62; background: var(--surface); transform: translateX(100%); transition: transform .32s var(--ease); display: flex; flex-direction: column; padding: 18px max(20px,env(safe-area-inset-left,0px)); }
 .cc-test-root .mnav.on{ transform: none; }
-.cc-test-root .mnav a{ font-family: "Fraunces"; font-size: 24px; font-weight: 700; padding: 16px 0; border-bottom: 2px solid var(--line); cursor: pointer; }
-.cc-test-root #toast{ position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%) translateY(16px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: var(--r); border: 2px solid var(--line-ink); font-family:"Space Mono"; font-size: 12.5px; font-weight: 700; box-shadow: var(--stamp); opacity: 0; pointer-events: none; transition: .28s var(--ease); z-index: 90; }
+.cc-test-root .mnav a{ font-family: var(--ff-display, "Fraunces"); font-size: 24px; font-weight: 700; padding: 16px 0; border-bottom: 2px solid var(--line); cursor: pointer; }
+.cc-test-root #toast{ position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%) translateY(16px); background: var(--ink); color: var(--surface); padding: 12px 20px; border-radius: var(--r); border: 2px solid var(--line-ink); font-family:var(--ff-mono, "Space Mono"); font-size: 12.5px; font-weight: 700; box-shadow: var(--stamp); opacity: 0; pointer-events: none; transition: .28s var(--ease); z-index: 90; }
 .cc-test-root #toast.on{ opacity: 1; transform: translateX(-50%) translateY(0); }
 .cc-test-root .reveal{ opacity: 0; transform: translateY(20px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
 .cc-test-root .reveal.in{ opacity: 1; transform: none; }
@@ -440,7 +440,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .pdpsticky__thumb img{ width: 100%; height: 100%; object-fit: cover; }
 .cc-test-root .pdpsticky__meta{ display: flex; flex-direction: column; min-width: 0; }
 .cc-test-root .pdpsticky__meta b{ font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
-.cc-test-root .pdpsticky__meta span{ font-family: "Space Mono"; color: var(--crimson); font-size: 13px; }
+.cc-test-root .pdpsticky__meta span{ font-family: var(--ff-mono, "Space Mono"); color: var(--crimson); font-size: 13px; }
 .cc-test-root .pdpsticky__btns{ display: flex; gap: 8px; flex: 0 0 auto; }
 .cc-test-root .pdpsticky__btns .btn{ padding: 11px 16px; font-size: 12.5px; }
 @media (max-width: 480px){ .cc-test-root .pdpsticky__btns .btn{ padding: 11px 13px; } .cc-test-root .pdpsticky__meta b{ max-width: 34vw; } }
@@ -460,8 +460,8 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .scmodal__note{ color: var(--ink-soft); font-size: 13px; margin: 0 0 14px; }
 .cc-test-root .sctable{ width: 100%; border-collapse: collapse; font-size: 13px; }
 .cc-test-root .sctable th, .cc-test-root .sctable td{ border: 1.5px solid var(--line); padding: 8px 10px; text-align: left; }
-.cc-test-root .sctable th{ background: var(--paper-2); font-family: "Space Mono"; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-.cc-test-root .scmodal__tip{ color: var(--ink-faint); font-size: 12px; font-family: "Space Mono"; margin: 12px 0 0; }
+.cc-test-root .sctable th{ background: var(--paper-2); font-family: var(--ff-mono, "Space Mono"); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.cc-test-root .scmodal__tip{ color: var(--ink-faint); font-size: 12px; font-family: var(--ff-mono, "Space Mono"); margin: 12px 0 0; }
 
 .cc-test-root .rvform{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 18px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
 .cc-test-root .rvform__stars{ display: flex; gap: 4px; }
@@ -476,30 +476,30 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .mkmodal{ position: fixed; inset: 0; z-index: 95; background: rgba(10,6,24,.62); display: grid; place-items: center; padding: 20px; }
 .cc-test-root .mkmodal__card{ position: relative; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); max-width: 400px; width: 100%; padding: 28px 24px 24px; }
 .cc-test-root .mkmodal__x{ position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line-ink); background: var(--surface); color: var(--ink); display: grid; place-items: center; cursor: pointer; }
-.cc-test-root .mkmodal__h{ font-family: "Fraunces", serif; font-weight: 700; font-size: 24px; margin: 8px 0 8px; text-wrap: balance; }
+.cc-test-root .mkmodal__h{ font-family: var(--ff-display, "Fraunces"), serif; font-weight: 700; font-size: 24px; margin: 8px 0 8px; text-wrap: balance; }
 .cc-test-root .mkmodal__d{ color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 0 0 16px; }
-.cc-test-root .mkcode{ display: flex; align-items: center; justify-content: center; gap: 10px; font-family: "Space Mono", monospace; font-weight: 700; font-size: 18px; letter-spacing: .1em; color: var(--crimson); border: 2px dashed var(--crimson); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
+.cc-test-root .mkcode{ display: flex; align-items: center; justify-content: center; gap: 10px; font-family: var(--ff-mono, "Space Mono"), monospace; font-weight: 700; font-size: 18px; letter-spacing: .1em; color: var(--crimson); border: 2px dashed var(--crimson); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
 .cc-test-root .mkcode span{ font-size: 10.5px; letter-spacing: .05em; color: var(--ink-faint); border-left: 1.5px solid var(--line); padding-left: 10px; }
-.cc-test-root .mklater{ display: block; width: 100%; margin-top: 10px; background: none; border: none; color: var(--ink-faint); font-family: "Space Mono", monospace; font-size: 11.5px; cursor: pointer; }
+.cc-test-root .mklater{ display: block; width: 100%; margin-top: 10px; background: none; border: none; color: var(--ink-faint); font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 11.5px; cursor: pointer; }
 
 /* --- PDP per-pair colour picker (multi-pair packs) --- */
 .cc-test-root .perpair{ margin-top: 6px; border: 2px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: color-mix(in srgb, var(--gold) 6%, var(--surface)); }
 .cc-test-root .perpair__row{ display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-.cc-test-root .perpair__n{ font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-faint); min-width: 54px; }
+.cc-test-root .perpair__n{ font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 11px; color: var(--ink-faint); min-width: 54px; }
 .cc-test-root .perpair__sw{ display: flex; flex-wrap: wrap; gap: 7px; }
 .cc-test-root .perpair__dot{ width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line-ink); cursor: pointer; padding: 0; }
 .cc-test-root .perpair__dot.on{ box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--crimson); }
 
 .cc-test-root .lowstock{ display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--crimson); }
 .cc-test-root .grievance{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 22px; margin-top: 14px; }
-.cc-test-root .grievance h3{ font-family: "Fraunces", serif; font-weight: 700; font-size: 20px; margin: 8px 0 8px; }
+.cc-test-root .grievance h3{ font-family: var(--ff-display, "Fraunces"), serif; font-weight: 700; font-size: 20px; margin: 8px 0 8px; }
 .cc-test-root .grievance p{ color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin: 0 0 14px; max-width: 64ch; }
 .cc-test-root .grievance__dl{ display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0; }
 .cc-test-root .grievance__dl > div{ display: flex; gap: 12px; font-size: 13.5px; }
-.cc-test-root .grievance__dl dt{ font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); min-width: 72px; }
+.cc-test-root .grievance__dl dt{ font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); min-width: 72px; }
 .cc-test-root .grievance__dl dd{ margin: 0; color: var(--ink-soft); }
 .cc-test-root .artbar{ display: flex; gap: 10px; margin: 14px 0 4px; }
-.cc-test-root .artbtn{ display: inline-flex; align-items: center; gap: 7px; font-family: "Space Mono", monospace; font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 8px 14px; cursor: pointer; }
+.cc-test-root .artbtn{ display: inline-flex; align-items: center; gap: 7px; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 8px 14px; cursor: pointer; }
 .cc-test-root .artbtn.on{ color: var(--crimson); border-color: var(--crimson); }
 .cc-test-root .arttoc{ border: 2px solid var(--line); border-radius: var(--r); background: var(--paper-2); padding: 16px 18px; margin: 18px 0; }
 .cc-test-root .arttoc__h{ font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
@@ -510,13 +510,13 @@ export const MINT_CSS = `.cc-test-root{
 
 /* --- Cart bundle-pack group card --- */
 .cc-test-root .packcolors{ display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 6px 0; }
-.cc-test-root .packcolors__c{ display: inline-flex; align-items: center; gap: 6px; font-family: "Space Mono", monospace; font-size: 11px; color: var(--ink-soft); }
+.cc-test-root .packcolors__c{ display: inline-flex; align-items: center; gap: 6px; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 11px; color: var(--ink-soft); }
 .cc-test-root .packcolors__c i{ width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-ink); display: inline-block; }
 
 /* --- Custom open/close dropdown (Stamped "A" style) --- */
 .cc-test-root .dd{ position: relative; }
 .cc-test-root .dd.sort{ width: 210px; max-width: 100%; }
-.cc-test-root .dd__btn{ display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; cursor: pointer; text-align: left; font-family: "Space Mono", monospace; font-size: 14px; color: var(--ink); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 13px 15px; }
+.cc-test-root .dd__btn{ display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; cursor: pointer; text-align: left; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 14px; color: var(--ink); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 13px 15px; }
 .cc-test-root .dd.open .dd__btn, .cc-test-root .dd__btn:focus-visible{ outline: none; box-shadow: var(--stamp-sm), 0 0 0 3px color-mix(in srgb, var(--crimson) 45%, transparent); }
 .cc-test-root .dd__chev{ flex: 0 0 auto; transition: transform .2s ease; font-size: 12px; line-height: 1; color: var(--ink-soft); }
 .cc-test-root .dd.open .dd__chev{ transform: rotate(180deg); }
@@ -525,7 +525,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .dd__panel{ position: absolute; top: calc(100% + 6px); left: 0; right: auto; min-width: 100%; width: max-content; max-width: min(92vw, 520px); z-index: 20; background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); padding: 5px; opacity: 0; transform: translateY(-6px) scaleY(.98); transform-origin: top; pointer-events: none; transition: opacity .16s ease, transform .16s ease; max-height: 320px; overflow: auto; }
 .cc-test-root .dd.sort .dd__panel{ left: auto; right: 0; }
 .cc-test-root .dd.open .dd__panel{ opacity: 1; transform: none; pointer-events: auto; }
-.cc-test-root .dd__opt{ display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; white-space: nowrap; text-align: left; background: none; border: none; font-family: "Space Mono", monospace; font-size: 13.5px; color: var(--ink); padding: 10px 12px; border-radius: 2px; cursor: pointer; }
+.cc-test-root .dd__opt{ display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; white-space: nowrap; text-align: left; background: none; border: none; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 13.5px; color: var(--ink); padding: 10px 12px; border-radius: 2px; cursor: pointer; }
 .cc-test-root .dd__opt:hover{ background: var(--paper-2); }
 .cc-test-root .dd__opt.sel{ color: var(--crimson); font-weight: 700; }
 .cc-test-root .dd__opt .tick{ opacity: 0; font-size: 12px; }
@@ -540,14 +540,14 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .cattile__img img{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cc-test-root .cattile__img > span{ position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
 .cc-test-root .cattile__bar{ display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-top: 2px solid var(--line-ink); }
-.cc-test-root .cattile__bar b{ font-family: "Fraunces"; font-weight: 700; font-size: 15px; color: var(--ink); }
+.cc-test-root .cattile__bar b{ font-family: var(--ff-display, "Fraunces"); font-weight: 700; font-size: 15px; color: var(--ink); }
 .cc-test-root .cattile__ar{ color: var(--crimson); display: grid; place-items: center; flex: 0 0 auto; }
 
 /* --- Home coupon strip (real live coupons, tap to copy) --- */
 .cc-test-root .coupstrip{ overflow: hidden; border-block: 2px solid var(--line-ink); background: var(--indigo); }
 .cc-test-root .coupstrip__track{ display: flex; gap: 0; width: max-content; animation: cccoup 32s linear infinite; }
 .cc-test-root .coupstrip:hover .coupstrip__track{ animation-play-state: paused; }
-.cc-test-root .coupstrip__item{ display: inline-flex; align-items: center; gap: 10px; padding: 13px 26px; background: none; border: none; border-right: 1px dashed rgba(255,255,255,.22); color: #efe9ff; cursor: pointer; font-family: "Space Mono", monospace; white-space: nowrap; }
+.cc-test-root .coupstrip__item{ display: inline-flex; align-items: center; gap: 10px; padding: 13px 26px; background: none; border: none; border-right: 1px dashed rgba(255,255,255,.22); color: #efe9ff; cursor: pointer; font-family: var(--ff-mono, "Space Mono"), monospace; white-space: nowrap; }
 .cc-test-root .coupstrip__tag{ font-size: 12px; opacity: .85; }
 .cc-test-root .coupstrip__code{ font-weight: 700; font-size: 13px; letter-spacing: .08em; color: var(--gold); border: 1.5px dashed var(--gold); border-radius: var(--r); padding: 3px 9px; }
 .cc-test-root .coupstrip__min{ font-size: 11px; opacity: .7; }
@@ -566,16 +566,16 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .hsearch__thumb img{ width: 100%; height: 100%; object-fit: cover; }
 .cc-test-root .hsearch__meta{ display: flex; flex-direction: column; min-width: 0; }
 .cc-test-root .hsearch__meta b{ font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-test-root .hsearch__meta span{ font-family: "Space Mono"; color: var(--crimson); font-size: 13px; }
+.cc-test-root .hsearch__meta span{ font-family: var(--ff-mono, "Space Mono"); color: var(--crimson); font-size: 13px; }
 .cc-test-root .hsearch__empty{ color: var(--ink-faint); font-size: 13px; padding: 10px 4px; }
-.cc-test-root .hsearch__all{ margin-top: 6px; background: none; border: none; color: var(--crimson); font-family: "Space Mono"; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; padding: 8px; }
+.cc-test-root .hsearch__all{ margin-top: 6px; background: none; border: none; color: var(--crimson); font-family: var(--ff-mono, "Space Mono"); font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; padding: 8px; }
 
 /* --- Shop: facet sidebar + pagination --- */
 .cc-test-root .shoplayout{ display: grid; grid-template-columns: 240px 1fr; gap: 28px; align-items: start; }
 .cc-test-root .shopaside{ position: sticky; top: 90px; }
 .cc-test-root .shopfilters{ display: flex; flex-direction: column; gap: 20px; }
 .cc-test-root .shopfilters__grp{ display: flex; flex-direction: column; gap: 8px; border-bottom: 2px solid var(--line); padding-bottom: 18px; }
-.cc-test-root .shopfilters__h{ font-family: "Space Mono"; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
+.cc-test-root .shopfilters__h{ font-family: var(--ff-mono, "Space Mono"); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
 .cc-test-root .facetrow{ text-align: left; background: none; border: none; padding: 5px 0; font-size: 13.5px; color: var(--ink-soft); cursor: pointer; font-family: inherit; }
 .cc-test-root .facetrow.on{ color: var(--crimson); font-weight: 700; }
 .cc-test-root .facetcheck{ display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--ink-soft); cursor: pointer; padding: 4px 0; }
@@ -594,7 +594,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .shopbar__filter{ display: none; align-items: center; gap: 6px; padding: 9px 14px; font-size: 12.5px; }
 .cc-test-root .pager{ display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin-top: 34px; }
 .cc-test-root .pager .btn{ padding: 9px 14px; font-size: 12.5px; }
-.cc-test-root .pager__n{ width: 38px; height: 38px; border: 2px solid var(--line-ink); background: var(--surface); color: var(--ink); border-radius: var(--r); cursor: pointer; font-family: "Space Mono"; font-size: 13px; }
+.cc-test-root .pager__n{ width: 38px; height: 38px; border: 2px solid var(--line-ink); background: var(--surface); color: var(--ink); border-radius: var(--r); cursor: pointer; font-family: var(--ff-mono, "Space Mono"); font-size: 13px; }
 .cc-test-root .pager__n.on{ background: var(--crimson); color: #fff; }
 @media (max-width: 820px){
   .cc-test-root .shoplayout{ grid-template-columns: 1fr; }
@@ -606,21 +606,21 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .authwrap{ display: grid; grid-template-columns: minmax(0,420px) 1fr; gap: 34px; align-items: start; max-width: 860px; margin: 0 auto; padding-block: 36px 70px; }
 @media (max-width: 760px){ .cc-test-root .authwrap{ grid-template-columns: 1fr; gap: 20px; } }
 .cc-test-root .authcard{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp); padding: 26px; }
-.cc-test-root .authcard__h{ font-family: "Fraunces", serif; font-weight: 700; font-size: 26px; margin: 8px 0 6px; }
+.cc-test-root .authcard__h{ font-family: var(--ff-display, "Fraunces"), serif; font-weight: 700; font-size: 26px; margin: 8px 0 6px; }
 .cc-test-root .authcard__d{ color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 0 0 18px; }
 .cc-test-root .authcard__alt{ margin-top: 18px; font-size: 13.5px; color: var(--ink-soft); }
 .cc-test-root .authcard__alt a, .cc-test-root .authlink{ color: var(--crimson); font-weight: 600; cursor: pointer; background: none; border: none; font: inherit; padding: 0; }
 .cc-test-root .authcard__note{ margin-top: 14px; font-size: 11px; color: var(--ink-faint); border-top: 1.5px solid var(--line); padding-top: 12px; }
 .cc-test-root .authcard .ffield textarea{ width: 100%; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); color: var(--ink); padding: 11px 12px; font: inherit; font-size: 13.5px; resize: vertical; }
 .cc-test-root .phoneinput{ display: flex; align-items: stretch; border: 2px solid var(--line-ink); border-radius: var(--r); overflow: hidden; background: var(--bg); }
-.cc-test-root .phoneinput__cc{ display: grid; place-items: center; padding: 0 12px; font-family: "Space Mono", monospace; font-size: 13px; color: var(--ink-soft); background: var(--paper-2); border-right: 2px solid var(--line-ink); }
+.cc-test-root .phoneinput__cc{ display: grid; place-items: center; padding: 0 12px; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 13px; color: var(--ink-soft); background: var(--paper-2); border-right: 2px solid var(--line-ink); }
 .cc-test-root .phoneinput input{ flex: 1; min-width: 0; border: none !important; background: transparent !important; box-shadow: none !important; padding: 12px 13px; font: inherit; font-size: 14px; color: var(--ink); }
 .cc-test-root .otpboxes{ display: flex; gap: 8px; }
-.cc-test-root .otpbox{ flex: 1; min-width: 0; aspect-ratio: 1 / 1; max-width: 52px; text-align: center; font-family: "Space Mono", monospace; font-size: 20px; font-weight: 700; color: var(--ink); border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); box-shadow: var(--stamp-sm); }
+.cc-test-root .otpbox{ flex: 1; min-width: 0; aspect-ratio: 1 / 1; max-width: 52px; text-align: center; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 20px; font-weight: 700; color: var(--ink); border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--bg); box-shadow: var(--stamp-sm); }
 .cc-test-root .otpbox:focus{ outline: none; border-color: var(--crimson); box-shadow: var(--stamp-sm), 0 0 0 3px color-mix(in srgb, var(--crimson) 35%, transparent); }
 .cc-test-root .agecheck{ display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
 .cc-test-root .agecheck input{ width: 17px; height: 17px; accent-color: var(--crimson); flex: 0 0 auto; }
-.cc-test-root .filefield{ font-family: "Space Mono", monospace; font-size: 12px; width: 100%; }
+.cc-test-root .filefield{ font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 12px; width: 100%; }
 .cc-test-root .authperks{ list-style: none; margin: 0; padding: 18px 0 0; display: flex; flex-direction: column; gap: 14px; }
 .cc-test-root .authperks li{ display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-soft); }
 .cc-test-root .authperks svg{ color: var(--crimson); flex: 0 0 auto; }
@@ -638,13 +638,13 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .authsplit{ display: grid; grid-template-columns: 1fr minmax(0,380px); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp); overflow: hidden; max-width: 820px; margin: 0 auto; }
 @media (max-width: 720px){ .cc-test-root .authsplit{ grid-template-columns: 1fr; } }
 .cc-test-root .authsplit__brand{ background: #201346; color: #fff; padding: 32px; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
-.cc-test-root .authsplit__brand h1{ font-family: "Fraunces", serif; font-weight: 700; font-size: 30px; margin: 0; color: #fff; }
+.cc-test-root .authsplit__brand h1{ font-family: var(--ff-display, "Fraunces"), serif; font-weight: 700; font-size: 30px; margin: 0; color: #fff; }
 .cc-test-root .authsplit__brand p{ color: #d8d0f0; font-size: 14px; line-height: 1.6; margin: 0; }
 .cc-test-root .authsplit__stats{ display: flex; gap: 18px; margin-top: 6px; }
-.cc-test-root .authsplit__stats b{ font-family: "Space Mono"; font-size: 18px; color: var(--gold); display: block; }
-.cc-test-root .authsplit__stats span{ font-size: 10px; color: #b8aee0; font-family: "Space Mono"; text-transform: uppercase; letter-spacing: .06em; }
+.cc-test-root .authsplit__stats b{ font-family: var(--ff-mono, "Space Mono"); font-size: 18px; color: var(--gold); display: block; }
+.cc-test-root .authsplit__stats span{ font-size: 10px; color: #b8aee0; font-family: var(--ff-mono, "Space Mono"); text-transform: uppercase; letter-spacing: .06em; }
 .cc-test-root .authsplit__form{ background: var(--surface); padding: 28px; }
-.cc-test-root .authsplit__form h2{ font-family: "Fraunces", serif; font-weight: 700; font-size: 24px; margin: 0 0 6px; }
+.cc-test-root .authsplit__form h2{ font-family: var(--ff-display, "Fraunces"), serif; font-weight: 700; font-size: 24px; margin: 0 0 6px; }
 .cc-test-root .authsplit__d{ color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; margin: 0 0 16px; }
 .cc-test-root .authsplit__alt{ margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
 .cc-test-root .authsplit__alt a{ color: var(--crimson); font-weight: 600; cursor: pointer; }
@@ -652,27 +652,27 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .autherr{ color: var(--crimson); font-size: 12px; margin-top: 10px; }
 
 .cc-test-root .phead{ display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp); padding: 20px; }
-.cc-test-root .phead__av{ width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--crimson); color: #fff; font-family: "Fraunces"; font-weight: 700; font-size: 20px; border: 2px solid var(--line-ink); flex: 0 0 auto; }
+.cc-test-root .phead__av{ width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--crimson); color: #fff; font-family: var(--ff-display, "Fraunces"); font-weight: 700; font-size: 20px; border: 2px solid var(--line-ink); flex: 0 0 auto; }
 .cc-test-root .phead__who{ flex: 1 1 180px; min-width: 0; }
-.cc-test-root .phead__who b{ font-family: "Fraunces"; font-size: 20px; display: block; }
-.cc-test-root .phead__who span{ font-family: "Space Mono"; font-size: 12.5px; color: var(--ink-soft); }
+.cc-test-root .phead__who b{ font-family: var(--ff-display, "Fraunces"); font-size: 20px; display: block; }
+.cc-test-root .phead__who span{ font-family: var(--ff-mono, "Space Mono"); font-size: 12.5px; color: var(--ink-soft); }
 .cc-test-root .phead__stats{ display: flex; gap: 10px; }
 .cc-test-root .pstat{ text-align: center; border: 2px solid var(--line); border-radius: var(--r); padding: 8px 14px; }
-.cc-test-root .pstat b{ font-family: "Space Mono"; font-size: 16px; display: block; color: var(--crimson); }
-.cc-test-root .pstat span{ font-size: 10px; color: var(--ink-faint); font-family: "Space Mono"; text-transform: uppercase; letter-spacing: .08em; }
+.cc-test-root .pstat b{ font-family: var(--ff-mono, "Space Mono"); font-size: 16px; display: block; color: var(--crimson); }
+.cc-test-root .pstat span{ font-size: 10px; color: var(--ink-faint); font-family: var(--ff-mono, "Space Mono"); text-transform: uppercase; letter-spacing: .08em; }
 .cc-test-root .accttabs{ display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 14px; }
-.cc-test-root .accttab{ font-family: "Space Mono"; font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 9px 14px; cursor: pointer; }
+.cc-test-root .accttab{ font-family: var(--ff-mono, "Space Mono"); font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--surface); border: 2px solid var(--line-ink); border-radius: var(--r); box-shadow: var(--stamp-sm); padding: 9px 14px; cursor: pointer; }
 .cc-test-root .accttab.on{ background: var(--crimson); color: #fff; }
 .cc-test-root .order{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 16px; margin-bottom: 14px; }
 .cc-test-root .order__top{ display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.cc-test-root .order__no{ font-family: "Space Mono"; font-weight: 700; font-size: 14px; }
-.cc-test-root .order__date{ font-family: "Space Mono"; font-size: 11.5px; color: var(--ink-faint); }
+.cc-test-root .order__no{ font-family: var(--ff-mono, "Space Mono"); font-weight: 700; font-size: 14px; }
+.cc-test-root .order__date{ font-family: var(--ff-mono, "Space Mono"); font-size: 11.5px; color: var(--ink-faint); }
 .cc-test-root .order__items2{ display: flex; flex-direction: column; gap: 4px; margin: 12px 0; }
 .cc-test-root .oitem2{ font-size: 12.5px; color: var(--ink-soft); } .cc-test-root .oitem2 b{ color: var(--ink); }
 .cc-test-root .order__bot{ display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1.5px solid var(--line); padding-top: 12px; }
-.cc-test-root .order__total{ font-family: "Space Mono"; font-size: 14px; } .cc-test-root .order__total b{ color: var(--crimson); }
+.cc-test-root .order__total{ font-family: var(--ff-mono, "Space Mono"); font-size: 14px; } .cc-test-root .order__total b{ color: var(--crimson); }
 .cc-test-root .order__acts{ display: flex; gap: 8px; }
-.cc-test-root .pill{ font-family: "Space Mono"; font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.cc-test-root .pill{ font-family: var(--ff-mono, "Space Mono"); font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .cc-test-root .pill--ok{ background: color-mix(in srgb, #2e7d32 18%, var(--surface)); color: #2e7d32; }
 .cc-test-root .pill--info{ background: color-mix(in srgb, #1a5cb5 18%, var(--surface)); color: #1a5cb5; }
 .cc-test-root .pill--no{ background: color-mix(in srgb, var(--crimson) 14%, var(--surface)); color: var(--crimson); }
@@ -680,7 +680,7 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root .btn--sm{ padding: 7px 12px; font-size: 12px; box-shadow: none; }
 .cc-test-root .addr{ border: 2px solid var(--line-ink); border-radius: var(--r); background: var(--surface); box-shadow: var(--stamp-sm); padding: 16px; margin-bottom: 12px; position: relative; }
 .cc-test-root .addr.def{ border-color: var(--crimson); }
-.cc-test-root .addr__tag{ position: absolute; top: 12px; right: 12px; font-family: "Space Mono"; font-size: 9.5px; font-weight: 700; color: #fff; background: var(--crimson); border-radius: 999px; padding: 2px 9px; }
+.cc-test-root .addr__tag{ position: absolute; top: 12px; right: 12px; font-family: var(--ff-mono, "Space Mono"); font-size: 9.5px; font-weight: 700; color: #fff; background: var(--crimson); border-radius: 999px; padding: 2px 9px; }
 .cc-test-root .addr b{ font-size: 14px; } .cc-test-root .addr p{ margin: 6px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
 
 /* --- Mobile refinements for the newer components (phone ≤ 560px) --- */

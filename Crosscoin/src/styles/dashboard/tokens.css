@@ -135,16 +135,6 @@
 
 /* Chrome pieces that keep a literal near-black in light mode need to invert
    in dark mode to stay legible on the dark canvas. */
-:root[data-theme="dark"] .sb-link--active,
-:root[data-theme="dark"] .sb-link--active:hover {
-  background: #fafafa;
-  color: #0a0a0a;
-}
-:root[data-theme="dark"] .sb-link--active .sb-icon { color: #0a0a0a; }
-:root[data-theme="dark"] .sb-logo-mark { background: #fafafa; color: #0a0a0a; }
-:root[data-theme="dark"] .sb-toggle:hover,
-:root[data-theme="dark"] .sb-help:hover,
-:root[data-theme="dark"] .sb-toggle--close { background: #fafafa; color: #0a0a0a; }
 /* Modal header + primary buttons keep the dark bar — that reads fine on dark,
    but the aside body/footer follow the tokens automatically. */
 
@@ -156,18 +146,5 @@
 */
 
 /* ── Generic dashboard reset to match the new chrome ──────────────── */
-.ds-canvas {
-  background: var(--ds-color-bg);
-  min-height: 100vh;
-  font-family: var(--ds-font-sans);
-  color: var(--ds-color-text);
-}
 
 /* ── Utility: visually-hidden but keyboard/screenreader accessible ─ */
-.ds-sr-only {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0,0,0,0);
-  white-space: nowrap; border: 0;
-}

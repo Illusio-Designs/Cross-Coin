@@ -1,16 +1,17 @@
 import SocksComparison from '../../components/test/SocksComparison';
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { R } from '../../components/test/routes';
-import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, submitProductReview } from '../../components/test/real';
+import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, submitProductReview, normalizeProduct } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
-import { richHtml } from '../../utils/sanitizeHtml';
+import { sanitizeRich } from '../../utils/sanitizeHtml';
+import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { packPairCount } from '../../components/test/packPairCount';
@@ -27,21 +28,70 @@ const fmtReviewDate = (d) => {
   return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 };
 
+// Description pictures fill the "About this product" column (or the screen
+// width on phones): sized copies instead of the original upload.
+const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_SIZES = '(max-width: 860px) calc(100vw - 64px), 640px';
+function sizeDescImages(html) {
+  return String(html || '').replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
+    const src = raw.replace(/&amp;/g, '&');
+    const set = ikSrcSet(src, DESC_WIDTHS);
+    const attr = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    return `${a}src="${attr(ikTransform(src, 1100) || src)}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+  });
+}
+const plainText = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
 // "pack_size" / "packSize" → "Pack size" for a specification row.
 function specLabel(key) {
   const t = String(key).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
   return t ? t[0].toUpperCase() + t.slice(1) : String(key);
 }
 
-export default function TestProduct({ preview = true }) {
+// Main photo: full width less the page padding on phones, 600px beside the buy
+// panel on desktop. Shared with the <link rel=preload> in pages/products/[slug].
+export const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+export const MAIN_SIZES = '(max-width: 860px) calc(100vw - 32px), 600px';
+
+// The variant, size and photo a product opens on (a single pair by default).
+function openingState(prod) {
+  const vlist = prod?.variants || [];
+  const v0 = vlist.find((v) => v.pairs === 1) || vlist[0] || null;
+  return {
+    v0,
+    size: (v0?.sizes?.length ? v0.sizes[0] : prod?.sizes?.[0]) || '',
+    img: v0?.img || prod?.img || prod?.images?.[0] || '',
+  };
+}
+
+// The photo the product page opens on, from the raw API product.
+export function openingImage(raw) {
+  try { return raw ? openingState(normalizeProduct(raw)).img || '' : ''; } catch (_) { return ''; }
+}
+
+export default function TestProduct({ preview = true, initialProduct = null }) {
   const router = useRouter();
-  const [p, setP] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // /products/<slug> passes the product it fetched on the server, so the
+  // gallery, price and buy panel are in the first HTML: the main photo starts
+  // loading straight away instead of after the page's JavaScript has run and
+  // fetched the product again (and nothing jumps when it arrives).
+  const [seed] = useState(() => {
+    const prod = initialProduct ? normalizeProduct(initialProduct) : null;
+    return prod ? { prod, ...openingState(prod) } : null;
+  });
+  const seedUsed = useRef(false);
+  // Browser-only bits (the saved-to-wishlist heart, the sanitised rich
+  // description) switch on after hydration, so the first client render matches
+  // the server's HTML exactly.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
+  const [p, setP] = useState(seed?.prod || null);
+  const [loading, setLoading] = useState(!seed);
   const [also, setAlso] = useState([]);
-  const [variant, setVariant] = useState(null); // selected variant (single pair or pack)
-  const [size, setSize] = useState('');
+  const [variant, setVariant] = useState(seed?.v0 || null); // selected variant (single pair or pack)
+  const [size, setSize] = useState(seed?.size || '');
   const [qty, setQty] = useState(1);
-  const [mainImg, setMainImg] = useState('');
+  const [mainImg, setMainImg] = useState(seed?.img || '');
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
   const [prodFaqs, setProdFaqs] = useState([]);
   // Secondary fetches that fill parts of the page after the product itself.
@@ -63,21 +113,24 @@ export default function TestProduct({ preview = true }) {
 
   useEffect(() => {
     let off = false;
-    setLoading(true);
+    // The server's product is used once, for the page it was rendered for.
+    const fromServer = !seedUsed.current && seed?.prod ? seed.prod : null;
+    seedUsed.current = true;
+    if (!fromServer) setLoading(true);
     (async () => {
       try {
         let slug = router.query.slug ? String(router.query.slug) : '';
-        if (!slug) { const list = await fetchProducts({ limit: 1 }); slug = list[0]?.slug || ''; }
-        const prod = slug ? await fetchProduct(slug) : null;
+        if (!slug && !fromServer) { const list = await fetchProducts({ limit: 1 }); slug = list[0]?.slug || ''; }
+        const prod = fromServer || (slug ? await fetchProduct(slug) : null);
+        if (fromServer && !slug) slug = prod.slug || '';
         if (off) return;
         setP(prod);
         if (prod) {
-          const vlist = prod.variants || [];
-          const v0 = vlist.find((v) => v.pairs === 1) || vlist[0] || null; // default to a single pair
+          const { v0, size: s0, img } = openingState(prod); // default to a single pair
           setVariant(v0);
-          setSize((v0?.sizes?.length ? v0.sizes[0] : prod.sizes?.[0]) || '');
+          setSize(s0);
           setQty(1);
-          setMainImg(v0?.img || prod.img || prod.images?.[0] || '');
+          setMainImg(img);
           // Meta Pixel + CAPI ViewContent (also GA4 + first-party funnel).
           try {
             fbqTrack('ViewContent', {
@@ -267,11 +320,11 @@ export default function TestProduct({ preview = true }) {
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200} widths={[600, 1200]} sizes="(max-width: 860px) 100vw, 600px" priority />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
+            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200} widths={MAIN_WIDTHS} sizes={MAIN_SIZES} priority />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
-                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)}><Thumb src={src} w={200} /></button>
+                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)} aria-label={`View image ${i + 1}`} aria-pressed={src === mainImg}><Thumb src={src} w={144} widths={[112, 144, 216]} sizes="70px" /></button>
                 ))}
               </div>
             )}
@@ -281,7 +334,7 @@ export default function TestProduct({ preview = true }) {
             <div className="kl">{p.brand}</div>
             <div className="titlerow">
               <h1>{p.name}</h1>
-              <button className={`wishsq${isWished(p.id) ? ' on' : ''}`} aria-label="Save to wishlist" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(18)}</button>
+              <button className={`wishsq${hydrated && isWished(p.id) ? ' on' : ''}`} aria-label="Save to wishlist" onClick={(e) => { const added = toggleWish(p); e.currentTarget.classList.toggle('on', added); toast(added ? 'Saved to wishlist ♥' : 'Removed from wishlist'); }}>{I.heart(18)}</button>
             </div>
             {p.rating && (
               <div className="rc-box" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
@@ -337,7 +390,9 @@ export default function TestProduct({ preview = true }) {
               <span className="eyebrow">Details</span>
               <h2>About this product</h2>
               {descHtml
-                ? <div className="legal" {...richHtml(descHtml)} />
+                ? (hydrated
+                  ? <div className="legal" dangerouslySetInnerHTML={{ __html: sizeDescImages(sanitizeRich(descHtml)) }} />
+                  : <div className="legal">{plainText(descHtml)}</div>)
                 : <p className="muted" style={{ color: 'var(--ink-soft)', lineHeight: 1.7 }}>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</p>}
             </div>
             <aside className="pdpspecs">

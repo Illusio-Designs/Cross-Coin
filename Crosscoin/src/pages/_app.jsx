@@ -10,11 +10,8 @@ import { WishlistProvider } from "../context/WishlistContext";
 import { BreadcrumbProvider } from "../components/common/Breadcrumb";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import Loader from "../components/common/Loader";
-import CartDrawer from "../components/cart/CartDrawer";
+import dynamic from "next/dynamic";
 import Breadcrumb from "../components/common/Breadcrumb";
-import Header from "../components/layout/Header";
-import Footer from "../components/layout/Footer";
 import { monitoring } from '../utils/monitoring';
 import { installLinkHardening } from '../utils/sanitizeHtml';
 import { installApiInterceptors } from '../utils/apiInterceptors';
@@ -98,13 +95,21 @@ import "../styles/components/WhatsAppChat.css";
 
 import Analytics from "../components/common/Analytics";
 import UTMTracker from "../components/common/UTMTracker";
-import WhatsAppChat from "../components/common/WhatsAppChat";
-import PhonePopupModal from "../components/common/PhonePopupModal";
-import ExitIntentModal from "../components/common/ExitIntentModal";
 import "../styles/components/PhonePopupModal.css";
 import ConsentSpeedInsights from "../components/common/ConsentSpeedInsights";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
 import ErrorBoundary from "../components/common/ErrorBoundary";
+
+// The legacy site chrome (header, footer, cart drawer, WhatsApp button,
+// exit-intent offer) now renders only on pages that have not moved to the Mint
+// design (Page.mintChrome) — /sitemap. Loading it on demand keeps ~70 KB of
+// JavaScript out of every Mint page's first download; on a legacy page it is
+// still server-rendered and its code preloaded, as before.
+const Header = dynamic(() => import("../components/layout/Header"));
+const Footer = dynamic(() => import("../components/layout/Footer"));
+const CartDrawer = dynamic(() => import("../components/cart/CartDrawer"));
+const WhatsAppChat = dynamic(() => import("../components/common/WhatsAppChat"));
+const ExitIntentModal = dynamic(() => import("../components/common/ExitIntentModal"));
 
 function AppContent({ Component, pageProps, progressRef }) {
   const { isDrawerOpen, setIsDrawerOpen, lastAddedItem, cartItems } = useCart();

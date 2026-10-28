@@ -136,23 +136,6 @@ a {
 }
 
 /* Standalone link (no sub-items) */
-.cat-standalone {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--black);
-  padding-bottom: 0;
-  border-bottom: none;
-  display: block;
-  margin-bottom: 16px;
-  transition: color 0.15s;
-  cursor: pointer;
-}
-
-.cat-standalone:hover {
-  color: var(--red);
-}
 
 /* ── DIVIDER ── */
 .section-divider {
