@@ -1,5 +1,5 @@
 /* Product page: Ideal for, care and manufacturing blocks (.pdd). */
-.pdd { --ink: #1c1b19; --mut: #75716a; --line: #e4dfd3; --card: #fbfaf6; --acc: #d0692a; --acc2: #b9571f; --soft: #f3e7d9;
+.pdd { --ink: #1c1b19; --mut: #69665f; --line: #e4dfd3; --card: #fbfaf6; --acc: #d0692a; --acc2: #a74e1c; --soft: #f3e7d9;
   display: flex; flex-direction: column; gap: 30px; color: var(--ink); font-size: 14px; line-height: 1.5; }
 .pdd, .pdd * { box-sizing: border-box; }
 .pdd-blk { min-width: 0; }

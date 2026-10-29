@@ -75,7 +75,7 @@ export default function TestTrack() {
             <div className="trackitem" aria-hidden="true" style={{ borderTop: '2px solid var(--line-ink)', marginTop: 4, paddingTop: 10 }}><Sk w={50} h={14} /><Sk w={70} h={14} /></div>
           </SkBusy>
         )}
-        {err && <p className="mono" style={{ color: 'var(--crimson)', fontSize: 13, padding: '24px 0' }}>{err}</p>}
+        {err && <p className="mono" style={{ color: 'var(--crimson-text)', fontSize: 13, padding: '24px 0' }}>{err}</p>}
         {order && (
           <div className="trackcard">
             <div className="trackcard__top">

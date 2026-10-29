@@ -207,7 +207,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
       </div>
     </TestLayout>
   );
-  if (!p) return <TestLayout>{preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}<div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Back to shop</a></p></div></TestLayout>;
+  if (!p) return <TestLayout>{preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}<div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson-text)', cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Back to shop</a></p></div></TestLayout>;
 
   // The selected variant (single pair or a pack) drives price + image. Fall back
   // to the product's own price when a product has no structured variants.
@@ -476,7 +476,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
                 <input type="email" placeholder="Email" value={rv.email} onChange={(e) => setRv((s) => ({ ...s, email: e.target.value }))} />
               </div>
               <textarea placeholder="Share what you liked (fit, comfort, quality)…" value={rv.comment} onChange={(e) => setRv((s) => ({ ...s, comment: e.target.value }))} rows={3} />
-              {rv.err && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12 }}>{rv.err}</div>}
+              {rv.err && <div className="mono" style={{ color: 'var(--crimson-text)', fontSize: 12 }}>{rv.err}</div>}
               <button className="btn btn--crimson" type="submit" disabled={rv.busy}>{rv.busy ? 'Submitting…' : 'Submit review'}</button>
             </form>
           )}

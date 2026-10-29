@@ -111,7 +111,7 @@ export default function TestAccount() {
 
             {!loading && tab === 'orders' && (
               orders.length === 0
-                ? <div className="acctempty mono">No orders yet. <a onClick={() => router.push(R.shop)} style={{ color: 'var(--crimson)', cursor: 'pointer' }}>Start shopping</a></div>
+                ? <div className="acctempty mono">No orders yet. <a onClick={() => router.push(R.shop)} style={{ color: 'var(--crimson-text)', cursor: 'pointer' }}>Start shopping</a></div>
                 : orders.map((o) => (
                   <div className="order" key={o.id || o.number}>
                     <div className="order__top">

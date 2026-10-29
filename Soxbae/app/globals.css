@@ -431,7 +431,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 .page-hero { max-width: 680px; }
 .page-hero h1 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.05; font-size: clamp(30px, 4.4vw, 50px); }
 .page-hero p { font-size: 15.5px; line-height: 1.7; }
-.filter-foot .btn-primary { background: var(--accent); color: #fff; }
+.filter-foot .btn-primary { background: var(--accent-btn); color: #fff; }
 .contact-form { border-radius: 12px; }
 .pill.cart { background: #17181a; border-color: #17181a; }
 .pill.cart .badge, .pill .badge { background: var(--teal); color: #17181a; }
@@ -453,6 +453,7 @@ h1, h2, h3 { letter-spacing: -0.015em; }
   --line:      #e4dfd3;   /* hairline */
   --line-soft: #eee9de;
   --accent:    #d0692a;   /* refined orange — used sparingly */
+  --accent-btn:#b35a24;   /* the orange under white text (buttons, tags, badges): 4.8:1 */
   --accent-600:#a74e1c;   /* accent text/links: 4.6–5.6:1 (was #b9571f, 3.9–4.7) */
   --accent-050:#f3e7d9;
   --navy:      #1c1b19;   /* remap old "navy" (buttons) to ink */
@@ -511,12 +512,12 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-hd .wl-link { position: relative; width: 42px; height: 42px; display: grid; place-items: center;
   border: 1px solid var(--line); border-radius: var(--r-box); background: var(--card); color: var(--ink); padding: 0; box-shadow: none; }
 .sx-hd .wl-link:hover { border-color: var(--ink); color: var(--accent-600); background: var(--card); }
-.sx-hd .wl-count { position: absolute; top: -5px; right: -5px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; border: 1.5px solid var(--bg); }
+.sx-hd .wl-count { position: absolute; top: -5px; right: -5px; background: var(--accent-btn); color: #fff; font-size: 9px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px; border: 1.5px solid var(--bg); }
 /* Cart — the one solid box, anchoring the right */
 .sx-hd .pill.cart { background: var(--ink); color: #fff; border: 1px solid var(--ink); border-radius: var(--r-box);
   font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-size: 11px; padding: 12px 16px; gap: 8px; }
 .sx-hd .pill.cart:hover { background: #000; }
-.sx-hd .pill.cart .badge { background: var(--accent); color: #fff; border-radius: 999px; }
+.sx-hd .pill.cart .badge { background: var(--accent-btn); color: #fff; border-radius: 999px; }
 /* Hamburger — boxed to match */
 .sx-hd .hamburger { display: none; width: 42px; height: 42px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: var(--r-box); }
 .sx-hd .hamburger:hover { border-color: var(--ink); }
@@ -549,7 +550,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sxp-link { position: absolute; inset: 0; z-index: 2; }
 .sxp-tags { position: absolute; top: 12px; left: 12px; z-index: 3; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .sxp-tag { font-size: 9.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: 5px 10px; line-height: 1; border-radius: 999px; color: var(--ink); background: rgba(251,250,246,.94); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-.sxp-tag.sale { background: var(--accent); color: #fff; }
+.sxp-tag.sale { background: var(--accent-btn); color: #fff; }
 .sxp-fav { position: absolute; top: 10px; right: 10px; z-index: 3; width: 36px; height: 36px; display: grid; place-items: center;
   border-radius: 999px; background: rgba(251,250,246,.9); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border: 0; color: var(--ink-soft); transition: color .15s, transform .15s; }
 .sxp-fav:hover { color: var(--accent); transform: scale(1.08); }
@@ -557,7 +558,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 /* Add button — a small round control living in the plate footer. */
 .sxp-add { flex-shrink: 0; }
 .sxp-add .pcard-add { width: 38px; height: 38px; border-radius: 999px; background: var(--ink); color: #fff; display: grid; place-items: center; border: 0; transition: background .18s ease; }
-.sxp-add .pcard-add:hover, .sxp-add .pcard-add.added { background: var(--accent); }
+.sxp-add .pcard-add:hover, .sxp-add .pcard-add.added { background: var(--accent-btn); }
 .sxp-add .pcard-add svg { width: 15px; height: 15px; }
 
 /* Floating info plate that overlaps the bottom of the photo. */
@@ -695,7 +696,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 22px; margin-top: clamp(32px,4vw,48px); border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-soft); }
 .sx-footer-social { display: flex; gap: 10px; margin-top: 22px; }
 .sx-footer-social a { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink-soft); transition: color .15s ease, border-color .15s ease, background .15s ease; }
-.sx-footer-social a:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+.sx-footer-social a:hover { color: #fff; background: var(--accent-btn); border-color: var(--accent-btn); }
 .sx-footer-bottom a { color: var(--accent-600); font-weight: 700; }
 .sx-footer-bottom a:hover { color: var(--accent); }
 @media (max-width: 860px) { .sx-footer-top { grid-template-columns: 1fr; gap: 36px; } }
@@ -715,7 +716,7 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-col-cap h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(15px, 1.3vw, 17px); line-height: 1.1; color: var(--ink); }
 .sx-col-arrow { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink); transition: background .2s ease, color .2s ease, border-color .2s ease; }
 .sx-col-arrow svg { transition: transform .25s ease; }
-.sx-col-card:hover .sx-col-arrow { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sx-col-card:hover .sx-col-arrow { background: var(--accent-btn); border-color: var(--accent-btn); color: #fff; }
 .sx-col-card:hover .sx-col-arrow svg { transform: translateX(2px); }
 @media (max-width: 860px) { .sx-collections-grid { grid-template-columns: repeat(3, 1fr); gap: 20px 16px; } }
 @media (max-width: 520px) { .sx-collections-grid { grid-template-columns: 1fr 1fr; gap: 18px 12px; } .sx-col-cap { margin: -24px 8px 0; padding: 10px 10px 10px 13px; border-radius: 11px; } .sx-col-cap h3 { font-size: 15px; } .sx-col-arrow { width: 30px; height: 30px; } }
@@ -801,7 +802,7 @@ button.sr-headless-checkout.sr-headless-checkout {
   width: 100% !important; min-height: 54px !important; height: auto !important; margin: 0 !important;
   display: inline-flex !important; align-items: center !important; justify-content: center !important;
   padding: 9px 24px 7px !important; border: 0 !important; border-radius: var(--r-box, 12px) !important;
-  background: var(--accent) !important; color: #fff !important; box-shadow: none !important;
+  background: var(--accent-btn) !important; color: #fff !important; box-shadow: none !important;
   font-family: inherit !important; font-size: 14.5px !important; font-weight: 600 !important; letter-spacing: .02em !important;
   cursor: pointer; transition: background .18s ease, transform .18s ease;
 }
