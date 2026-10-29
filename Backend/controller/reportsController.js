@@ -49,10 +49,10 @@ exports.parseRange = parseRange;
 // and the report can be checked precisely from a fresh start.
 // Visits, funnel steps and orders carry a time and start at this exact
 // moment. The store-counted visitors / page loads and cookieless visits are
-// kept per India day only, so they start on the first FULL day after it
-// (a part-day would mix in counts from before).
+// kept per India day only, so they start with that whole day (29 Oct counts
+// its morning too) — they show from the first day instead of a blank one.
 const TRAFFIC_DATA_FROM = '2026-10-29T16:00:00+05:30';
-const TRAFFIC_DAY_FROM = '2026-10-30';
+const TRAFFIC_DAY_FROM = '2026-10-29';
 
 // GET /api/reports/brand-traffic?startDate=&endDate=
 // Brand-wise funnel: sessions (first-party visit tracking) → orders → revenue,
