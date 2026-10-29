@@ -5,7 +5,12 @@ import AddToCart from '@/components/AddToCart';
 import ShimmerImg from '@/components/ui/ShimmerImg';
 import WishlistButton from '@/components/product/WishlistButton';
 
-export default function ProductCard({ product }) {
+// headingLevel: the card's name is a heading one level below the section it
+// sits in — h3 under a section's h2 (home, "You might also like"), h2 on pages
+// whose grid sits straight under the page's h1 (shop, collection, search,
+// wishlist). Same look either way (.pcard-name).
+export default function ProductCard({ product, headingLevel = 3 }) {
+  const Name = `h${headingLevel}`;
   const { id, slug, name, category, price, oldPrice, rating, reviews, sizes, colors, badge, badgeKey, image, colorParam } = product;
   const off = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
 
@@ -39,7 +44,7 @@ export default function ProductCard({ product }) {
       <div className="pcard-body">
         {/* Lead with the product name (not the long collection name) so the card
             reads cleanly — same as the other brands. */}
-        <PdpLink slug={slug} color={colorParam}><h3 className="pcard-name">{name}</h3></PdpLink>
+        <PdpLink slug={slug} color={colorParam}><Name className="pcard-name">{name}</Name></PdpLink>
 
         <div className="pcard-foot">
           <div className="pcard-price">

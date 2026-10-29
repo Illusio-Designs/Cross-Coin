@@ -54,7 +54,7 @@ export default function WishlistClient() {
         </div>
       ) : (
         <div className="product-grid" style={{ marginTop: 24 }}>
-          {items.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+          {items.map((p) => <ProductCard key={p.uid ?? p.id} product={p} headingLevel={2} />)}
         </div>
       )}
     </div>

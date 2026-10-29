@@ -5,10 +5,11 @@ import { useEffect } from 'react';
 /**
  * Sentry bootstrap — SAFE BY DESIGN.
  *
- * Loads @sentry/browser via a dynamic import a few seconds after the page has
- * loaded (when the browser is idle), so it can NEVER block the build, the
- * first paint or hydration; errors before that are queued and sent once it is
- * ready, and every failure path is swallowed. A previous attempt wired
+ * Loads @sentry/browser via a dynamic import on the shopper's first
+ * interaction, the first error, or 30 s after load (then when the browser is
+ * idle), so it can NEVER block the build, the first paint or hydration; errors
+ * before that are queued and sent once it is ready, and every failure path is
+ * swallowed. A previous attempt wired
  * @sentry/nextjs as a top-level client import and caused a runtime TDZ crash —
  * this deliberately avoids that by code-splitting the SDK and deferring init.
  *
@@ -33,14 +34,12 @@ export default function SentryInit() {
     window.__sentryInited = true;
 
     const early = [];
-    const onError = (e) => { if (early.length < EARLY_MAX) early.push(e?.error || e?.message || e); };
-    const onRejection = (e) => { if (early.length < EARLY_MAX) early.push(e?.reason ?? e); };
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onRejection);
-
-    let cancelled = false;
     let idleId = null;
     let timer = null;
+    let started = false;
+    let cancelled = false;
+    const TRIGGERS = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+
     const load = () => {
       if (cancelled) return;
       import('@sentry/browser')
@@ -62,16 +61,27 @@ export default function SentryInit() {
         })
         .catch(() => { /* SDK failed to load — storefront unaffected */ });
     };
-    // The SDK is ~450 KB of JavaScript: load it only once the page has fully
-    // loaded and the browser is idle, so it never competes with the first
-    // paint or the shopper's first taps (it was a large share of the mobile
-    // page-speed "Total Blocking Time").
-    const schedule = () => {
-      timer = setTimeout(() => {
-        if (typeof window.requestIdleCallback === 'function') idleId = window.requestIdleCallback(load, { timeout: 5000 });
-        else load();
-      }, 3000);
+    // The SDK is ~450 KB of JavaScript. It loads when the shopper first
+    // interacts (tap, key, scroll), when an error happens, or 30 s after the
+    // page has loaded — whichever comes first — and then at the next idle
+    // moment, so its parsing never lands on the first paint, on hydration or
+    // on the tap itself. (Loaded on a timer a few seconds after load it still
+    // showed up in page-speed tests as one long task — their simulated
+    // timeline ignores timers.) Errors before it loads are kept and sent.
+    const start = () => {
+      if (started || cancelled) return;
+      started = true;
+      clearTimeout(timer);
+      TRIGGERS.forEach((t) => window.removeEventListener(t, start, true));
+      if (typeof window.requestIdleCallback === 'function') idleId = window.requestIdleCallback(load, { timeout: 3000 });
+      else setTimeout(load, 1);
     };
+    const onError = (e) => { if (early.length < EARLY_MAX) early.push(e?.error || e?.message || e); start(); };
+    const onRejection = (e) => { if (early.length < EARLY_MAX) early.push(e?.reason ?? e); start(); };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    TRIGGERS.forEach((t) => window.addEventListener(t, start, { capture: true, passive: true, once: true }));
+    const schedule = () => { timer = setTimeout(start, 30000); };
     if (document.readyState === 'complete') schedule();
     else window.addEventListener('load', schedule, { once: true });
 
@@ -79,6 +89,7 @@ export default function SentryInit() {
       cancelled = true;
       clearTimeout(timer);
       if (idleId != null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+      TRIGGERS.forEach((t) => window.removeEventListener(t, start, true));
       window.removeEventListener('load', schedule);
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onRejection);

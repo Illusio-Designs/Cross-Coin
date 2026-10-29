@@ -108,7 +108,7 @@ function OrderDetail({ id }) {
 
       <div className="order-detail-grid">
         <div className="order-items-card">
-          <h3>Items</h3>
+          <h2>Items</h2>
           {items.length === 0 ? <p className="muted">No item details available.</p> : items.map((it, i) => {
             const name = it.name || it.product?.name || it.Product?.name || it.product_name || 'Item';
             const rawImg = it.image || it.image_url || it.product?.image || it.Product?.image
@@ -132,7 +132,7 @@ function OrderDetail({ id }) {
         </div>
 
         <aside className="order-summary-card">
-          <h3>Summary</h3>
+          <h2>Summary</h2>
           <div className="row"><span className="muted">Subtotal</span><b>₹{Number(order.total_amount || order.subtotal || 0).toFixed(0)}</b></div>
           {order.shipping_fee != null && <div className="row"><span className="muted">Shipping</span><b>₹{Number(order.shipping_fee).toFixed(0)}</b></div>}
           {Number(order.discount_amount) > 0 && <div className="row"><span className="muted">Discount</span><b style={{ color: 'var(--teal-text)' }}>−₹{Number(order.discount_amount).toFixed(0)}</b></div>}

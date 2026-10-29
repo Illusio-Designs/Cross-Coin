@@ -62,7 +62,7 @@ export default function Hero({ features = [], slides = [], products = [] }) {
                 <span className="heroc-ph">
                   {p.image
                     ? <ShimmerImg src={p.image} alt={p.name} width={600} widths={[300, 450, 600]} sizes="(max-width: 820px) 45vw, 260px"
-                        priority={i === 0} fallback={<Icon name="Footprints" size={30} />} />
+                        priority fallback={<Icon name="Footprints" size={30} />} />
                     : <Icon name="Footprints" size={30} />}
                   {off > 0 && <span className="heroc-off">{off}% OFF</span>}
                 </span>
