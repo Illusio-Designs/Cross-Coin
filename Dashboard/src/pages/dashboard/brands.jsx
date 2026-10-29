@@ -3,7 +3,7 @@ export { default } from './index';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { brandService, brandSettingsService, facebookCapiService } from '../../services';
+import { brandService, brandSettingsService, facebookCapiService, googleAnalyticsService } from '../../services';
 import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar, Select } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
@@ -195,6 +195,10 @@ function SectionTest({ tab, brand, form }) {
           const r = await brandSettingsService.testMetaAds(brand.id);
           return { ok: !!r?.ok, message: r?.message || 'Meta didn’t answer — try again in a minute.' };
         })}>{busy ? 'Checking…' : 'Check ad account access'}</button>
+        <button type="button" className="oss-btn" disabled={busy} onClick={() => run(async () => {
+          const r = await googleAnalyticsService.runTest(brand.slug);
+          return { ok: !!r?.ok, message: r?.message || 'Google didn’t answer — try again in a minute.' };
+        })}>{busy ? 'Checking…' : 'Check Google Analytics'}</button>
       </span>
     );
   }

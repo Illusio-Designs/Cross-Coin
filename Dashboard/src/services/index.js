@@ -442,6 +442,17 @@ export const facebookCapiService = {
   },
 };
 
+// Google Analytics 4 check for one store (brand slug in X-Brand-Name): IDs
+// saved, test event validated by Google, then sent so it shows in DebugView.
+export const googleAnalyticsService = {
+  runTest: async (brandSlug) => {
+    const { data } = await adminApi.post('/api/google-analytics/test', {}, {
+      headers: brandSlug ? { 'X-Brand-Name': brandSlug } : {},
+    });
+    return data;
+  },
+};
+
 // Dashboard → Shipping & courier (per-brand fees, free-delivery threshold,
 // COD limit, courier account + webhook summary).
 export const shippingFeeService = {

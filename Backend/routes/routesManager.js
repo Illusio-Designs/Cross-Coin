@@ -62,6 +62,7 @@ router.use('/order-status-history', optionalBrand, require('./orderStatusHistory
 
 // ── Integrations ──────────────────────────────────────────────────────────
 router.use('/facebook-pixel',     require('../integration/facebookPixel.js'));
+router.use('/google-analytics',   require('../integration/googleAnalytics.js'));
 
 // ── FAQs (admin + public) ─────────────────────────────────────────────────
 router.use('/', optionalBrand, require('./faqRoutes.js'));
