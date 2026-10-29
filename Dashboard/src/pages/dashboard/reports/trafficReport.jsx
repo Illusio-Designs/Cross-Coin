@@ -106,7 +106,17 @@ function DayLine({ rows, from, to, valueKey, fmt, tip, gaps = false, height = 16
     return out;
   }, [rows, from, to, valueKey, gaps]);
   const [hover, setHover] = useState(null);
-  if (series.length < 2 || !series.some((x) => x.v)) return <span className="hint">No data in this period yet.</span>;
+  if (!series.some((x) => x.v)) return <span className="hint">No data in this period yet.</span>;
+  // One day picked: there is no line to draw, so show the day's figure.
+  if (series.length < 2) {
+    const one = series[0];
+    return (
+      <div style={{ display: 'grid', gap: 4 }}>
+        <span className="num" style={{ fontSize: 28, fontWeight: 600 }}>{fmt(one.v)}</span>
+        <span className="hint">{fmtDay(one.day)}{tip ? ` · ${tip(one)}` : ''}</span>
+      </div>
+    );
+  }
   const W = 720, H = height, PAD = 10;
   const max = Math.max(1e-9, ...series.map((x) => x.v || 0));
   const X = (i) => (i / (series.length - 1)) * W;
