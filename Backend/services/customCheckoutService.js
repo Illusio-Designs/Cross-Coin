@@ -20,6 +20,7 @@ const {
   Order, OrderItem, Payment, GuestUser, ShippingAddress,
 } = require('../model/associations.js');
 const { sequelize } = require('../config/db.js');
+const { QueryTypes } = require('sequelize');
 const settingsHelper = require('./settingsHelper.js');
 const { logger } = require('../config/logging.js');
 
@@ -202,8 +203,64 @@ async function productBody(productId, brandId) {
   return JSON.stringify(mapProduct(p, { vendor }));
 }
 const hashOf = (body) => crypto.createHash('sha1').update(body).digest('hex');
-// brand:product → hash of the copy Shiprocket last accepted from this server.
+// What a checkout depends on: title, status, and per variant its price,
+// compare-at price and whether it is in stock. Stock counts and edit times
+// change with every sale; they are refreshed in the background, never on the
+// shopper's tap.
+function checkoutKeyOf(body) {
+  try {
+    const p = JSON.parse(body);
+    return hashOf(JSON.stringify([p.title, p.status, (p.variants || []).map((v) => [v.id, v.price, v.compare_at_price, Number(v.quantity) > 0])]));
+  } catch { return hashOf(body); }
+}
+// What Shiprocket last accepted, per brand:product — { full, key } hashes.
+// Kept in the database (custom_checkout_pushes), not just in memory: the app
+// is restarted by the host after idle time and on every deploy, and with only
+// a memory copy each restart made the next tap on every product wait for a
+// full upload again.
 const pushedHash = new Map();
+let pushTableReady = null;
+function ensurePushTable() {
+  if (!pushTableReady) {
+    pushTableReady = sequelize.query(
+      `CREATE TABLE IF NOT EXISTS custom_checkout_pushes (
+         brand_id INT NOT NULL,
+         product_id INT NOT NULL,
+         full_hash CHAR(40) NOT NULL,
+         key_hash CHAR(40) NOT NULL,
+         pushed_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+         PRIMARY KEY (brand_id, product_id)
+       ) ENGINE=InnoDB`
+    ).catch((e) => { pushTableReady = null; throw e; });
+  }
+  return pushTableReady;
+}
+const loadedBrands = new Set();
+async function loadPushed(brandId) {
+  if (loadedBrands.has(brandId)) return;
+  try {
+    await ensurePushTable();
+    const rows = await sequelize.query('SELECT product_id, full_hash, key_hash FROM custom_checkout_pushes WHERE brand_id = :b',
+      { replacements: { b: brandId }, type: QueryTypes.SELECT });
+    for (const r of rows) {
+      const k = `${brandId}:${r.product_id}`;
+      if (!pushedHash.has(k)) pushedHash.set(k, { full: r.full_hash, key: r.key_hash });
+    }
+    loadedBrands.add(brandId);
+  } catch (e) {
+    logger.warn('[custom-checkout] push memory load failed: ' + e.message);
+  }
+}
+function rememberPush(brandId, productId, body) {
+  const rec = { full: hashOf(body), key: checkoutKeyOf(body) };
+  pushedHash.set(`${brandId}:${productId}`, rec);
+  ensurePushTable()
+    .then(() => sequelize.query(
+      `INSERT INTO custom_checkout_pushes (brand_id, product_id, full_hash, key_hash) VALUES (:b, :p, :f, :k)
+       ON DUPLICATE KEY UPDATE full_hash = VALUES(full_hash), key_hash = VALUES(key_hash)`,
+      { replacements: { b: brandId, p: productId, f: rec.full, k: rec.key }, type: QueryTypes.INSERT }))
+    .catch((e) => logger.warn('[custom-checkout] push memory save failed: ' + e.message));
+}
 
 async function pushProduct(productId, brandId = 1) {
   try {
@@ -220,7 +277,7 @@ async function pushProduct(productId, brandId = 1) {
       },
       timeout: 15000,
     });
-    pushedHash.set(`${brandId}:${productId}`, hashOf(body));
+    rememberPush(brandId, productId, body);
     logger.info(`[custom-checkout] pushed product ${productId} (brand ${brandId})`);
     return { pushed: true };
   } catch (err) {
@@ -232,19 +289,25 @@ async function pushProduct(productId, brandId = 1) {
 // Make sure Shiprocket has the current copy of the products in this cart
 // before a checkout opens (it prices each pair from its own catalog, and the
 // order is rejected later if its prices differ from ours). Reading our copy is
-// a quick database read; the slow call to Shiprocket happens only when the
-// product changed since this server last pushed it — e.g. a price edit — or it
-// was never pushed. warmCatalog() pushes everything once at startup, so a
-// shopper's tap normally waits for nothing but the checkout token.
+// a quick database read; the shopper's tap waits for the slow call to
+// Shiprocket only when what the checkout depends on changed (a price, a
+// variant going out of stock) or the product was never pushed. A change in
+// stock count alone is pushed in the background.
 async function ensureProductsPushed(brandId, variantIds) {
+  await loadPushed(brandId);
   const vars = await ProductVariation.findAll({ where: { id: variantIds.map(Number).filter(Boolean) }, attributes: ['id', 'productId'] });
   const ids = [...new Set(vars.map((v) => v.productId))];
   const results = await Promise.all(ids.map(async (pid) => {
     const body = await productBody(pid, brandId);
-    if (body && pushedHash.get(`${brandId}:${pid}`) === hashOf(body)) return { productId: pid, pushed: 'unchanged' };
+    const last = pushedHash.get(`${brandId}:${pid}`);
+    if (body && last && last.full === hashOf(body)) return { productId: pid, pushed: 'unchanged' };
+    if (body && last && last.key === checkoutKeyOf(body)) {
+      pushProduct(pid, brandId).catch(() => {}); // stock / edit time only: refresh in the background
+      return { productId: pid, pushed: 'background' };
+    }
     return { productId: pid, ...(await pushProduct(pid, brandId)) };
   }));
-  if (results.some((r) => r.pushed !== 'unchanged')) {
+  if (results.some((r) => r.pushed !== 'unchanged' && r.pushed !== 'background')) {
     noteProviderCall(brandId, { ok: results.every((r) => r.pushed), push: true, method: 'PUSH', path: 'product push', results });
   }
   return results;
@@ -261,16 +324,22 @@ async function warmCatalog() {
         attributes: ['id'],
         include: [{ model: Brand, as: 'Brands', attributes: [], where: { id: b.id }, through: { attributes: [] } }],
       });
+      await loadPushed(b.id);
       const queue = products.map((p) => p.id);
       let ok = 0;
+      let same = 0;
       const worker = async () => {
         while (queue.length) {
-          const r = await pushProduct(queue.shift(), b.id);
+          const pid = queue.shift();
+          // Unchanged since the last push (remembered across restarts): skip.
+          const body = await productBody(pid, b.id);
+          if (body && pushedHash.get(`${b.id}:${pid}`)?.full === hashOf(body)) { same += 1; continue; }
+          const r = await pushProduct(pid, b.id);
           if (r.pushed) ok += 1;
         }
       };
       await Promise.all([worker(), worker(), worker()]);
-      logger.info(`[custom-checkout] catalog warm-up: ${ok}/${products.length} products pushed (brand ${b.id})`);
+      logger.info(`[custom-checkout] catalog warm-up: ${ok} pushed, ${same} unchanged of ${products.length} (brand ${b.id})`);
     }
   } catch (e) {
     logger.warn('[custom-checkout] catalog warm-up failed: ' + e.message);

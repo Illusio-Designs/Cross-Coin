@@ -25,7 +25,7 @@ import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
-import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { shiprocketEnabled, openShiprocketCheckout, loadShiprocketSdk } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import '@/app/styles/cart.css';
@@ -624,6 +624,9 @@ export default function CartDrawer() {
     cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
+    // Opening a cart with items is the strongest sign of checkout: download
+    // the checkout script now, so BUY NOW doesn't wait for it.
+    shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
     // Re-arm the whole-cart shimmer for this open (cart has items to load for).
     setLdCoupons(false); setLdSuggest(false); setLdFees(false);
     viewCart({

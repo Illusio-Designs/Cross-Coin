@@ -1871,7 +1871,8 @@ const startServer = async () => {
             logMemoryUsage(); // Log initial memory usage
             // Send Shiprocket Checkout the current catalog once the server has
             // settled, so shoppers' checkout taps don't wait on a product push.
-            if (process.env.NODE_ENV === 'production') {
+            // Main app only: the admin copy (APP_ROLE=admin) serves the Dashboard.
+            if (process.env.NODE_ENV === 'production' && process.env.APP_ROLE !== 'admin') {
                 setTimeout(() => { require('./services/customCheckoutService.js').warmCatalog(); }, 20000).unref();
             }
             // Nudge: internal endpoints fail closed in prod, so flag missing secrets.
