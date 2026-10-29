@@ -695,7 +695,7 @@ exports.getBrandTraffic = async (req, res) => {
                   COUNT(DISTINCT CONCAT(COALESCE(u.ip_address,''), '|', COALESCE(u.user_agent,''))) AS devices,
                   COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%fbclid=%' THEN u.session_id END) AS fbclid,
                   COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%fbclid=%' THEN ${FBCLID} END) AS fbclid_ids,
-                  COUNT(DISTINCT CASE WHEN LOWER(u.utm_medium) IN ('paid','cpc','ppc','paid_social','paidsocial') THEN u.session_id END) AS paid,
+                  COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%utm\\_source=%' OR u.landing_page LIKE '%utm\\_campaign=%' THEN u.session_id END) AS paid,
                   COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active
              FROM utm_tracking u
             WHERE u.created_at BETWEEN :start AND :end AND ${notBot('u.')}${bFiltU}`,

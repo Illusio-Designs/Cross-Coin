@@ -214,7 +214,7 @@ function VisitCheck({ vc, dim, busy }) {
       text: `${num(Math.max(0, visits - vc.active))} only landed and left without looking.`,
       chip: vcPct(vc.active, visits) >= 80 ? 'Interested' : vcPct(vc.active, visits) >= 50 ? 'Many left fast' : 'Most left fast' },
     { key: 'Paid tags', name: 'Tagged as paid ads', pct: vcPct(vc.paid, visits), value: num(vc.paid),
-      text: vc.paid ? 'Visits whose link carried the ad’s UTM tags (utm_medium = paid / paid_social / cpc).' : 'None arrived with the ad’s UTM tags.',
+      text: vc.paid ? 'Visits whose link carried UTM tags (utm_source or utm_campaign).' : 'None arrived with the ad’s UTM tags.',
       chip: vc.paid ? 'Tagged' : 'Check URL parameters' },
   ];
   return (

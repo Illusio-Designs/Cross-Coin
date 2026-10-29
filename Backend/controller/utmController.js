@@ -24,7 +24,22 @@ exports.trackUTM = async (req, res) => {
     let sessionId = req.cookies?.session_id;
     logger.info('🍪 UTM Tracking - Cookies received:', req.cookies);
     logger.info('🔑 UTM Tracking - Session ID from cookie:', sessionId);
-    
+
+    // The cookie lives 30 days, but a visit doesn't: a browser that comes
+    // back after 30 minutes, or arrives from a new ad / campaign link, starts
+    // a new visit (as Google Analytics does). Otherwise a returning shopper
+    // tapping an ad kept their old visit, and the ad's UTM tags were lost.
+    if (sessionId) {
+      const prev = await UTMTracking.findOne({
+        where: { session_id: sessionId },
+        attributes: ['created_at', 'landing_page'],
+      }).catch(() => null);
+      const tagged = !!(utm_source || utm_campaign) || /[?&](fbclid|gclid|gbraid|wbraid|msclkid|ttclid)=/.test(String(landing_page || ''));
+      const stale = prev && Date.now() - new Date(prev.created_at).getTime() > 30 * 60 * 1000;
+      const newCampaign = prev && tagged && String(prev.landing_page || '') !== String(landing_page || '');
+      if (stale || newCampaign) sessionId = null;
+    }
+
     if (!sessionId) {
       sessionId = uuidv4();
       logger.info('🆕 UTM Tracking - Creating new session ID:', sessionId);
