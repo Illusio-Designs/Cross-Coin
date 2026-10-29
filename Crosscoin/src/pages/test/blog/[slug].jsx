@@ -69,7 +69,7 @@ export default function TestBlog({ preview = true }) {
             </SkBusy>
           )
           : !post
-            ? <p className="mono" style={{ fontSize: 13, padding: '30px 0' }}>Article not found. <a style={{ color: 'var(--crimson)', cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Back to journal</a></p>
+            ? <p className="mono" style={{ fontSize: 13, padding: '30px 0' }}>Article not found. <a style={{ color: 'var(--crimson-text)', cursor: 'pointer' }} onClick={() => router.push(R.journal)}>Back to journal</a></p>
             : (<>
                 <div className="artmeta" style={{ marginTop: 14 }}>
                   <span className="artcat">{post.cat}</span>

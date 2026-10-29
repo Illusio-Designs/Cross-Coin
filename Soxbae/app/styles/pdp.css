@@ -15,7 +15,7 @@
 .pdx-lb-nav.prev { left: 12px; } .pdx-lb-nav.next { right: 12px; }
 .pdx-lb-nav:hover { background: rgba(255,255,255,.26); }
 .pdx-badge { position: absolute; top: 16px; left: 16px; background: var(--ink); color: #fbfaf6; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 7px 13px; border-radius: 999px; }
-.pdx-badge-off { left: auto; right: 16px; background: var(--accent); }
+.pdx-badge-off { left: auto; right: 16px; background: var(--accent-btn); }
 .pdx-title { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.05; font-size: clamp(28px,3.8vw,46px); color: var(--ink); margin: 12px 0 0; }
 .pdx-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); }
 .pdx-stars { display: inline-flex; gap: 2px; color: var(--line); }
@@ -51,7 +51,7 @@
 .pdx-qty { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); padding: 0 6px; flex-shrink: 0; }
 .pdx-qty button { width: 38px; height: 52px; border: 0; background: none; font-size: 20px; color: var(--ink); cursor: pointer; }
 .pdx-qty span { min-width: 26px; text-align: center; font-weight: 600; font-size: 15px; }
-.pdx-add { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: var(--accent); color: #fff; border: 0; border-radius: 999px; font-size: 14.5px; font-weight: 600; padding: 0 24px; min-height: 54px; cursor: pointer; transition: background .18s ease, transform .18s ease; }
+.pdx-add { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: var(--accent-btn); color: #fff; border: 0; border-radius: 999px; font-size: 14.5px; font-weight: 600; padding: 0 24px; min-height: 54px; cursor: pointer; transition: background .18s ease, transform .18s ease; }
 .pdx-add:hover:not(:disabled) { background: var(--accent-600); transform: translateY(-1px); }
 .pdx-add:disabled { background: var(--line); color: var(--ink-soft); cursor: not-allowed; }
 /* Assurances — one wrapping row of trust signals */

@@ -67,7 +67,7 @@
 .chip-active svg { color: #fbfaf6; }
 .filter-trigger { background: var(--card); font-weight: 600; }
 .filter-trigger:hover { border-color: var(--ink); }
-.filter-badge { background: var(--accent); }
+.filter-badge { background: var(--accent-btn); }
 .result-count { color: var(--ink-soft); }
 .size-pill:hover, .price-pill:hover, .color-swatch:hover, .sort-dd-btn:hover, .filter-head .hamburger:hover { border-color: var(--ink); color: var(--ink); }
 .size-pill.active, .price-pill.active { background: var(--ink); color: #fbfaf6; border-color: var(--ink); }

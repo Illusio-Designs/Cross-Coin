@@ -110,7 +110,7 @@ export default function TestThankYou() {
             : phase === 'pending'
               ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Your order is received. We&rsquo;ll send the order number and updates to you.</p>
               : orderNo
-                ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Order <b style={{ color: 'var(--crimson)' }}>{orderNo}</b> is confirmed.</p>
+                ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Order <b style={{ color: 'var(--crimson-text)' }}>{orderNo}</b> is confirmed.</p>
                 : <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Your order is confirmed.</p>}
           {phase !== 'loading' && (
             <p style={{ color: 'var(--ink-soft)', fontSize: 14.5, lineHeight: 1.6, marginTop: 10 }}>

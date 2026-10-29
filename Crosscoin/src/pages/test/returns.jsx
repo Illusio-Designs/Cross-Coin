@@ -184,13 +184,13 @@ export default function TestReturns() {
             ) : eligible.length === 0 ? (
               <div className="acctempty mono">
                 No delivered orders are available to return right now. Returns can be requested once an order is delivered.{' '}
-                <a onClick={() => router.push(R.account)} style={{ color: 'var(--crimson)', cursor: 'pointer' }}>View your orders</a>
+                <a onClick={() => router.push(R.account)} style={{ color: 'var(--crimson-text)', cursor: 'pointer' }}>View your orders</a>
               </div>
             ) : (
               <form className="authcard" onSubmit={submit} noValidate>
                 <div className="ffield"><label>Order</label><Dropdown value={orderId} options={orderOptions} onChange={(v) => { setOrderId(v); setErr(''); }} ariaLabel="Order to return" /></div>
                 <div className="ffield"><label>Reason</label><Dropdown value={reason} options={REASONS} onChange={(v) => { setReason(v); setErr(''); }} ariaLabel="Return reason" /></div>
-                <div className="ffield"><label>Photos {needsPhoto ? <span style={{ color: 'var(--crimson)' }}>(required)</span> : <span style={{ color: 'var(--ink-faint)' }}>(optional)</span>}</label>
+                <div className="ffield"><label>Photos {needsPhoto ? <span style={{ color: 'var(--crimson-text)' }}>(required)</span> : <span style={{ color: 'var(--ink-faint)' }}>(optional)</span>}</label>
                   <input key={fileKey} type="file" accept="image/*" multiple className="filefield" onChange={onPhotos} />
                   <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
                     {photos.length > 0 ? `${photos.length} photo${photos.length === 1 ? '' : 's'} selected · ` : ''}
@@ -207,7 +207,7 @@ export default function TestReturns() {
                 ) : (
                   <p className="mono" style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.6, margin: '4px 0 14px' }}>We&rsquo;ll refund your original payment method once we receive the item back.</p>
                 ))}
-                {err && <p className="mono" role="alert" style={{ color: 'var(--crimson)', fontSize: 12.5, margin: '0 0 10px' }}>{err}</p>}
+                {err && <p className="mono" role="alert" style={{ color: 'var(--crimson-text)', fontSize: 12.5, margin: '0 0 10px' }}>{err}</p>}
                 <button className="btn btn--crimson btn--block btn--lg" type="submit" style={{ marginTop: 14 }} disabled={busy}>{busy ? 'Submitting…' : 'Submit return request'}</button>
                 <p className="authcard__note mono">The final refund amount is confirmed after we receive and check the item.</p>
               </form>

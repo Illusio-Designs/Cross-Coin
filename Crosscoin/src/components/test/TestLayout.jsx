@@ -139,7 +139,7 @@ const MOBILE_CSS = `
 .cc-test-root .ctile__coin::after{ content:''; position:absolute; inset:16px; border-radius:50%; background:radial-gradient(circle at 35% 30%, var(--c,var(--crimson)), transparent 70%); opacity:.5; }
 .cc-test-root .ctile__no{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:12px; color:var(--ink-faint); }
 .cc-test-root .ctile__nm{ font-family:var(--ff-display, "Fraunces"),serif; font-weight:700; font-size:19px; line-height:1.1; max-width:76%; margin-top:4px; }
-.cc-test-root .ctile__go{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; color:var(--crimson); display:inline-flex; align-items:center; gap:7px; }
+.cc-test-root .ctile__go{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; color:var(--crimson-text); display:inline-flex; align-items:center; gap:7px; }
 .cc-test-root .ctile__dot{ width:12px; height:12px; border-radius:50%; background:var(--c,var(--crimson)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.4); }
 @media (max-width:820px){ .cc-test-root .cgrid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:480px){ .cc-test-root .cgrid{ grid-template-columns:1fr; } }
@@ -218,11 +218,11 @@ const MOBILE_CSS = `
 .cc-test-root .citem__top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
 .cc-test-root .citem__nm{ font-weight:700; font-size:14px; line-height:1.25; }
 .cc-test-root .citem__rm{ flex:0 0 auto; background:none; border:0; color:var(--ink-faint); cursor:pointer; padding:0; }
-.cc-test-root .citem__rm:hover{ color:var(--crimson); }
+.cc-test-root .citem__rm:hover{ color:var(--crimson-text); }
 .cc-test-root .citem__var{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; color:var(--ink-faint); margin:4px 0 9px; display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .cc-test-root .citem__bot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .cc-test-root .citem__pr{ display:flex; align-items:baseline; gap:6px; font-family:var(--ff-mono, "Space Mono"),monospace; flex-wrap:wrap; }
-.cc-test-root .citem__pr b{ font-size:15px; color:var(--crimson); }
+.cc-test-root .citem__pr b{ font-size:15px; color:var(--crimson-text); }
 .cc-test-root .citem__per{ font-size:10px; color:var(--ink-faint); font-weight:400; }
 .cc-test-root .citem__pr s{ font-size:11px; color:var(--ink-faint); }
 .cc-test-root .citem__pr em{ font-style:normal; font-size:10.5px; font-weight:700; color:#0f766e; }
@@ -243,16 +243,16 @@ const MOBILE_CSS = `
 .cc-test-root .seeoffers{ display:flex; align-items:center; gap:6px; margin-top:12px; background:none; border:0; padding:0; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:12px; font-weight:700; color:#0f766e; cursor:pointer; }
 .cc-test-root .offerlist{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
 .cc-test-root .offerlist__row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1.5px dashed var(--line); border-radius:4px; font-size:12.5px; }
-.cc-test-root .offerlist__row button{ flex:0 0 auto; background:none; border:0; color:var(--crimson); font-family:var(--ff-mono, "Space Mono"),monospace; font-weight:700; font-size:11.5px; cursor:pointer; }
+.cc-test-root .offerlist__row button{ flex:0 0 auto; background:none; border:0; color:var(--crimson-text); font-family:var(--ff-mono, "Space Mono"),monospace; font-weight:700; font-size:11.5px; cursor:pointer; }
 /* checkout trust row */
 .cc-test-root .cotrust{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; color:var(--ink-faint); }
 .cc-test-root .cotrust span{ display:inline-flex; align-items:center; gap:5px; }
 .cc-test-root .cotrust svg{ color:#0f766e; }
 /* cart item pack chip */
-.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:4px; padding:2px 8px; }
+.cc-test-root .packchip{ display:inline-block; margin-left:8px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--crimson-text); background:color-mix(in srgb,var(--crimson) 10%,var(--surface)); border:1px solid color-mix(in srgb,var(--crimson) 30%,transparent); border-radius:4px; padding:2px 8px; }
 /* Buy More, Save More carousel (Morbix) */
 .cc-test-root .bms{ margin:16px 0 4px; border:2px solid var(--line-ink); border-radius:4px; background:color-mix(in srgb,var(--crimson) 5%,var(--surface)); box-shadow:var(--stamp-sm); padding:12px; }
-.cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson); margin-bottom:10px; }
+.cc-test-root .bms__h{ text-align:center; font-size:11.5px; font-weight:700; color:var(--crimson-text); margin-bottom:10px; }
 .cc-test-root .bms__scroll{ display:flex; gap:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
 .cc-test-root .bms__scroll::-webkit-scrollbar{ display:none; }
 .cc-test-root .bms__card{ flex:0 0 auto; width:210px; display:flex; flex-direction:column; gap:10px; background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; padding:10px; box-shadow:var(--stamp-sm); }
@@ -262,17 +262,17 @@ const MOBILE_CSS = `
 .cc-test-root .bms__info{ min-width:0; flex:1; }
 .cc-test-root .bms__nm{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cc-test-root .bms__pr{ display:flex; align-items:baseline; gap:6px; margin-top:3px; font-family:var(--ff-mono, "Space Mono"),monospace; }
-.cc-test-root .bms__pr b{ font-size:13px; color:var(--crimson); }
+.cc-test-root .bms__pr b{ font-size:13px; color:var(--crimson-text); }
 .cc-test-root .bms__pr s{ font-size:11px; color:var(--ink-faint); }
 .cc-test-root .bms__save{ display:inline-block; margin-top:6px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; color:var(--teal); background:color-mix(in srgb,var(--teal) 14%,transparent); border-radius:4px; padding:2px 8px; }
 .cc-test-root .bms__add{ width:100%; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; font-weight:700; color:#fff; background:var(--crimson); border:2px solid var(--line-ink); border-radius:4px; padding:9px; cursor:pointer; }
 .cc-test-root .bms__add:hover{ filter:brightness(1.08); }
 /* "Sold in pairs" note at the top of the cart */
-.cc-test-root .pairsnote{ font-size:11px; color:var(--crimson); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:4px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
+.cc-test-root .pairsnote{ font-size:11px; color:var(--crimson-text); background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:1px dashed color-mix(in srgb,var(--crimson) 40%,var(--line)); border-radius:4px; padding:8px 11px; margin-bottom:14px; line-height:1.4; }
 /* PDP: Ideal for / Washing instructions / Manufacturing details (stamped Mint). */
 .cc-test-root .idealrow{ display:flex; flex-wrap:wrap; gap:10px; }
 .cc-test-root .idealchip{ display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); font-weight:600; font-size:13.5px; }
-.cc-test-root .idealchip svg{ color:var(--crimson); }
+.cc-test-root .idealchip svg{ color:var(--crimson-text); }
 .cc-test-root .washbox{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
 .cc-test-root .washitem{ display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:14px 8px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); }
 .cc-test-root .washitem svg{ color:var(--ink); }
@@ -294,18 +294,18 @@ const MOBILE_CSS = `
 .cc-test-root .instock{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#0f766e; background:color-mix(in srgb,#0f766e 12%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 38%,transparent); border-radius:4px; padding:5px 11px; }
 .cc-test-root .instock svg{ color:#0f766e; }
 .cc-test-root .freeship{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft); }
-.cc-test-root .freeship svg{ color:var(--crimson); }
+.cc-test-root .freeship svg{ color:var(--crimson-text); }
 .cc-test-root .freeship strong{ color:var(--ink); font-weight:700; }
 /* PDP trust row + About/Specs (Morbix-style layout, Mint styling) */
 .cc-test-root .pdptrust{ margin-top:16px; border-top:2px solid var(--line); padding-top:14px; }
 .cc-test-root .pdptrust__free{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-soft); }
-.cc-test-root .pdptrust__free svg{ color:var(--crimson); }
+.cc-test-root .pdptrust__free svg{ color:var(--crimson-text); }
 .cc-test-root .pdptrust__free strong{ color:var(--ink); }
 /* Trust row — "B": one bordered strip, four icon-over-label cells, hairline dividers. */
 .cc-test-root .pdptrust__row{ display:grid; grid-template-columns:repeat(4,1fr); margin-top:14px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); overflow:hidden; }
 .cc-test-root .pdptrust__i{ display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-soft); padding:14px 8px; border-right:1.5px solid var(--line); line-height:1.25; }
 .cc-test-root .pdptrust__i:last-child{ border-right:none; }
-.cc-test-root .pdptrust__i svg{ color:var(--crimson); }
+.cc-test-root .pdptrust__i svg{ color:var(--crimson-text); }
 @media (max-width:420px){
   .cc-test-root .pdptrust__row{ grid-template-columns:repeat(2,1fr); }
   .cc-test-root .pdptrust__i:nth-child(2){ border-right:none; }
@@ -318,7 +318,7 @@ const MOBILE_CSS = `
 .cc-test-root .wishsq:hover{ transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--line-ink); }
 .cc-test-root .wishsq.on{ background:var(--crimson); border-color:var(--crimson); color:#fff; }
 /* PREPAID10 chip above Buy it now */
-.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0f766e; background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:4px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
+.cc-test-root .prepaidchip{ position:relative; z-index:3; display:block; width:max-content; max-width:92%; margin:12px auto -14px; text-align:center; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#0d6b64; /* 5:1 on the chip (was #0f766e, 4.3) */ background:color-mix(in srgb,#0f766e 16%,var(--surface)); border:1.5px solid color-mix(in srgb,#0f766e 32%,transparent); border-radius:4px; padding:7px 18px; box-shadow:0 2px 8px rgba(24,13,62,.2); }
 /* button gets a touch more top room so its label clears the overlapping chip */
 .cc-test-root .btn--buynow{ padding-top:20px; }
 /* delivery pincode check */
@@ -372,7 +372,7 @@ const MOBILE_CSS = `
 /* account hub tiles */
 .cc-test-root .acctile{ text-align:left; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); box-shadow:var(--stamp-sm); padding:18px; cursor:pointer; font:inherit; color:var(--ink); transition:transform .16s var(--ease); display:flex; flex-direction:column; gap:4px; min-height:120px; }
 .cc-test-root .acctile:hover{ transform:translate(-3px,-3px); box-shadow:6px 6px 0 var(--line-ink); }
-.cc-test-root .acctile__ic{ color:var(--crimson); margin-bottom:6px; }
+.cc-test-root .acctile__ic{ color:var(--crimson-text); margin-bottom:6px; }
 .cc-test-root .acctile b{ font-family:var(--ff-display, "Fraunces"),serif; font-size:17px; }
 .cc-test-root .acctile__d{ font-size:13px; color:var(--ink-soft); }
 /* Legal / policy / article rich text */
@@ -380,7 +380,7 @@ const MOBILE_CSS = `
 .cc-test-root .legal h1,.cc-test-root .legal h2,.cc-test-root .legal h3{ color:var(--ink); margin:22px 0 10px; }
 .cc-test-root .legal h2{ font-size:24px; } .cc-test-root .legal h3{ font-size:19px; }
 .cc-test-root .legal p{ margin:0 0 13px; } .cc-test-root .legal ul,.cc-test-root .legal ol{ margin:0 0 13px 20px; }
-.cc-test-root .legal li{ margin:5px 0; } .cc-test-root .legal a{ color:var(--crimson); text-decoration:underline; }
+.cc-test-root .legal li{ margin:5px 0; } .cc-test-root .legal a{ color:var(--crimson-text); text-decoration:underline; }
 .cc-test-root .legal img{ border-radius:4px; margin:12px 0; }
 /* Blog article */
 .cc-test-root .artmeta{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12px; color:var(--ink-faint); }
@@ -391,16 +391,16 @@ const MOBILE_CSS = `
 /* Order tracking */
 .cc-test-root .trackcard{ border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); background:var(--surface); padding:20px; margin-top:24px; }
 .cc-test-root .trackcard__top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson); border:2px solid var(--crimson); border-radius:4px; padding:5px 13px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
+.cc-test-root .statuspill{ background:color-mix(in srgb,var(--crimson) 12%,var(--surface)); color:var(--crimson-text); border:2px solid var(--crimson); border-radius:4px; padding:5px 13px; font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; text-transform:uppercase; }
 .cc-test-root .trackcard__meta{ display:flex; flex-wrap:wrap; gap:8px; font-size:11.5px; color:var(--ink-faint); margin-top:8px; }
 .cc-test-root .trackitems{ margin-top:14px; border-top:2px solid var(--line); padding-top:12px; }
 .cc-test-root .trackitem{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; font-size:13.5px; }
 /* Contact */
 .cc-test-root .contactgrid{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:24px; }
 .cc-test-root .contactrow{ display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--line); }
-.cc-test-root .contactrow .pi{ color:var(--crimson); flex:0 0 auto; margin-top:2px; }
+.cc-test-root .contactrow .pi{ color:var(--crimson-text); flex:0 0 auto; margin-top:2px; }
 .cc-test-root .contactrow b{ display:block; font-size:13px; } .cc-test-root .contactrow a,.cc-test-root .contactrow span{ font-size:13.5px; color:var(--ink-soft); }
-.cc-test-root .contactrow a{ color:var(--crimson); }
+.cc-test-root .contactrow a{ color:var(--crimson-text); }
 .cc-test-root .contactform textarea{ width:100%; padding:12px 14px; border:2px solid var(--line-ink); border-radius:4px; background:var(--surface); color:var(--ink); font:inherit; font-size:14px; box-shadow:var(--stamp-sm); resize:vertical; }
 @media (max-width:720px){ .cc-test-root .contactgrid{ grid-template-columns:1fr; } }
 .cc-test-root .post__img{ aspect-ratio:auto !important; height:0 !important; padding-top:60% !important; position:relative !important; overflow:hidden !important; display:block !important; }
@@ -411,8 +411,8 @@ const MOBILE_CSS = `
 /* Buy More, Save More pair stepper in the cart drawer. */
 .cc-test-root .ccps{ padding:14px 16px; background:color-mix(in srgb,var(--crimson) 7%,var(--surface)); border:2px solid var(--line-ink); border-radius:4px; margin-bottom:16px; box-shadow:var(--stamp-sm); }
 .cc-test-root .ccps__msg{ display:flex; align-items:center; gap:7px; font-size:12.5px; line-height:1.35; }
-.cc-test-root .ccps__spark{ color:var(--crimson); flex:0 0 auto; }
-.cc-test-root .ccps__msg b{ font-weight:700; } .cc-test-root .ccps__msg .hi{ color:var(--crimson); font-weight:700; }
+.cc-test-root .ccps__spark{ color:var(--crimson-text); flex:0 0 auto; }
+.cc-test-root .ccps__msg b{ font-weight:700; } .cc-test-root .ccps__msg .hi{ color:var(--crimson-text); font-weight:700; }
 .cc-test-root .ccps__track{ position:relative; margin-top:14px; }
 .cc-test-root .ccps__line{ position:absolute; left:10%; right:10%; top:9px; height:4px; border-radius:4px; background:var(--line); }
 .cc-test-root .ccps__line span{ display:block; height:100%; border-radius:4px; background:var(--crimson); transition:width .35s var(--ease); }
@@ -422,8 +422,8 @@ const MOBILE_CSS = `
 .cc-test-root .ccps__dot.on .d{ background:var(--crimson); border-color:var(--crimson); }
 .cc-test-root .ccps__dot.sel .d{ box-shadow:0 0 0 3px color-mix(in srgb,var(--crimson) 20%,transparent); }
 .cc-test-root .ccps__dot .l{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:10.5px; font-weight:700; color:var(--ink); text-align:center; }
-.cc-test-root .ccps__dot.on .l{ color:var(--crimson); }
-.cc-test-root .ccps__dot .sv{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; color:var(--crimson); text-align:center; }
+.cc-test-root .ccps__dot.on .l{ color:var(--crimson-text); }
+.cc-test-root .ccps__dot .sv{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:9.5px; font-weight:700; color:var(--crimson-text); text-align:center; }
 .cc-test-root .offerwrap{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 2px; }
 .cc-test-root .offerwrap .chip{ font-size:11px; padding:6px 11px; cursor:pointer; }
 /* PDP: let the grid columns shrink so the buy column (buttons, option rows)
@@ -437,7 +437,7 @@ const MOBILE_CSS = `
 .cc-test-root .mnav .brand .cc-logo{ height:30px; }
 .cc-test-root .mnav__util{ margin-top:14px; padding-top:14px; border-top:2px solid var(--line); display:flex; flex-direction:column; gap:4px; }
 .cc-test-root .mnav__util button{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:0; padding:12px 4px; font:inherit; font-size:16px; font-weight:600; color:var(--ink); cursor:pointer; }
-.cc-test-root .mnav__util button svg{ color:var(--crimson); }
+.cc-test-root .mnav__util button svg{ color:var(--crimson-text); }
 @media (max-width:860px){ .cc-test-root .cc-logo{ height:26px; } .cc-test-root footer.site .cc-logo{ height:30px; } }
 @media (max-width:520px){
   .cc-test-root .sechead{ flex-direction:column; align-items:flex-start; }
@@ -965,12 +965,12 @@ export default function TestLayout({ children }) {
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: 'var(--ff-mono, "Space Mono"), monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
-            Contact: <a href="tel:+919712891700" style={{ color: 'var(--crimson)' }}>+91 97128 91700</a> · <a href="mailto:obzusindia@gmail.com" style={{ color: 'var(--crimson)' }}>obzusindia@gmail.com</a>
+            Contact: <a href="tel:+919712891700" style={{ color: 'var(--crimson-text)' }}>+91 97128 91700</a> · <a href="mailto:obzusindia@gmail.com" style={{ color: 'var(--crimson-text)' }}>obzusindia@gmail.com</a>
           </div>
         </div>
         <div className="wrap footend">
           <span>© {new Date().getFullYear()} CROSSCOIN. All rights reserved. · MADE IN INDIA 🇮🇳</span>
-          <span>Made with ❤ by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--crimson)' }}>Finvera.solutions</a></span>
+          <span>Made with ❤ by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--crimson-text)' }}>Finvera.solutions</a></span>
         </div>
       </footer>
 
@@ -1113,8 +1113,8 @@ export default function TestLayout({ children }) {
           </div>
           <div className="drawer__foot">
             <div className="srow" style={{ padding: '4px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
-            {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
-            {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
+            {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson-text)' }}>−{inr(disc)}</span></div>}
+            {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson-text)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
             {useShiprocket ? (
               <ShiprocketButton label="BUY NOW" onClick={checkoutShiprocket} busy={srBusy} />
@@ -1151,11 +1151,11 @@ export default function TestLayout({ children }) {
           </div>
           <div className="drawer__foot">
             <div className="srow" style={{ padding: '3px 0' }}><span>Subtotal</span><span>{inr(sub)}</span></div>
-            {coupon && disc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson)' }}>−{inr(disc)}</span></div>}
-            {prepaidDisc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Prepaid discount</span><span style={{ color: 'var(--crimson)' }}>−{inr(prepaidDisc)}</span></div>}
+            {coupon && disc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson-text)' }}>−{inr(disc)}</span></div>}
+            {prepaidDisc > 0 && <div className="srow" style={{ padding: '3px 0' }}><span>Prepaid discount</span><span style={{ color: 'var(--crimson-text)' }}>−{inr(prepaidDisc)}</span></div>}
             <div className="srow" style={{ padding: '3px 0' }}><span>Shipping</span><span>{ship === 0 ? 'FREE' : inr(ship)}</span></div>
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            {orderErr && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12, marginBottom: 10 }}>{orderErr}</div>}
+            {orderErr && <div className="mono" style={{ color: 'var(--crimson-text)', fontSize: 12, marginBottom: 10 }}>{orderErr}</div>}
             <button className="btn btn--crimson btn--block btn--lg" onClick={placeOrder} disabled={placing || !cart.length}>
               {placing ? 'Placing…' : (pay === 'prepaid' ? `Pay ${inr(total)}` : `Place order · ${inr(total)}`)}
             </button>
@@ -1240,7 +1240,7 @@ export default function TestLayout({ children }) {
               <>
                 <span className="eyebrow">You&rsquo;re in</span>
                 <h3 className="mkmodal__h">Check WhatsApp for your code</h3>
-                <p className="mkmodal__d">{lead.coupon ? <>Your exclusive code <b style={{ color: 'var(--crimson)' }}>{lead.coupon}</b> is on its way.</> : 'Your exclusive offer is on its way to WhatsApp.'}</p>
+                <p className="mkmodal__d">{lead.coupon ? <>Your exclusive code <b style={{ color: 'var(--crimson-text)' }}>{lead.coupon}</b> is on its way.</> : 'Your exclusive offer is on its way to WhatsApp.'}</p>
                 <button className="btn btn--crimson btn--block btn--lg" onClick={closeLead}>Start shopping</button>
               </>
             ) : (
@@ -1249,7 +1249,7 @@ export default function TestLayout({ children }) {
                 <h3 className="mkmodal__h">Get 10% off your first order</h3>
                 <p className="mkmodal__d">Drop your mobile number — we&rsquo;ll send an exclusive code on WhatsApp.</p>
                 <div className="phoneinput"><span className="phoneinput__cc">+91</span><input inputMode="numeric" maxLength={10} value={lead.phone} onChange={(e) => setLead((s) => ({ ...s, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="98XXXXXXXX" /></div>
-                {lead.msg && <div className="mono" style={{ color: 'var(--crimson)', fontSize: 12, marginTop: 8 }}>{lead.msg}</div>}
+                {lead.msg && <div className="mono" style={{ color: 'var(--crimson-text)', fontSize: 12, marginTop: 8 }}>{lead.msg}</div>}
                 <button className="btn btn--crimson btn--block btn--lg" type="submit" style={{ marginTop: 12 }} disabled={lead.busy}>{lead.busy ? 'Sending…' : 'Get my code'}</button>
                 <button type="button" className="mklater" onClick={closeLead}>No thanks</button>
               </form>
