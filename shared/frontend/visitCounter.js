@@ -7,7 +7,8 @@ import { NextResponse } from 'next/server';
 // clicks.
 //
 // It never changes headers or caching: it returns NextResponse.next(), only
-// adds the first-party `_cv` session cookie, and the ping is sent in the
+// adds first-party cookies (the `_cv` session, and Meta's `_fbp` / `_fbc`, see
+// setMetaCookies), and the ping is sent in the
 // background (event.waitUntil), so the page is never delayed. Any failure is
 // swallowed. The routing changes: a store's retired mixed-case paths
 // (LEGACY_PATHS, e.g. /Products → /products) get a permanent redirect,
@@ -96,6 +97,38 @@ function setSessionCookie(res, id) {
   });
 }
 
+// Meta browser id (_fbp) and ad-click id (_fbc), set here on the first page
+// load, before any script runs. The Meta pixel loads late (after the page) and
+// only then creates these cookies, so until now the server copies of the first
+// events — and everything from shoppers who left or blocked the pixel — carried
+// neither and couldn't be tied to the ad click. The pixel reuses cookies that
+// already exist, so browser and server events share one value. Same formats as
+// the pixel (fb.1.<ms>.<random> / fb.1.<ms>.<fbclid>), on the site's own
+// domain, readable by the page, 90 days like the pixel's.
+const META_COOKIE_SECONDS = 90 * 24 * 60 * 60;
+function metaCookieDomain(host) {
+  if (!host || host === 'localhost' || /^[\d.:]+$/.test(host) || /\.vercel\.app$/i.test(host)) return undefined;
+  return host.replace(/^www\./i, '');
+}
+function setMetaCookies(request, res) {
+  const opts = {
+    maxAge: META_COOKIE_SECONDS,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    domain: metaCookieDomain(request.nextUrl.hostname),
+  };
+  const now = Date.now();
+  if (!request.cookies.get('_fbp')?.value) {
+    res.cookies.set('_fbp', `fb.1.${now}.${Math.floor(1e9 + Math.random() * 9e9)}`, opts);
+  }
+  const clid = request.nextUrl.searchParams.get('fbclid');
+  if (clid && /^[\w-]{10,500}$/.test(clid)) {
+    const cur = request.cookies.get('_fbc')?.value || '';
+    if (!cur.endsWith(`.${clid}`)) res.cookies.set('_fbc', `fb.1.${now}.${clid}`, opts);
+  }
+}
+
 export function __HANDLER__(request, event) {
   const moved = LEGACY_PATHS[request.nextUrl.pathname];
   if (moved) {
@@ -121,6 +154,7 @@ export function __HANDLER__(request, event) {
       return res;
     }
     if (!isDocument(request)) return res;
+    setMetaCookies(request, res);
 
     const newSession = !valid;
     setSessionCookie(res, valid ? existing : newId());

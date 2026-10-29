@@ -60,8 +60,27 @@ async function resolveBrandId(req) {
  * consent record we logged for the shopper (user id or session cookie)
  * decides; no record means no.
  */
+// Stores with no cookie banner track every visitor, so every order counts as
+// consented — including Shiprocket checkout orders that arrive by webhook with
+// no consent record (there is no banner to create one).
+const TRACKS_EVERYONE = new Set(['morbix', 'soxbae', 'crosscoin']);
+const brandSlugCache = new Map();
+async function brandTracksEveryone(brandId) {
+  const id = Number(brandId) || 1;
+  if (!brandSlugCache.has(id)) {
+    try {
+      const b = await Brand.findByPk(id, { attributes: ['slug'] });
+      brandSlugCache.set(id, String(b?.slug || '').toLowerCase());
+    } catch {
+      return false;
+    }
+  }
+  return TRACKS_EVERYONE.has(brandSlugCache.get(id));
+}
+
 async function hasMarketingConsent(order) {
   if (order.marketing_consent === true || order.marketing_consent === 'true') return true;
+  if (await brandTracksEveryone(order.brand_id)) return true;
   if (order.marketing_consent === false || order.marketing_consent === 'false') return false;
   const userId = order.external_id || order.user_id || null;
   const sessionId = order.consent_session_id || null;
@@ -177,6 +196,16 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
   }
 }
 
+/** Meta click id (fb.1.<ms>.<fbclid>) from an ad-click landing URL, if it has one. */
+function fbcFromUrl(url) {
+  try {
+    const clid = new URL(url).searchParams.get('fbclid');
+    return clid ? `fb.1.${Date.now()}.${clid}` : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Relay a browser pixel event to the Conversions API using the SAME event_id
  * the browser used, so Meta deduplicates the pair. This lifts CAPI coverage to
@@ -216,8 +245,10 @@ async function sendBrowserPixelEvent(req, body = {}) {
     fn: sha256(user_data.fn || user_data.first_name),
     ln: sha256(user_data.ln || user_data.last_name),
     external_id: user_data.external_id ? sha256(user_data.external_id) : undefined,
+    // Every store ships within India only.
+    country: sha256(user_data.country || 'in'),
     fbp: fbp || null,
-    fbc: fbc || null,
+    fbc: fbc || fbcFromUrl(event_source_url) || null,
   };
   Object.keys(userData).forEach((k) => (userData[k] == null) && delete userData[k]);
 

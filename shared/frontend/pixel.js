@@ -30,6 +30,19 @@ function readCookie(name) {
   return m ? decodeURIComponent(m[1]) : undefined;
 }
 
+// Meta click id: the _fbc cookie (set by the store's edge on the ad-click
+// landing, or by the pixel), else built from the ad click's fbclid — in this
+// page's address or saved by VisitTracker — in the pixel's own format.
+function readFbc() {
+  const c = readCookie('_fbc');
+  if (c) return c;
+  try {
+    const clid = new URLSearchParams(window.location.search).get('fbclid') || localStorage.getItem('fbclid');
+    if (clid) return `fb.1.${Date.now()}.${clid}`;
+  } catch (_) { /* blocked storage */ }
+  return undefined;
+}
+
 // Map the Meta custom_data shape to GA4's items[] (item_id/quantity/name).
 function ga4Items(params) {
   const contents = Array.isArray(params.contents) ? params.contents : null;
@@ -186,7 +199,7 @@ function sendMeta(event, params, url) {
         custom_data: params,
         user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id },
         fbp: readCookie('_fbp'),
-        fbc: readCookie('_fbc'),
+        fbc: readFbc(),
       }),
     }).catch(() => {});
   } catch (_) { /* never throw */ }
@@ -299,12 +312,15 @@ export function trackWishlist(product = {}) {
 // Purchase matches this shopper: Meta _fbp/_fbc and the GA4 client id. Also
 // whether the shopper allowed marketing cookies: the Meta pixel only loads
 // with that consent, so fbq existing means yes. The server sends Meta a
-// Purchase only when this is true, as Shopify does.
+// Purchase only when this is true, as Shopify does. Stores without a cookie
+// banner track every visitor, so for them it is always yes — also when the
+// shopper checks out before the pixel has started.
+const TRACKS_EVERYONE = new Set(['morbix', 'soxbae', 'crosscoin']);
 export function trackingIds() {
   if (typeof window === 'undefined') return {};
-  const out = { marketing_consent: !!window.fbq };
+  const out = { marketing_consent: TRACKS_EVERYONE.has(String(BRAND).toLowerCase()) || !!window.fbq };
   const fbp = readCookie('_fbp'); if (fbp) out.fbp = fbp;
-  const fbc = readCookie('_fbc'); if (fbc) out.fbc = fbc;
+  const fbc = readFbc(); if (fbc) out.fbc = fbc;
   const ga = readCookie('_ga'); // GA1.1.<client id>
   const m = ga && ga.match(/^GA\d\.\d\.(.+)$/);
   if (m) out.ga_client_id = m[1];
