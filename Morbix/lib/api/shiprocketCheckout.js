@@ -20,16 +20,38 @@ let enabledPromise = null;
 let sdkPromise = null;
 
 // Is Shiprocket Checkout switched on for Morbix (Brand settings → Payments →
-// Shiprocket Checkout, with keys saved)? Asked once per visit; any failure
-// means "no", so the store's own checkout is used.
+// Shiprocket Checkout, with keys saved)? Asked once per visit. Morbix checks
+// out only through Shiprocket, so only a clear "switched off" (false) brings
+// back the store's own checkout; if the question itself fails the answer is
+// null ("don't know") and it is asked again next time.
 export function shiprocketEnabled() {
   if (!enabledPromise) {
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
-      .then((d) => !!d?.enabled)
-      .catch(() => false);
+      .then((d) => (typeof d?.enabled === 'boolean' ? d.enabled : null))
+      .catch(() => null)
+      .then((on) => { if (on === null) enabledPromise = null; return on; });
   }
   return enabledPromise;
+}
+
+// Download Shiprocket's script + stylesheet ahead of the tap, once the shopper
+// first touches, scrolls or types on the page (and the browser is idle), so
+// tapping Buy now / checkout doesn't wait for the download. Not on page load:
+// it would cost the page's speed score, and most visitors never check out.
+let preloadArmed = false;
+export function preloadShiprocket() {
+  if (preloadArmed || typeof window === 'undefined') return;
+  preloadArmed = true;
+  const evs = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+  const go = () => {
+    evs.forEach((e) => window.removeEventListener(e, go));
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+    idle(() => {
+      shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
+    });
+  };
+  evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
 }
 
 // Shiprocket's stylesheet (their checkout window + their Buy now button).

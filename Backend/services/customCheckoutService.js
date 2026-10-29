@@ -194,14 +194,23 @@ async function getPushConfig(brandId) {
 
 // Fire-and-forget push of one product to the checkout provider. Never throws —
 // catalog pushes must not break product saves.
+// The product exactly as Shiprocket receives it (JSON), or null if not found.
+async function productBody(productId, brandId) {
+  const p = await Product.findByPk(productId, { include: productIncludes(brandId) });
+  if (!p) return null;
+  const vendor = p.Brands?.[0]?.name || '';
+  return JSON.stringify(mapProduct(p, { vendor }));
+}
+const hashOf = (body) => crypto.createHash('sha1').update(body).digest('hex');
+// brand:product → hash of the copy Shiprocket last accepted from this server.
+const pushedHash = new Map();
+
 async function pushProduct(productId, brandId = 1) {
   try {
     const cfg = await getPushConfig(brandId);
     if (!cfg) return { skipped: 'not_configured' };
-    const p = await Product.findByPk(productId, { include: productIncludes(brandId) });
-    if (!p) return { skipped: 'not_found' };
-    const vendor = p.Brands?.[0]?.name || '';
-    const body = JSON.stringify(mapProduct(p, { vendor }));
+    const body = await productBody(productId, brandId);
+    if (!body) return { skipped: 'not_found' };
     const hmac = crypto.createHmac('sha256', cfg.secret).update(body, 'utf8').digest('base64');
     await axios.post(PUSH_PRODUCT_URL, body, {
       headers: {
@@ -211,6 +220,7 @@ async function pushProduct(productId, brandId = 1) {
       },
       timeout: 15000,
     });
+    pushedHash.set(`${brandId}:${productId}`, hashOf(body));
     logger.info(`[custom-checkout] pushed product ${productId} (brand ${brandId})`);
     return { pushed: true };
   } catch (err) {
@@ -219,22 +229,52 @@ async function pushProduct(productId, brandId = 1) {
   }
 }
 
-// Make sure Shiprocket knows the products in this cart before a checkout
-// opens: push each one (once per 30 min per store) and wait for the result.
-const recentlyPushed = new Map();
+// Make sure Shiprocket has the current copy of the products in this cart
+// before a checkout opens (it prices each pair from its own catalog, and the
+// order is rejected later if its prices differ from ours). Reading our copy is
+// a quick database read; the slow call to Shiprocket happens only when the
+// product changed since this server last pushed it — e.g. a price edit — or it
+// was never pushed. warmCatalog() pushes everything once at startup, so a
+// shopper's tap normally waits for nothing but the checkout token.
 async function ensureProductsPushed(brandId, variantIds) {
   const vars = await ProductVariation.findAll({ where: { id: variantIds.map(Number).filter(Boolean) }, attributes: ['id', 'productId'] });
   const ids = [...new Set(vars.map((v) => v.productId))];
-  const now = Date.now();
   const results = await Promise.all(ids.map(async (pid) => {
-    const k = `${brandId}:${pid}`;
-    if (now - (recentlyPushed.get(k) || 0) < 30 * 60 * 1000) return { productId: pid, pushed: 'recently' };
-    const r = await pushProduct(pid, brandId);
-    if (r.pushed) recentlyPushed.set(k, now);
-    return { productId: pid, ...r };
+    const body = await productBody(pid, brandId);
+    if (body && pushedHash.get(`${brandId}:${pid}`) === hashOf(body)) return { productId: pid, pushed: 'unchanged' };
+    return { productId: pid, ...(await pushProduct(pid, brandId)) };
   }));
-  noteProviderCall(brandId, { ok: results.every((r) => r.pushed), push: true, method: 'PUSH', path: 'product push', results });
+  if (results.some((r) => r.pushed !== 'unchanged')) {
+    noteProviderCall(brandId, { ok: results.every((r) => r.pushed), push: true, method: 'PUSH', path: 'product push', results });
+  }
   return results;
+}
+
+// Push every product of every store that uses Shiprocket Checkout, a few at a
+// time, so checkout taps after a restart or deploy don't wait for the push.
+async function warmCatalog() {
+  try {
+    const brands = await Brand.findAll({ attributes: ['id'] });
+    for (const b of brands) {
+      if (!(await getPushConfig(b.id))) continue;
+      const products = await Product.findAll({
+        attributes: ['id'],
+        include: [{ model: Brand, as: 'Brands', attributes: [], where: { id: b.id }, through: { attributes: [] } }],
+      });
+      const queue = products.map((p) => p.id);
+      let ok = 0;
+      const worker = async () => {
+        while (queue.length) {
+          const r = await pushProduct(queue.shift(), b.id);
+          if (r.pushed) ok += 1;
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+      logger.info(`[custom-checkout] catalog warm-up: ${ok}/${products.length} products pushed (brand ${b.id})`);
+    }
+  } catch (e) {
+    logger.warn('[custom-checkout] catalog warm-up failed: ' + e.message);
+  }
 }
 
 // Signed POST to the checkout provider: X-Api-Key + base64 HMAC-SHA256 of the
@@ -589,7 +629,7 @@ function providerCallsFor(brandId) {
 }
 
 module.exports = {
-  noteProviderCall, providerCallsFor, ensureProductsPushed, isCodOrder,
+  noteProviderCall, providerCallsFor, ensureProductsPushed, warmCatalog, isCodOrder,
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,

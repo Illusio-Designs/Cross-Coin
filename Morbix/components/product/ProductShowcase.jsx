@@ -312,14 +312,15 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     setTimeout(() => setAdded(false), 1600);
   };
 
-  // Shiprocket Checkout (when switched on for Morbix): Buy now opens it
-  // straight away with just this selection. Discounted packs keep using our
-  // own checkout, because Shiprocket prices each pair from the catalog and
-  // wouldn't apply the pack price.
-  const [srOn, setSrOn] = useState(false);
+  // Morbix checks out only through Shiprocket Checkout: Buy now opens it
+  // straight away with just this selection, packs included (Shiprocket prices
+  // each pair from the catalog; the pack discount comes from the matching
+  // offer set up in Shiprocket). Only when Shiprocket is switched off for the
+  // store does Buy now go to the cart drawer's own checkout.
+  const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && !(hasPacks && packHasDiscount);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
+  const useShiprocket = !srOff;
 
   const buyNowLines = () => {
     if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
@@ -348,10 +349,10 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     });
     setSrBusy(true);
     try {
+      if ((await shiprocketEnabled()) === false) { setSrOff(true); addToCart(); return; }
       await openShiprocketCheckout(e, lines, 'buy-now');
     } catch (err) {
-      // Shiprocket couldn't start: fall back to our own checkout.
-      addToCart();
+      toast.error('Checkout couldn’t open. Please check your connection and tap Buy now again.');
     } finally {
       setSrBusy(false);
     }

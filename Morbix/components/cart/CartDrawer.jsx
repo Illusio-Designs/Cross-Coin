@@ -484,14 +484,17 @@ export default function CartDrawer() {
 
   // couponDiscount is state (set on a successful validate). Clamp so an over-large
   // coupon can never make the order total negative.
-  // Shiprocket Checkout (when switched on for Morbix) replaces the drawer's
-  // checkout step (and its coupon box — Shiprocket applies its own coupons). Carts with a discounted pack stay on our own checkout:
-  // Shiprocket prices each pair from the catalog and can't apply pack prices.
-  const [srOn, setSrOn] = useState(false);
+  // Morbix checks out only through Shiprocket Checkout: it replaces the
+  // drawer's checkout step (and its coupon box — Shiprocket applies its own
+  // coupons). Packs go too: Shiprocket prices each pair from the catalog and
+  // the pack discount comes from the matching offer set up in Shiprocket.
+  // Only when Shiprocket is switched off for the store (Brand settings) does
+  // the drawer's own checkout come back.
+  const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
 
-  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+  const useShiprocket = !srOff && items.length > 0;
   // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
   const effectiveCouponDiscount = useShiprocket ? 0 : Math.min(couponDiscount, displaySubtotal + shippingFee);
   const total = Math.round(Math.max(0, displaySubtotal + shippingFee - effectiveCouponDiscount));
@@ -646,12 +649,24 @@ export default function CartDrawer() {
       currency: 'INR',
     });
     if (useShiprocket) {
+      setError('');
       setSrBusy(true);
       try {
-        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
-        return;
+        const on = await shiprocketEnabled();
+        if (on === false) {
+          setSrOff(true); // switched off for the store: use the drawer's own checkout
+        } else {
+          const old = items.filter((i) => i.variationId == null);
+          if (old.length) {
+            setError(`Please remove ${old.map((i) => i.name).join(', ')} from the cart and add ${old.length > 1 ? 'them' : 'it'} again, then check out.`);
+            return;
+          }
+          await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+          return;
+        }
       } catch {
-        // Shiprocket couldn't start: carry on with our own checkout.
+        setError('Checkout couldn’t open. Please check your connection and tap again.');
+        return;
       } finally {
         setSrBusy(false);
       }
