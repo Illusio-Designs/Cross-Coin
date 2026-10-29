@@ -33,8 +33,22 @@ async function sendGAEvent(eventName, order, params = {}) {
     console.warn(`⚠️ Google Analytics: Some items missing item_name for order ${order.order_number}`, items);
   }
 
+  // The shopper's GA4 session (from the _ga_<stream> cookie, sent with the
+  // order): without it Measurement Protocol events join no visit, and GA4
+  // reports the purchase under "(not set)" instead of the source that brought
+  // the shopper. engagement_time_msec makes it count as an engaged event.
+  const session = /^\d{6,20}$/.test(String(order.ga_session_id || ''))
+    ? {
+      session_id: String(order.ga_session_id),
+      ...(order.ga_session_number ? { session_number: Number(order.ga_session_number) || undefined } : {}),
+      engagement_time_msec: 1,
+    }
+    : {};
+
   const eventData = {
     client_id: clientId,
+    // Logged-in shopper's account id (never an email/phone — GA forbids PII).
+    ...(order.external_id && /^\d+$/.test(String(order.external_id)) ? { user_id: String(order.external_id) } : {}),
     events: [{
       name: eventName,
       params: {
@@ -42,6 +56,7 @@ async function sendGAEvent(eventName, order, params = {}) {
         value: parseFloat(order.total_amount || order.final_amount || 0),
         currency: order.currency || 'INR',
         items,
+        ...session,
         ...params,
       },
     }],

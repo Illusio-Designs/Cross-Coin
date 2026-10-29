@@ -7,8 +7,9 @@ import { NextResponse } from 'next/server';
 // clicks.
 //
 // It never changes headers or caching: it returns NextResponse.next(), only
-// adds first-party cookies (the `_cv` session, Meta's `_fbp` / `_fbc` and the
-// anonymous visitor id `_mvid`, see setMetaCookies), and the ping is sent in the
+// adds first-party cookies (the `_cv` session, Meta's `_fbp` / `_fbc`, Google's
+// `_ga` and the anonymous visitor id `_mvid`, see setMetaCookies), and the ping
+// is sent in the
 // background (event.waitUntil), so the page is never delayed. Any failure is
 // swallowed. The routing changes: a store's retired mixed-case paths
 // (LEGACY_PATHS, e.g. /Products → /products) get a permanent redirect,
@@ -128,6 +129,12 @@ function setMetaCookies(request, res) {
     const b = new Uint8Array(32);
     globalThis.crypto.getRandomValues(b);
     res.cookies.set('_mvid', Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(''), { ...opts, maxAge: 365 * 24 * 60 * 60 });
+  }
+  // Google Analytics browser id (_ga), in gtag's own format, so the shopper
+  // has the same client id from the first page — gtag reuses it — and a quick
+  // purchase sent by our server joins their visit instead of a made-up id.
+  if (!request.cookies.get('_ga')?.value) {
+    res.cookies.set('_ga', `GA1.1.${Math.floor(1e9 + Math.random() * 9e9)}.${Math.floor(now / 1000)}`, { ...opts, maxAge: 400 * 24 * 60 * 60 });
   }
   const clid = request.nextUrl.searchParams.get('fbclid');
   if (clid && /^[\w-]{10,500}$/.test(clid)) {

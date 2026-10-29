@@ -306,6 +306,8 @@ exports.initiateCheckout = async (req, res) => {
         fbp: req.body?.fbp || req.cookies?._fbp || null,
         fbc: req.body?.fbc || req.cookies?._fbc || null,
         ga_client_id: req.body?.ga_client_id || null,
+        ga_session_id: req.body?.ga_session_id || null,
+        ga_session_number: req.body?.ga_session_number || null,
         visitor_id: req.body?.visitor_id || null,
         marketing_consent: req.body?.marketing_consent,
         consent_session_id: req.cookies?.session_id || null,

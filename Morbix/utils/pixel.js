@@ -369,6 +369,17 @@ export function trackingIds() {
   // this carries it through Shiprocket Checkout so its orders link to it too.
   const sid = fpSessionId(); if (sid) out.utm_session_id = sid;
   const vid = visitorId(); if (vid) out.visitor_id = vid;
+  // GA4 session (cookie _ga_<stream>: "GS1.1.<session id>.<number>…" or the
+  // newer "GS2.1.s<session id>$o<number>…"), so the server's purchase is
+  // credited to this visit and its source, not to "(not set)".
+  try {
+    const m = document.cookie.match(/(?:^|; )_ga_[A-Z0-9]+=([^;]*)/);
+    const v = m ? decodeURIComponent(m[1]) : '';
+    const g1 = v.match(/^GS1\.\d+\.(\d+)\.(\d+)/);
+    const g2 = v.match(/^GS2\.\d+\.s(\d+)\$o(\d+)/);
+    const sess = g1 || g2;
+    if (sess) { out.ga_session_id = sess[1]; out.ga_session_number = sess[2]; }
+  } catch (_) { /* never throw */ }
   const ga = readCookie('_ga'); // GA1.1.<client id>
   const m = ga && ga.match(/^GA\d\.\d\.(.+)$/);
   if (m) out.ga_client_id = m[1];

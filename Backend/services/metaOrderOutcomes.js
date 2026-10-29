@@ -1,6 +1,7 @@
 // What happened to an order after it was placed, sent to Meta (Conversions
 // API) on the store's own pixel: OrderDelivered, OrderCancelled and
-// OrderReturned (RTO). Most of our orders are cash on delivery, and a placed
+// OrderReturned (RTO) — and, for cancelled / returned orders, a full GA4
+// refund on the store's Google Analytics. Most of our orders are cash on delivery, and a placed
 // order isn't a paid one — with these Meta can build audiences and custom
 // conversions on orders that were actually delivered, and leave out the ones
 // that were refused or cancelled.
@@ -38,10 +39,17 @@ function ensureTable() {
          visitor_id VARCHAR(64) NULL,
          ip_address VARCHAR(64) NULL,
          user_agent VARCHAR(400) NULL,
+         ga_client_id VARCHAR(100) NULL,
+         ga_session_id VARCHAR(32) NULL,
          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
          PRIMARY KEY (brand_id, order_number)
        ) ENGINE=InnoDB`
-    ).catch((e) => { tableReady = null; throw e; });
+    )
+      // The Google ids came a day later: add them to a table created before.
+      .then(() => Promise.all(['ga_client_id VARCHAR(100) NULL', 'ga_session_id VARCHAR(32) NULL'].map((col) =>
+        sequelize.query(`ALTER TABLE meta_order_tracking ADD COLUMN ${col}`)
+          .catch((e) => { if (!/duplicate column/i.test(e.message)) throw e; }))))
+      .catch((e) => { tableReady = null; throw e; });
   }
   return tableReady;
 }
@@ -57,19 +65,23 @@ async function saveTracking(brandId, order) {
     visitor_id: order.visitor_id ? String(order.visitor_id).slice(0, 64) : null,
     ip_address: order.ip_address ? String(order.ip_address).slice(0, 64) : null,
     user_agent: order.user_agent ? String(order.user_agent).slice(0, 400) : null,
+    ga_client_id: order.ga_client_id ? String(order.ga_client_id).slice(0, 100) : null,
+    ga_session_id: order.ga_session_id ? String(order.ga_session_id).slice(0, 32) : null,
   };
-  if (!row.fbp && !row.fbc && !row.visitor_id && !row.user_agent) return;
+  if (!row.fbp && !row.fbc && !row.visitor_id && !row.user_agent && !row.ga_client_id) return;
   await ensureTable();
   // A later Purchase copy (thank-you page) fills in what an earlier one
   // (webhook) didn't know, never erasing a value.
   await sequelize.query(
-    `INSERT INTO meta_order_tracking (brand_id, order_number, fbp, fbc, visitor_id, ip_address, user_agent)
-     VALUES (:brand_id, :order_number, :fbp, :fbc, :visitor_id, :ip_address, :user_agent)
+    `INSERT INTO meta_order_tracking (brand_id, order_number, fbp, fbc, visitor_id, ip_address, user_agent, ga_client_id, ga_session_id)
+     VALUES (:brand_id, :order_number, :fbp, :fbc, :visitor_id, :ip_address, :user_agent, :ga_client_id, :ga_session_id)
      ON DUPLICATE KEY UPDATE
        fbp = COALESCE(VALUES(fbp), fbp), fbc = COALESCE(VALUES(fbc), fbc),
        visitor_id = COALESCE(VALUES(visitor_id), visitor_id),
        ip_address = COALESCE(VALUES(ip_address), ip_address),
-       user_agent = COALESCE(VALUES(user_agent), user_agent)`,
+       user_agent = COALESCE(VALUES(user_agent), user_agent),
+       ga_client_id = COALESCE(VALUES(ga_client_id), ga_client_id),
+       ga_session_id = COALESCE(VALUES(ga_session_id), ga_session_id)`,
     { replacements: row, type: QueryTypes.INSERT }
   );
 }
@@ -78,7 +90,7 @@ async function trackingFor(brandId, orderNumber) {
   try {
     await ensureTable();
     const [row] = await sequelize.query(
-      'SELECT fbp, fbc, visitor_id, ip_address, user_agent FROM meta_order_tracking WHERE brand_id = :b AND order_number = :n LIMIT 1',
+      'SELECT fbp, fbc, visitor_id, ip_address, user_agent, ga_client_id, ga_session_id FROM meta_order_tracking WHERE brand_id = :b AND order_number = :n LIMIT 1',
       { replacements: { b: brandId, n: orderNumber }, type: QueryTypes.SELECT }
     );
     return row || {};
@@ -99,6 +111,13 @@ async function sendOutcome(order, event) {
   // their Purchase details were kept have none, so those go as system events.
   const r = await sendFacebookEvent(event, payload, { action_source: payload.user_agent ? 'website' : 'system_generated' });
   if (r?.error) logger.warn(`[meta] ${event} ${order.order_number}: ${JSON.stringify(r.error).slice(0, 300)}`);
+  // Google Analytics: a cancelled or returned order is refunded in full, so
+  // GA4 revenue counts only what was actually sold (same transaction id as
+  // the purchase).
+  if (event === 'OrderCancelled' || event === 'OrderReturned') {
+    const { sendGAEvent } = require('../integration/googleAnalytics.js');
+    await sendGAEvent('refund', payload);
+  }
 }
 
 Order.addHook('afterUpdate', 'metaOrderOutcomes', (order, options) => {

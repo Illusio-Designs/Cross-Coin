@@ -36,6 +36,9 @@ export default function Analytics() {
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
+          // Arrived from an ad or a tagged link: GA4 loads at once (below),
+          // so short visits from paid traffic are still counted.
+          paid: /[?&](gclid|gbraid|wbraid|fbclid|utm_source)=/.test(window.location.search),
         });
       })
       .catch(() => {});
@@ -52,7 +55,7 @@ export default function Analytics() {
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   if (!cfg) return null;
-  const { gaId, fbId, clarityId, gtmId } = cfg;
+  const { gaId, fbId, clarityId, gtmId, paid } = cfg;
 
   return (
     <>
@@ -94,8 +97,8 @@ export default function Analytics() {
 
       {gaId && (
         <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
-          <Script id="ga4-init" strategy="lazyOnload"
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy={paid ? 'afterInteractive' : 'lazyOnload'} />
+          <Script id="ga4-init" strategy={paid ? 'afterInteractive' : 'lazyOnload'}
             dangerouslySetInnerHTML={{ __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}

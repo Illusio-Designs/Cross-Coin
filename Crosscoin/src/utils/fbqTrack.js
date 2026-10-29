@@ -136,6 +136,10 @@ export function trackingIds() {
     // The visit (traffic report), so Shiprocket Checkout orders link to it.
     const sid = localStorage.getItem('utm_session_id');
     if (sid) out.utm_session_id = sid;
+    // GA4 session (cookie _ga_<stream>), so the server purchase joins this visit.
+    const gs = (document.cookie.match(/(?:^|; )_ga_[A-Z0-9]+=([^;]*)/) || [])[1] || '';
+    const sess = decodeURIComponent(gs).match(/^GS1\.\d+\.(\d+)\.(\d+)/) || decodeURIComponent(gs).match(/^GS2\.\d+\.s(\d+)\$o(\d+)/);
+    if (sess) { out.ga_session_id = sess[1]; out.ga_session_number = sess[2]; }
     const ga = readCookie('_ga');
     const m = ga && ga.match(/^GA\d+\.\d+\.(.+)$/);
     if (m && m[1]) out.ga_client_id = m[1];

@@ -384,6 +384,8 @@ function trackingFromAttributes(p) {
   if (ca.fbp) out.fbp = String(ca.fbp);
   if (ca.fbc) out.fbc = String(ca.fbc);
   if (ca.ga_client_id) out.ga_client_id = String(ca.ga_client_id);
+  if (/^\d{6,20}$/.test(String(ca.ga_session_id || ''))) out.ga_session_id = String(ca.ga_session_id);
+  if (/^\d{1,6}$/.test(String(ca.ga_session_number || ''))) out.ga_session_number = String(ca.ga_session_number);
   if (ca.visitor_id) out.visitor_id = String(ca.visitor_id).slice(0, 64);
   if (ca.marketing_consent === true || ca.marketing_consent === 'true') out.marketing_consent = true;
   return out;
@@ -428,6 +430,10 @@ async function purchasePayload(brandId, orderNumber) {
   ]);
   const amount = Number(order.final_amount) || 0;
   const email = guest?.email || null;
+  // Product names, so GA4's product reports show real names, not "(not set)".
+  const pids = [...new Set((order.OrderItems || []).map((i) => i.product_id).filter(Boolean))];
+  const prods = pids.length ? await Product.findAll({ where: { id: pids }, attributes: ['id', 'name'] }) : [];
+  const nameOf = new Map(prods.map((p) => [p.id, p.name]));
   return {
     brand_id: brandId, order_number: order.order_number,
     external_id: order.user_id || await customerIdFor(brandId, email),
@@ -435,7 +441,7 @@ async function purchasePayload(brandId, orderNumber) {
     email: guest?.email || null, phone: addr?.phone || guest?.phone || null,
     first_name: guest?.firstName || null, last_name: guest?.lastName || null,
     zip_code: addr?.pincode || null, city: addr?.city || null, state: addr?.state || null, country: 'in',
-    items: (order.OrderItems || []).map((i) => ({ product_id: i.product_id, quantity: i.quantity, price: Number(i.price) || 0, name: '' })),
+    items: (order.OrderItems || []).map((i) => ({ product_id: i.product_id, quantity: i.quantity, price: Number(i.price) || 0, name: nameOf.get(i.product_id) || '' })),
   };
 }
 
