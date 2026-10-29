@@ -229,9 +229,11 @@ exports.getBrandTraffic = async (req, res) => {
       for (const r of vBrand) vByBrand.set(r.brand_id, pair(r));
       for (const r of vChan) vByChannel.set(r.channel, pair(r));
       const brandName = new Map(brands.map((b) => [b.id, b.display_name]));
-      const firstDay = vFirst[0] && vFirst[0].first_day
+      const storedFrom = vFirst[0] && vFirst[0].first_day
         ? (vFirst[0].first_day instanceof Date ? vFirst[0].first_day.toISOString().slice(0, 10) : String(vFirst[0].first_day).slice(0, 10))
         : null;
+      // Counts before the fresh start are kept but never shown.
+      const firstDay = storedFrom && storedFrom < TRAFFIC_DAY_FROM ? TRAFFIC_DAY_FROM : storedFrom;
       visitors = {
         firstDay,
         totals: vTotals,
