@@ -1,6 +1,5 @@
 import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
-import './cookie-banner.css';
 import SmoothScroll from '@/components/SmoothScroll';
 import Msg91Loader from '@/components/Msg91Loader';
 import ToastHost from '@/components/ToastHost';
@@ -14,7 +13,6 @@ import Analytics from '@/components/layout/Analytics';
 import VisitTracker from '@/components/common/VisitTracker';
 import SentryInit from '@/components/SentryInit';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
-import CookieBanner from '@/components/ui/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 // Fraunces is a variable font: omit an explicit weight array (it supplies the
@@ -71,7 +69,6 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
-            <CookieBanner />
         <ConsentSpeedInsights />
         <Msg91Loader />
         <AuthProvider>

@@ -2,18 +2,14 @@
 import { useEffect, useState } from 'react';
 
 /* ─────────────────────────────────────────────────────────────
-   Cookie / tracking consent (DPDP Act 2023).
+   Tracking consent — CrossCoin tracks every visitor.
 
-   Three categories:
-     • essential — always on (cart, login, security); never tracked here.
-     • analytics — GA4, Microsoft Clarity, Vercel Speed Insights, first-party
-       visit tracking. Off until the user opts in.
-     • marketing — Meta Pixel and any ad/retargeting tag. Off until opt-in.
-
-   Google tags use Advanced Consent Mode: cookieless signals may be sent
-   with storage denied. Other optional analytics/marketing tags wait until
-   getConsent() reports their category true. Choice is stored per-browser; changing it fires
-   CONSENT_EVENT so live components (Analytics, VisitTracker) react at once.
+   There is no cookie banner: analytics (GA4, Microsoft Clarity, Vercel Speed
+   Insights, first-party visit tracking) and marketing (Meta Pixel + its
+   Conversions API copy, Google ads signals) are on for everyone, so
+   getConsent()/useConsent() always report both as granted (the tag bootstrap
+   in pages/_document.jsx does the same). The rest of this module is kept so
+   the components that import it keep working unchanged.
    ───────────────────────────────────────────────────────────── */
 
 export const CONSENT_KEY = 'vlm-consent-v1';
@@ -51,18 +47,12 @@ function postConsent(val, action, source) {
   } catch {}
 }
 
-const DENIED = { essential: true, analytics: false, marketing: false, set: false };
+// Every visitor is tracked (no cookie banner): all categories granted, on the
+// server and in the browser alike.
+const GRANTED = { essential: true, analytics: true, marketing: true, set: true };
 
 export function getConsent() {
-  if (typeof window === 'undefined') return { ...DENIED };
-  try {
-    const raw = localStorage.getItem(CONSENT_KEY);
-    if (!raw) return { ...DENIED };
-    const p = JSON.parse(raw);
-    return { essential: true, analytics: !!p.analytics, marketing: !!p.marketing, set: true };
-  } catch {
-    return { ...DENIED };
-  }
+  return { ...GRANTED };
 }
 
 export function setConsent({ analytics, marketing }, meta = {}) {
