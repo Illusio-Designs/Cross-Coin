@@ -5,7 +5,7 @@ import { DateRangePicker, Skeleton, SkeletonKpis, SkeletonTableRows } from '../.
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Download04Icon } from '@hugeicons/core-free-icons';
+import { Download04Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 import { useReportState } from '../../../lib/reportFilters';
 
 /* ──────────────────────────────────────────────────────────────
@@ -87,6 +87,7 @@ function exportCsv(filename, columns, rows) {
 }
 
 const DlIcon = () => <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />;
+const RefreshGlyph = () => <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />;
 const Dot = ({ color }) => (
   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: color, marginRight: 8, verticalAlign: 'middle', flex: 'none' }} />
 );
@@ -160,7 +161,7 @@ export default function TrafficReport() {
 
   // Keyed on range + brand: a slow response for an old selection can never
   // replace the newer one (the bug that showed a previous range's numbers).
-  const { data, isLoading, isFetching, error } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['reports', 'brand-traffic', from, to, brandId],
     queryFn: async () => {
       const r = await trafficReportService.getBrandTraffic(from, to, brandId || undefined);
@@ -339,6 +340,10 @@ export default function TrafficReport() {
             />
             <DateRangePicker label="" inline startDate={from} endDate={to}
               onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
+            {/* Re-loads the report for the brand and dates picked above. */}
+            <button type="button" className="order-sync-main-btn" onClick={() => refetch()} disabled={isFetching} aria-busy={isFetching || undefined}>
+              <RefreshGlyph /> {isFetching ? 'Refreshing…' : 'Refresh'}
+            </button>
             <button type="button" className="order-sync-main-btn" onClick={doExport} disabled={!brands.length}>
               <DlIcon /> CSV
             </button>
