@@ -42,12 +42,29 @@ function parseRange(q) {
 
 exports.parseRange = parseRange;
 
+// The traffic report starts here, India time. Tracking was rebuilt on
+// 29 Oct 2026 — every store tracks every visitor, Shiprocket orders link to
+// their visit, stores never share data — so the report shows nothing from
+// before this moment: older rows stay in the database but are never shown,
+// and the report can be checked precisely from a fresh start.
+// Visits, funnel steps and orders carry a time and start at this exact
+// moment. The store-counted visitors / page loads and cookieless visits are
+// kept per India day only, so they start on the first FULL day after it
+// (a part-day would mix in counts from before).
+const TRAFFIC_DATA_FROM = '2026-10-29T16:00:00+05:30';
+const TRAFFIC_DAY_FROM = '2026-10-30';
+
 // GET /api/reports/brand-traffic?startDate=&endDate=
 // Brand-wise funnel: sessions (first-party visit tracking) → orders → revenue,
 // with conversion rate and a channel (source/medium) breakdown per brand.
 exports.getBrandTraffic = async (req, res) => {
   try {
-    const { start, end } = parseRange(req.query);
+    const range = parseRange(req.query);
+    const dataFrom = new Date(TRAFFIC_DATA_FROM);
+    // Nothing before the fresh start is shown: a range that begins earlier is
+    // cut to start there (a range that ends earlier shows nothing).
+    const start = range.start < dataFrom ? dataFrom : range.start;
+    const { end } = range;
     // Optional brand filter (?brandId=) — scopes every figure to one store.
     const brandIdNum = Number.parseInt(req.query.brandId, 10);
     const hasBrand = Number.isFinite(brandIdNum) && brandIdNum > 0;
@@ -108,12 +125,23 @@ exports.getBrandTraffic = async (req, res) => {
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
-    // Funnel events (distinct sessions that reached each stage) per brand
+    // Funnel per brand, the storefront's own steps: distinct sessions that
+    // REACHED each step — viewed a product, added to cart or tapped Buy now
+    // (Buy now opens checkout straight from the product page, skipping the
+    // cart), and opened checkout. A later step counts for the earlier ones, and
+    // only visits counted under Visits take part, so every step is ≤ the one
+    // before it, starting from Visits.
     const funnel = await sequelize.query(
-      `SELECT brand_id, event, COUNT(DISTINCT session_id) AS sessions
-       FROM funnel_events
-       WHERE created_at BETWEEN :start AND :end${bFilt}
-       GROUP BY brand_id, event`,
+      `SELECT fe.brand_id,
+              COUNT(DISTINCT CASE WHEN fe.event IN ('view_item','add_to_cart','begin_checkout') THEN fe.session_id END) AS view_item,
+              COUNT(DISTINCT CASE WHEN fe.event IN ('add_to_cart','begin_checkout') THEN fe.session_id END) AS add_to_cart,
+              COUNT(DISTINCT CASE WHEN fe.event = 'begin_checkout' THEN fe.session_id END) AS begin_checkout
+       FROM funnel_events fe
+       JOIN (SELECT DISTINCT brand_id, session_id FROM utm_tracking
+              WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt}) v
+         ON v.session_id = fe.session_id AND v.brand_id = fe.brand_id
+       WHERE fe.created_at BETWEEN :start AND :end${hasBrand ? ' AND fe.brand_id = :brandId' : ''}
+       GROUP BY fe.brand_id`,
       { replacements: repl, type: QueryTypes.SELECT }
     );
 
@@ -136,6 +164,8 @@ exports.getBrandTraffic = async (req, res) => {
     // many actually landed" next to the consented funnel. Wrapped defensively:
     // the table may not exist yet on a brand-new deploy (no pings recorded).
     const dayOf = (d) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);
+    // Daily counters (visit_hits, page_hits) begin on the first full India day.
+    const startDayOf = (d) => (dayOf(d) < TRAFFIC_DAY_FROM ? TRAFFIC_DAY_FROM : dayOf(d));
     let pageHits = [];
     try {
       pageHits = await sequelize.query(
@@ -143,7 +173,7 @@ exports.getBrandTraffic = async (req, res) => {
            FROM page_hits
           WHERE day BETWEEN :startDay AND :endDay${hasBrand ? ' AND brand_id = :brandId' : ''}
           GROUP BY brand_id, channel`,
-        { replacements: { startDay: dayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT }
+        { replacements: { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT }
       );
     } catch (e) {
       logger.warn && logger.warn('page_hits query skipped: ' + e.message);
@@ -168,7 +198,7 @@ exports.getBrandTraffic = async (req, res) => {
     const vByBrand = new Map();
     const vByChannel = new Map();
     try {
-      const vRepl = { startDay: dayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) };
+      const vRepl = { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) };
       const vb = hasBrand ? ' AND brand_id = :brandId' : '';
       const vWhere = `day BETWEEN :startDay AND :endDay${vb}`;
       const q = (sql) => sequelize.query(sql, { replacements: vRepl, type: QueryTypes.SELECT });
@@ -325,8 +355,11 @@ exports.getBrandTraffic = async (req, res) => {
     // brand_id -> { view_item, add_to_cart, begin_checkout }
     const funnelByBrand = new Map();
     for (const f of funnel) {
-      if (!funnelByBrand.has(f.brand_id)) funnelByBrand.set(f.brand_id, {});
-      funnelByBrand.get(f.brand_id)[f.event] = Number(f.sessions);
+      funnelByBrand.set(f.brand_id, {
+        view_item: Number(f.view_item) || 0,
+        add_to_cart: Number(f.add_to_cart) || 0,
+        begin_checkout: Number(f.begin_checkout) || 0,
+      });
     }
 
     // Percent of a stage relative to the previous non-zero anchor.
@@ -357,8 +390,8 @@ exports.getBrandTraffic = async (req, res) => {
       const stages = [
         { key: 'sessions',   label: 'Visits',          count: s },
         { key: 'view_item',  label: 'Product views',   count: views,      of: s },
-        { key: 'add_to_cart',label: 'Add to cart',     count: carts,      of: views || s },
-        { key: 'begin_checkout', label: 'Checkout',    count: checkouts,  of: carts || views || s },
+        { key: 'add_to_cart',label: 'Add to cart / Buy now', count: carts, of: views || s },
+        { key: 'begin_checkout', label: 'Checkout opened', count: checkouts, of: carts || views || s },
         { key: 'purchase',   label: 'Orders',          count: ordersN,    of: checkouts || carts || s },
         { key: 'delivered',  label: 'Delivered',       count: delivered,  of: ordersN },
       ].map((st) => ({
@@ -605,7 +638,7 @@ exports.getBrandTraffic = async (req, res) => {
     // visitors landed on first (utm_tracking.landing_page, path only).
     const istDayCol = `DATE(CONVERT_TZ(created_at, '+00:00', '+05:30'))`;
     const T = { type: QueryTypes.SELECT };
-    const dRepl = { startDay: dayOf(start), endDay: dayOf(end), start, end, ...(hasBrand ? { brandId: brandIdNum } : {}) };
+    const dRepl = { startDay: startDayOf(start), endDay: dayOf(end), start, end, ...(hasBrand ? { brandId: brandIdNum } : {}) };
     const [vDays, sDays, oDays, lpRows] = await Promise.all([
       sequelize.query(`SELECT day, SUM(landings) AS landings, SUM(sessions) AS sessions FROM visit_hits
                         WHERE day BETWEEN :startDay AND :endDay${bFilt} GROUP BY day`, { ...T, replacements: dRepl }).catch(() => []),
@@ -646,6 +679,9 @@ exports.getBrandTraffic = async (req, res) => {
     res.json({
       success: true,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
+      // First India day the report shows (see TRAFFIC_DATA_FROM).
+      dataFrom: TRAFFIC_DATA_FROM,
+      dayCountsFrom: TRAFFIC_DAY_FROM,
       brandId: hasBrand ? brandIdNum : null,
       daily,
       landingPages,

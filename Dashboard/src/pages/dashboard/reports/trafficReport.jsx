@@ -38,8 +38,8 @@ const chLabel = (name) => CHANNEL_LABEL[name] || name;
 const LEFT_STAGES = [
   { key: 'landing',  label: 'Left without opening a product', short: 'Left on landing', color: '#94a3b8' },
   { key: 'product',  label: 'Viewed a product, left before cart', short: 'Left after product', color: '#f59e0b' },
-  { key: 'cart',     label: 'Added to cart, left before checkout', short: 'Left at cart', color: '#f97316' },
-  { key: 'checkout', label: 'Started checkout, didn’t order', short: 'Left at checkout', color: '#ef4444' },
+  { key: 'cart',     label: 'Added to cart, didn’t open checkout', short: 'Left at cart', color: '#f97316' },
+  { key: 'checkout', label: 'Opened checkout, didn’t order', short: 'Left at checkout', color: '#ef4444' },
   { key: 'ordered',  label: 'Ordered', short: 'Ordered', color: '#16a34a' },
 ];
 const leftSlices = (r) => {
@@ -172,6 +172,15 @@ export default function TrafficReport() {
     staleTime: 60 * 1000,
   });
 
+  // The report shows nothing from before tracking was rebuilt (the server's
+  // dataFrom, India time), so charts start on that day and the header says so.
+  const dataFrom = data?.dataFrom ? new Date(data.dataFrom) : null;
+  const dataFromDay = dataFrom ? new Date(dataFrom.getTime() + 330 * 60000).toISOString().slice(0, 10) : '';
+  const shownFrom = dataFromDay && from < dataFromDay ? dataFromDay : from;
+  const dataFromLabel = dataFrom
+    ? dataFrom.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : '';
+
   const t = data?.totals;
   const brands = data?.brands || [];
   const channels = data?.channels || [];
@@ -292,8 +301,8 @@ export default function TrafficReport() {
     { label: 'Tracked visits', value: (r) => r.sessions },
     { label: 'All visits (cookieless)', value: (r) => r.allVisits },
     { label: 'Product views', value: (r) => r.views },
-    { label: 'Add to cart', value: (r) => r.carts },
-    { label: 'Checkout', value: (r) => r.checkouts },
+    { label: 'Add to cart / Buy now', value: (r) => r.carts },
+    { label: 'Checkout opened', value: (r) => r.checkouts },
     { label: 'Orders', value: (r) => r.orders },
     { label: 'Delivered', value: (r) => r.delivered },
     { label: 'Conversion %', value: (r) => r.conversion_rate ?? '' },
@@ -319,7 +328,7 @@ export default function TrafficReport() {
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Traffic & Conversion"
-        subtitle={`${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Where visitors come from and how many of them order.`}
+        subtitle={`${brandName} · ${shownFrom} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Where visitors come from and how many of them order.${dataFromLabel ? ` Data from ${dataFromLabel} IST onwards — earlier tracking isn’t shown.` : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown
@@ -442,12 +451,12 @@ export default function TrafficReport() {
           <div className="rep-grid2" style={dim} aria-busy={busy}>
             <div className="rep-panel">
               <div className="rep-ph"><h3>Visits over time</h3><span className="hint">{num((data?.daily || []).reduce((a, x) => a + (x.visits || x.trackedSessions), 0))} visits · India days</span></div>
-              <DayLine rows={(data?.daily || []).map((x) => ({ ...x, v2: x.visits || x.trackedSessions }))} from={from} to={to} valueKey="v2"
+              <DayLine rows={(data?.daily || []).map((x) => ({ ...x, v2: x.visits || x.trackedSessions }))} from={shownFrom} to={to} valueKey="v2"
                 fmt={(v) => plural(v, 'visit')} tip={(r) => `${plural(r.orders || 0, 'order')} · ${inr(r.value)}`} />
             </div>
             <div className="rep-panel">
               <div className="rep-ph"><h3>Conversion rate over time</h3><span className="hint">orders ÷ visits, per day</span></div>
-              <DayLine rows={data?.daily} from={from} to={to} valueKey="conversion" gaps
+              <DayLine rows={data?.daily} from={shownFrom} to={to} valueKey="conversion" gaps
                 fmt={(v) => `${pct(v)} conversion`} tip={(r) => `${plural(r.orders || 0, 'order')} from ${plural(r.visits || r.trackedSessions || 0, 'visit')}`} />
             </div>
           </div>
