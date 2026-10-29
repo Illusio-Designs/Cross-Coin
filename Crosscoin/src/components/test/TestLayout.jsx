@@ -18,7 +18,6 @@ import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { fbqTrack, trackCartPageView, trackShippingInfoFp } from '@/utils/fbqTrack';
 import { gtagTrack } from '@/utils/gtagTrack';
 import { useWishlist, wishCount } from './wishlist';
-import { getConsent, setConsent } from '../../lib/consent';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { savePurchaseForThankYou } from '../../lib/thankYou';
 import ShiprocketButton from '../checkout/ShiprocketButton';
@@ -194,22 +193,6 @@ const MOBILE_CSS = `
 .cc-test-root img.ccimg.is-on{ opacity:1; }
 .cc-test-root :has(> img.ccimg:not(.is-on)){ background-image:linear-gradient(90deg,var(--sk-base) 0%,var(--sk-hi) 40%,var(--sk-base) 80%) !important; background-size:200% 100% !important; }
 @media (prefers-reduced-motion: reduce){ .cc-test-root img.ccimg{ transition:none; } }
-/* cookie preferences modal */
-/* Slides up with transform (not bottom): moving a box with bottom/top is a
-   layout shift on every frame, which counted against CLS on every first
-   visit (this opens automatically). */
-.cc-test-root .ckmodal{ position:fixed; left:50%; bottom:max(18px,env(safe-area-inset-bottom,0px)); transform:translate(-50%, calc(100% + 60px)); z-index:120; width:min(520px,calc(100% - 28px)); background:var(--surface); border:2px solid var(--line-ink); border-radius:4px; box-shadow:var(--stamp); padding:20px; transition:transform .3s var(--ease); }
-.cc-test-root .ckmodal.on{ transform:translate(-50%, 0); }
-.cc-test-root .ckmodal__h{ display:flex; align-items:center; justify-content:space-between; }
-.cc-test-root .ckmodal__h b{ font-family:var(--ff-display, "Fraunces"),serif; font-size:19px; }
-.cc-test-root .ckmodal__intro{ font-size:13px; color:var(--ink-soft); line-height:1.55; margin:8px 0 14px; }
-.cc-test-root .ckrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-top:1.5px solid var(--line); cursor:pointer; }
-.cc-test-root .ckrow b{ display:block; font-size:14px; }
-.cc-test-root .ckrow span{ font-size:12px; color:var(--ink-faint); }
-.cc-test-root .ckrow .ckon{ font-family:var(--ff-mono, "Space Mono"),monospace; font-size:11px; font-weight:700; color:#0f766e; }
-.cc-test-root .ckrow input[type=checkbox]{ width:20px; height:20px; accent-color:var(--crimson); flex-shrink:0; }
-.cc-test-root .ckmodal__btns{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-.cc-test-root .ckmodal__btns .btn{ flex:1; min-width:120px; }
 /* clean cart item cards (Morbix) */
 .cc-test-root .citem-sec-title{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); margin:2px 0 8px; }
 .cc-test-root .citem{ display:flex; gap:12px; padding:14px 0; border-bottom:1.5px solid var(--line); }
@@ -532,17 +515,8 @@ export default function TestLayout({ children }) {
   const [exitShow, setExitShow] = useState(false);
   const [lead, setLead] = useState({ open: false, phone: '', busy: false, done: false, msg: '' });
   const abCaptured = useRef(false);
-  const [cookieOpen, setCookieOpen] = useState(false);
-  const [consent, setConsentUI] = useState({ analytics: true, marketing: true });
   const tt = useRef();
 
-  const openCookie = () => { const c = getConsent(); setConsentUI({ analytics: c.analytics, marketing: c.marketing }); setCookieOpen(true); };
-  const saveCookie = (vals, msg) => { try { setConsent(vals, { action: 'custom', source: 'preview' }); } catch (_) {} setConsentUI(vals); setCookieOpen(false); showToast(msg || 'Cookie preferences saved'); };
-  // First-visit consent (DPDP): this Mint modal is now the single cookie UI
-  // (the old global CookieBanner was removed from _app), so auto-open it until
-  // the visitor records a choice. Nothing in analytics/marketing runs until
-  // getConsent().set is true, so the toggles start from the stored (denied) state.
-  useEffect(() => { try { if (!getConsent().set) openCookie(); } catch (_) {} }, []);
   const rootRef = useRef(null);
   const formRef = useRef(null);
   const promoRef = useRef(null);
@@ -961,7 +935,7 @@ export default function TestLayout({ children }) {
           </div>
           <div><h4>Quick Links</h4><a onClick={() => go(R.shop)}>All Products</a><a onClick={() => go(R.collections)}>Collections</a><a onClick={() => go(R.journal)}>Journal</a><a onClick={() => go(R.about)}>About Us</a><a onClick={() => go(R.contact)}>Contact</a></div>
           <div><h4>Account</h4><a onClick={() => go(R.account)}>My Account</a><a onClick={() => go(R.track)}>Track Order</a><a onClick={() => go(R.returns)}>Returns</a><a onClick={() => go(R.wishlist)}>Wishlist</a></div>
-          <div><h4>Policies</h4><a onClick={() => go(R.policy('privacy-policy'))}>Privacy Policy</a><a onClick={() => go(R.contact)}>Grievance</a><a onClick={() => go(R.policy('terms-and-conditions'))}>Terms &amp; Conditions</a><a onClick={() => go(R.policy('shipping-policy'))}>Shipping Policy</a><a onClick={() => go(R.policy('cancellation-and-refund'))}>Cancellation &amp; Refund</a><a onClick={openCookie}>Cookie Settings</a></div>
+          <div><h4>Policies</h4><a onClick={() => go(R.policy('privacy-policy'))}>Privacy Policy</a><a onClick={() => go(R.contact)}>Grievance</a><a onClick={() => go(R.policy('terms-and-conditions'))}>Terms &amp; Conditions</a><a onClick={() => go(R.policy('shipping-policy'))}>Shipping Policy</a><a onClick={() => go(R.policy('cancellation-and-refund'))}>Cancellation &amp; Refund</a></div>
         </div>
         <div className="wrap" style={{ paddingBottom: 18 }}>
           <div style={{ fontFamily: 'var(--ff-mono, "Space Mono"), monospace', fontSize: 12, color: 'var(--ink-soft)' }}>
@@ -1175,21 +1149,6 @@ export default function TestLayout({ children }) {
           </div>
         )}
       </aside>
-
-      {/* Cookie preferences — real consent (DPDP) like the live site */}
-      <div className={`scrim${cookieOpen ? ' on' : ''}`} onClick={() => setCookieOpen(false)} />
-      <div className={`ckmodal${cookieOpen ? ' on' : ''}`} role="dialog" aria-label="Cookie settings" aria-modal="true">
-        <div className="ckmodal__h"><b>Cookie preferences</b><button className="ibtn" onClick={() => setCookieOpen(false)} aria-label="Close">{I.close()}</button></div>
-        <p className="ckmodal__intro">We use cookies to run the store and, with your consent, to understand usage and show relevant offers. You can change this anytime.</p>
-        <div className="ckrow"><div><b>Strictly necessary</b><span>Required for the cart, checkout and security.</span></div><span className="ckon">Always on</span></div>
-        <label className="ckrow"><div><b>Analytics</b><span>Helps us understand what’s working.</span></div><input type="checkbox" checked={consent.analytics} onChange={(e) => setConsentUI((c) => ({ ...c, analytics: e.target.checked }))} /></label>
-        <label className="ckrow"><div><b>Marketing</b><span>Lets us show relevant offers.</span></div><input type="checkbox" checked={consent.marketing} onChange={(e) => setConsentUI((c) => ({ ...c, marketing: e.target.checked }))} /></label>
-        <div className="ckmodal__btns">
-          <button className="btn" onClick={() => saveCookie({ analytics: false, marketing: false }, 'Only necessary cookies kept')}>Reject all</button>
-          <button className="btn" onClick={() => saveCookie(consent, 'Cookie preferences saved')}>Save choices</button>
-          <button className="btn btn--crimson" onClick={() => saveCookie({ analytics: true, marketing: true }, 'All cookies accepted')}>Accept all</button>
-        </div>
-      </div>
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
 

@@ -122,8 +122,9 @@ export default function Document({ tracking }) {
             dangerouslySetInnerHTML={{
               __html:
                 "(function(){var P=location.pathname,BLOCK=(P.indexOf('/dashboard')===0||P.indexOf('/auth')===0);" +
-                // DPDP consent — read the visitor's stored choice. AN=analytics, MK=marketing.
-                "var AN=false,MK=false;try{var _C=JSON.parse(localStorage.getItem('vlm-consent-v1')||'{}');AN=!!_C.analytics;MK=!!_C.marketing;}catch(e){}" +
+                // Every visitor is tracked (no cookie banner): analytics and
+                // marketing are both on. AN=analytics, MK=marketing.
+                "var AN=true,MK=true;" +
                 // Advanced Consent Mode: queue Google signals with the actual storage choice.
                 "window.dataLayer=window.dataLayer||[];" +
                 // Apply Google Consent Mode before either GTM or gtag initializes.
@@ -155,8 +156,6 @@ export default function Document({ tracking }) {
                 "}" +
                 "['pointerdown','keydown','touchstart','scroll'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
                 "if('requestIdleCallback'in window){requestIdleCallback(boot,{timeout:4000});}else{setTimeout(boot,3500);}" +
-                // Re-evaluate tags when the visitor changes cookie consent.
-                "window.addEventListener('vlm-consent-change',function(){location.reload();});" +
                 "})();",
             }}
           />

@@ -310,10 +310,9 @@ function App({ Component, pageProps }) {
       {/* Msg91Loader moved to the login page — the 351 KiB OTP widget is only
           used for phone login, so it no longer loads on every other page. */}
       <ConsentSpeedInsights />
-      {/* Cookie consent is handled by the Mint storefront's own modal in
-          TestLayout (it auto-opens on first visit and writes the same
-          vlm-consent-v1 choice). The old global CookieBanner was removed so the
-          site shows a single, consistent consent UI. */}
+      {/* No cookie banner: every visitor is tracked (lib/consent reports
+          analytics + marketing as granted; the tag bootstrap in _document
+          does the same). */}
       <VercelAnalytics />
       <ErrorBoundary>
         <AppWrapper
