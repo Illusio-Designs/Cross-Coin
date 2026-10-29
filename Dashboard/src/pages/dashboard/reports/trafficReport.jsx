@@ -152,6 +152,163 @@ const Empty = ({ cols, text }) => (
   <tr><td colSpan={cols} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>{text}</td></tr>
 );
 
+/* ── Visit check: what the Visits number is made of. One Lighthouse-style
+   gauge — every check is a segment of one ring that fills to its share,
+   tracked visits in the middle — the checks explained beside it, why Meta
+   shows more clicks than visits, then the latest 10 visits. ── */
+const vcTone = (p) => (p == null ? 'none' : p >= 80 ? 'good' : p >= 50 ? 'warn' : 'bad');
+const vcPct = (n, of) => (of > 0 ? Math.min(100, Math.round((n / of) * 100)) : 0);
+
+function VisitGauge({ total, checks }) {
+  const CX = 200, CY = 200, R = 160, GAP = 7;
+  const pt = (r, deg) => { const a = ((deg - 90) * Math.PI) / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+  const arc = (from, to) => {
+    const a = pt(R, from), b = pt(R, to);
+    return `M${a[0].toFixed(2)} ${a[1].toFixed(2)} A${R} ${R} 0 ${to - from > 180 ? 1 : 0} 1 ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;
+  };
+  const span = 360 / checks.length;
+  return (
+    <svg className="rep-vc-gauge" viewBox="-80 -40 560 480" role="img"
+      aria-label={`${total} tracked visits. ${checks.map((c) => `${c.name} ${c.pct == null ? 'not known' : `${c.pct}%`}`).join(', ')}`}>
+      <circle className="rep-vc-core" cx={CX} cy={CY} r={R - 22} />
+      <text className="rep-vc-num" x={CX} y={CY - 8}>{num(total)}</text>
+      <text className="rep-vc-sub" x={CX} y={CY + 40}>tracked visits</text>
+      {checks.map((c, i) => {
+        const start = i * span + GAP / 2 + 3, end = (i + 1) * span - GAP / 2 - 3;
+        const tone = vcTone(c.pct);
+        const mid = (start + end) / 2, p = pt(R + 38, mid);
+        const anchor = Math.abs(p[0] - CX) < 24 ? 'middle' : p[0] > CX ? 'start' : 'end';
+        return (
+          <g key={c.key} className={`rep-vc-${tone}`}>
+            <path className="rep-vc-track" d={arc(start, end)} />
+            {c.pct > 0 ? <path className="rep-vc-seg" d={arc(start, start + ((end - start) * c.pct) / 100)} /> : null}
+            <text className="rep-vc-lab" x={p[0].toFixed(1)} y={p[1].toFixed(1)} textAnchor={anchor} dominantBaseline="middle">
+              {c.key} <tspan className="rep-vc-labpct">{c.pct == null ? '—' : `${c.pct}%`}</tspan>
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function VisitCheck({ vc, dim, busy }) {
+  const [typed, setTyped] = useState('');
+  const fromMeta = vc.metaClicks != null && vc.metaClicks > 0;
+  const metaClicks = fromMeta ? vc.metaClicks : (Number(typed) > 0 ? Math.round(Number(typed)) : null);
+  const visits = vc.visits;
+  const conv = metaClicks ? vcPct(visits, metaClicks) : null;
+  const lost = metaClicks ? Math.max(0, metaClicks - visits) : null;
+  const shared = Math.max(0, vc.fbclid - vc.fbclidIds);
+  const checks = [
+    { key: 'Devices', name: 'Different devices', pct: vcPct(vc.devices, visits), value: num(vc.devices),
+      text: vc.devices >= visits * 0.8 ? 'Almost every visit is a different phone, not repeat reloads.' : 'Many visits come from the same phones: reloads or the same people coming back.',
+      chip: vc.devices >= visits * 0.8 ? 'New people' : 'Repeat phones' },
+    { key: 'Meta click', name: 'From a Meta click', pct: vcPct(vc.fbclid, visits), value: num(vc.fbclid),
+      text: vc.fbclid ? `${plural(vc.fbclidIds, 'different click')}${shared ? `; ${num(shared)} visits reused a click id — a link copied and shared` : ': each visit is its own tap'}.` : 'No visits came from a Facebook or Instagram link.',
+      chip: !vc.fbclid ? 'None' : shared > vc.fbclid * 0.2 ? 'Shared link' : 'Not a shared link', tone: !vc.fbclid ? null : shared > vc.fbclid * 0.2 ? 'warn' : 'good' },
+    { key: 'Clicks → visits', name: 'Meta clicks that became visits', pct: conv, value: metaClicks ? `${num(visits)} of ${num(metaClicks)}` : '—',
+      text: metaClicks ? `${plural(lost, 'tap')} never opened the page. See why below.` : 'Type the link clicks from Ads Manager below, or connect the ad account in the Ads tab.',
+      chip: conv == null ? 'Needs Meta clicks' : conv >= 80 ? 'Normal gap' : conv >= 50 ? 'Page may be slow' : 'Too many lost' },
+    { key: 'Viewed product', name: 'Viewed a product or more', pct: vcPct(vc.active, visits), value: num(vc.active),
+      text: `${num(Math.max(0, visits - vc.active))} only landed and left without looking.`,
+      chip: vcPct(vc.active, visits) >= 80 ? 'Interested' : vcPct(vc.active, visits) >= 50 ? 'Many left fast' : 'Most left fast' },
+    { key: 'Paid tags', name: 'Tagged as paid ads', pct: vcPct(vc.paid, visits), value: num(vc.paid),
+      text: vc.paid ? 'Visits whose link carried the ad’s UTM tags (utm_medium = paid / paid_social / cpc).' : 'None arrived with the ad’s UTM tags.',
+      chip: vc.paid ? 'Tagged' : 'Check URL parameters' },
+  ];
+  return (
+    <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
+      <div className="rep-ph"><h3>Visit check</h3><span className="hint">what the Visits number is made of</span></div>
+      <div className="rep-vc">
+        <VisitGauge total={visits} checks={checks} />
+        <ul className="rep-vc-checks">
+          {checks.map((c) => {
+            const tone = c.tone || vcTone(c.pct);
+            return (
+              <li key={c.key}>
+                <i className={`rep-vc-dot rep-vc-${vcTone(c.pct)}`} />
+                <span className="rep-vc-name">{c.name}<span className={`rep-vc-chip rep-vc-${tone}`}>{c.chip}</span></span>
+                <span className="rep-vc-val num">{c.value}{c.pct != null ? ` · ${c.pct}%` : ''}</span>
+                <span className="rep-vc-text">{c.text}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="rep-vc-gap">
+        <div>
+          <h4>Why Meta shows more clicks than visits</h4>
+          <p>Meta counts a tap on the ad. We count a page that actually opened. Some people tap and never see the page, so visits are always a little lower than Meta’s link clicks.</p>
+        </div>
+        <div className="rep-vc-gapbody">
+          <div className="rep-vc-fig">
+            <label className="rep-kl" htmlFor="vc-meta-clicks">Link clicks in Meta</label>
+            {fromMeta ? (
+              <>
+                <span className="rep-kv num" style={{ margin: 0 }}>{num(vc.metaClicks)}</span>
+                <span className="rep-kf">From the connected ad account for these days (Ads tab, synced every 3 hours).</span>
+              </>
+            ) : (
+              <>
+                <input id="vc-meta-clicks" className="rep-vc-input" type="number" min="1" step="1" inputMode="numeric" placeholder="e.g. 477"
+                  value={typed} onChange={(e) => setTyped(e.target.value)} />
+                <span className="rep-kf">Type it from Ads Manager for the same days, or connect the ad account in the Ads tab to fill it in by itself.</span>
+              </>
+            )}
+            {metaClicks ? <span className="rep-kf">{lost ? `${plural(lost, 'tap')} never opened the page (${conv}% became visits).` : 'Every click became a visit.'}</span> : null}
+          </div>
+          <div>
+            <span className="rep-kl">Why some clicks never become visits</span>
+            <ul className="rep-vc-why">
+              <li><b>Left before the page loaded.</b> On slow mobile data people tap, wait a second and press back. Meta has counted the click; the page never opened.</li>
+              <li><b>Tapped by mistake.</b> Common on Reels and in other apps (Audience Network). The page is closed straight away.</li>
+              <li><b>Tapped twice.</b> Meta counts every tap; one person opening the link twice in a row is one visit here.</li>
+              <li><b>Different hours.</b> Meta’s “Today” starts at midnight in the ad account’s time zone; this report counts India days, and only from 29 Oct, 4 pm.</li>
+              <li><b>Tracking blocked.</b> A few browsers or bad networks stop our tracker from reporting.</li>
+            </ul>
+            <p className="rep-vc-tip"><b>Compare like with like:</b> Meta’s <b>Landing page views</b> counts only clicks where the page loaded, so it should sit within about 5–10% of our visits. Landing page views are usually 75–90% of link clicks.</p>
+          </div>
+        </div>
+        <div className="rep-vc-scale">
+          <span><i className="rep-vc-dot rep-vc-good" />80% or more: good</span>
+          <span><i className="rep-vc-dot rep-vc-warn" />50–80%: needs a look</span>
+          <span><i className="rep-vc-dot rep-vc-bad" />Under 50%: problem</span>
+        </div>
+      </div>
+
+      <div className="rep-vc-listhead"><span className="rep-kl">Latest 10 visits</span><span className="rep-kf">newest first</span></div>
+      <div className="rep-tbl-wrap">
+        <table className="rep-table">
+          <thead><tr><th>Time (IST)</th><th>Source</th><th>Landing page</th><th>Device</th><th>Network</th><th>Did</th></tr></thead>
+          <tbody>
+            {vc.latest.length ? vc.latest.slice(0, 10).map((v, i) => (
+              <tr key={i}>
+                <td className="num" style={{ whiteSpace: 'nowrap' }}>{new Date(v.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                <td>
+                  {srcLabel(v.source)}{v.medium && v.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)' }}> / {v.medium}</span> : null}
+                  {v.campaign ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{v.campaign}</div> : null}
+                  {v.adClick ? (
+                    <div style={{ fontSize: 12, color: v.clickUses > 1 ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>
+                      {v.clickUses > 1 ? `Same Meta click id on ${num(v.clickUses)} visits — a shared link` : 'Meta click id'}
+                    </div>
+                  ) : null}
+                  {v.referrer ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>from {v.referrer}</div> : null}
+                </td>
+                <td style={{ overflowWrap: 'anywhere' }}>{v.page || <Dash />}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{v.device}</td>
+                <td className="num" style={{ whiteSpace: 'nowrap', color: 'var(--ds-color-text-muted)' }}>{v.ip || <Dash />}</td>
+                <td style={{ fontSize: 12 }}>{v.did.length ? v.did.map((e) => EVENT_LABEL[e] || e).join(', ') : <span style={{ color: 'var(--ds-color-text-muted)' }}>only landed</span>}</td>
+              </tr>
+            )) : <Empty cols={6} text="No tracked visits in this period" />}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function TrafficReport() {
   const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
   const [to, setTo] = useReportState('to', istDate());
@@ -806,43 +963,7 @@ export default function TrafficReport() {
             </div>
           </div>
 
-          {/* ── Visit check: what the Visits number is made of ── */}
-          {data?.visitCheck && (
-            <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
-              <div className="rep-ph">
-                <h3>Visit check</h3>
-                <span className="hint">
-                  {plural(data.visitCheck.visits, 'tracked visit')} · {plural(data.visitCheck.devices, 'different device')} · {num(data.visitCheck.fbclid)} with a Meta click id ({plural(data.visitCheck.fbclidIds, 'different click')}) · {num(data.visitCheck.paid)} tagged as paid ads · {num(data.visitCheck.active)} viewed a product or more
-                </span>
-              </div>
-              <div className="rep-tbl-wrap">
-                <table className="rep-table">
-                  <thead><tr><th>Time (IST)</th><th>Source</th><th>Landing page</th><th>Device</th><th>Network</th><th>Did</th></tr></thead>
-                  <tbody>
-                    {data.visitCheck.latest.length ? data.visitCheck.latest.map((v, i) => (
-                      <tr key={i}>
-                        <td className="num" style={{ whiteSpace: 'nowrap' }}>{new Date(v.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
-                        <td>
-                          {srcLabel(v.source)}{v.medium && v.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)' }}> / {v.medium}</span> : null}
-                          {v.campaign ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{v.campaign}</div> : null}
-                          {v.adClick ? (
-                            <div style={{ fontSize: 12, color: v.clickUses > 1 ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>
-                              {v.clickUses > 1 ? `Same Meta click id on ${num(v.clickUses)} visits — a shared link` : 'Meta click id'}
-                            </div>
-                          ) : null}
-                          {v.referrer ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>from {v.referrer}</div> : null}
-                        </td>
-                        <td style={{ overflowWrap: 'anywhere' }}>{v.page || <Dash />}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{v.device}</td>
-                        <td className="num" style={{ whiteSpace: 'nowrap', color: 'var(--ds-color-text-muted)' }}>{v.ip || <Dash />}</td>
-                        <td style={{ fontSize: 12 }}>{v.did.length ? v.did.map((e) => EVENT_LABEL[e] || e).join(', ') : <span style={{ color: 'var(--ds-color-text-muted)' }}>only landed</span>}</td>
-                      </tr>
-                    )) : <Empty cols={6} text="No tracked visits in this period" />}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          {data?.visitCheck && <VisitCheck vc={data.visitCheck} dim={dim} busy={busy} />}
 
           {howCounted}
         </>

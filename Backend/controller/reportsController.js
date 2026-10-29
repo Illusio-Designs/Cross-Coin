@@ -681,7 +681,7 @@ exports.getBrandTraffic = async (req, res) => {
       type: path === '/' ? 'Home' : /^\/products?\//.test(path) ? 'Product' : /^\/(collections?|categories|category|shop)\b/.test(path) ? 'Collection' : /^\/cart\b/.test(path) ? 'Cart' : /^\/(blogs?|journal)\b/.test(path) ? 'Blog' : 'Page',
     })).sort((a, b) => b.sessions - a.sessions).slice(0, 15);
 
-    // Latest tracked visits, one by one, plus a check across all of them —
+    // The latest 10 tracked visits, one by one, plus a check across all of them —
     // to see what the Visits number is made of (an ad tap, someone browsing,
     // the same phone coming back, or a page nobody looked at).
     let visitCheck = null;
@@ -706,7 +706,7 @@ exports.getBrandTraffic = async (req, res) => {
                   (SELECT GROUP_CONCAT(DISTINCT fe.event) FROM funnel_events fe WHERE fe.session_id = u.session_id) AS events
              FROM utm_tracking u
             WHERE u.created_at BETWEEN :start AND :end AND ${notBot('u.')}${bFiltU}
-            ORDER BY u.created_at DESC LIMIT 200`,
+            ORDER BY u.created_at DESC LIMIT 10`,
           { replacements: repl, type: QueryTypes.SELECT }),
         sequelize.query(
           `SELECT ${FBCLID} AS id, COUNT(DISTINCT u.session_id) AS uses
@@ -715,6 +715,16 @@ exports.getBrandTraffic = async (req, res) => {
             GROUP BY id HAVING uses > 1`,
           { replacements: repl, type: QueryTypes.SELECT }),
       ]);
+      // Meta's link clicks for the same India days, when the store's ad
+      // account is connected (Ads tab, synced every 3 hours). Null = unknown.
+      let metaClicks = null;
+      try {
+        const [m] = await sequelize.query(
+          `SELECT COUNT(*) AS n, COALESCE(SUM(clicks), 0) AS clicks FROM ad_spend_daily
+            WHERE day BETWEEN :startDay AND :endDay${hasBrand ? ' AND brand_id = :brandId' : ''}`,
+          { replacements: { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT });
+        if (m && Number(m.n) > 0) metaClicks = Number(m.clicks) || 0;
+      } catch (_) { /* no ad spend synced yet */ }
       const usesOf = new Map(clickIds.map((r) => [r.id, Number(r.uses) || 0]));
       const fbclidOf = (url) => { const m = /[?&]fbclid=([^&#]*)/.exec(String(url || '')); return m ? m[1] : null; };
       const sm = summary[0] || {};
@@ -739,6 +749,7 @@ exports.getBrandTraffic = async (req, res) => {
         devices: Number(sm.devices) || 0,
         fbclid: Number(sm.fbclid) || 0,
         fbclidIds: Number(sm.fbclid_ids) || 0,
+        metaClicks,
         paid: Number(sm.paid) || 0,
         active: Number(sm.active) || 0,
         latest: latest.map((r) => ({
