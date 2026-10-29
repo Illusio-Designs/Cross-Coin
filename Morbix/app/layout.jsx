@@ -34,7 +34,11 @@ export const metadata = {
   icons: { icon: '/icon.svg' },
   // Deployment marker so we can verify EXACTLY which commit is live:
   // view page source and search for <meta name="x-build" …>.
-  other: { 'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7) },
+  other: {
+    'x-build': (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7),
+    // Meta Business → Brand safety → Domains: proves morbixsocks.com is ours.
+    'facebook-domain-verification': 'xhllnh6tnbfemywbbuz24i7idhifes',
+  },
 };
 
 // Mobile browser chrome (address bar / status bar) tinted to the Morbix brand.

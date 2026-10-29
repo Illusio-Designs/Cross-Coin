@@ -59,7 +59,9 @@ export default function Analytics() {
       <GoogleTagManager containerId={gtmId} />
       {/* The pixel queue (fbq) is ready at once; the ~100 KB pixel library
           itself loads after the page has loaded and the browser is idle, then
-          sends everything queued. Visitors arriving from a Meta ad (fbclid in
+          sends everything queued. It starts with the match keys we have: the
+          anonymous visitor id (_mvid) and, for a returning buyer, their hashed
+          email / phone. Visitors arriving from a Meta ad (fbclid in
           the address) get it at once instead: many of them leave within
           seconds, and Meta counts a landing page view only when the pixel
           fires. The Conversions API copy is unaffected. */}
@@ -77,7 +79,8 @@ export default function Analytics() {
               var G=function(){setTimeout(function(){f.requestIdleCallback?f.requestIdleCallback(L,{timeout:4000}):L()},1500)};
               /[?&]fbclid=/.test(f.location.search)?L():b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              window._fbqId='${fbId}';fbq('init', '${fbId}');
+              var am={};try{var c=document.cookie.match(/(?:^|; )_mvid=([a-f0-9]{64})/);if(c)am.external_id=c[1];var r=JSON.parse(window.localStorage.getItem('fb_am')||'null');if(r&&/^[a-f0-9]{64}$/.test(r.em||''))am.em=r.em;if(r&&/^[a-f0-9]{64}$/.test(r.ph||''))am.ph=r.ph;}catch(x){}
+              window._fbqId='${fbId}';fbq('init', '${fbId}', am);
               window.dispatchEvent(new Event('brand-fbq-ready'));
             ` }}
           />

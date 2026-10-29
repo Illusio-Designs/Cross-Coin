@@ -384,6 +384,7 @@ function trackingFromAttributes(p) {
   if (ca.fbp) out.fbp = String(ca.fbp);
   if (ca.fbc) out.fbc = String(ca.fbc);
   if (ca.ga_client_id) out.ga_client_id = String(ca.ga_client_id);
+  if (ca.visitor_id) out.visitor_id = String(ca.visitor_id).slice(0, 64);
   if (ca.marketing_consent === true || ca.marketing_consent === 'true') out.marketing_consent = true;
   return out;
 }

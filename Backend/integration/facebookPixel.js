@@ -13,6 +13,21 @@ function sha256(value) {
   return crypto.createHash("sha256").update(String(value).toLowerCase().trim()).digest("hex");
 }
 
+/**
+ * Hash for Meta matching, unless it already is a SHA-256 hex string (the
+ * storefront sends some values pre-hashed — a remembered buyer's email/phone,
+ * the anonymous visitor id), so the browser and server copies carry the SAME
+ * value instead of the server hashing a hash.
+ */
+const HEX64 = /^[a-f0-9]{64}$/i;
+function hashed(value, normalize = (v) => v) {
+  if (!value) return undefined;
+  const v = String(value).trim();
+  if (HEX64.test(v)) return v.toLowerCase();
+  const n = normalize(v);
+  return n ? sha256(n) : undefined;
+}
+
 /** Normalise an Indian phone to E.164 digits (country code, no symbols). */
 function normalizePhone(value) {
   if (!value) return undefined;
@@ -69,18 +84,22 @@ async function resolveBrandId(req) {
 // no consent record (there is no banner to create one).
 const TRACKS_EVERYONE = new Set(['morbix', 'soxbae', 'crosscoin']);
 const brandSlugCache = new Map();
-async function brandTracksEveryone(brandId) {
+async function brandSlug(brandId) {
   const id = Number(brandId) || 1;
   if (!brandSlugCache.has(id)) {
     try {
       const b = await Brand.findByPk(id, { attributes: ['slug'] });
       brandSlugCache.set(id, String(b?.slug || '').toLowerCase());
     } catch {
-      return false;
+      return '';
     }
   }
-  return TRACKS_EVERYONE.has(brandSlugCache.get(id));
+  return brandSlugCache.get(id);
 }
+async function brandTracksEveryone(brandId) {
+  return TRACKS_EVERYONE.has(await brandSlug(brandId));
+}
+
 
 async function hasMarketingConsent(order) {
   if (order.marketing_consent === true || order.marketing_consent === 'true') return true;
@@ -102,6 +121,24 @@ async function hasMarketingConsent(order) {
   } catch {
     return false;
   }
+}
+
+// external_id for Meta: the account id (hashed) and the anonymous visitor id
+// (already a hash) — one value, an array of both, or undefined.
+function externalIds(accountId, visitorId) {
+  const ids = [accountId != null && accountId !== '' ? hashed(String(accountId)) : undefined, hashed(visitorId)]
+    .filter(Boolean);
+  if (!ids.length) return undefined;
+  return ids.length === 1 ? ids[0] : [...new Set(ids)];
+}
+
+/** The buyer's email / phone hashed as Meta wants them — for the thank-you
+ *  page, so the browser Purchase carries the same match keys as the server's. */
+function buyerMatchKeys(order) {
+  const out = {};
+  const em = hashed(order?.email); if (em) out.em = em;
+  const ph = hashed(order?.phone, normalizePhone); if (ph) out.ph = ph;
+  return out;
 }
 
 async function sendFacebookEvent(eventName, order, extraData = {}) {
@@ -144,11 +181,11 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     client_ip_address: order.ip_address || null,
     client_user_agent: order.user_agent || null,
     // Hashed PII
-    em: sha256(order.email),
+    em: hashed(order.email),
     // Digits with the country code (91…), as Meta matches phone numbers.
-    ph: sha256(normalizePhone(order.phone)),
-    fn: sha256(order.first_name),
-    ln: sha256(order.last_name),
+    ph: hashed(order.phone, normalizePhone),
+    fn: hashed(order.first_name),
+    ln: hashed(order.last_name),
     // Address fields — hashed
     zp: sha256(order.zip_code),
     ct: sha256(order.city),
@@ -156,7 +193,7 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     country: sha256(order.country || 'in'),
     // Stable user id (hashed) — raises Event Match Quality and ties the browser
     // (Advanced Matching) and server copies to the same person, like Shopify.
-    external_id: order.external_id ? sha256(String(order.external_id)) : undefined,
+    external_id: externalIds(order.external_id, order.visitor_id),
     // Click ID (fbc) — not hashed
     fbc: order.fbc || null,
     fbp: order.fbp || null,
@@ -171,12 +208,19 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
     }
   });
 
+  // Keep what this order's Purchase knew about the shopper's browser (ad
+  // click id, browser id, device), so the later Delivered / Cancelled /
+  // Returned events for the order match the same person.
+  if (eventName === 'Purchase' && order.order_number) {
+    require('../services/metaOrderOutcomes.js').saveTracking(brandId, order).catch(() => {});
+  }
+
   const eventData = {
     event_name: eventName,
     event_time: Math.floor(Date.now() / 1000),
     event_source_url: extraData.event_source_url || order.event_source_url || await thankYouUrl(brandId),
-    action_source: 'website',
-    event_id: order.order_number ? `${eventName}_${order.order_number}` : `${eventName}_${Date.now()}`,
+    action_source: extraData.action_source || 'website',
+    event_id: extraData.event_id || (order.order_number ? `${eventName}_${order.order_number}` : `${eventName}_${Date.now()}`),
     user_data: userData,
     custom_data: {
       // What the shopper paid (after discounts), like the browser Purchase.
@@ -184,6 +228,10 @@ async function sendFacebookEvent(eventName, order, extraData = {}) {
       currency: order.currency || 'INR',
       order_id: order.order_number || '',
       contents: items,
+      content_ids: [...new Set(items.map((i) => i.id).filter(Boolean))],
+      // Product ids, like the browser events (Meta matches them to the
+      // catalog's items or item groups).
+      content_type: 'product',
       num_items: items.length,
       ...(extraData.custom_data || {}),
     },
@@ -247,11 +295,12 @@ async function sendBrowserPixelEvent(req, body = {}) {
   const userData = {
     client_ip_address: ip,
     client_user_agent: ua,
-    em: sha256(user_data.em || user_data.email),
-    ph: sha256(normalizePhone(user_data.ph || user_data.phone)),
-    fn: sha256(user_data.fn || user_data.first_name),
-    ln: sha256(user_data.ln || user_data.last_name),
-    external_id: user_data.external_id ? sha256(user_data.external_id) : undefined,
+    em: hashed(user_data.em || user_data.email),
+    ph: hashed(user_data.ph || user_data.phone, normalizePhone),
+    fn: hashed(user_data.fn || user_data.first_name),
+    ln: hashed(user_data.ln || user_data.last_name),
+    // Shopper's account id and/or the store's anonymous visitor id (_mvid).
+    external_id: externalIds(user_data.external_id, user_data.visitor_id),
     // Every store ships within India only.
     country: sha256(user_data.country || 'in'),
     fbp: fbp || null,
@@ -340,3 +389,7 @@ router.post('/test', isAuthenticated, isAdmin, async (req, res) => {
 module.exports = router;
 module.exports.sendFacebookEvent = sendFacebookEvent;
 module.exports.sendBrowserPixelEvent = sendBrowserPixelEvent;
+module.exports.buyerMatchKeys = buyerMatchKeys;
+
+// Delivered / Cancelled / Returned order events (hooks on the Order model).
+require('../services/metaOrderOutcomes.js');

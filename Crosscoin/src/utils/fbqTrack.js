@@ -130,6 +130,9 @@ export function trackingIds() {
     if (fbp) out.fbp = fbp;
     const fbc = readCookie('_fbc');
     if (fbc) out.fbc = fbc;
+    // Anonymous visitor id (_mvid, set by the store's edge): Meta external_id.
+    const vid = readCookie('_mvid');
+    if (vid && /^[a-f0-9]{64}$/.test(vid)) out.visitor_id = vid;
     // The visit (traffic report), so Shiprocket Checkout orders link to it.
     const sid = localStorage.getItem('utm_session_id');
     if (sid) out.utm_session_id = sid;
@@ -157,7 +160,7 @@ function relayToCapi(event, eventID, params) {
       event_id: eventID,
       event_source_url: typeof window !== 'undefined' ? window.location.href : undefined,
       custom_data: params,
-      user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id },
+      user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id, visitor_id: (readCookie('_mvid') || '').match(/^[a-f0-9]{64}$/) ? readCookie('_mvid') : undefined },
       fbp: readCookie('_fbp'),
       fbc: readCookie('_fbc'),
     });

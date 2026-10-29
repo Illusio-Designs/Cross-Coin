@@ -317,6 +317,29 @@ exports.abandonedWebhook = async (req, res) => {
       });
     }
     note(true, `${created ? 'added' : 'updated'} abandoned cart (${itemCount} item${itemCount === 1 ? '' : 's'})`);
+
+    // Meta: the shopper reached Shiprocket's checkout, gave their phone and
+    // left — a strong signal for retargeting (an audience of "abandoned
+    // checkout, didn't buy"). Once per phone per India day. Browser ids are
+    // used when Shiprocket passes back the ones we sent at token time.
+    setImmediate(async () => {
+      try {
+        const day = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
+        const ua = pick(body, /^user_agent$/i) || null;
+        const { sendFacebookEvent } = require('../integration/facebookPixel.js');
+        await sendFacebookEvent('CheckoutAbandoned', {
+          brand_id: brandId, phone: digits, first_name: first || null, last_name: last || null, country: 'in',
+          final_amount: cartValue, currency: 'INR',
+          items: lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })),
+          fbp: pick(body, /^fbp$/i) || null, fbc: pick(body, /^fbc$/i) || null,
+          visitor_id: pick(body, /^visitor_id$/i) || null,
+          ip_address: pick(body, /^client_ip$/i) || null, user_agent: ua,
+        }, {
+          event_id: `CheckoutAbandoned_${phoneHash(digits).slice(0, 16)}_${day}`,
+          action_source: ua ? 'website' : 'system_generated',
+        });
+      } catch (e) { logger.warn('[custom-checkout] CheckoutAbandoned to Meta failed: ' + e.message); }
+    });
     return res.json({ ok: true, saved: true });
   } catch (err) {
     logger.error('[custom-checkout] abandoned webhook failed: ' + err.message);
@@ -365,6 +388,7 @@ exports.confirmReturn = async (req, res) => {
         ...track, marketing_consent: true,
         fbp: req.body?.fbp || req.cookies?._fbp || null,
         fbc: req.body?.fbc || req.cookies?._fbc || null,
+        visitor_id: req.body?.visitor_id || null,
         ip_address: req.ip || null, user_agent: req.headers['user-agent'] || null,
       };
       setImmediate(async () => {
@@ -377,6 +401,9 @@ exports.confirmReturn = async (req, res) => {
     res.json({
       ok: true, order_number: result.order_number,
       value: track?.final_amount || 0,
+      // Buyer's email / phone, SHA-256-hashed, for the browser Purchase's
+      // advanced matching (never the plain values).
+      am: track ? require('../integration/facebookPixel.js').buyerMatchKeys(track) : undefined,
       items: (track?.items || []).map((i) => ({ id: String(i.product_id), quantity: i.quantity })),
     });
   } catch (err) {

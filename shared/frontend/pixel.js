@@ -43,6 +43,48 @@ function readFbc() {
   return undefined;
 }
 
+// Anonymous visitor id (_mvid, set by the store's edge): Meta external_id for
+// shoppers who aren't logged in, the same value from browser and server.
+function visitorId() {
+  const v = readCookie('_mvid');
+  return v && /^[a-f0-9]{64}$/.test(v) ? v : undefined;
+}
+
+// A buyer's email / phone, SHA-256-hashed by our server, kept in this browser
+// after an order so their later visits match Meta as well as the order did.
+const AM_KEY = 'fb_am';
+function rememberedBuyer() {
+  try {
+    const r = JSON.parse(localStorage.getItem(AM_KEY) || 'null');
+    if (!r) return {};
+    const out = {};
+    if (/^[a-f0-9]{64}$/.test(r.em || '')) out.em = r.em;
+    if (/^[a-f0-9]{64}$/.test(r.ph || '')) out.ph = r.ph;
+    return out;
+  } catch (_) { return {}; }
+}
+
+// Thank-you page: remember the buyer ({ em, ph } hashed, from the order) and
+// re-initialise the pixel with them, so the browser Purchase that follows
+// carries the same match keys as the server's.
+export function rememberBuyer(keys = {}) {
+  if (typeof window === 'undefined') return;
+  const am = {};
+  if (/^[a-f0-9]{64}$/.test(keys.em || '')) am.em = keys.em;
+  if (/^[a-f0-9]{64}$/.test(keys.ph || '')) am.ph = keys.ph;
+  if (!am.em && !am.ph) return;
+  try { localStorage.setItem(AM_KEY, JSON.stringify(am)); } catch (_) { /* blocked */ }
+  window.__fbUser = { ...am, ...(window.__fbUser || {}) };
+  const init = () => {
+    try {
+      const vid = visitorId();
+      window.fbq('init', window._fbqId, { ...am, ...(vid ? { external_id: vid } : {}) });
+    } catch (_) { /* never throw */ }
+  };
+  if (window.fbq && window._fbqId) init();
+  else window.addEventListener('brand-fbq-ready', init, { once: true });
+}
+
 // Map the Meta custom_data shape to GA4's items[] (item_id/quantity/name).
 function ga4Items(params) {
   const contents = Array.isArray(params.contents) ? params.contents : null;
@@ -186,7 +228,7 @@ function sendMeta(event, params, url) {
 
   if (!RELAY_EVENTS.has(event)) return;
   try {
-    const u = window.__fbUser || {};
+    const u = { ...rememberedBuyer(), ...(window.__fbUser || {}) };
     fetch(`${API_URL}/api/facebook-pixel/track`, {
       method: 'POST',
       keepalive: true,
@@ -197,7 +239,7 @@ function sendMeta(event, params, url) {
         event_id: eventID,
         event_source_url: url || window.location.href,
         custom_data: params,
-        user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id },
+        user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id, visitor_id: visitorId() },
         fbp: readCookie('_fbp'),
         fbc: readFbc(),
       }),
@@ -324,6 +366,7 @@ export function trackingIds() {
   // The visit (traffic report): our own checkout sends it as utm_session_id;
   // this carries it through Shiprocket Checkout so its orders link to it too.
   const sid = fpSessionId(); if (sid) out.utm_session_id = sid;
+  const vid = visitorId(); if (vid) out.visitor_id = vid;
   const ga = readCookie('_ga'); // GA1.1.<client id>
   const m = ga && ga.match(/^GA\d\.\d\.(.+)$/);
   if (m) out.ga_client_id = m[1];

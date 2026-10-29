@@ -7,8 +7,8 @@ import { NextResponse } from 'next/server';
 // clicks.
 //
 // It never changes headers or caching: it returns NextResponse.next(), only
-// adds first-party cookies (the `_cv` session, and Meta's `_fbp` / `_fbc`, see
-// setMetaCookies), and the ping is sent in the
+// adds first-party cookies (the `_cv` session, Meta's `_fbp` / `_fbc` and the
+// anonymous visitor id `_mvid`, see setMetaCookies), and the ping is sent in the
 // background (event.waitUntil), so the page is never delayed. Any failure is
 // swallowed. The routing changes: a store's retired mixed-case paths
 // (LEGACY_PATHS, e.g. /Products → /products) get a permanent redirect,
@@ -121,6 +121,13 @@ function setMetaCookies(request, res) {
   const now = Date.now();
   if (!request.cookies.get('_fbp')?.value) {
     res.cookies.set('_fbp', `fb.1.${now}.${Math.floor(1e9 + Math.random() * 9e9)}`, opts);
+  }
+  // Anonymous visitor id (Meta external_id): a random SHA-256-sized hex, the
+  // same value sent by the pixel and the server, kept for a year.
+  if (!/^[a-f0-9]{64}$/.test(request.cookies.get('_mvid')?.value || '')) {
+    const b = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(b);
+    res.cookies.set('_mvid', Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(''), { ...opts, maxAge: 365 * 24 * 60 * 60 });
   }
   const clid = request.nextUrl.searchParams.get('fbclid');
   if (clid && /^[\w-]{10,500}$/.test(clid)) {

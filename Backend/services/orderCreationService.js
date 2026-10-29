@@ -403,6 +403,7 @@ async function handlePaymentSuccess({
           fbc: session.tracking?.fbc || req?.body?.fbc || req?.cookies?._fbc || null,
           fbp: session.tracking?.fbp || req?.body?.fbp || req?.cookies?._fbp || null,
           ga_client_id: session.tracking?.ga_client_id || req?.body?.ga_client_id || null,
+          visitor_id: session.tracking?.visitor_id || req?.body?.visitor_id || null,
           marketing_consent: session.tracking?.marketing_consent ?? req?.body?.marketing_consent,
           consent_session_id: session.tracking?.consent_session_id || req?.cookies?.session_id || null,
           items: orderItems.map(i => ({
