@@ -130,6 +130,9 @@ export function trackingIds() {
     if (fbp) out.fbp = fbp;
     const fbc = readCookie('_fbc');
     if (fbc) out.fbc = fbc;
+    // The visit (traffic report), so Shiprocket Checkout orders link to it.
+    const sid = localStorage.getItem('utm_session_id');
+    if (sid) out.utm_session_id = sid;
     const ga = readCookie('_ga');
     const m = ga && ga.match(/^GA\d+\.\d+\.(.+)$/);
     if (m && m[1]) out.ga_client_id = m[1];

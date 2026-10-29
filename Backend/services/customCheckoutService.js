@@ -388,6 +388,20 @@ function trackingFromAttributes(p) {
   return out;
 }
 
+// The tracked visit (traffic report) the shopper came from: the store passes
+// its visit id (utm_session_id) at token time, as our own checkout does with
+// the order, so the order counts for its channel instead of "No tracked visit".
+async function visitIdFor(p) {
+  const ca = p?.cart_data?.custom_attributes || p?.custom_attributes || {};
+  const sid = String(ca.utm_session_id || '').trim();
+  if (!sid || sid.length > 128) return null;
+  try {
+    const UTMTracking = require('../model/utmModel.js');
+    const row = await UTMTracking.findOne({ where: { session_id: sid }, order: [['created_at', 'DESC']], attributes: ['id'] });
+    return row ? row.id : null;
+  } catch (_) { return null; }
+}
+
 // The store account with this email, if the shopper has one: its id is the
 // external_id the store's browser pixel sends for logged-in shoppers, so the
 // server Purchase links to the same person. Checkout orders come in as guests.
@@ -447,6 +461,7 @@ async function ingestCheckoutOrder(brandId, p) {
   const firstName = ship.first_name || 'Customer';
   const lastName = ship.last_name || '';
 
+  const utmTrackingId = await visitIdFor(p);
   return sequelize.transaction(async (t) => {
     // Guest identity (custom-checkout shoppers have no local account).
     let guest = phone ? await GuestUser.findOne({ where: { phone }, transaction: t }) : null;
@@ -514,6 +529,7 @@ async function ingestCheckoutOrder(brandId, p) {
       shipping_address_id: address.id,
       brand_id: brandId,
       idempotency_key: idemKey,
+      utm_tracking_id: utmTrackingId,
     }, { transaction: t });
 
     await OrderItem.bulkCreate(lines.map((l) => ({ ...l, order_id: order.id })), { transaction: t });
@@ -634,6 +650,6 @@ module.exports = {
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
   initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
-  trackingFromAttributes, customerIdFor,
+  trackingFromAttributes, visitIdFor, customerIdFor,
   getPushConfig,
 };

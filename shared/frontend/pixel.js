@@ -321,6 +321,9 @@ export function trackingIds() {
   const out = { marketing_consent: TRACKS_EVERYONE.has(String(BRAND).toLowerCase()) || !!window.fbq };
   const fbp = readCookie('_fbp'); if (fbp) out.fbp = fbp;
   const fbc = readFbc(); if (fbc) out.fbc = fbc;
+  // The visit (traffic report): our own checkout sends it as utm_session_id;
+  // this carries it through Shiprocket Checkout so its orders link to it too.
+  const sid = fpSessionId(); if (sid) out.utm_session_id = sid;
   const ga = readCookie('_ga'); // GA1.1.<client id>
   const m = ga && ga.match(/^GA\d\.\d\.(.+)$/);
   if (m) out.ga_client_id = m[1];
