@@ -104,7 +104,10 @@ exports.status = async (req, res) => {
 
 exports.createToken = async (req, res) => {
   try {
-    const brandId = req.brandId || 1;
+    // A checkout must belong to the store that opened it — never default to
+    // Crosscoin when the store isn't named.
+    if (!req.brandId) return res.status(400).json({ success: false, message: 'X-Brand-Name is required' });
+    const brandId = req.brandId;
     const items = Array.isArray(req.body.items) ? req.body.items
       .map((i) => ({ variant_id: String(i.variant_id ?? i.variationId ?? ''), quantity: Math.max(1, parseInt(i.quantity, 10) || 1) }))
       .filter((i) => i.variant_id) : [];
@@ -116,6 +119,9 @@ exports.createToken = async (req, res) => {
     const custom = (req.body.custom_attributes && typeof req.body.custom_attributes === 'object') ? { ...req.body.custom_attributes } : {};
     if (req.ip) custom.client_ip = String(req.ip).slice(0, 64);
     if (req.headers['user-agent']) custom.user_agent = String(req.headers['user-agent']).slice(0, 400);
+    // The store, stamped by us (not the browser): the order is saved under it
+    // whichever webhook URL Shiprocket calls (see verifyAndIngest).
+    custom.store = req.brand.slug;
     const cartData = {
       items,
       custom_attributes: custom,
@@ -191,6 +197,19 @@ async function verifyAndIngest(brandId, claimedId) {
   if (!Array.isArray(providerOrder?.cart_data?.items) || !providerOrder.cart_data.items.length) {
     logger.error(`[custom-checkout] provider order ${claimedId} has no cart_data.items (keys: ${Object.keys(providerOrder || {}).join(',')}) — not ingesting`);
     const e = new Error('Provider order has no items'); e.status = 422; throw e;
+  }
+  // The store the checkout was opened from (stamped at token time) decides
+  // which store the order — and its Meta / Google Purchase — belongs to, so a
+  // webhook URL without (or with the wrong) ?brand= can't file a Morbix order
+  // under Crosscoin or the other way round.
+  const stamped = String(providerOrder?.cart_data?.custom_attributes?.store || providerOrder?.custom_attributes?.store || '').trim().toLowerCase();
+  if (stamped) {
+    const Brand = require('../model/brandModel.js');
+    const own = await Brand.findOne({ where: { slug: stamped }, attributes: ['id'] });
+    if (own && own.id !== brandId) {
+      logger.warn(`[custom-checkout] order ${claimedId} came in for brand ${brandId} but was opened on ${stamped} (brand ${own.id}) — saving it under ${stamped}`);
+      brandId = own.id;
+    }
   }
   return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
 }

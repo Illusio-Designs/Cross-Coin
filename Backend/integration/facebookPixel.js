@@ -35,15 +35,19 @@ async function thankYouUrl(brandId) {
   return `${process.env.FRONTEND_URL || 'https://crosscoin.in'}/order-confirmation`;
 }
 
-/** Resolve the brand id from the X-Brand-Name header (defaults to 1 = Crosscoin). */
+/**
+ * Resolve the brand id from the X-Brand-Name header. No header or an unknown
+ * store gives null — never Crosscoin — so one store's events can't land on
+ * another store's pixel.
+ */
 async function resolveBrandId(req) {
-  const slug = (req.headers["x-brand-name"] || "").toLowerCase();
-  if (!slug) return 1;
+  const slug = String(req.headers["x-brand-name"] || "").trim().toLowerCase();
+  if (!slug) return null;
   try {
     const b = await Brand.findOne({ where: { slug } });
-    return b ? b.id : 1;
+    return b ? b.id : null;
   } catch {
-    return 1;
+    return null;
   }
 }
 
@@ -101,7 +105,9 @@ async function hasMarketingConsent(order) {
 }
 
 async function sendFacebookEvent(eventName, order, extraData = {}) {
-  const brandId = order.brand_id || 1;
+  const brandId = order.brand_id;
+  // Never send a store-less event to Crosscoin's (or any other) pixel.
+  if (!brandId) return { skipped: true, reason: 'no brand' };
 
   if (!(await hasMarketingConsent(order))) {
     console.log(`Facebook Pixel: Skipping ${eventName} for ${order.order_number || 'event'} — no marketing consent`);
@@ -221,6 +227,7 @@ async function sendBrowserPixelEvent(req, body = {}) {
   const brandId = await resolveBrandId(req);
   // Per-brand pixel + token; fail closed so one brand's events never post to
   // another's pixel. No cross-brand default.
+  if (!brandId) return { skipped: true, reason: 'unknown store' };
   const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID');
   const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
   const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
@@ -288,7 +295,7 @@ router.post('/track', async (req, res) => {
 // without ever exposing the secret token itself.
 router.get('/status', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const brandId = await resolveBrandId(req);
+    const brandId = (await resolveBrandId(req)) || 1; // admin tools: Crosscoin when no store is picked
     const FB_PIXEL_ID = await settingsHelper.getSetting(brandId, 'FB_PIXEL_ID');
     const FB_ACCESS_TOKEN = await settingsHelper.getSetting(brandId, 'FB_ACCESS_TOKEN');
     const FB_TEST_EVENT_CODE = await settingsHelper.getSetting(brandId, 'FB_TEST_EVENT_CODE');
@@ -310,7 +317,7 @@ router.get('/status', isAuthenticated, isAdmin, async (req, res) => {
 // Test Events. Admin only.
 router.post('/test', isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const brandId = await resolveBrandId(req);
+    const brandId = (await resolveBrandId(req)) || 1; // admin tools: Crosscoin when no store is picked
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || null;
     const sampleOrder = {
       brand_id: brandId,
