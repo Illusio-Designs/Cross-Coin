@@ -11,15 +11,16 @@ import { useConsent } from '@/lib/consent';
  * Analytics — GA4 + Meta Pixel + Microsoft Clarity, driven by the platform
  * tracking-config (Brand Settings), matching the Crosscoin storefront.
  *
- * IDs are fetched from /api/public/tracking-config at runtime, scoped to this
- * brand via the X-Brand-Name header, so changing GA_MEASUREMENT_ID /
- * FB_PIXEL_ID / CLARITY_ID in the dashboard takes effect on the next page
- * load — no redeploy or build-time env var required.
+ * IDs come from /api/public/tracking-config, scoped to this brand via the
+ * X-Brand-Name header — read by the layout on the server (cached 5 minutes,
+ * passed in as `initial`), else fetched here — so changing GA_MEASUREMENT_ID /
+ * FB_PIXEL_ID / CLARITY_ID in the dashboard takes effect within minutes, no
+ * redeploy or build-time env var required.
  */
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'morbix';
 
-export default function Analytics() {
+export default function Analytics({ initial = null }) {
   const [cfg, setCfg] = useState(null);
   const pathname = usePathname();
   const consent = useConsent();
@@ -27,8 +28,13 @@ export default function Analytics() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return;
     let aborted = false;
-    fetch(`${API_URL}/api/public/tracking-config`, { cache: 'no-store', headers: { 'X-Brand-Name': BRAND } })
-      .then((r) => r.json())
+    // The layout already fetched the IDs on the server (cached 5 minutes), so
+    // tracking starts at once instead of after a round trip to the API — many
+    // ad visitors leave within seconds. Fetched here only when it couldn't.
+    const config = initial?.success
+      ? Promise.resolve(initial)
+      : fetch(`${API_URL}/api/public/tracking-config`, { cache: 'no-store', headers: { 'X-Brand-Name': BRAND } }).then((r) => r.json());
+    config
       .then((d) => {
         if (aborted || !d?.success) return;
         setCfg({
@@ -43,7 +49,7 @@ export default function Analytics() {
       })
       .catch(() => {});
     return () => { aborted = true; };
-  }, [consent.analytics, consent.marketing]);
+  }, [initial, consent.analytics, consent.marketing]);
 
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
