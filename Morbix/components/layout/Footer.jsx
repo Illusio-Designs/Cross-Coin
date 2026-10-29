@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
 import Icon from '@/components/Icon';
 import BrandLogo from '@/components/BrandLogo';
 
@@ -14,7 +13,6 @@ const COLS = [
     { label: 'Shipping & delivery', href: '/policies/shipping-policy' },
     { label: 'Cancellation & refund', href: '/policies/cancellation-and-refund' },
     { label: 'Privacy policy', href: '/policies/privacy-policy' },
-    { label: 'Cookie settings', cookie: true },
     { label: 'Grievance', href: '/contact#grievance' },
     { label: 'Terms of service', href: '/policies/terms-and-conditions' },
   ] },
@@ -44,7 +42,7 @@ export default function Footer() {
           {COLS.map((col) => (
             <div key={col.title}>
               <h2 className="footer-title">{col.title}</h2>
-              <ul>{col.links.map((l) => <li key={l.label}>{l.cookie ? <CookieSettingsButton className="footer-cookie-btn" /> : <Link href={l.href}>{l.label}</Link>}</li>)}</ul>
+              <ul>{col.links.map((l) => <li key={l.label}><Link href={l.href}>{l.label}</Link></li>)}</ul>
             </div>
           ))}
 
