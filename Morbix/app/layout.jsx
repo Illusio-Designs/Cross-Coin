@@ -1,6 +1,5 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import './cookie-banner.css';
 import SmoothScroll from '@/components/SmoothScroll';
 import ToastHost from '@/components/ToastHost';
 import { AuthProvider } from '@/context/AuthContext';
@@ -15,7 +14,6 @@ import VisitTracker from '@/components/common/VisitTracker';
 import Msg91Loader from '@/components/Msg91Loader';
 import SentryInit from '@/components/SentryInit';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
-import CookieBanner from '@/components/ui/CookieBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
@@ -82,7 +80,6 @@ export default function RootLayout({ children }) {
             <ToastHost />
             <Analytics />
             <VisitTracker />
-            <CookieBanner />
           </CartProvider>
         </AuthProvider>
       </body>
