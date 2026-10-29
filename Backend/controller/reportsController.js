@@ -1,7 +1,7 @@
 const { sequelize } = require('../config/db.js');
 const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
-const { BOT_SQL_REGEXP } = require('../utils/botDetect');
+const { BOT_SQL_REGEXP, metaNetworkSql } = require('../utils/botDetect');
 const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
 // Shopify-style channel roll-up (Direct / Facebook / Instagram / Google / AI
 // chatbot / Email / SMS / Referral), shared with the tracker and the anonymous
@@ -9,9 +9,12 @@ const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
 const { channelOf } = require('../utils/channel');
 const { isOwnHost } = require('../utils/ownHosts');
 
-// Excludes bot/crawler user agents from a utm_tracking scan (belt-and-suspenders
-// for rows recorded before ingestion-time bot filtering existed).
-const NOT_BOT = `(user_agent IS NULL OR LOWER(user_agent) NOT REGEXP :bot)`;
+// Excludes bot/crawler user agents and Meta's own network (ad review, link
+// checks) from a utm_tracking scan (belt-and-suspenders for rows recorded
+// before ingestion-time filtering existed).
+const notBot = (t = '') => `(${t}user_agent IS NULL OR LOWER(${t}user_agent) NOT REGEXP :bot)`
+  + ` AND (${t}ip_address IS NULL OR NOT ${metaNetworkSql(`${t}ip_address`)})`;
+const NOT_BOT = notBot();
 
 const CHANNEL_ORDER = ['Direct', 'Facebook', 'Instagram', 'Google', 'WhatsApp', 'AI chatbot', 'Email', 'SMS', 'Referral'];
 
@@ -314,7 +317,7 @@ exports.getBrandTraffic = async (req, res) => {
        LEFT JOIN orders o ON o.utm_tracking_id = u.id
              AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
        WHERE u.created_at BETWEEN :start AND :end
-         AND (u.user_agent IS NULL OR LOWER(u.user_agent) NOT REGEXP :bot)${bFiltU}
+         AND ${notBot('u.')}${bFiltU}
        GROUP BY source, medium`,
       { replacements: repl, type: QueryTypes.SELECT }
     );

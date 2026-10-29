@@ -32,13 +32,42 @@ const LEGACY_PATHS = {"/Products":"/products","/Collections":"/collections","/Wi
 // change.
 const PDP_COLOR_REWRITE = false;
 const SESSION_SECONDS = 30 * 60; // sliding 30-minute session
-const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|preview|lighthouse|headless|monitor|curl|wget|python/i;
+const BOT_RE = /bot|crawl|spider|slurp|facebookexternalhit|meta-external|facebookcatalog|whatsapp|preview|lighthouse|headless|monitor|curl|wget|python/i;
 
-// Prefetches (router, <link rel=prefetch>, speculation rules) aren't visits.
+// Prefetches (router, <link rel=prefetch>, speculation rules) aren't visits —
+// nor are the Facebook and Instagram apps loading a link ahead of a tap
+// (X-Purpose: preview): the shopper hasn't opened the page.
 function isPrefetch(h) {
   return !!(h.get('next-router-prefetch') || h.get('x-middleware-prefetch'))
-    || /prefetch/i.test(h.get('purpose') || '')
-    || /prefetch/i.test(h.get('sec-purpose') || '');
+    || /prefetch|preview/i.test(h.get('purpose') || '')
+    || /prefetch|preview/i.test(h.get('sec-purpose') || '')
+    || /prefetch|preview/i.test(h.get('x-purpose') || '')
+    || /prefetch/i.test(h.get('x-moz') || '');
+}
+
+// Meta's own network (AS32934): ad review and Meta's link checks open the
+// page from there with Facebook-app user agents. Shoppers never do.
+const META_V4 = [
+  '31.13.24.0/21', '31.13.64.0/18', '45.64.40.0/22', '57.141.0.0/16', '57.144.0.0/14',
+  '66.220.144.0/20', '69.63.176.0/20', '69.171.224.0/19', '74.119.76.0/22',
+  '102.132.96.0/20', '103.4.96.0/22', '129.134.0.0/16', '157.240.0.0/16',
+  '163.70.128.0/17', '173.252.64.0/18', '179.60.192.0/22', '185.60.216.0/22',
+  '185.89.216.0/22', '204.15.20.0/22',
+].map((c) => {
+  const [ip, bits] = c.split('/');
+  const mask = (~0 << (32 - Number(bits))) >>> 0;
+  return [(v4Int(ip) & mask) >>> 0, mask];
+});
+function v4Int(ip) {
+  return ip.split('.').reduce((n, o) => ((n << 8) + Number(o)) >>> 0, 0);
+}
+function isMetaNetwork(h) {
+  const ip = (h.get('x-real-ip') || (h.get('x-forwarded-for') || '').split(',')[0] || '').trim().toLowerCase();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+    const n = v4Int(ip);
+    return META_V4.some(([net, mask]) => ((n & mask) >>> 0) === net);
+  }
+  return /^(2a03:2880:|2a03:83e0:|2620:0{0,4}:1c[0-9a-f]{2}:)/.test(ip);
 }
 
 // Client-side route change (App Router RSC payload / Pages Router data JSON).
@@ -158,7 +187,7 @@ export function middleware(request, event) {
     const h = request.headers;
     if (isPrefetch(h)) return res;
     const ua = h.get('user-agent') || '';
-    if (!ua || BOT_RE.test(ua)) return res;
+    if (!ua || BOT_RE.test(ua) || isMetaNetwork(h)) return res;
 
     const existing = request.cookies.get(COOKIE)?.value || '';
     const valid = /^[A-Za-z0-9-]{8,64}$/.test(existing);

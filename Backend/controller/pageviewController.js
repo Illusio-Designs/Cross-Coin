@@ -1,7 +1,7 @@
 const { sequelize } = require('../config/db.js');
 const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
-const { isBotUserAgent } = require('../utils/botDetect');
+const { isBotRequest } = require('../utils/botDetect');
 const { classifyChannel } = require('../utils/channel');
 
 // Anonymous, cookieless pageview counter (page_hits table, created below). Stores
@@ -38,7 +38,7 @@ function istDay() {
 exports.recordPageview = async (req, res) => {
   try {
     // Drop bot/crawler traffic by UA — the UA itself is never stored.
-    if (isBotUserAgent(req.headers['user-agent'])) {
+    if (isBotRequest(req)) {
       return res.status(200).json({ ok: true, skipped: 'bot' });
     }
     const brandId = (req.brand && req.brand.id) || 0;

@@ -1,7 +1,7 @@
 const FunnelEvent = require('../model/funnelEventModel');
 const { sequelize } = require('../config/db.js');
 const { logger } = require('../config/logging.js');
-const { isBotUserAgent } = require('../utils/botDetect');
+const { isBotRequest } = require('../utils/botDetect');
 
 // Funnel + engagement events we record. view/cart/checkout are the ordered
 // funnel stages; wishlist/search are extra intent signals; view_cart is the
@@ -78,7 +78,7 @@ exports.trackEvent = async (req, res) => {
   // Respond immediately — analytics must never slow or block the storefront.
   res.status(202).json({ success: true });
   try {
-    if (isBotUserAgent(req.headers['user-agent'])) return; // exclude bots
+    if (isBotRequest(req)) return; // exclude bots
     const event = String(req.body?.event || '').toLowerCase();
     if (!ALLOWED.has(event)) return;
     const sessionId = req.cookies?.session_id || bodySessionId(req.body?.session_id);

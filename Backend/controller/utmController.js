@@ -1,7 +1,7 @@
 const UTMTracking = require('../model/utmModel');
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../config/logging.js');
-const { isBotUserAgent } = require('../utils/botDetect');
+const { isBotUserAgent, isMetaNetwork } = require('../utils/botDetect');
 // Referrer → source/medium classification (incl. self-referral exclusion) lives
 // in utils/channel so the tracker, the report and the anonymous counter agree.
 const { resolveSource } = require('../utils/channel');
@@ -54,7 +54,7 @@ exports.trackUTM = async (req, res) => {
     const brandId = req.brand?.id || null;
 
     // Drop bot / crawler / monitor traffic so it never enters the funnel counts.
-    if (isBotUserAgent(userAgent)) {
+    if (isBotUserAgent(userAgent) || isMetaNetwork(ipAddress)) {
       return res.status(200).json({ success: true, skipped: 'bot' });
     }
 
