@@ -643,12 +643,12 @@ exports.getBrandTraffic = async (req, res) => {
     // visitors landed on first (utm_tracking.landing_page, path only).
     const istDayCol = `DATE(CONVERT_TZ(created_at, '+00:00', '+05:30'))`;
     const T = { type: QueryTypes.SELECT };
-    const dRepl = { startDay: startDayOf(start), endDay: dayOf(end), start, end, ...(hasBrand ? { brandId: brandIdNum } : {}) };
+    const dRepl = { startDay: startDayOf(start), endDay: dayOf(end), start, end, bot: BOT_SQL_REGEXP, ...(hasBrand ? { brandId: brandIdNum } : {}) };
     const [vDays, sDays, oDays, lpRows] = await Promise.all([
       sequelize.query(`SELECT day, SUM(landings) AS landings, SUM(sessions) AS sessions FROM visit_hits
                         WHERE day BETWEEN :startDay AND :endDay${bFilt} GROUP BY day`, { ...T, replacements: dRepl }).catch(() => []),
       sequelize.query(`SELECT ${istDayCol} AS day, COUNT(DISTINCT session_id) AS sessions FROM utm_tracking
-                        WHERE created_at BETWEEN :start AND :end${bFilt} GROUP BY day`, { ...T, replacements: dRepl }),
+                        WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt} GROUP BY day`, { ...T, replacements: dRepl }),
       sequelize.query(`SELECT ${istDayCol} AS day, COUNT(*) AS orders, SUM(final_amount) AS value FROM orders
                         WHERE created_at BETWEEN :start AND :end AND status NOT IN ('cancelled','order cancelled')${bFilt}
                         GROUP BY day`, { ...T, replacements: dRepl }),
@@ -681,8 +681,72 @@ exports.getBrandTraffic = async (req, res) => {
       type: path === '/' ? 'Home' : /^\/products?\//.test(path) ? 'Product' : /^\/(collections?|categories|category|shop)\b/.test(path) ? 'Collection' : /^\/cart\b/.test(path) ? 'Cart' : /^\/(blogs?|journal)\b/.test(path) ? 'Blog' : 'Page',
     })).sort((a, b) => b.sessions - a.sessions).slice(0, 15);
 
+    // Latest tracked visits, one by one, plus a check across all of them —
+    // to see what the Visits number is made of (an ad tap, someone browsing,
+    // the same phone coming back, or a page nobody looked at).
+    let visitCheck = null;
+    try {
+      const [summary, latest] = await Promise.all([
+        sequelize.query(
+          `SELECT COUNT(DISTINCT u.session_id) AS visits,
+                  COUNT(DISTINCT CONCAT(COALESCE(u.ip_address,''), '|', COALESCE(u.user_agent,''))) AS devices,
+                  COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%fbclid=%' THEN u.session_id END) AS fbclid,
+                  COUNT(DISTINCT CASE WHEN LOWER(u.utm_medium) IN ('paid','cpc','ppc','paid_social','paidsocial') THEN u.session_id END) AS paid,
+                  COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active
+             FROM utm_tracking u
+            WHERE u.created_at BETWEEN :start AND :end AND ${notBot('u.')}${bFiltU}`,
+          { replacements: repl, type: QueryTypes.SELECT }),
+        sequelize.query(
+          `SELECT u.created_at, u.utm_source, u.utm_medium, u.utm_campaign, u.landing_page, u.referrer,
+                  u.user_agent, u.ip_address,
+                  (SELECT GROUP_CONCAT(DISTINCT fe.event) FROM funnel_events fe WHERE fe.session_id = u.session_id) AS events
+             FROM utm_tracking u
+            WHERE u.created_at BETWEEN :start AND :end AND ${notBot('u.')}${bFiltU}
+            ORDER BY u.created_at DESC LIMIT 200`,
+          { replacements: repl, type: QueryTypes.SELECT }),
+      ]);
+      const sm = summary[0] || {};
+      const maskIp = (ip) => {
+        const a = String(ip || '').replace(/^::ffff:/, '');
+        if (/^\d+\.\d+\.\d+\.\d+$/.test(a)) return a.replace(/\.\d+$/, '.x');
+        return a ? a.split(':').slice(0, 3).join(':') + ':…' : '';
+      };
+      const deviceOf = (ua) => {
+        const u = String(ua || '');
+        const app = /Instagram/i.test(u) ? 'Instagram app' : /FBAN|FBAV|FB_IAB|FBIOS|FB4A|\[FB/i.test(u) ? 'Facebook app'
+          : /WhatsApp/i.test(u) ? 'WhatsApp' : /\bGSA\//.test(u) ? 'Google app' : '';
+        const os = /iPhone|iPad|iOS/i.test(u) ? 'iPhone' : /Android/i.test(u) ? 'Android' : /Windows/i.test(u) ? 'Windows'
+          : /Mac OS X|Macintosh/i.test(u) ? 'Mac' : /Linux/i.test(u) ? 'Linux' : 'Unknown';
+        const browser = app || (/Edg\//.test(u) ? 'Edge' : /SamsungBrowser/.test(u) ? 'Samsung Internet'
+          : /CriOS|Chrome\//.test(u) ? 'Chrome' : /Firefox|FxiOS/.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'Other');
+        return `${browser} · ${os}`;
+      };
+      const pathOf = (url) => { try { const x = new URL(url, 'https://x.invalid'); return x.pathname; } catch (_) { return ''; } };
+      visitCheck = {
+        visits: Number(sm.visits) || 0,
+        devices: Number(sm.devices) || 0,
+        fbclid: Number(sm.fbclid) || 0,
+        paid: Number(sm.paid) || 0,
+        active: Number(sm.active) || 0,
+        latest: latest.map((r) => ({
+          at: r.created_at,
+          source: r.utm_source || 'direct',
+          medium: r.utm_medium || '',
+          campaign: r.utm_campaign || '',
+          page: pathOf(r.landing_page),
+          adClick: /[?&]fbclid=/.test(String(r.landing_page || '')),
+          device: deviceOf(r.user_agent),
+          ip: maskIp(r.ip_address),
+          did: r.events ? String(r.events).split(',') : [],
+        })),
+      };
+    } catch (e) {
+      logger.warn && logger.warn('visit check skipped: ' + e.message);
+    }
+
     res.json({
       success: true,
+      visitCheck,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
       // First India day the report shows (see TRAFFIC_DATA_FROM).
       dataFrom: TRAFFIC_DATA_FROM,

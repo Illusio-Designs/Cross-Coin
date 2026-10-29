@@ -64,6 +64,7 @@ const srcLabel = (s) => {
   if (k === 'ig') return 'instagram';
   return s;
 };
+const EVENT_LABEL = { view_item: 'viewed product', add_to_cart: 'added to cart', begin_checkout: 'opened checkout', view_cart: 'opened cart', add_to_wishlist: 'wishlisted', search: 'searched', add_shipping_info: 'entered address', add_payment_info: 'chose payment' };
 const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 
 const istDate = (d = new Date()) =>
@@ -794,6 +795,39 @@ export default function TrafficReport() {
               </table>
             </div>
           </div>
+
+          {/* ── Visit check: what the Visits number is made of ── */}
+          {data?.visitCheck && (
+            <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
+              <div className="rep-ph">
+                <h3>Visit check</h3>
+                <span className="hint">
+                  {plural(data.visitCheck.visits, 'tracked visit')} · {plural(data.visitCheck.devices, 'different device')} · {num(data.visitCheck.fbclid)} with a Meta click id · {num(data.visitCheck.paid)} tagged as paid ads · {num(data.visitCheck.active)} viewed a product or more
+                </span>
+              </div>
+              <div className="rep-tbl-wrap">
+                <table className="rep-table">
+                  <thead><tr><th>Time (IST)</th><th>Source</th><th>Landing page</th><th>Device</th><th>Network</th><th>Did</th></tr></thead>
+                  <tbody>
+                    {data.visitCheck.latest.length ? data.visitCheck.latest.map((v, i) => (
+                      <tr key={i}>
+                        <td className="num" style={{ whiteSpace: 'nowrap' }}>{new Date(v.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>
+                          {srcLabel(v.source)}{v.medium && v.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)' }}> / {v.medium}</span> : null}
+                          {v.campaign ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{v.campaign}</div> : null}
+                          {v.adClick ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>Meta click id</div> : null}
+                        </td>
+                        <td style={{ overflowWrap: 'anywhere' }}>{v.page || <Dash />}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{v.device}</td>
+                        <td className="num" style={{ whiteSpace: 'nowrap', color: 'var(--ds-color-text-muted)' }}>{v.ip || <Dash />}</td>
+                        <td style={{ fontSize: 12 }}>{v.did.length ? v.did.map((e) => EVENT_LABEL[e] || e).join(', ') : <span style={{ color: 'var(--ds-color-text-muted)' }}>only landed</span>}</td>
+                      </tr>
+                    )) : <Empty cols={6} text="No tracked visits in this period" />}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {howCounted}
         </>

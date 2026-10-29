@@ -60,9 +60,26 @@ export default function VisitTracker() {
       /* sessionStorage unavailable or other error — swallow */
     }
     };
-    fire();
+    // A page loaded out of sight (the Facebook / Instagram app preloading an
+    // ad's link, a browser prerender) isn't a visit until someone sees it.
+    const seen = () => document.visibilityState === 'visible' && !document.prerendering;
+    const onSeen = () => {
+      if (!seen()) return;
+      document.removeEventListener('visibilitychange', onSeen);
+      document.removeEventListener('prerenderingchange', onSeen);
+      fire();
+    };
+    if (seen()) fire();
+    else {
+      document.addEventListener('visibilitychange', onSeen);
+      document.addEventListener('prerenderingchange', onSeen);
+    }
     window.addEventListener(CONSENT_EVENT, fire);
-    return () => window.removeEventListener(CONSENT_EVENT, fire);
+    return () => {
+      document.removeEventListener('visibilitychange', onSeen);
+      document.removeEventListener('prerenderingchange', onSeen);
+      window.removeEventListener(CONSENT_EVENT, fire);
+    };
   }, [])
 
   return null
