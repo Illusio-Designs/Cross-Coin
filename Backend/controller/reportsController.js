@@ -6,7 +6,7 @@ const { dayStartTZ, dayEndTZ, TZ_OFFSET } = require('../utils/dateRange.js');
 // Shopify-style channel roll-up (Direct / Facebook / Instagram / Google / AI
 // chatbot / Email / SMS / Referral), shared with the tracker and the anonymous
 // pageview counter so the buckets never drift. Self-referrals → Direct.
-const { channelOf } = require('../utils/channel');
+const { channelOf, hostOf } = require('../utils/channel');
 const { isOwnHost } = require('../utils/ownHosts');
 
 // Excludes bot/crawler user agents and Meta's own network (ad review, link
@@ -686,11 +686,15 @@ exports.getBrandTraffic = async (req, res) => {
     // the same phone coming back, or a page nobody looked at).
     let visitCheck = null;
     try {
-      const [summary, latest] = await Promise.all([
+      // Every tap on a Meta ad or post gets its own click id; the same id on
+      // many visits means one link was copied and shared (WhatsApp, Telegram…).
+      const FBCLID = `SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(u.landing_page, 'fbclid=', -1), '&', 1), '#', 1)`;
+      const [summary, latest, clickIds] = await Promise.all([
         sequelize.query(
           `SELECT COUNT(DISTINCT u.session_id) AS visits,
                   COUNT(DISTINCT CONCAT(COALESCE(u.ip_address,''), '|', COALESCE(u.user_agent,''))) AS devices,
                   COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%fbclid=%' THEN u.session_id END) AS fbclid,
+                  COUNT(DISTINCT CASE WHEN u.landing_page LIKE '%fbclid=%' THEN ${FBCLID} END) AS fbclid_ids,
                   COUNT(DISTINCT CASE WHEN LOWER(u.utm_medium) IN ('paid','cpc','ppc','paid_social','paidsocial') THEN u.session_id END) AS paid,
                   COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active
              FROM utm_tracking u
@@ -704,7 +708,15 @@ exports.getBrandTraffic = async (req, res) => {
             WHERE u.created_at BETWEEN :start AND :end AND ${notBot('u.')}${bFiltU}
             ORDER BY u.created_at DESC LIMIT 200`,
           { replacements: repl, type: QueryTypes.SELECT }),
+        sequelize.query(
+          `SELECT ${FBCLID} AS id, COUNT(DISTINCT u.session_id) AS uses
+             FROM utm_tracking u
+            WHERE u.created_at BETWEEN :start AND :end AND u.landing_page LIKE '%fbclid=%' AND ${notBot('u.')}${bFiltU}
+            GROUP BY id HAVING uses > 1`,
+          { replacements: repl, type: QueryTypes.SELECT }),
       ]);
+      const usesOf = new Map(clickIds.map((r) => [r.id, Number(r.uses) || 0]));
+      const fbclidOf = (url) => { const m = /[?&]fbclid=([^&#]*)/.exec(String(url || '')); return m ? m[1] : null; };
       const sm = summary[0] || {};
       const maskIp = (ip) => {
         const a = String(ip || '').replace(/^::ffff:/, '');
@@ -726,6 +738,7 @@ exports.getBrandTraffic = async (req, res) => {
         visits: Number(sm.visits) || 0,
         devices: Number(sm.devices) || 0,
         fbclid: Number(sm.fbclid) || 0,
+        fbclidIds: Number(sm.fbclid_ids) || 0,
         paid: Number(sm.paid) || 0,
         active: Number(sm.active) || 0,
         latest: latest.map((r) => ({
@@ -734,7 +747,10 @@ exports.getBrandTraffic = async (req, res) => {
           medium: r.utm_medium || '',
           campaign: r.utm_campaign || '',
           page: pathOf(r.landing_page),
-          adClick: /[?&]fbclid=/.test(String(r.landing_page || '')),
+          adClick: !!fbclidOf(r.landing_page),
+          // How many visits in the period opened with this same click id.
+          clickUses: usesOf.get(fbclidOf(r.landing_page)) || (fbclidOf(r.landing_page) ? 1 : 0),
+          referrer: hostOf(r.referrer),
           device: deviceOf(r.user_agent),
           ip: maskIp(r.ip_address),
           did: r.events ? String(r.events).split(',') : [],

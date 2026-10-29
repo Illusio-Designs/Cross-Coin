@@ -802,7 +802,7 @@ export default function TrafficReport() {
               <div className="rep-ph">
                 <h3>Visit check</h3>
                 <span className="hint">
-                  {plural(data.visitCheck.visits, 'tracked visit')} · {plural(data.visitCheck.devices, 'different device')} · {num(data.visitCheck.fbclid)} with a Meta click id · {num(data.visitCheck.paid)} tagged as paid ads · {num(data.visitCheck.active)} viewed a product or more
+                  {plural(data.visitCheck.visits, 'tracked visit')} · {plural(data.visitCheck.devices, 'different device')} · {num(data.visitCheck.fbclid)} with a Meta click id ({plural(data.visitCheck.fbclidIds, 'different click')}) · {num(data.visitCheck.paid)} tagged as paid ads · {num(data.visitCheck.active)} viewed a product or more
                 </span>
               </div>
               <div className="rep-tbl-wrap">
@@ -815,7 +815,12 @@ export default function TrafficReport() {
                         <td>
                           {srcLabel(v.source)}{v.medium && v.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)' }}> / {v.medium}</span> : null}
                           {v.campaign ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{v.campaign}</div> : null}
-                          {v.adClick ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>Meta click id</div> : null}
+                          {v.adClick ? (
+                            <div style={{ fontSize: 12, color: v.clickUses > 1 ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>
+                              {v.clickUses > 1 ? `Same Meta click id on ${num(v.clickUses)} visits — a shared link` : 'Meta click id'}
+                            </div>
+                          ) : null}
+                          {v.referrer ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>from {v.referrer}</div> : null}
                         </td>
                         <td style={{ overflowWrap: 'anywhere' }}>{v.page || <Dash />}</td>
                         <td style={{ whiteSpace: 'nowrap' }}>{v.device}</td>
