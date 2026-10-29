@@ -4,7 +4,7 @@ const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
 // Referrer → source/medium classification (incl. self-referral exclusion) lives
 // in utils/channel so the tracker, the report and the anonymous counter agree.
-const { deriveSource, deriveMedium } = require('../utils/channel');
+const { resolveSource } = require('../utils/channel');
 
 // Track UTM parameters
 exports.trackUTM = async (req, res) => {
@@ -59,9 +59,10 @@ exports.trackUTM = async (req, res) => {
     }
 
     // Derive a channel when the visit carries no UTM params so organic/direct
-    // traffic is still classified in the report (not just paid campaigns).
-    const source = utm_source || deriveSource(referrer);
-    const medium = utm_medium || (utm_source ? null : deriveMedium(referrer));
+    // traffic is still classified in the report (not just paid campaigns):
+    // the referrer, else the ad click id in the landing URL or the in-app
+    // browser (Instagram / Facebook often send no referrer).
+    const { source, medium } = resolveSource({ utm_source, utm_medium, referrer, landing: landing_page, ua: userAgent });
 
     // One row per session = one "visit"/session in the traffic report. The FIRST
     // touch wins (keeps the landing page + original source that brought them in);

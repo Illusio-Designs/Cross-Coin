@@ -94,7 +94,7 @@ export const sendPageviewPing = () => {
       keepalive: true,
       credentials: 'omit',
       headers: { 'Content-Type': 'application/json', 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME || 'crosscoin' },
-      body: JSON.stringify({ utm_source: p.get('utm_source'), utm_medium: p.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }),
+      body: JSON.stringify({ utm_source: p.get('utm_source'), utm_medium: p.get('utm_medium'), referrer: document.referrer, path: window.location.pathname, q: window.location.search.slice(0, 1000) }),
     }).catch(() => {});
   } catch (e) { /* never break the page */ }
 };

@@ -47,6 +47,8 @@ exports.recordPageview = async (req, res) => {
       utm_source: body.utm_source,
       utm_medium: body.utm_medium,
       referrer: body.referrer,
+      landing: typeof body.q === 'string' ? body.q.slice(0, 1000) : undefined, // the landing query string
+      ua: req.headers['user-agent'],
     });
 
     await ensurePageHitsTable();

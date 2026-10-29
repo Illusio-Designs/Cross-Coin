@@ -190,6 +190,9 @@ export function __HANDLER__(request, event) {
         utm_campaign: q.get('utm_campaign'),
         utm_term: q.get('utm_term'),
         utm_content: q.get('utm_content'),
+        // Which ad click ids the link carried (names only): with the user agent
+        // they place an app visit that sent no referrer (Instagram, a Google ad).
+        clicks: ['gclid', 'gbraid', 'wbraid', 'fbclid', 'igshid', 'igsh', 'ttclid', 'msclkid'].filter((k) => q.has(k)),
         referrer: h.get('referer') || '',
         newSession,
         country: h.get('x-vercel-ip-country') || '',

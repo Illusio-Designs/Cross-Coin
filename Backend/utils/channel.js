@@ -64,13 +64,69 @@ function channelOf(source, medium, selfHosts) {
   return 'Referral';
 }
 
+// Where a visit came from when the link has no UTM tags and the browser sent
+// no usable referrer — common for app traffic: Instagram and Facebook open
+// links in their own browser and often send no referrer, so without this an
+// Instagram story or a Google ad lands in Direct. Two clues, in order:
+//  1. the ad platform's click id in the landing URL (gclid = Google Ads,
+//     fbclid = Meta — Instagram when its in-app browser opened it —, igshid =
+//     Instagram share, ttclid = TikTok, msclkid = Microsoft Ads);
+//  2. the in-app browser naming itself in the user agent.
+// `landing` = the landing URL or just its query string; `clicks` = the click
+// id names the store edge saw (it only sends which ones were present).
+const IN_APP = [
+  [/Instagram/i, 'instagram', 'social'],
+  [/FBAN|FBAV|FB_IAB|FBIOS|FB4A|\[FB/i, 'facebook', 'social'],
+  [/musical_ly|BytedanceWebview|TikTok/i, 'tiktok', 'social'],
+  [/Snapchat/i, 'snapchat', 'social'],
+  [/LinkedInApp/i, 'linkedin', 'social'],
+  [/Pinterest/i, 'pinterest', 'social'],
+  [/Twitter/i, 'twitter', 'social'],
+  [/WhatsApp/i, 'whatsapp', 'social'],
+  [/\bGSA\//, 'google', 'organic'], // the Google app (Discover, search)
+];
+function clickParams(landing, clicks) {
+  const out = new Set((Array.isArray(clicks) ? clicks : []).map((c) => String(c).toLowerCase()));
+  if (landing) {
+    try {
+      const q = String(landing).includes('?') ? String(landing).slice(String(landing).indexOf('?')) : String(landing);
+      for (const k of new URLSearchParams(q).keys()) out.add(k.toLowerCase());
+    } catch { /* not a URL */ }
+  }
+  return out;
+}
+function inferSource({ landing, clicks, ua } = {}) {
+  const c = clickParams(landing, clicks);
+  const inApp = IN_APP.find(([re]) => re.test(String(ua || '')));
+  if (c.has('gclid') || c.has('gbraid') || c.has('wbraid')) return { source: 'google', medium: 'cpc' };
+  if (c.has('msclkid')) return { source: 'bing', medium: 'cpc' };
+  if (c.has('ttclid')) return { source: 'tiktok', medium: 'paid_social' };
+  if (c.has('fbclid')) return { source: inApp && inApp[1] === 'instagram' ? 'instagram' : 'facebook', medium: 'social' };
+  if (c.has('igshid') || c.has('igsh')) return { source: 'instagram', medium: 'social' };
+  if (inApp) return { source: inApp[1], medium: inApp[2] };
+  return null;
+}
+
+// The source + medium of a visit: UTM tags first, then a known referrer, then
+// the click id / in-app browser clues above, else direct.
+function resolveSource({ utm_source, utm_medium, referrer, landing, clicks, ua } = {}) {
+  if (utm_source) return { source: String(utm_source), medium: utm_medium || null };
+  const fromRef = deriveSource(referrer);
+  // A click id beats a referrer that only says "an app" or "our own site".
+  const inferred = inferSource({ landing, clicks, ua });
+  if (fromRef !== 'direct' && !(inferred && /^(com\.|android-app)/.test(hostOf(referrer)))) {
+    const clickWins = inferred && inferred.medium === 'cpc';
+    if (!clickWins) return { source: fromRef, medium: deriveMedium(referrer) };
+  }
+  return inferred || { source: 'direct', medium: 'none' };
+}
+
 // Convenience for the pageview counter: given what the storefront sends, return
 // the channel bucket to increment. UTM wins over the referrer, exactly like the
 // consented tracker.
-function classifyChannel({ utm_source, utm_medium, referrer } = {}, selfHosts) {
-  const source = utm_source || deriveSource(referrer);
-  const medium = utm_medium || (utm_source ? null : deriveMedium(referrer));
+function classifyChannel({ utm_source, utm_medium, referrer, landing, clicks, ua } = {}, selfHosts) {
+  const { source, medium } = resolveSource({ utm_source, utm_medium, referrer, landing, clicks, ua });
   return channelOf(source, medium, selfHosts);
 }
 
-module.exports = { hostOf, deriveSource, deriveMedium, channelOf, classifyChannel };
+module.exports = { hostOf, deriveSource, deriveMedium, channelOf, classifyChannel, resolveSource, inferSource };

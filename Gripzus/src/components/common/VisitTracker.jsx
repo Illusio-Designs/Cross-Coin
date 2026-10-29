@@ -20,7 +20,7 @@ export default function VisitTracker() {
     } catch { /* localStorage/URL unavailable — swallow */ }
 
     const fire = () => {
-      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/i/pv`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname }) }).catch(function(){}); } catch (e) {} }
+      if (!window.__ccPv) { window.__ccPv = true; try { const _pv = new URLSearchParams(window.location.search); fetch(`${API_URL}/api/i/pv`, { method: 'POST', keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND }, body: JSON.stringify({ utm_source: _pv.get('utm_source'), utm_medium: _pv.get('utm_medium'), referrer: document.referrer, path: window.location.pathname, q: window.location.search.slice(0, 1000) }) }).catch(function(){}); } catch (e) {} }
       // First-party campaign attribution runs for EVERY visitor (minimal,
       // non-identifying: utm_* + fbclid) so paid traffic is attributable
       // regardless of cookie choice. GA4 / Pixel / Clarity stay consent-gated.

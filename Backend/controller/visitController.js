@@ -3,7 +3,7 @@ const { sequelize } = require('../config/db.js');
 const { QueryTypes } = require('sequelize');
 const { logger } = require('../config/logging.js');
 const { isBotUserAgent } = require('../utils/botDetect');
-const { classifyChannel, deriveSource, deriveMedium, hostOf } = require('../utils/channel');
+const { classifyChannel, resolveSource, hostOf } = require('../utils/channel');
 const { isOwnHost } = require('../utils/ownHosts');
 const { regionName } = require('../utils/indiaRegions');
 const { visitKeyOk } = require('../utils/visitKey');
@@ -99,9 +99,13 @@ function buildRow(body, hosts) {
   // A hop from one of our own stores is an internal navigation → Direct.
   if (referrer && isOwnHost(hostOf(referrer), hosts)) referrer = '';
 
-  const channel = classifyChannel({ utm_source: utmSource, utm_medium: utmMedium, referrer }, hosts);
-  const source = (utmSource || deriveSource(referrer)).toLowerCase().slice(0, 100);
-  const medium = (utmMedium || (utmSource ? '' : deriveMedium(referrer))).toLowerCase().slice(0, 60);
+  // Click id names the edge saw (gclid, fbclid, …) + the in-app browser in
+  // the user agent fill in for a missing referrer.
+  const clicks = Array.isArray(b.clicks) ? b.clicks.slice(0, 8).map((c) => str(c, 20)) : [];
+  const resolved = resolveSource({ utm_source: utmSource, utm_medium: utmMedium, referrer, clicks, ua });
+  const channel = classifyChannel({ utm_source: utmSource, utm_medium: utmMedium, referrer, clicks, ua }, hosts);
+  const source = String(resolved.source || 'direct').toLowerCase().slice(0, 100);
+  const medium = String(utmSource ? (utmMedium || '') : (resolved.medium === 'none' ? 'none' : resolved.medium || '')).toLowerCase().slice(0, 60);
 
   const countryRaw = str(b.country, 8).toUpperCase();
   const country = /^[A-Z]{2}$/.test(countryRaw) ? countryRaw : '';
