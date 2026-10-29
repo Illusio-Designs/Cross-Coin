@@ -53,7 +53,7 @@ function Settings() {
 
       <div className="settings-single">
         <form className="contact-form" onSubmit={saveProfile}>
-          <h3 style={{ margin: 0 }}>Profile details</h3>
+          <h2 className="h3-size" style={{ margin: 0 }}>Profile details</h2>
           <label>Full name<input value={profile.username} onChange={(e) => setProfile((p) => ({ ...p, username: e.target.value }))} placeholder="Your name" /></label>
           <label>Email<input type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} placeholder="you@email.com" /></label>
           <label>Phone number

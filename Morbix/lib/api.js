@@ -49,8 +49,10 @@ export async function getBestsellers() {
     if (Array.isArray(list) && list.length) return explodeColorVariants(list.map(mapProduct).filter(Boolean));
     // Nothing flagged as a best-seller yet — fall back to the live catalog so
     // the home page still shows real products (same behaviour as Knitwink).
-    return getAllProducts();
-  } catch { return getAllProducts(); }
+    // Cached like the best-seller list: an uncached fetch here made Next build
+    // the home page on every visit instead of serving it from cache.
+    return getAllProducts(300);
+  } catch { return getAllProducts(300); }
 }
 
 export async function getAllProducts(revalidate) {

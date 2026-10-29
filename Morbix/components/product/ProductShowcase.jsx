@@ -412,6 +412,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             ref={thumbsRef}
             tabIndex={0}
             data-lenis-prevent
+            role="group"
             aria-label="Product image thumbnails"
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') { e.currentTarget.scrollBy({ left: 120, behavior: 'smooth' }); e.preventDefault(); }

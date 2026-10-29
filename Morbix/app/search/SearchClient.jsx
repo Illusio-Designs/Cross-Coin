@@ -78,7 +78,7 @@ export default function SearchClient({ initialQuery = '' }) {
           <p className="muted" style={{ margin: '18px 0' }}>{results.length} result{results.length === 1 ? '' : 's'}</p>
           {/* Typing a new query keeps the current results (dimmed) until the new ones land. */}
           <div className={`product-grid${loading ? ' sk-dim' : ''}`} aria-busy={loading || undefined}>
-            {results.map((p) => <ProductCard key={p.uid ?? p.id} product={p} />)}
+            {results.map((p) => <ProductCard key={p.uid ?? p.id} product={p} headingLevel={2} />)}
           </div>
         </>
       )}

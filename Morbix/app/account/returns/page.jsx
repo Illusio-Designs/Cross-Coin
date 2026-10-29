@@ -168,7 +168,7 @@ function ReturnsInner() {
           {/* existing returns */}
           {returns.length > 0 && (
             <div style={{ marginTop: 10 }}>
-              <h3 style={{ margin: '0 0 12px' }}>Your return requests</h3>
+              <h2 className="h3-size" style={{ margin: '0 0 12px' }}>Your return requests</h2>
               <div className="order-list">
                 {returns.map((r) => (
                   <div className="order-row" key={r.id} style={{ display: 'block' }}>
@@ -206,7 +206,7 @@ function ReturnsInner() {
 
           {/* eligible orders */}
           <div style={{ marginTop: 28 }}>
-            <h3 style={{ margin: '0 0 12px' }}>Request a return</h3>
+            <h2 className="h3-size" style={{ margin: '0 0 12px' }}>Request a return</h2>
             {orders.length === 0 ? (
               <div className="cart-empty">
                 <Icon name="ShoppingBag" size={40} color="#c3ccd2" />

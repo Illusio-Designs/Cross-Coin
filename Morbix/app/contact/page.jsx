@@ -37,17 +37,17 @@ export default function ContactPage() {
       </div>
 
       <div id="grievance" style={{ maxWidth: 760, margin: '40px auto 0', padding: '28px 24px', border: '1px solid rgba(0,0,0,.14)', scrollMarginTop: 110 }}>
-        <h3 style={{ fontSize: 20, margin: '0 0 12px', fontWeight: 600 }}>Grievance Officer</h3>
+        <h2 style={{ fontSize: 20, margin: '0 0 12px', fontWeight: 600 }}>Grievance Officer</h2>
         <p style={{ fontSize: 14, lineHeight: 1.6, margin: '0 0 16px', opacity: 0.8 }}>
           For privacy requests — access, correction, deletion, or withdrawing consent — or any grievance
           about how your personal data is handled, contact our Grievance Officer. We respond within the
           timelines required under the DPDP Act, 2023.
         </p>
         <div style={{ fontSize: 14, lineHeight: 1.9 }}>
-          <div><span style={{ opacity: 0.6 }}>Name:</span> Divyesh Kotadiya</div>
-          <div><span style={{ opacity: 0.6 }}>Entity:</span> Obzus India Private Limited</div>
-          <div><span style={{ opacity: 0.6 }}>Email:</span> <a href="mailto:obzusindia@gmail.com">obzusindia@gmail.com</a></div>
-          <div><span style={{ opacity: 0.6 }}>Phone:</span> <a href="tel:+919712891700">+91 97128 91700</a></div>
+          <div><span style={{ color: 'var(--ink-soft)' }}>Name:</span> Divyesh Kotadiya</div>
+          <div><span style={{ color: 'var(--ink-soft)' }}>Entity:</span> Obzus India Private Limited</div>
+          <div><span style={{ color: 'var(--ink-soft)' }}>Email:</span> <a href="mailto:obzusindia@gmail.com">obzusindia@gmail.com</a></div>
+          <div><span style={{ color: 'var(--ink-soft)' }}>Phone:</span> <a href="tel:+919712891700">+91 97128 91700</a></div>
         </div>
       </div>
     </div>

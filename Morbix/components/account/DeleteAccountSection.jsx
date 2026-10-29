@@ -58,7 +58,7 @@ export default function DeleteAccountSection() {
 
   return (
     <section style={{ marginTop: 40, border: '1px solid rgba(0,0,0,.14)', padding: '22px 20px' }}>
-      <h3 style={{ margin: '0 0 6px', fontSize: 16 }}>Your data &amp; privacy</h3>
+      <h2 style={{ margin: '0 0 6px', fontSize: 16 }}>Your data &amp; privacy</h2>
       <p style={{ margin: '0 0 16px', fontSize: 13.5, lineHeight: 1.6, opacity: 0.8 }}>
         Download a copy of the personal data we hold about your account, or permanently delete your
         account under the DPDP Act, 2023. Your order and invoice records are kept in anonymised form as

@@ -53,6 +53,9 @@ body {
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 h1, h2, h3, h4 { margin: 0; line-height: 1.08; letter-spacing: -0.02em; }
+/* A section heading (h2, for the page's heading order) that keeps the smaller
+   size these sections had as h3. */
+.h3-size { font-size: 1.17em; }
 button { font-family: inherit; cursor: pointer; }
 
 .container { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
@@ -623,7 +626,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .order-detail-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; margin-top: 8px; }
 .order-items-card, .order-summary-card { background: #fff; border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: 22px; }
-.order-items-card h3, .order-summary-card h3 { font-size: 16px; margin-bottom: 14px; }
+.order-items-card h2, .order-summary-card h2, .order-items-card h3, .order-summary-card h3 { font-size: 16px; margin-bottom: 14px; }
 .order-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
 .order-item:last-child { border-bottom: 0; }
 .order-item-thumb { position: relative; width: 60px; height: 60px; border-radius: 12px; background: #f2f5f6; display: grid; place-items: center; overflow: hidden; flex-shrink: 0; }
