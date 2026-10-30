@@ -725,29 +725,62 @@ exports.getBrandTraffic = async (req, res) => {
           { replacements: { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT });
         if (m && Number(m.n) > 0) metaClicks = Number(m.clicks) || 0;
       } catch (_) { /* no ad spend synced yet */ }
-      // Where on Meta each ad visit came from (Facebook feed, Reels, Instagram,
-      // WhatsApp Status, Audience Network…), when the ad's URL parameters
-      // carry Meta's placement: …&placement={{placement}} (or utm_placement).
+      // Where on Meta the ad visits came from, named as Ads Manager names it
+      // (Platform · Placement · Device): Meta's own delivery per placement
+      // (synced from the connected ad account, Ads tab) next to our visits
+      // whose ad link carried placement={{placement}}.
       let placements = [];
       try {
+        const { fromInsights, fromUrlValue } = require('../utils/metaPlacement');
         const PLACEMENT = `SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(u.landing_page, 'placement=', -1), '&', 1), '#', 1)`;
-        const rows = await sequelize.query(
-          `SELECT ${PLACEMENT} AS placement,
-                  COUNT(DISTINCT u.session_id) AS visits,
-                  COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active,
-                  COUNT(DISTINCT o.id) AS orders
-             FROM utm_tracking u
-             LEFT JOIN orders o ON o.utm_tracking_id = u.id
-                  AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
-            WHERE u.created_at BETWEEN :start AND :end AND u.landing_page LIKE '%placement=%' AND ${notBot('u.')}${bFiltU}
-            GROUP BY placement ORDER BY visits DESC LIMIT 20`,
-          { replacements: repl, type: QueryTypes.SELECT });
-        const label = (v) => {
-          let t = String(v || '');
-          try { t = decodeURIComponent(t.replace(/\+/g, ' ')); } catch (_) { /* keep raw */ }
-          return t.replace(/_/g, ' ').trim() || 'unknown';
+        const [ours, meta] = await Promise.all([
+          sequelize.query(
+            `SELECT ${PLACEMENT} AS placement,
+                    COUNT(DISTINCT u.session_id) AS visits,
+                    COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active,
+                    COUNT(DISTINCT o.id) AS orders
+               FROM utm_tracking u
+               LEFT JOIN orders o ON o.utm_tracking_id = u.id
+                    AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
+              WHERE u.created_at BETWEEN :start AND :end AND u.landing_page LIKE '%placement=%' AND ${notBot('u.')}${bFiltU}
+              GROUP BY placement`,
+            { replacements: repl, type: QueryTypes.SELECT }),
+          sequelize.query(
+            `SELECT platform, position, device, SUM(spend) AS spend, SUM(impressions) AS impressions,
+                    SUM(link_clicks) AS link_clicks, SUM(landing_page_views) AS lpv
+               FROM ad_placement_daily
+              WHERE day BETWEEN :startDay AND :endDay${hasBrand ? ' AND brand_id = :brandId' : ''}
+              GROUP BY platform, position, device`,
+            { replacements: { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT })
+            .catch(() => []),
+        ]);
+        const byKey = new Map();
+        const row = (platform, placement) => {
+          const k = `${platform}|${placement}`;
+          if (!byKey.has(k)) byKey.set(k, { platform, placement, devices: [], spend: 0, impressions: 0, linkClicks: 0, landingPageViews: 0, visits: 0, active: 0, orders: 0, fromMeta: false });
+          return byKey.get(k);
         };
-        placements = rows.map((r) => ({ placement: label(r.placement), visits: Number(r.visits) || 0, active: Number(r.active) || 0, orders: Number(r.orders) || 0 }));
+        for (const m of meta) {
+          const l = fromInsights(m.platform, m.position, m.device);
+          const r = row(l.platform, l.placement);
+          r.fromMeta = true;
+          if (l.device && !r.devices.includes(l.device)) r.devices.push(l.device);
+          r.spend += Number(m.spend) || 0;
+          r.impressions += Number(m.impressions) || 0;
+          r.linkClicks += Number(m.link_clicks) || 0;
+          r.landingPageViews += Number(m.lpv) || 0;
+        }
+        for (const o of ours) {
+          const l = fromUrlValue(o.placement);
+          const r = row(l.platform, l.placement);
+          r.visits += Number(o.visits) || 0;
+          r.active += Number(o.active) || 0;
+          r.orders += Number(o.orders) || 0;
+        }
+        placements = [...byKey.values()]
+          .filter((r) => r.impressions > 0 || r.visits > 0)
+          .map((r) => ({ ...r, spend: Math.round(r.spend * 100) / 100 }))
+          .sort((x, y) => (y.landingPageViews - x.landingPageViews) || (y.visits - x.visits) || (y.impressions - x.impressions));
       } catch (e) {
         logger.warn && logger.warn('placement breakdown skipped: ' + e.message);
       }

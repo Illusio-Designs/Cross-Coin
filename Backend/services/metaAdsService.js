@@ -94,12 +94,33 @@ const AD_SYNC_DDL = `CREATE TABLE IF NOT EXISTS ad_spend_sync (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+// Delivery by Platform / Placement / Device per day, as Ads Manager's
+// "By delivery → Platform, placement and device" breakdown shows it
+// (Facebook · Facebook feed · In-app, WhatsApp · Status · In-app…).
+const AD_PLACEMENT_DDL = `CREATE TABLE IF NOT EXISTS ad_placement_daily (
+  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  brand_id INT NULL,
+  account_id VARCHAR(32) NOT NULL,
+  day DATE NOT NULL,
+  platform VARCHAR(40) NOT NULL,
+  position VARCHAR(60) NOT NULL,
+  device VARCHAR(30) NOT NULL DEFAULT '',
+  spend DECIMAL(12,2) NOT NULL DEFAULT 0,
+  impressions BIGINT NOT NULL DEFAULT 0,
+  link_clicks BIGINT NOT NULL DEFAULT 0,
+  landing_page_views BIGINT NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_ad_placement (account_id, day, platform, position, device),
+  KEY idx_ad_placement_brand_day (brand_id, day)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
 let schemaPromise = null;
 function ensureSchema() {
   if (!schemaPromise) {
     schemaPromise = (async () => {
       await sequelize.query(AD_SPEND_DDL);
       await sequelize.query(AD_SYNC_DDL);
+      await sequelize.query(AD_PLACEMENT_DDL);
     })().catch((e) => { schemaPromise = null; throw e; });
   }
   return schemaPromise;
@@ -423,6 +444,7 @@ async function saveMapping(mapping, userId) {
     const b = accToBrand.get(acc) ?? null;
     await sequelize.query('UPDATE ad_spend_daily SET brand_id = :b WHERE account_id = :a AND NOT (brand_id <=> :b)', { replacements: { a: acc, b } });
     await sequelize.query('UPDATE ad_spend_sync SET brand_id = :b WHERE account_id = :a', { replacements: { a: acc, b } });
+    await sequelize.query('UPDATE ad_placement_daily SET brand_id = :b WHERE account_id = :a AND NOT (brand_id <=> :b)', { replacements: { a: acc, b } }).catch(() => {});
   }
   return { ok: true, changed };
 }
@@ -515,6 +537,10 @@ async function syncAccount({ accountId, brandId }, token, opts) {
   for (let i = 0; i < stale.length; i += 500) {
     await sequelize.query('DELETE FROM ad_spend_daily WHERE id IN (:ids)', { replacements: { ids: stale.slice(i, i + 500) } });
   }
+  // Placement breakdown — never fails the spend sync.
+  let placementRows = null;
+  try { placementRows = await syncPlacements({ accountId, brandId }, token, since, until); }
+  catch (e) { logger.warn(`[meta-ads] placements ${accountId}: ${scrub(e.message, token)}`); }
   const first = raw[0] || {};
   const spend = rows.reduce((s, r) => s + r.spend, 0);
   await recordState(accountId, {
@@ -523,7 +549,49 @@ async function syncAccount({ accountId, brandId }, token, opts) {
     ...(first.account_name ? { account_name: String(first.account_name).slice(0, 255) } : {}),
     ...(first.account_currency ? { currency: String(first.account_currency).slice(0, 8) } : {}),
   });
-  return { accountId, brandId, since, until, kind, rows: rows.length, removed: stale.length, spend: Math.round(spend * 100) / 100, currency: first.account_currency || null };
+  return { accountId, brandId, since, until, kind, rows: rows.length, removed: stale.length, placementRows, spend: Math.round(spend * 100) / 100, currency: first.account_currency || null };
+}
+
+const actionCount = (list, type) => {
+  const a = Array.isArray(list) ? list.find((x) => x && x.action_type === type) : null;
+  return a ? Math.round(num(a.value)) : 0;
+};
+
+/** Account delivery per day by platform, placement and device. */
+async function syncPlacements({ accountId, brandId }, token, since, until) {
+  const params = {
+    level: 'account', time_increment: 1, time_range: JSON.stringify({ since, until }),
+    fields: 'spend,impressions,inline_link_clicks,actions', limit: 500,
+  };
+  let raw;
+  try {
+    raw = await graphAll(`act_${accountId}/insights`, { ...params, breakdowns: 'publisher_platform,platform_position,device_platform' }, token);
+  } catch (e) {
+    if (e.rateLimited) throw e;
+    // Older accounts / API versions may refuse the device split.
+    raw = await graphAll(`act_${accountId}/insights`, { ...params, breakdowns: 'publisher_platform,platform_position' }, token);
+  }
+  const cut = (v, n) => String(v || '').slice(0, n);
+  const rows = raw.map((r) => ({
+    brand_id: brandId, account_id: accountId, day: String(r.date_start || '').slice(0, 10),
+    platform: cut(r.publisher_platform, 40) || 'unknown', position: cut(r.platform_position, 60) || 'unknown', device: cut(r.device_platform, 30),
+    spend: Math.round(num(r.spend) * 100) / 100, impressions: Math.round(num(r.impressions)),
+    link_clicks: Math.round(num(r.inline_link_clicks)), landing_page_views: actionCount(r.actions, 'landing_page_view'),
+  })).filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.day));
+  // The window is fetched whole: replace it.
+  await sequelize.query('DELETE FROM ad_placement_daily WHERE account_id = :a AND day BETWEEN :s AND :u', { replacements: { a: accountId, s: since, u: until } });
+  const COLS = ['brand_id', 'account_id', 'day', 'platform', 'position', 'device', 'spend', 'impressions', 'link_clicks', 'landing_page_views'];
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200);
+    const values = [];
+    const ph = chunk.map((r) => { COLS.forEach((c) => values.push(r[c])); return `(${COLS.map(() => '?').join(',')})`; });
+    await sequelize.query(
+      `INSERT INTO ad_placement_daily (${COLS.join(',')}) VALUES ${ph.join(',')}
+       ON DUPLICATE KEY UPDATE spend = VALUES(spend), impressions = VALUES(impressions), link_clicks = VALUES(link_clicks),
+         landing_page_views = VALUES(landing_page_views), brand_id = VALUES(brand_id)`,
+      { replacements: values });
+  }
+  return rows.length;
 }
 
 /**
@@ -577,8 +645,8 @@ async function syncAll(opts = {}) {
 }
 
 module.exports = {
-  GRAPH, GLOBAL_BRAND_ID, GLOBAL_TOKEN_KEY, AD_SPEND_DDL, AD_SYNC_DDL, RATE_LIMIT_CODES,
+  GRAPH, GLOBAL_BRAND_ID, GLOBAL_TOKEN_KEY, AD_SPEND_DDL, AD_SYNC_DDL, AD_PLACEMENT_DDL, RATE_LIMIT_CODES,
   ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping,
-  getConnection, saveToken, saveMapping, syncAll, syncAccount, toRow, pickAction, rangeFor,
+  getConnection, saveToken, saveMapping, syncAll, syncAccount, syncPlacements, toRow, pickAction, rangeFor,
   GraphError,
 };

@@ -278,21 +278,30 @@ function VisitCheck({ vc, dim, busy }) {
         </div>
       </div>
 
-      <div className="rep-vc-listhead"><span className="rep-kl">Where on Meta the ad visits came from</span><span className="rep-kf">Facebook feed, Reels, Instagram, WhatsApp Status, other apps…</span></div>
+      <div className="rep-vc-listhead"><span className="rep-kl">Meta ads by platform, placement and device</span><span className="rep-kf">as Ads Manager shows it, next to our visits</span></div>
       <div className="rep-tbl-wrap" style={{ marginBottom: 20 }}>
         <table className="rep-table">
-          <thead><tr><th>Placement</th><th className="r">Visits</th><th className="r">Viewed a product</th><th className="r">Orders</th></tr></thead>
+          <thead><tr>
+            <th>Platform</th><th>Placement</th><th>Device</th>
+            <th className="r" title="From Meta">Spent</th><th className="r" title="From Meta">Link clicks</th><th className="r" title="From Meta">Landing page views</th>
+            <th className="r" title="Our tracked visits whose ad link carried this placement">Our visits</th><th className="r">Viewed a product</th><th className="r">Orders</th>
+          </tr></thead>
           <tbody>
             {(vc.placements || []).length ? vc.placements.map((p) => (
-              <tr key={p.placement}>
+              <tr key={`${p.platform}|${p.placement}`}>
+                <td>{p.platform}</td>
                 <td>{p.placement}</td>
-                <td className="r num">{num(p.visits)}</td>
-                <td className="r num">{num(p.active)} <span style={{ color: 'var(--ds-color-text-muted)' }}>({vcPct(p.active, p.visits)}%)</span></td>
-                <td className="r num">{num(p.orders)}</td>
+                <td style={{ color: 'var(--ds-color-text-muted)' }}>{p.devices && p.devices.length ? p.devices.join(', ') : '—'}</td>
+                <td className="r num">{p.fromMeta ? inr(p.spend) : <Dash />}</td>
+                <td className="r num">{p.fromMeta ? num(p.linkClicks) : <Dash />}</td>
+                <td className="r num">{p.fromMeta ? num(p.landingPageViews) : <Dash />}</td>
+                <td className="r num">{p.visits ? num(p.visits) : <Dash />}</td>
+                <td className="r num">{p.visits ? <>{num(p.active)} <span style={{ color: 'var(--ds-color-text-muted)' }}>({vcPct(p.active, p.visits)}%)</span></> : <Dash />}</td>
+                <td className="r num">{p.visits ? num(p.orders) : <Dash />}</td>
               </tr>
             )) : (
-              <tr><td colSpan={4} style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, lineHeight: 1.5 }}>
-                No placement on the ad links yet. Add <code>&amp;placement=&#123;&#123;placement&#125;&#125;</code> to the end of each ad’s URL parameters in Ads Manager (Ad → Tracking → URL parameters) and new ad visits will be split here by Facebook feed, Reels, Instagram, WhatsApp Status and other apps.
+              <tr><td colSpan={9} style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, lineHeight: 1.5 }}>
+                Nothing yet. Meta’s numbers per placement appear once the store’s ad account is connected in the Ads tab (synced every 3 hours). Our visits per placement appear once each ad’s URL parameters end with <code>&amp;placement=&#123;&#123;placement&#125;&#125;</code>.
               </td></tr>
             )}
           </tbody>
