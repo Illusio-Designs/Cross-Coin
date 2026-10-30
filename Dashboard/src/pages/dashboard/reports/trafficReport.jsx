@@ -1,80 +1,58 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { trafficReportService, brandService } from '../../../services';
-import { DateRangePicker, Skeleton, SkeletonKpis, SkeletonTableRows } from '../../../components/ui';
+import { DateRangePicker, Skeleton, SkeletonKpis } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Download04Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 import { useReportState } from '../../../lib/reportFilters';
+import { ChartCard, Donut, Empty, HBars, KpiTile, VBars, VisitGauge, gaugeTone } from '../../../components/reports/TrafficCharts';
 
 /* ──────────────────────────────────────────────────────────────
-   Traffic & Conversion — visits → product views → cart → checkout
-   → orders, per brand and per marketing channel / ad campaign.
+   Traffic & Conversion — charts only (no tables): where visitors
+   come from, how far they get, what the visits are made of, and
+   where on Meta the ad visits came from. Every card has an ⓘ
+   button explaining what it shows. Data: GET /api/reports/brand-traffic.
 
-   How it counts (GET /api/reports/brand-traffic):
-     · Visitors  counted by each store's server (edge middleware → visit_hits)
-                 on every page load, before the page's JS runs; sessions +
-                 page loads. Can't be tied to orders.
-     · Visits    tracked sessions that STARTED in the range (bots excluded)
-     · Orders    orders PLACED in the range, not cancelled — the same
-                 number as "Orders booked" on the Overview
-     · Channel / campaign orders are credited to the ad click that led to
-       them, even if that click was before the range. Orders with no
-       tracked visit show as "Direct / untracked" so totals reconcile.
-   Same look as the Reports overview (.obz-rep / .rep-* in reports.css).
+     · Visits   tracked sessions that STARTED in the range (bots,
+                Meta's own checks and link previews excluded)
+     · Orders   orders PLACED in the range, not cancelled — the same
+                number as "Orders booked" on the Overview
+     · Channel / campaign orders are credited to the ad click that
+       led to them, even if that click was before the range.
    ────────────────────────────────────────────────────────────── */
 
-// Categorical identity for the marketing channels (reads in both themes).
+// Categorical identity for the marketing channels (colour follows the
+// channel, never its rank).
 const CHANNEL_COLORS = {
-  Direct: '#0f766e', Facebook: '#1877f2', Instagram: '#e1306c', Google: '#ea4335',
-  'AI chatbot': '#8b5cf6', Email: '#d97706', SMS: '#16a34a', Referral: '#6366f1',
-  WhatsApp: '#25d366', Other: '#94a3b8', 'Direct / untracked': '#64748b',
+  Facebook: 'var(--tr2-s1)', Direct: 'var(--tr2-s3)', Instagram: 'var(--tr2-s5)', Google: 'var(--tr2-s2)',
+  WhatsApp: 'var(--tr2-s6)', 'AI chatbot': 'var(--tr2-s7)', Email: 'var(--tr2-s4)', SMS: 'var(--tr2-s8)',
+  Referral: 'var(--ds-color-text-faint)', 'Direct / untracked': 'var(--ds-color-text-faint)',
 };
-// Display names: "Referral" is any other website or app (YouTube, blogs…).
 const CHANNEL_LABEL = { Referral: 'Other websites & apps', 'Direct / untracked': 'No tracked visit' };
 const chLabel = (name) => CHANNEL_LABEL[name] || name;
-// Where visitors left — one colour per exit point, green for "ordered".
-const LEFT_STAGES = [
-  { key: 'landing',  label: 'Left without opening a product', short: 'Left on landing', color: '#94a3b8' },
-  { key: 'product',  label: 'Viewed a product, left before cart', short: 'Left after product', color: '#f59e0b' },
-  { key: 'cart',     label: 'Added to cart, didn’t open checkout', short: 'Left at cart', color: '#f97316' },
-  { key: 'checkout', label: 'Opened checkout, didn’t order', short: 'Left at checkout', color: '#ef4444' },
-  { key: 'ordered',  label: 'Ordered', short: 'Ordered', color: '#16a34a' },
-];
-const leftSlices = (r) => {
-  const v = Number(r.visits) || 0;
-  const parts = {
-    landing: v - r.views, product: r.views - r.carts, cart: r.carts - r.checkouts,
-    checkout: r.checkouts - r.ordered, ordered: r.ordered,
-  };
-  return LEFT_STAGES.map((st) => ({ ...st, n: Math.max(0, parts[st.key] || 0), pct: v > 0 ? (Math.max(0, parts[st.key] || 0) / v) * 100 : 0 }));
-};
-const chColor = (name) => CHANNEL_COLORS[name] || 'var(--ds-color-text-muted)';
-const SPLIT_COLORS = { Paid: '#2f6fed', Organic: '#16a34a', Direct: '#64748b' };
-const DEVICE_COLORS = { mobile: '#2f6fed', desktop: '#0f766e', tablet: '#d97706', unknown: '#94a3b8' };
+const SPLIT_COLORS = { Paid: 'var(--tr2-s1)', Organic: 'var(--tr2-s3)', Direct: 'var(--tr2-s4)' };
+const DEVICE_COLORS = { mobile: 'var(--tr2-s1)', desktop: 'var(--tr2-s2)', tablet: 'var(--tr2-s3)', unknown: 'var(--ds-color-text-faint)' };
 const DEVICE_LABEL = { mobile: 'Mobile', desktop: 'Desktop', tablet: 'Tablet', unknown: 'Unknown' };
+const PLATFORM_COLORS = { WhatsApp: 'var(--tr2-s1)', Facebook: 'var(--tr2-s2)', Instagram: 'var(--tr2-s3)', 'Audience Network': 'var(--tr2-s4)', Messenger: 'var(--tr2-s5)', Threads: 'var(--tr2-s7)' };
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
 const inr = (v) => `₹${num(Math.round(Number(v) || 0))}`;
 const pct = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : `${Number(v).toFixed(Number(v) >= 10 ? 1 : 2)}%`);
-const srcLabel = (s) => {
-  const k = String(s || '').toLowerCase().trim();
-  if (k === 'fb') return 'facebook';
-  if (k === 'ig') return 'instagram';
-  return s;
-};
-const EVENT_LABEL = { view_item: 'viewed product', add_to_cart: 'added to cart', begin_checkout: 'opened checkout', view_cart: 'opened cart', add_to_wishlist: 'wishlisted', search: 'searched', add_shipping_info: 'entered address', add_payment_info: 'chose payment' };
+const share = (n, of) => (of > 0 ? Math.min(100, Math.round((n / of) * 100)) : 0);
 const plural = (n, word) => `${num(n)} ${word}${Number(n) === 1 ? '' : 's'}`;
 
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 // Invalid / empty day (e.g. a half-picked date range) is returned as-is.
 const shiftDay = (s, n) => { const d = new Date(s + 'T00:00:00Z'); if (Number.isNaN(d.getTime())) return s; d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const fmtDay = (s) => {
+const fmtDay = (s, withYear = false) => {
   const d = new Date(String(s).slice(0, 10) + 'T00:00:00Z');
-  return Number.isNaN(d.getTime()) ? String(s) : new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  return Number.isNaN(d.getTime()) ? String(s) : new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) }).format(d);
 };
+const hourLabel = (h) => `${h % 12 || 12}${h < 12 ? 'a' : 'p'}`;
+const hourFull = (h) => `${h % 12 || 12}:00 ${h < 12 ? 'am' : 'pm'} – ${(h + 1) % 12 || 12}:00 ${(h + 1) % 24 < 12 ? 'am' : 'pm'}`;
 
 function exportCsv(filename, columns, rows) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -89,265 +67,31 @@ function exportCsv(filename, columns, rows) {
 
 const DlIcon = () => <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />;
 const RefreshGlyph = () => <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />;
-const Dot = ({ color }) => (
-  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: color, marginRight: 8, verticalAlign: 'middle', flex: 'none' }} />
-);
-/* One series per India day, every day of the range shown (missing days = 0,
-   or a gap when `gaps`), with a hover card. */
-function DayLine({ rows, from, to, valueKey, fmt, tip, gaps = false, height = 160 }) {
-  const series = useMemo(() => {
-    const by = new Map((rows || []).map((r) => [r.day, r]));
-    const out = [];
-    for (let d = from; d <= to && out.length < 400; d = shiftDay(d, 1)) {
-      const r = by.get(d) || { day: d };
-      const v = r[valueKey];
-      out.push({ ...r, day: d, v: v == null ? (gaps ? null : 0) : Number(v) });
-    }
-    return out;
-  }, [rows, from, to, valueKey, gaps]);
-  const [hover, setHover] = useState(null);
-  if (!series.some((x) => x.v)) return <span className="hint">No data in this period yet.</span>;
-  // One day picked: there is no line to draw, so show the day's figure.
-  if (series.length < 2) {
-    const one = series[0];
-    return (
-      <div style={{ display: 'grid', gap: 4 }}>
-        <span className="num" style={{ fontSize: 28, fontWeight: 600 }}>{fmt(one.v)}</span>
-        <span className="hint">{fmtDay(one.day)}{tip ? ` · ${tip(one)}` : ''}</span>
-      </div>
-    );
-  }
-  const W = 720, H = height, PAD = 10;
-  const max = Math.max(1e-9, ...series.map((x) => x.v || 0));
-  const X = (i) => (i / (series.length - 1)) * W;
-  const Y = (v) => H - PAD - (v / max) * (H - PAD * 2);
-  const d = series.map((x, i) => (x.v == null ? '' : `${i && series[i - 1].v != null ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x.v).toFixed(1)}`)).join(' ');
-  const h = hover != null ? series[hover] : null;
-  const ticks = [0, Math.floor((series.length - 1) / 2), series.length - 1];
-  return (
-    <div className="rep-trend-wrap" onMouseLeave={() => setHover(null)}>
-      <svg className="rep-chart" viewBox={`0 0 ${W} ${H}`} height={H} preserveAspectRatio="none" role="img" aria-label={valueKey}
-        onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover(Math.max(0, Math.min(series.length - 1, Math.round(((e.clientX - r.left) / r.width) * (series.length - 1))))); }}>
-        <line x1="0" y1={H / 2} x2={W} y2={H / 2} stroke="var(--ds-color-border-soft)" vectorEffect="non-scaling-stroke" />
-        <path d={d} fill="none" stroke="var(--ds-color-text)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-        {/* A day with no neighbours has no line — mark it. */}
-        {series.map((x, i) => (x.v != null && series[i - 1]?.v == null && series[i + 1]?.v == null
-          ? <rect key={x.day} x={X(i) - 3} y={Y(x.v) - 3} width="6" height="6" fill="var(--ds-color-text)" /> : null))}
-        {h ? <line x1={X(hover)} y1="0" x2={X(hover)} y2={H} stroke="var(--ds-color-border)" vectorEffect="non-scaling-stroke" /> : null}
-      </svg>
-      <div className="rep-trend-ticks">{ticks.map((i) => <span key={i}>{fmtDay(series[i].day)}</span>)}</div>
-      {h ? (
-        <div className="rep-trend-tip" style={{ left: `${(hover / (series.length - 1)) * 100}%` }}>
-          <b>{fmtDay(h.day)}</b>
-          <span>{h.v == null ? 'No visits counted' : fmt(h.v)}</span>
-          {tip ? <span className="mut">{tip(h)}</span> : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
-const Dash = () => <span style={{ color: 'var(--ds-color-text-faint)' }}>—</span>;
-const Empty = ({ cols, text }) => (
-  <tr><td colSpan={cols} style={{ textAlign: 'center', color: 'var(--ds-color-text-faint)' }}>{text}</td></tr>
-);
-
-/* ── Visit check: what the Visits number is made of. One Lighthouse-style
-   gauge — every check is a segment of one ring that fills to its share,
-   tracked visits in the middle — the checks explained beside it, why Meta
-   shows more clicks than visits, then the latest 10 visits. ── */
-const vcTone = (p) => (p == null ? 'none' : p >= 80 ? 'good' : p >= 50 ? 'warn' : 'bad');
-const vcPct = (n, of) => (of > 0 ? Math.min(100, Math.round((n / of) * 100)) : 0);
-
-function VisitGauge({ total, checks }) {
-  const CX = 200, CY = 200, R = 160, GAP = 7;
-  const pt = (r, deg) => { const a = ((deg - 90) * Math.PI) / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
-  const arc = (from, to) => {
-    const a = pt(R, from), b = pt(R, to);
-    return `M${a[0].toFixed(2)} ${a[1].toFixed(2)} A${R} ${R} 0 ${to - from > 180 ? 1 : 0} 1 ${b[0].toFixed(2)} ${b[1].toFixed(2)}`;
-  };
-  const span = 360 / checks.length;
-  return (
-    <svg className="rep-vc-gauge" viewBox="-80 -40 560 480" role="img"
-      aria-label={`${total} tracked visits. ${checks.map((c) => `${c.name} ${c.pct == null ? 'not known' : `${c.pct}%`}`).join(', ')}`}>
-      <circle className="rep-vc-core" cx={CX} cy={CY} r={R - 22} />
-      <text className="rep-vc-num" x={CX} y={CY - 8}>{num(total)}</text>
-      <text className="rep-vc-sub" x={CX} y={CY + 40}>tracked visits</text>
-      {checks.map((c, i) => {
-        const start = i * span + GAP / 2 + 3, end = (i + 1) * span - GAP / 2 - 3;
-        const tone = vcTone(c.pct);
-        const mid = (start + end) / 2, p = pt(R + 38, mid);
-        const anchor = Math.abs(p[0] - CX) < 24 ? 'middle' : p[0] > CX ? 'start' : 'end';
-        return (
-          <g key={c.key} className={`rep-vc-${tone}`}>
-            <path className="rep-vc-track" d={arc(start, end)} />
-            {c.pct > 0 ? <path className="rep-vc-seg" d={arc(start, start + ((end - start) * c.pct) / 100)} /> : null}
-            <text className="rep-vc-lab" x={p[0].toFixed(1)} y={p[1].toFixed(1)} textAnchor={anchor} dominantBaseline="middle">
-              {c.key} <tspan className="rep-vc-labpct">{c.pct == null ? '—' : `${c.pct}%`}</tspan>
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function VisitCheck({ vc, dim, busy }) {
-  const [typed, setTyped] = useState('');
-  const fromMeta = vc.metaClicks != null && vc.metaClicks > 0;
-  const metaClicks = fromMeta ? vc.metaClicks : (Number(typed) > 0 ? Math.round(Number(typed)) : null);
-  const visits = vc.visits;
-  const conv = metaClicks ? vcPct(visits, metaClicks) : null;
-  const lost = metaClicks ? Math.max(0, metaClicks - visits) : null;
-  const shared = Math.max(0, vc.fbclid - vc.fbclidIds);
-  const checks = [
-    { key: 'Devices', name: 'Different devices', pct: vcPct(vc.devices, visits), value: num(vc.devices),
-      text: vc.devices >= visits * 0.8 ? 'Almost every visit is a different phone, not repeat reloads.' : 'Many visits come from the same phones: reloads or the same people coming back.',
-      chip: vc.devices >= visits * 0.8 ? 'New people' : 'Repeat phones' },
-    { key: 'Meta click', name: 'From a Meta click', pct: vcPct(vc.fbclid, visits), value: num(vc.fbclid),
-      text: vc.fbclid ? `${plural(vc.fbclidIds, 'different click')}${shared ? `; ${num(shared)} visits reused a click id — a link copied and shared` : ': each visit is its own tap'}.` : 'No visits came from a Facebook or Instagram link.',
-      chip: !vc.fbclid ? 'None' : shared > vc.fbclid * 0.2 ? 'Shared link' : 'Not a shared link', tone: !vc.fbclid ? null : shared > vc.fbclid * 0.2 ? 'warn' : 'good' },
-    { key: 'Clicks → visits', name: 'Meta clicks that became visits', pct: conv, value: metaClicks ? `${num(visits)} of ${num(metaClicks)}` : '—',
-      text: metaClicks ? `${plural(lost, 'tap')} never opened the page. See why below.` : 'Type the link clicks from Ads Manager below, or connect the ad account in the Ads tab.',
-      chip: conv == null ? 'Needs Meta clicks' : conv >= 80 ? 'Normal gap' : conv >= 50 ? 'Page may be slow' : 'Too many lost' },
-    { key: 'Viewed product', name: 'Viewed a product or more', pct: vcPct(vc.active, visits), value: num(vc.active),
-      text: `${num(Math.max(0, visits - vc.active))} only landed and left without looking.`,
-      chip: vcPct(vc.active, visits) >= 80 ? 'Interested' : vcPct(vc.active, visits) >= 50 ? 'Many left fast' : 'Most left fast' },
-    { key: 'Paid tags', name: 'Tagged as paid ads', pct: vcPct(vc.paid, visits), value: num(vc.paid),
-      text: vc.paid ? 'Visits whose link carried UTM tags (utm_source or utm_campaign).' : 'None arrived with the ad’s UTM tags.',
-      chip: vc.paid ? 'Tagged' : 'Check URL parameters' },
-  ];
-  return (
-    <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
-      <div className="rep-ph"><h3>Visit check</h3><span className="hint">what the Visits number is made of</span></div>
-      <div className="rep-vc">
-        <VisitGauge total={visits} checks={checks} />
-        <ul className="rep-vc-checks">
-          {checks.map((c) => {
-            const tone = c.tone || vcTone(c.pct);
-            return (
-              <li key={c.key}>
-                <i className={`rep-vc-dot rep-vc-${vcTone(c.pct)}`} />
-                <span className="rep-vc-name">{c.name}<span className={`rep-vc-chip rep-vc-${tone}`}>{c.chip}</span></span>
-                <span className="rep-vc-val num">{c.value}{c.pct != null ? ` · ${c.pct}%` : ''}</span>
-                <span className="rep-vc-text">{c.text}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div className="rep-vc-gap">
-        <div>
-          <h4>Why Meta shows more clicks than visits</h4>
-          <p>Meta counts a tap on the ad. We count a page that actually opened. Some people tap and never see the page, so visits are always a little lower than Meta’s link clicks.</p>
-        </div>
-        <div className="rep-vc-gapbody">
-          <div className="rep-vc-fig">
-            <label className="rep-kl" htmlFor="vc-meta-clicks">Link clicks in Meta</label>
-            {fromMeta ? (
-              <>
-                <span className="rep-kv num" style={{ margin: 0 }}>{num(vc.metaClicks)}</span>
-                <span className="rep-kf">From the connected ad account for these days (Ads tab, synced every 3 hours).</span>
-              </>
-            ) : (
-              <>
-                <input id="vc-meta-clicks" className="rep-vc-input" type="number" min="1" step="1" inputMode="numeric" placeholder="e.g. 477"
-                  value={typed} onChange={(e) => setTyped(e.target.value)} />
-                <span className="rep-kf">Type it from Ads Manager for the same days, or connect the ad account in the Ads tab to fill it in by itself.</span>
-              </>
-            )}
-            {metaClicks ? <span className="rep-kf">{lost ? `${plural(lost, 'tap')} never opened the page (${conv}% became visits).` : 'Every click became a visit.'}</span> : null}
-          </div>
-          <div>
-            <span className="rep-kl">Why some clicks never become visits</span>
-            <ul className="rep-vc-why">
-              <li><b>Left before the page loaded.</b> On slow mobile data people tap, wait a second and press back. Meta has counted the click; the page never opened.</li>
-              <li><b>Tapped by mistake.</b> Common on Reels and in other apps (Audience Network). The page is closed straight away.</li>
-              <li><b>Tapped twice.</b> Meta counts every tap; one person opening the link twice in a row is one visit here.</li>
-              <li><b>Different hours.</b> Meta’s “Today” starts at midnight in the ad account’s time zone; this report counts India days, and only from 29 Oct, 4 pm.</li>
-              <li><b>Tracking blocked.</b> A few browsers or bad networks stop our tracker from reporting.</li>
-            </ul>
-            <p className="rep-vc-tip"><b>Compare like with like:</b> Meta’s <b>Landing page views</b> counts only clicks where the page loaded, so it should sit within about 5–10% of our visits. Landing page views are usually 75–90% of link clicks.</p>
-          </div>
-        </div>
-        <div className="rep-vc-scale">
-          <span><i className="rep-vc-dot rep-vc-good" />80% or more: good</span>
-          <span><i className="rep-vc-dot rep-vc-warn" />50–80%: needs a look</span>
-          <span><i className="rep-vc-dot rep-vc-bad" />Under 50%: problem</span>
-        </div>
-      </div>
-
-      <div className="rep-vc-listhead"><span className="rep-kl">Meta ads by platform, placement and device</span><span className="rep-kf">as Ads Manager shows it, next to our visits</span></div>
-      <div className="rep-tbl-wrap" style={{ marginBottom: 20 }}>
-        <table className="rep-table">
-          <thead><tr>
-            <th>Platform</th><th>Placement</th><th>Device</th>
-            <th className="r" title="From Meta">Spent</th><th className="r" title="From Meta">Link clicks</th><th className="r" title="From Meta">Landing page views</th>
-            <th className="r" title="Our tracked visits whose ad link carried this placement">Our visits</th><th className="r">Viewed a product</th><th className="r">Orders</th>
-          </tr></thead>
-          <tbody>
-            {(vc.placements || []).length ? vc.placements.map((p) => (
-              <tr key={`${p.platform}|${p.placement}`}>
-                <td>{p.platform}</td>
-                <td>{p.placement}</td>
-                <td style={{ color: 'var(--ds-color-text-muted)' }}>{p.devices && p.devices.length ? p.devices.join(', ') : '—'}</td>
-                <td className="r num">{p.fromMeta ? inr(p.spend) : <Dash />}</td>
-                <td className="r num">{p.fromMeta ? num(p.linkClicks) : <Dash />}</td>
-                <td className="r num">{p.fromMeta ? num(p.landingPageViews) : <Dash />}</td>
-                <td className="r num">{p.visits ? num(p.visits) : <Dash />}</td>
-                <td className="r num">{p.visits ? <>{num(p.active)} <span style={{ color: 'var(--ds-color-text-muted)' }}>({vcPct(p.active, p.visits)}%)</span></> : <Dash />}</td>
-                <td className="r num">{p.visits ? num(p.orders) : <Dash />}</td>
-              </tr>
-            )) : (
-              <tr><td colSpan={9} style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, lineHeight: 1.5 }}>
-                Nothing yet. Meta’s numbers per placement appear once the store’s ad account is connected in the Ads tab (synced every 3 hours). Our visits per placement appear once each ad’s URL parameters end with <code>&amp;placement=&#123;&#123;placement&#125;&#125;</code>.
-              </td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="rep-vc-listhead"><span className="rep-kl">Latest 10 visits</span><span className="rep-kf">newest first</span></div>
-      <div className="rep-tbl-wrap">
-        <table className="rep-table">
-          <thead><tr><th>Time (IST)</th><th>Source</th><th>Landing page</th><th>Device</th><th>Network</th><th>Did</th></tr></thead>
-          <tbody>
-            {vc.latest.length ? vc.latest.slice(0, 10).map((v, i) => (
-              <tr key={i}>
-                <td className="num" style={{ whiteSpace: 'nowrap' }}>{new Date(v.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
-                <td>
-                  {srcLabel(v.source)}{v.medium && v.medium !== 'none' ? <span style={{ color: 'var(--ds-color-text-muted)' }}> / {v.medium}</span> : null}
-                  {v.campaign ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>{v.campaign}</div> : null}
-                  {v.adClick ? (
-                    <div style={{ fontSize: 12, color: v.clickUses > 1 ? 'var(--ds-color-danger)' : 'var(--ds-color-text-muted)' }}>
-                      {v.clickUses > 1 ? `Same Meta click id on ${num(v.clickUses)} visits — a shared link` : 'Meta click id'}
-                    </div>
-                  ) : null}
-                  {v.referrer ? <div style={{ fontSize: 12, color: 'var(--ds-color-text-muted)' }}>from {v.referrer}</div> : null}
-                </td>
-                <td style={{ overflowWrap: 'anywhere' }}>{v.page || <Dash />}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>{v.device}</td>
-                <td className="num" style={{ whiteSpace: 'nowrap', color: 'var(--ds-color-text-muted)' }}>{v.ip || <Dash />}</td>
-                <td style={{ fontSize: 12 }}>{v.did.length ? v.did.map((e) => EVENT_LABEL[e] || e).join(', ') : <span style={{ color: 'var(--ds-color-text-muted)' }}>only landed</span>}</td>
-              </tr>
-            )) : <Empty cols={6} text="No tracked visits in this period" />}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+// What each card shows — opened by its ⓘ button.
+const INFO = {
+  visits: 'A visit is a page that actually opened and ran the store’s tracker. Bots, Meta’s own ad-review checks and link previews are left out. A new visit starts after 30 minutes away, or when someone arrives from a new ad or campaign link.',
+  orders: 'Every order placed in the period except cancelled ones, so it matches “Orders booked” on the Overview. Delivered shows how many have reached the customer.',
+  conversion: 'Orders divided by tracked visits. 1 order from 100 visits is 1%.',
+  revenue: 'The total value of the placed orders in the period (after discounts, with shipping). Average order is revenue divided by orders.',
+  overTime: 'Tracked visits per hour of the day (India time) when one day is picked, or per day for a longer range. Hover a bar for its orders.',
+  sources: 'Each visit gets one source, checked in this order: the link’s UTM tags, the site that sent the visitor, an ad click id in the link (Meta or Google), the app’s own browser (Instagram, Facebook), and otherwise Direct. Every spelling of a platform (fb, m.facebook.com…) counts as that platform.',
+  visitCheck: 'Five checks on what the visits are made of. Different devices: how many different phones made them. From a Meta click: visits with a Facebook/Instagram click id; many visits sharing one click id means a link was copied and shared. Clicks → visits: our visits against Meta’s link clicks (from the connected ad account). Viewed a product: visits that went beyond landing. Paid tags: visits whose link carried UTM tags. Green 80%+, orange 50–80%, red under 50%.',
+  funnel: 'Visits that reached each step: opened the store, viewed a product, added to cart or tapped Buy now, opened checkout, ordered. A later step counts for the earlier ones, so no bar is longer than the one above it.',
+  split: 'Paid: visits from an ad (paid UTM tags or an ad click id). Organic: search engines, social posts, email and other sites. Direct: typed address, bookmarks and apps that send no source.',
+  placements: 'Meta’s own landing page views per placement, named the way Ads Manager names them, from the connected ad account (Ads tab, synced every 3 hours). WhatsApp Status and Audience Network open the ad link in the phone’s browser, so the store sees them as plain Chrome visits; this shows where they really came from. Hover a bar for spend, link clicks and our own visits and orders from that placement (the ad’s URL parameters must end with &placement={{placement}}).',
+  platforms: 'The same Meta landing page views grouped by app: Facebook, Instagram, WhatsApp, Messenger and Audience Network (ads inside other apps).',
+  devices: 'Mobile, desktop or tablet, read from each visitor’s browser.',
+  states: 'Where visitors are, from their network location, counted by the store on every page load. Indian states only; the top 8 are shown.',
+  pages: 'The first page of each visit. Ads should land on the page they promise; a page with many visits and few product views needs a look.',
+  campaigns: 'Visits per ad campaign, read from the utm_campaign tag on the ad link. Ads without URL parameters fall under “not tagged”. Hover a bar for its orders and revenue.',
+};
 
 export default function TrafficReport() {
   const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
   const [to, setTo] = useReportState('to', istDate());
   const [brandId, setBrandId] = useReportState('brandId', '');
   const [brandList, setBrandList] = useState([]);
-  const [showAdsets, setShowAdsets] = useState(false);
-  const [openGroups, setOpenGroups] = useState({});
-  const [sitesOpen, setSitesOpen] = useState(null); // null = auto (open when few sites)
-  const [geoView, setGeoView] = useState('states'); // 'states' | 'cities'
 
   useEffect(() => {
     let off = false;
@@ -358,7 +102,7 @@ export default function TrafficReport() {
   }, []);
 
   // Keyed on range + brand: a slow response for an old selection can never
-  // replace the newer one (the bug that showed a previous range's numbers).
+  // replace the newer one.
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['reports', 'brand-traffic', from, to, brandId],
     queryFn: async () => {
@@ -371,134 +115,134 @@ export default function TrafficReport() {
     staleTime: 60 * 1000,
   });
 
-  // The report shows nothing from before tracking was rebuilt (the server's
-  // dataFrom, India time), so charts start on that day and the header says so.
+  // Nothing from before tracking was rebuilt (the server's dataFrom, India
+  // time) is shown, so charts start on that day and the header says so.
   const dataFrom = data?.dataFrom ? new Date(data.dataFrom) : null;
   const dataFromDay = dataFrom ? new Date(dataFrom.getTime() + 330 * 60000).toISOString().slice(0, 10) : '';
   const shownFrom = dataFromDay && from < dataFromDay ? dataFromDay : from;
   const dataFromLabel = dataFrom
     ? dataFrom.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
     : '';
+  const oneDay = shownFrom === to;
 
   const t = data?.totals;
   const brands = data?.brands || [];
-  const channels = data?.channels || [];
-  const split = data?.trafficSplit || [];
-  const campaigns = data?.campaigns || [];
-  // Server-counted visitors (store edge middleware). `hasVis` only when the
-  // range actually has counts; otherwise the old figures stay the headline.
+  const vc = data?.visitCheck || null;
   const vis = data?.visitors || null;
-  const hasVis = !!(vis && Number(vis.totals?.landings) > 0);
-  const visitorsByCampaign = useMemo(() => {
-    const m = new Map();
-    for (const r of vis?.campaigns || []) {
-      const k = `${r.channel}\u0001${r.campaign}`;
-      m.set(k, (m.get(k) || 0) + (Number(r.sessions) || 0));
-    }
-    return m;
-  }, [vis]);
-  const visitorsByChannel = new Map((vis?.channels || []).map((c) => [c.channel, Number(c.sessions) || 0]));
-  const campaignVisitors = (channel, name) => {
-    if (name !== 'none') return visitorsByCampaign.get(`${channel}\u0001${name}`) || 0;
-    // Untagged visits = the channel's visitors minus its tagged campaigns.
-    let tagged = 0;
-    for (const [k, n] of visitorsByCampaign) if (k.startsWith(`${channel}\u0001`)) tagged += n;
-    return Math.max(0, (visitorsByChannel.get(channel) || 0) - tagged);
-  };
+  const visits = Number(t?.sessions) || 0;
   const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name) : 'All brands';
 
-  // "Other websites & apps" by actual site name (YouTube, Pinterest, a blog…).
-  const otherSites = (data?.otherSites || []).map((x) => ({
-    name: x.site, sessions: x.sessions, share: x.share, orders: x.orders,
-    conversion: x.conversion_rate, revenue: x.revenue, campaigns: x.campaigns || [], adsets: [],
-  }));
-  const showSites = sitesOpen ?? otherSites.length <= 6;
-  const drop = data?.dropOff || { channels: [], totals: { visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 } };
-
-  // Platform → campaign → ad set, merging every spelling of a platform (fb,
-  // facebook, m.facebook.com…) and every medium into one group.
-  const { platforms, hasAdsets, revenueByChannel } = useMemo(() => {
-    const totalVisits = campaigns.reduce((n, r) => n + (Number(r.sessions) || 0), 0) || 1;
-    const rate = (o, v) => (v > 0 ? (o / v) * 100 : null);
-    const groups = new Map();
-    for (const r of campaigns) {
-      const ch = r.channel || 'Referral';
-      const g = groups.get(ch) || { channel: ch, untracked: ch === 'Direct / untracked', sessions: 0, orders: 0, revenue: 0, camps: new Map() };
-      g.sessions += Number(r.sessions) || 0; g.orders += Number(r.orders) || 0; g.revenue += Number(r.revenue) || 0;
-      if (!g.untracked) {
-        const name = r.campaign || 'none';
-        const c = g.camps.get(name) || { name, sessions: 0, orders: 0, revenue: 0, sets: new Map(), utm: new Set() };
-        c.sessions += Number(r.sessions) || 0; c.orders += Number(r.orders) || 0; c.revenue += Number(r.revenue) || 0;
-        // The exact UTM tags behind this campaign (one per source/medium spelling).
-        c.utm.add(`utm_source=${r.source || 'direct'} · utm_medium=${r.medium || 'none'}`);
-        const an = r.adset || 'none';
-        const a = c.sets.get(an) || { name: an, sessions: 0, orders: 0, revenue: 0, ads: new Map() };
-        a.sessions += Number(r.sessions) || 0; a.orders += Number(r.orders) || 0; a.revenue += Number(r.revenue) || 0;
-        // Ad (utm_content) + creative code (utm_creative) under each ad set.
-        const adName = r.ad || 'none';
-        const ad = a.ads.get(adName) || { name: adName, creatives: new Set(), sessions: 0, orders: 0, revenue: 0 };
-        ad.sessions += Number(r.sessions) || 0; ad.orders += Number(r.orders) || 0; ad.revenue += Number(r.revenue) || 0;
-        if (r.creative && r.creative !== 'none') ad.creatives.add(r.creative);
-        a.ads.set(adName, ad);
-        c.sets.set(an, a);
-        g.camps.set(name, c);
-      }
-      groups.set(ch, g);
+  // Per-day series for the tiles' sparklines and the multi-day bars.
+  const days = useMemo(() => {
+    const by = new Map((data?.daily || []).map((r) => [r.day, r]));
+    const out = [];
+    for (let d = shownFrom; d && d <= to && out.length < 400; d = shiftDay(d, 1)) {
+      const r = by.get(d) || {};
+      out.push({ day: d, visits: Number(r.trackedSessions) || 0, orders: Number(r.orders) || 0, value: Number(r.value) || 0, conversion: Number(r.conversion) || 0 });
     }
-    const fin = (x) => ({ ...x, share: (x.sessions / totalVisits) * 100, conversion: rate(x.orders, x.sessions) });
-    const byRev = (a, b) => b.revenue - a.revenue || b.orders - a.orders || b.sessions - a.sessions;
-    const list = [...groups.values()].map((g) => fin({
-      ...g,
-      campaigns: [...g.camps.values()].map((c) => fin({
-        ...c,
-        utm: [...c.utm],
-        adsets: [...c.sets.values()].map((a) => fin({ ...a, ads: [...a.ads.values()].map((d) => fin({ ...d, creatives: [...d.creatives] })).sort(byRev) })).sort(byRev),
-      })).sort(byRev),
-      // Only real (utm_campaign-tagged) campaigns count; untagged visits show
-      // as a sub-row only when the platform also has tagged campaigns.
-      tagged: [...g.camps.keys()].filter((n) => n !== 'none').length,
-    })).sort((a, b) => (a.untracked - b.untracked) || byRev(a, b));
-    return {
-      platforms: list,
-      hasAdsets: list.some((g) => g.campaigns.some((c) => c.adsets.length > 1 || c.adsets.some((a) => a.ads.length > 1 || a.ads.some((d) => d.name !== 'none')))),
-      revenueByChannel: new Map(list.map((g) => [g.channel, g.revenue])),
-    };
-  }, [campaigns]);
+    return out;
+  }, [data, shownFrom, to]);
 
-  // Source list for "Where visitors come from": channels with revenue added.
-  const sources = channels.map((c) => ({ ...c, revenue: revenueByChannel.get(c.channel) || 0 }))
-    .filter((c) => c.sessions > 0 || c.orders > 0 || c.visitors > 0);
-  const sourceTotal = channels.reduce((n, c) => n + (c.untracked ? 0 : Number(c.sessions) || 0), 0);
-  const splitRevenue = split.reduce((n, r) => n + (Number(r.revenue) || 0), 0);
+  const overTime = useMemo(() => {
+    if (oneDay) {
+      return (data?.hourly || []).map((h) => ({ label: hourLabel(h.hour), full: hourFull(h.hour), value: h.visits }));
+    }
+    return days.map((d) => ({ label: fmtDay(d.day), full: fmtDay(d.day, true), value: d.visits, extra: `${plural(d.orders, 'order')} · ${inr(d.value)}` }));
+  }, [oneDay, data, days]);
 
-  // First load (nothing to show yet) → skeletons in place of each section.
-  // A date-range / brand change keeps the old figures on screen, dimmed.
+  const sources = (data?.channels || [])
+    .filter((c) => !c.untracked && Number(c.sessions) > 0)
+    .map((c) => ({ name: chLabel(c.channel), value: Number(c.sessions) || 0, color: CHANNEL_COLORS[c.channel] }));
+
+  const split = (data?.trafficSplit || [])
+    .filter((r) => Number(r.sessions) > 0)
+    .map((r) => ({ name: r.type, value: Number(r.sessions) || 0, color: SPLIT_COLORS[r.type] }));
+  const paidShare = share(split.find((r) => r.name === 'Paid')?.value || 0, split.reduce((n, r) => n + r.value, 0));
+
+  const drop = data?.dropOff?.totals || { visits: 0, views: 0, carts: 0, checkouts: 0, ordered: 0 };
+  const funnelBase = Number(drop.visits) || 0;
+  const funnel = [
+    { name: 'Visited the store', value: funnelBase },
+    { name: 'Viewed a product', value: Number(drop.views) || 0 },
+    { name: 'Added to cart / Buy now', value: Number(drop.carts) || 0 },
+    { name: 'Opened checkout', value: Number(drop.checkouts) || 0 },
+    { name: 'Ordered', value: Number(drop.ordered) || 0 },
+  ].map((s, i, all) => ({
+    ...s,
+    text: `${num(s.value)} · ${share(s.value, funnelBase)}%`,
+    tip: [`${plural(s.value, 'visit')} · ${share(s.value, funnelBase)}% of visits`, i ? `${num(Math.max(0, all[i - 1].value - s.value))} stopped before this step` : null].filter(Boolean),
+  }));
+
+  // Meta placements (Meta's numbers, or our tagged visits when Meta's aren't synced).
+  const placements = (vc?.placements || []).map((p) => {
+    const value = p.fromMeta ? p.landingPageViews : p.visits;
+    const tip = [
+      p.fromMeta ? `${num(p.landingPageViews)} landing page views · ${num(p.linkClicks)} link clicks · ${inr(p.spend)} spent` : null,
+      p.devices?.length ? p.devices.join(', ') : null,
+      p.visits ? `Our visits: ${num(p.visits)} · viewed a product ${num(p.active)} · ${plural(p.orders, 'order')}` : null,
+    ].filter(Boolean);
+    return { name: `${p.platform} · ${p.placement}`, platform: p.platform, value, tip, color: PLATFORM_COLORS[p.platform] || 'var(--ds-color-text-faint)' };
+  }).filter((p) => p.value > 0);
+  const placementsFromMeta = (vc?.placements || []).some((p) => p.fromMeta);
+  const platformTotals = [...placements.reduce((m, p) => m.set(p.platform, (m.get(p.platform) || 0) + p.value), new Map())]
+    .map(([name, value]) => ({ name, value, color: PLATFORM_COLORS[name] || 'var(--ds-color-text-faint)' }))
+    .sort((a, b) => b.value - a.value);
+
+  const devices = (data?.trackedDevices?.length ? data.trackedDevices.map((d) => ({ device: d.device, n: d.visits })) : (vis?.devices || []).map((d) => ({ device: d.device, n: d.sessions })))
+    .filter((d) => d.n > 0)
+    .map((d) => ({ name: DEVICE_LABEL[d.device] || d.device, value: d.n, color: DEVICE_COLORS[d.device] || 'var(--ds-color-text-faint)' }));
+
+  const states = (vis?.states || []).slice(0, 8).map((s) => ({ name: s.state, value: Number(s.sessions) || 0, tip: `${plural(s.sessions, 'visit')} · ${pct(s.share)} of visits` }));
+
+  const pages = (data?.landingPages || []).slice(0, 8).map((p) => ({
+    name: p.path === '/' ? 'Home' : p.path, value: Number(p.sessions) || 0, tip: `${p.type} · ${plural(p.sessions, 'visit')} · ${pct(p.share)}`,
+  }));
+
+  // Campaigns: platform · campaign, summed over ad sets / ads.
+  const campaigns = useMemo(() => {
+    const m = new Map();
+    for (const r of data?.campaigns || []) {
+      // Direct and untracked visits aren't campaigns.
+      if (r.channel === 'Direct / untracked' || r.channel === 'Direct') continue;
+      const name = `${chLabel(r.channel || 'Referral')} · ${r.campaign && r.campaign !== 'none' ? r.campaign : 'not tagged'}`;
+      const c = m.get(name) || { name, value: 0, orders: 0, revenue: 0, color: CHANNEL_COLORS[r.channel] };
+      c.value += Number(r.sessions) || 0; c.orders += Number(r.orders) || 0; c.revenue += Number(r.revenue) || 0;
+      m.set(name, c);
+    }
+    return [...m.values()].filter((c) => c.value > 0).sort((a, b) => b.value - a.value).slice(0, 10)
+      .map((c) => ({ ...c, tip: `${plural(c.value, 'visit')} · ${plural(c.orders, 'order')} · ${inr(c.revenue)}` }));
+  }, [data]);
+
+  // Visit check gauge.
+  const checks = useMemo(() => {
+    if (!vc) return [];
+    const v = vc.visits;
+    const shared = Math.max(0, vc.fbclid - vc.fbclidIds);
+    const conv = vc.metaClicks ? share(v, vc.metaClicks) : null;
+    return [
+      { key: 'Devices', name: 'Different devices', pct: share(vc.devices, v), value: num(vc.devices),
+        text: vc.devices >= v * 0.8 ? 'Almost every visit is a different phone.' : 'Many visits come from the same phones.', chip: vc.devices >= v * 0.8 ? 'New people' : 'Repeat phones' },
+      { key: 'Meta click', name: 'From a Meta click', pct: share(vc.fbclid, v), value: num(vc.fbclid),
+        text: vc.fbclid ? `${plural(vc.fbclidIds, 'different click')}${shared ? `; ${num(shared)} reused a click id (a shared link)` : ''}.` : 'No visits from a Facebook or Instagram link.',
+        chip: !vc.fbclid ? 'None' : shared > vc.fbclid * 0.2 ? 'Shared link' : 'Not shared', tone: !vc.fbclid ? null : shared > vc.fbclid * 0.2 ? 'warn' : 'good' },
+      { key: 'Clicks → visits', name: 'Meta clicks that became visits', pct: conv, value: vc.metaClicks ? `${num(v)} of ${num(vc.metaClicks)}` : '—',
+        text: vc.metaClicks ? `${plural(Math.max(0, vc.metaClicks - v), 'tap')} never opened the page.` : 'Connect the ad account in the Ads tab to compare.',
+        chip: conv == null ? 'Needs Meta' : conv >= 80 ? 'Normal gap' : conv >= 50 ? 'Page may be slow' : 'Too many lost' },
+      { key: 'Viewed', name: 'Viewed a product', pct: share(vc.active, v), value: num(vc.active),
+        text: `${num(Math.max(0, v - vc.active))} only landed and left.`, chip: share(vc.active, v) >= 80 ? 'Interested' : share(vc.active, v) >= 50 ? 'Many left fast' : 'Most left fast' },
+      { key: 'Paid tags', name: 'Tagged as paid ads', pct: share(vc.paid, v), value: num(vc.paid),
+        text: vc.paid ? 'Visits whose link carried UTM tags.' : 'No UTM tags on the ad links yet.', chip: vc.paid ? 'Tagged' : 'Check URL tags' },
+    ];
+  }, [vc]);
+
   const first = isLoading && !data;
   const refreshing = isFetching && !!data;
   const dim = refreshing ? { opacity: 0.6, transition: 'opacity .15s' } : undefined;
   const busy = refreshing || undefined;
 
-  const howCounted = (
-    <div className="rep-panel">
-      <div className="rep-ph"><h3>How this is counted</h3></div>
-      <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6, fontSize: 13, color: 'var(--ds-color-text-muted)', lineHeight: 1.5 }}>
-        <li><b style={{ color: 'var(--ds-color-text)' }}>Visitors</b> are counted by the store's server on every page load, before the page has loaded, so they include people who leave straight away (slow mobile, in-app browsers, accidental ad clicks). A visitor starts a new visit after 30 minutes without a page load. Bots are left out.</li>
-        <li><b style={{ color: 'var(--ds-color-text)' }}>Visits</b> are recorded by the page itself once it has loaded, for every shopper; bots are left out. Only these can be linked to orders, so conversion and the funnel use them.</li>
-        <li><b style={{ color: 'var(--ds-color-text)' }}>Orders</b> are orders placed in this period that weren't cancelled — the same as “Orders booked” on the Overview.</li>
-        <li>A channel or campaign gets the order even if the ad click was before this period. Orders with no tracked visit show as <b style={{ color: 'var(--ds-color-text)' }}>No tracked visit</b>, so every table adds up to the Orders total.</li>
-        <li><b style={{ color: 'var(--ds-color-text)' }}>Where visitors left</b> follows the visitors who came in this period: how many opened a product, added to cart, started checkout and ordered. Each colour is where that share of visitors stopped.</li>
-        <li>Every Facebook link (fb, m.facebook.com, paid or post) counts as Facebook; the same for Instagram, Google and WhatsApp. YouTube, Pinterest, blogs and other sites are “Other websites & apps” — click that row to see each site by name.</li>
-        <li>Paid = ads tagged utm_medium paid / cpc. Direct = no source or our own sites. Everything else (search, social posts, email, referral) is Organic.</li>
-      </ul>
-    </div>
-  );
-
   const doExport = () => exportCsv(`traffic-conversion_${from}_${to}.csv`, [
     { label: 'Brand', value: (r) => r.brand },
-    { label: 'Visitors (counted by the store)', value: (r) => r.visitors ?? '' },
-    { label: 'Page loads (counted by the store)', value: (r) => r.visitorLoads ?? '' },
     { label: 'Tracked visits', value: (r) => r.sessions },
-    { label: 'All visits (cookieless)', value: (r) => r.allVisits },
     { label: 'Product views', value: (r) => r.views },
     { label: 'Add to cart / Buy now', value: (r) => r.carts },
     { label: 'Checkout opened', value: (r) => r.checkouts },
@@ -509,25 +253,11 @@ export default function TrafficReport() {
     { label: 'AOV', value: (r) => r.aov },
   ], brands);
 
-  const exportCampaigns = () => exportCsv(`campaigns_${from}_${to}.csv`, [
-    { label: 'Platform', value: (r) => chLabel(r.channel) },
-    { label: 'Source', value: (r) => srcLabel(r.source) },
-    { label: 'Medium', value: (r) => r.medium },
-    { label: 'Campaign', value: (r) => r.campaign },
-    { label: 'Ad set', value: (r) => r.adset },
-    { label: 'Ad', value: (r) => r.ad },
-    { label: 'Creative', value: (r) => r.creative },
-    { label: 'Visits', value: (r) => r.sessions },
-    { label: 'Orders', value: (r) => r.orders },
-    { label: 'Conversion %', value: (r) => r.conversion_rate ?? '' },
-    { label: 'Revenue', value: (r) => r.revenue },
-  ], campaigns);
-
   return (
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Traffic & Conversion"
-        subtitle={`${brandName} · ${shownFrom} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Where visitors come from and how many of them order.${dataFromLabel ? ` Data from ${dataFromLabel} IST onwards — earlier tracking isn’t shown.` : ''}`}
+        subtitle={`${brandName} · ${shownFrom} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Where visitors come from and how many of them order.${dataFromLabel ? ` Data from ${dataFromLabel} IST onwards.` : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown
@@ -538,7 +268,6 @@ export default function TrafficReport() {
             />
             <DateRangePicker label="" inline startDate={from} endDate={to}
               onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
-            {/* Re-loads the report for the brand and dates picked above. */}
             <button type="button" className="order-sync-main-btn" onClick={() => refetch()} disabled={isFetching} aria-busy={isFetching || undefined}>
               <RefreshGlyph /> {isFetching ? 'Refreshing…' : 'Refresh'}
             </button>
@@ -552,450 +281,88 @@ export default function TrafficReport() {
       {first ? (
         <>
           <SkeletonKpis count={4} label="Loading traffic report…" />
-          <div className="rep-panel" aria-hidden="true">
-            <div className="rep-ph"><h3>Where visitors come from</h3></div>
-            <Skeleton w="100%" h={14} r={7} style={{ marginBottom: 16 }} />
-            <div className="rep-tbl-wrap">
-              <table className="rep-table">
-                <thead><tr><th>Source</th><th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                <tbody><SkeletonTableRows rows={5} cols={6} /></tbody>
-              </table>
-            </div>
+          <div className="tr2-grid" aria-hidden="true">
+            {[8, 4, 12, 8, 4].map((s, i) => (
+              <section key={i} className={`tr2-card tr2-c${s}`}><Skeleton w="40%" h={14} r={7} /><Skeleton w="100%" h={180} r={10} /></section>
+            ))}
           </div>
-          <div className="rep-panel" aria-hidden="true">
-            <div className="rep-ph"><h3>Where visitors left</h3></div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 18 }}>
-              {LEFT_STAGES.map((st) => (
-                <div key={st.key} className="rep-tile"><Skeleton w="70%" h={10} /><Skeleton w="40%" h={18} style={{ marginTop: 7 }} /><Skeleton w="55%" h={10} style={{ marginTop: 6 }} /></div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 160px) 1fr 70px', gap: 12, alignItems: 'center' }}>
-                  <Skeleton w="70%" h={12} /><Skeleton w="100%" h={22} r={6} /><Skeleton w="100%" h={10} />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rep-masonry" aria-hidden="true">
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Paid vs organic vs direct</h3></div>
-              <Skeleton w="100%" h={12} r={6} style={{ marginBottom: 14 }} />
-              <div className="rep-tiles" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="rep-tile"><Skeleton w="50%" h={10} /><Skeleton w="60%" h={18} style={{ marginTop: 7 }} /><Skeleton w="80%" h={10} style={{ marginTop: 6 }} /></div>
-                ))}
-              </div>
-            </div>
-            {!brandId && (
-              <div className="rep-panel rep-panel--flush">
-                <div className="rep-ph"><h3>By brand</h3></div>
-                <div className="rep-tbl-wrap">
-                  <table className="rep-table">
-                    <thead><tr><th>Brand</th><th className="r">Visits</th><th className="r">Cart</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                    <tbody><SkeletonTableRows rows={4} cols={6} /></tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="rep-panel rep-panel--flush" aria-hidden="true">
-            <div className="rep-ph"><h3>Ad campaigns by platform</h3></div>
-            <div className="rep-tbl-wrap">
-              <table className="rep-table">
-                <thead><tr><th>Platform / campaign</th><th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                <tbody><SkeletonTableRows rows={6} cols={6} /></tbody>
-              </table>
-            </div>
-          </div>
-          {howCounted}
         </>
       ) : error ? (
         <div className="rep-state" style={{ color: 'var(--ds-color-danger)' }}>Couldn't load the report: {error.message || 'try again'}</div>
       ) : !data ? null : (
         <>
-          <div className="rep-kpis" style={dim} aria-busy={busy}>
-            {hasVis ? (
-              <div className="rep-kpi">
-                <div className="rep-kl">Visitors (counted by the store)</div>
-                <div className="rep-kv num">{num(t?.visitors)}</div>
-                <div className="rep-kf">{plural(t?.visitorLoads, 'page load')} · {plural(t?.sessions, 'tracked visit')}</div>
-              </div>
-            ) : (
-              <div className="rep-kpi">
-                <div className="rep-kl">Visits</div>
-                <div className="rep-kv num">{num(t?.sessions)}</div>
-                <div className="rep-kf">{vis?.firstDay ? `Store counting started on ${fmtDay(vis.firstDay)}` : 'tracked visits, bots left out'}</div>
-              </div>
-            )}
-            <div className="rep-kpi">
-              <div className="rep-kl">Orders</div>
-              <div className="rep-kv num">{num(t?.orders)}</div>
-              <div className="rep-kf">{num(t?.delivered)} delivered so far</div>
-            </div>
-            <div className="rep-kpi">
-              <div className="rep-kl">Conversion</div>
-              <div className="rep-kv num">{pct(t?.conversion_rate)}</div>
-              <div className="rep-kf">orders ÷ tracked visits</div>
-            </div>
-            <div className="rep-kpi">
-              <div className="rep-kl">Revenue booked</div>
-              <div className="rep-kv num">{inr(t?.revenue)}</div>
-              <div className="rep-kf">avg order {inr(t?.aov)}</div>
-            </div>
-          </div>
-          {hasVis && (
-            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--ds-color-text-muted)' }}>
-              Visitors are counted by the store's server on every page load, so they include people who leave before the page finishes loading; tracked visits are recorded by the page once it loads and are the only ones we can link to orders, so conversion uses them.
-            </p>
-          )}
-
-          {/* ── Over time (Shopify-style): visits and conversion per day ── */}
-          <div className="rep-grid2" style={dim} aria-busy={busy}>
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Visits over time</h3><span className="hint">{num((data?.daily || []).reduce((a, x) => a + (x.visits || x.trackedSessions), 0))} visits · India days</span></div>
-              <DayLine rows={(data?.daily || []).map((x) => ({ ...x, v2: x.visits || x.trackedSessions }))} from={shownFrom} to={to} valueKey="v2"
-                fmt={(v) => plural(v, 'visit')} tip={(r) => `${plural(r.orders || 0, 'order')} · ${inr(r.value)}`} />
-            </div>
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Conversion rate over time</h3><span className="hint">orders ÷ visits, per day</span></div>
-              <DayLine rows={data?.daily} from={shownFrom} to={to} valueKey="conversion" gaps
-                fmt={(v) => `${pct(v)} conversion`} tip={(r) => `${plural(r.orders || 0, 'order')} from ${plural(r.visits || r.trackedSessions || 0, 'visit')}`} />
-            </div>
+          <div className="tr2-kpis" style={dim} aria-busy={busy}>
+            <KpiTile label="Visits" value={num(visits)} foot={vc ? `${plural(vc.devices, 'different device')}` : 'tracked visits, bots left out'}
+              series={days.map((d) => d.visits)} info={INFO.visits} />
+            <KpiTile label="Orders" value={num(t?.orders)} foot={`${num(t?.delivered)} delivered so far`}
+              series={days.map((d) => d.orders)} color="var(--tr2-s3)" info={INFO.orders} />
+            <KpiTile label="Conversion" value={pct(t?.conversion_rate)} foot="orders ÷ visits"
+              series={days.map((d) => d.conversion)} color="var(--tr2-s7)" info={INFO.conversion} />
+            <KpiTile label="Revenue booked" value={inr(t?.revenue)} foot={`avg order ${inr(t?.aov)}`}
+              series={days.map((d) => d.value)} color="var(--tr2-s2)" info={INFO.revenue} />
           </div>
 
-          {/* ── 1. Where visitors come from ── */}
-          <div className="rep-panel" style={dim} aria-busy={busy}>
-            <div className="rep-ph"><h3>Where visitors come from</h3><span className="hint">share of {num(sourceTotal)} tracked visits</span></div>
-            {sourceTotal > 0 && (
-              <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 16 }}>
-                {sources.filter((c) => c.sessions > 0).map((c) => (
-                  <div key={c.channel} title={`${chLabel(c.channel)}: ${pct(c.share)}`} style={{ width: `${c.share}%`, background: chColor(c.channel) }} />
-                ))}
-              </div>
-            )}
-            <div className="rep-tbl-wrap">
-              <table className="rep-table">
-                <thead><tr><th>Source</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th style={{ width: '32%' }}>Share of visits</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                <tbody>
-                  {sources.length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No visits in this period" /> : sources.map((c) => {
-                    const expandable = c.channel === 'Referral' && otherSites.length > 0;
-                    return (
-                    <React.Fragment key={c.channel}>
-                    <tr onClick={expandable ? () => setSitesOpen(!showSites) : undefined} style={expandable ? { cursor: 'pointer' } : undefined}>
-                      <td className="strong" style={{ whiteSpace: 'nowrap' }}>
-                        <Dot color={chColor(c.channel)} />{chLabel(c.channel)}
-                        {expandable && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{showSites ? '▾' : '▸'} {plural(otherSites.length, 'site')}</span>}
-                      </td>
-                      {hasVis && <td className="r num">{c.untracked ? <Dash /> : num(c.visitors)}</td>}
-                      <td className="r num">{c.untracked ? <Dash /> : num(c.sessions)}</td>
-                      <td>
-                        {c.untracked ? <span style={{ fontSize: 12, color: 'var(--ds-color-text-faint)' }}>orders with no tracked visit</span> : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
-                              <div style={{ width: `${Math.min(100, c.share)}%`, height: '100%', background: chColor(c.channel) }} />
-                            </div>
-                            <b className="num" style={{ fontSize: 12.5, minWidth: 46, textAlign: 'right' }}>{pct(c.share)}</b>
-                          </div>
-                        )}
-                      </td>
-                      <td className="r num">{num(c.orders)}</td>
-                      <td className="r num">{c.untracked ? <Dash /> : pct(c.conversion_rate)}</td>
-                      <td className="r strong num">{inr(c.revenue)}</td>
-                    </tr>
-                    {expandable && showSites && otherSites.map((x) => (
-                      <tr key={x.name}>
-                        <td style={{ paddingLeft: 34, color: 'var(--ds-color-text-muted)' }}>↳ {x.name}</td>
-                        {hasVis && <td className="r num"><Dash /></td>}
-                        <td className="r num">{num(x.sessions)}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
-                              <div style={{ width: `${Math.min(100, x.share)}%`, height: '100%', background: chColor('Referral'), opacity: 0.7 }} />
-                            </div>
-                            <span className="num" style={{ fontSize: 12, minWidth: 46, textAlign: 'right', color: 'var(--ds-color-text-muted)' }}>{pct(x.share)}</span>
-                          </div>
-                        </td>
-                        <td className="r num">{num(x.orders)}</td>
-                        <td className="r num">{pct(x.conversion)}</td>
-                        <td className="r num">{inr(x.revenue)}</td>
-                      </tr>
-                    ))}
-                    </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div className="tr2-grid">
+            <ChartCard span={8} title={oneDay ? 'Visits by hour' : 'Visits by day'} hint="India time" info={INFO.overTime} style={dim} busy={busy}>
+              {overTime.some((d) => d.value > 0)
+                ? <VBars data={overTime} labelEvery={oneDay ? 2 : Math.max(1, Math.ceil(overTime.length / 12))} />
+                : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+            <ChartCard span={4} title="Where visitors come from" hint="share of visits" info={INFO.sources} style={dim} busy={busy}>
+              {sources.length ? <Donut data={sources} sub="visits" /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+
+            {vc ? (
+              <ChartCard span={12} title="Visit check" hint="green 80%+, orange 50–80%, red under 50%" info={INFO.visitCheck} style={dim} busy={busy}>
+                <div className="tr2-gauge-row">
+                  <VisitGauge total={vc.visits} checks={checks} />
+                  <ul className="tr2-checks">
+                    {checks.map((c) => {
+                      const tone = c.tone || gaugeTone(c.pct);
+                      return (
+                        <li key={c.key}>
+                          <i className={`rep-vc-dot rep-vc-${gaugeTone(c.pct)}`} />
+                          <span className="rep-vc-name">{c.name}<span className={`rep-vc-chip rep-vc-${tone}`}>{c.chip}</span></span>
+                          <span className="rep-vc-val num">{c.value}</span>
+                          <span className="rep-vc-text">{c.text}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </ChartCard>
+            ) : null}
+
+            <ChartCard span={8} title="How far visitors got" hint="visits that reached each step" info={INFO.funnel} style={dim} busy={busy}>
+              {funnelBase ? <HBars data={funnel} max={funnelBase} /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+            <ChartCard span={4} title="Paid, organic, direct" hint={split.length ? `${paidShare}% from ads` : undefined} info={INFO.split} style={dim} busy={busy}>
+              {split.length ? <Donut data={split} sub="visits" /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+
+            <ChartCard span={8} title="Meta ads by placement" hint={placementsFromMeta ? 'landing page views, from Ads Manager' : 'our visits per placement'} info={INFO.placements} style={dim} busy={busy}>
+              {placements.length
+                ? <HBars data={placements} unit={placementsFromMeta ? 'landing page views' : 'visits'} />
+                : <Empty>Nothing yet. Connect the store’s ad account in the Ads tab (synced every 3 hours), and end each ad’s URL parameters with &amp;placement=&#123;&#123;placement&#125;&#125;.</Empty>}
+            </ChartCard>
+            <ChartCard span={4} title="Meta platforms" hint={placementsFromMeta ? 'landing page views' : 'visits'} info={INFO.platforms} style={dim} busy={busy}>
+              {platformTotals.length ? <Donut data={platformTotals} sub={placementsFromMeta ? 'page views' : 'visits'} unit={placementsFromMeta ? 'landing page views' : 'visits'} /> : <Empty>No Meta placement data yet.</Empty>}
+            </ChartCard>
+
+            <ChartCard span={4} title="Device" info={INFO.devices} style={dim} busy={busy}>
+              {devices.length ? <Donut data={devices} sub="visits" /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+            <ChartCard span={4} title="Top states" hint="visits" info={INFO.states} style={dim} busy={busy}>
+              {states.length ? <HBars data={states} /> : <Empty>No location data yet. It comes from the store’s own page-load counter.</Empty>}
+            </ChartCard>
+            <ChartCard span={4} title="Landing pages" hint="first page of each visit" info={INFO.pages} style={dim} busy={busy}>
+              {pages.length ? <HBars data={pages} /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
+
+            <ChartCard span={12} title="Ad campaigns" hint="visits per campaign" info={INFO.campaigns} style={dim} busy={busy}>
+              {campaigns.length ? <HBars data={campaigns} /> : <Empty>No visits in this period yet.</Empty>}
+            </ChartCard>
           </div>
-
-          {/* ── 2. Where visitors left ── */}
-          <div className="rep-panel" style={dim} aria-busy={busy}>
-            <div className="rep-ph"><h3>Where visitors left</h3><span className="hint">what each visitor did before leaving</span></div>
-            {drop.totals.visits > 0 ? (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 18 }}>
-                  {leftSlices(drop.totals).map((sl) => (
-                    <div key={sl.key} className="rep-tile" style={{ borderTop: `3px solid ${sl.color}` }}>
-                      <div className="rep-tl">{sl.label}</div>
-                      <div className="rep-tv num">{pct(sl.pct)}</div>
-                      <div className="rep-ts">{plural(sl.n, 'visitor')}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {drop.channels.map((r) => (
-                    <div key={r.channel} style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 160px) 1fr 70px', gap: 12, alignItems: 'center' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><Dot color={chColor(r.channel)} />{chLabel(r.channel)}</span>
-                      <div style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', background: 'var(--ds-color-surface-soft)' }}>
-                        {leftSlices(r).filter((sl) => sl.n > 0).map((sl) => (
-                          <div key={sl.key} title={`${sl.short}: ${plural(sl.n, 'visitor')} (${pct(sl.pct)})`}
-                            style={{ width: `${sl.pct}%`, background: sl.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {sl.pct >= 12 ? `${Math.round(sl.pct)}%` : ''}
-                          </div>
-                        ))}
-                      </div>
-                      <span className="num" style={{ fontSize: 12, color: 'var(--ds-color-text-muted)', textAlign: 'right' }}>{plural(r.visits, 'visit')}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 14, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>
-                  {LEFT_STAGES.map((st) => (
-                    <span key={st.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 3, background: st.color }} />{st.short}
-                    </span>
-                  ))}
-                </div>
-              </>
-            ) : <span className="hint">No tracked visits in this period.</span>}
-          </div>
-
-          {/* ── Where visitors are + device (server-counted) ── */}
-          {hasVis && (
-            <div className="rep-masonry" style={dim} aria-busy={busy}>
-              <div className="rep-panel rep-panel--flush">
-                <div className="rep-ph">
-                  <h3>Where visitors are</h3>
-                  <span style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" className={`order-sync-main-btn${geoView === 'states' ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setGeoView('states')}>States</button>
-                    <button type="button" className={`order-sync-main-btn${geoView === 'cities' ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setGeoView('cities')}>Cities</button>
-                  </span>
-                </div>
-                {(() => {
-                  const list = (geoView === 'cities' ? vis.cities : vis.states) || [];
-                  return (
-                    <div className="rep-tbl-wrap">
-                      <table className="rep-table">
-                        <thead><tr><th>{geoView === 'cities' ? 'City' : 'State'}</th><th className="r">Visitors</th><th style={{ width: '34%' }}>Share of visitors</th><th className="r">Page loads</th></tr></thead>
-                        <tbody>
-                          {list.length === 0 ? <Empty cols={4} text="No visitors from India in this period" /> : list.map((x) => (
-                            <tr key={`${x.city || ''}|${x.state}`}>
-                              <td className="strong">
-                                {geoView === 'cities' ? x.city : x.state}
-                                {geoView === 'cities' && x.state && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{x.state}</span>}
-                              </td>
-                              <td className="r num">{num(x.sessions)}</td>
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--ds-color-surface-soft)', overflow: 'hidden', minWidth: 60 }}>
-                                    <div style={{ width: `${Math.min(100, Number(x.share) || 0)}%`, height: '100%', background: 'var(--ds-color-brand)' }} />
-                                  </div>
-                                  <span className="num" style={{ fontSize: 12, minWidth: 46, textAlign: 'right', color: 'var(--ds-color-text-muted)' }}>{pct(x.share)}</span>
-                                </div>
-                              </td>
-                              <td className="r num">{num(x.landings)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="rep-panel">
-                <div className="rep-ph"><h3>Device</h3><span className="hint">share of {plural(t?.visitors, 'visitor')}</span></div>
-                <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 14 }}>
-                  {(vis.devices || []).filter((d) => d.share > 0).map((d) => (
-                    <div key={d.device} title={`${DEVICE_LABEL[d.device] || d.device}: ${pct(d.share)}`}
-                      style={{ width: `${d.share}%`, background: DEVICE_COLORS[d.device] || DEVICE_COLORS.unknown }} />
-                  ))}
-                </div>
-                <div className="rep-tiles" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-                  {(vis.devices || []).filter((d) => d.sessions > 0 || d.device !== 'unknown').map((d) => (
-                    <div className="rep-tile" key={d.device}>
-                      <div className="rep-tl"><Dot color={DEVICE_COLORS[d.device] || DEVICE_COLORS.unknown} />{DEVICE_LABEL[d.device] || d.device}</div>
-                      <div className="rep-tv num">{pct(d.share)}</div>
-                      <div className="rep-ts">{plural(d.sessions, 'visitor')} · {plural(d.landings, 'page load')}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="rep-masonry" style={dim} aria-busy={busy}>
-            {/* Paid / Organic / Direct */}
-            <div className="rep-panel">
-              <div className="rep-ph"><h3>Paid vs organic vs direct</h3><span className="hint">share of revenue</span></div>
-              {splitRevenue > 0 && (
-                <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'var(--ds-color-surface-soft)', marginBottom: 14 }}>
-                  {split.map((r) => (
-                    <div key={r.type} title={`${r.type}: ${inr(r.revenue)}`}
-                      style={{ width: `${((Number(r.revenue) || 0) / splitRevenue) * 100}%`, background: SPLIT_COLORS[r.type] }} />
-                  ))}
-                </div>
-              )}
-              <div className="rep-tiles" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-                {split.map((r) => (
-                  <div className="rep-tile" key={r.type}>
-                    <div className="rep-tl"><Dot color={SPLIT_COLORS[r.type]} />{r.type}</div>
-                    <div className="rep-tv num">{inr(r.revenue)}</div>
-                    <div className="rep-ts">{plural(r.orders, 'order')} · {plural(r.sessions, 'visit')}{r.conversion_rate != null ? ` · ${pct(r.conversion_rate)} conv.` : ''}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Per brand — only when looking at all brands */}
-            {!brandId && (
-              <div className="rep-panel rep-panel--flush">
-                <div className="rep-ph"><h3>By brand</h3></div>
-                <div className="rep-tbl-wrap">
-                  <table className="rep-table">
-                    <thead><tr><th>Brand</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th className="r">Cart</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                    <tbody>
-                      {brands.filter((b) => b.sessions || b.orders || b.visitors).length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No visits or orders in this period" />
-                        : brands.filter((b) => b.sessions || b.orders || b.visitors).map((b) => (
-                          <tr key={b.brand_id}>
-                            <td className="strong">{b.brand}</td>
-                            {hasVis && <td className="r num">{num(b.visitors)}</td>}
-                            <td className="r num">{num(b.sessions)}</td>
-                            <td className="r num">{num(b.carts)}</td>
-                            <td className="r num">{num(b.orders)}</td>
-                            <td className="r num">{pct(b.conversion_rate)}</td>
-                            <td className="r strong num">{inr(b.revenue)}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── 3. Ad campaigns, grouped by platform ── */}
-          <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
-            <div className="rep-ph"><h3>Visits by landing page</h3><span className="hint">the first page of each tracked visit</span></div>
-            <div className="rep-tbl-wrap">
-              <table className="rep-table">
-                <thead><tr><th>Page</th><th className="r">Visits</th><th className="r">Share</th></tr></thead>
-                <tbody>
-                  {(data?.landingPages || []).length ? data.landingPages.map((lp) => (
-                    <tr key={lp.path}>
-                      <td style={{ overflowWrap: 'anywhere' }}><span style={{ color: 'var(--ds-color-text-muted)' }}>{lp.type} · </span>{lp.path}</td>
-                      <td className="r num">{num(lp.sessions)}</td>
-                      <td className="r num">{pct(lp.share)}</td>
-                    </tr>
-                  )) : <Empty cols={3} text="No tracked visits in this period" />}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="rep-panel rep-panel--flush" style={dim} aria-busy={busy}>
-            <div className="rep-ph">
-              <h3>Ad campaigns by platform</h3>
-              <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button type="button" className={`order-sync-main-btn${showAdsets ? ' order-sync-main-btn--primary' : ''}`} onClick={() => setShowAdsets((v) => !v)} disabled={!hasAdsets}>
-                  {showAdsets ? 'Hide ad sets & ads' : 'Show ad sets & ads'}
-                </button>
-                <button type="button" className="order-sync-main-btn" onClick={exportCampaigns} disabled={!campaigns.length}><DlIcon /> CSV</button>
-              </span>
-            </div>
-            <div className="rep-tbl-wrap">
-              <table className="rep-table">
-                <thead><tr><th>Platform / campaign</th>{hasVis && <th className="r" title="Counted by the store on every page load">Visitors</th>}<th className="r">Visits</th><th className="r">Share</th><th className="r">Orders</th><th className="r">Conv.</th><th className="r">Revenue</th></tr></thead>
-                <tbody>
-                  {platforms.length === 0 ? <Empty cols={hasVis ? 7 : 6} text="No campaign traffic in this period" /> : platforms.map((g) => {
-                    const isSites = g.channel === 'Referral' && otherSites.length > 0;
-                    const rows = isSites ? otherSites : (g.tagged ? g.campaigns : []);
-                    const open = openGroups[g.channel] ?? g.campaigns.length <= 3;
-                    return (
-                      <React.Fragment key={g.channel}>
-                        <tr onClick={() => rows.length && setOpenGroups((m) => ({ ...m, [g.channel]: !open }))}
-                          style={{ cursor: rows.length ? 'pointer' : 'default', background: 'var(--ds-color-surface-soft)' }}>
-                          <td className="strong" style={{ whiteSpace: 'nowrap' }}>
-                            <span style={{ display: 'inline-block', width: 14, color: 'var(--ds-color-text-faint)' }}>{rows.length ? (open ? '▾' : '▸') : ''}</span>
-                            <Dot color={chColor(g.channel)} />{chLabel(g.channel)}
-                            {(isSites || g.tagged > 0) && <span style={{ fontWeight: 400, color: 'var(--ds-color-text-faint)', marginLeft: 6 }}>{isSites ? plural(otherSites.length, 'site') : plural(g.tagged, 'campaign')}</span>}
-                          </td>
-                          {hasVis && <td className="r strong num">{g.untracked ? <Dash /> : num(visitorsByChannel.get(g.channel) || 0)}</td>}
-                          <td className="r strong num">{g.untracked ? <Dash /> : num(g.sessions)}</td>
-                          <td className="r num">{g.untracked ? <Dash /> : pct(g.share)}</td>
-                          <td className="r strong num">{num(g.orders)}</td>
-                          <td className="r num">{g.untracked ? <Dash /> : pct(g.conversion)}</td>
-                          <td className="r strong num">{inr(g.revenue)}</td>
-                        </tr>
-                        {open && rows.map((c) => (
-                          <React.Fragment key={c.name}>
-                            <tr>
-                              <td style={{ paddingLeft: 40 }}>
-                                {c.name === 'none' ? <span style={{ color: 'var(--ds-color-text-faint)' }}>Without a campaign tag (posts, bio links, shares)</span> : c.name}
-                                {isSites && c.campaigns.length > 0 && <span style={{ color: 'var(--ds-color-text-faint)', fontSize: 12 }}> · {c.campaigns.join(', ')}</span>}
-                                {!isSites && c.utm?.length > 0 && (
-                                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--ds-font-mono)', fontSize: 11, color: 'var(--ds-color-text-faint)', overflowWrap: 'anywhere' }}>
-                                    {c.name !== 'none' && `utm_campaign=${c.name} · `}{c.utm.join(' | ')}
-                                  </span>
-                                )}
-                              </td>
-                              {hasVis && <td className="r num">{isSites ? <Dash /> : num(campaignVisitors(g.channel, c.name))}</td>}
-                              <td className="r num">{num(c.sessions)}</td>
-                              <td className="r num">{pct(c.share)}</td>
-                              <td className="r num">{num(c.orders)}</td>
-                              <td className="r num">{pct(c.conversion)}</td>
-                              <td className="r num">{inr(c.revenue)}</td>
-                            </tr>
-                            {showAdsets && !isSites && (c.adsets.length > 1 || c.adsets.some((a) => a.ads.some((d) => d.name !== 'none'))) && c.adsets.map((a) => (
-                              <React.Fragment key={a.name}>
-                                <tr>
-                                  <td style={{ paddingLeft: 64, fontSize: 12, color: 'var(--ds-color-text-muted)' }}>↳ Ad set: {a.name === 'none' ? 'no ad set tag (utm_term)' : a.name}</td>
-                                  {hasVis && <td className="r num" style={{ fontSize: 12 }}><Dash /></td>}
-                                  <td className="r num" style={{ fontSize: 12 }}>{num(a.sessions)}</td>
-                                  <td className="r num" style={{ fontSize: 12 }}>{pct(a.share)}</td>
-                                  <td className="r num" style={{ fontSize: 12 }}>{num(a.orders)}</td>
-                                  <td className="r num" style={{ fontSize: 12 }}>{pct(a.conversion)}</td>
-                                  <td className="r num" style={{ fontSize: 12 }}>{inr(a.revenue)}</td>
-                                </tr>
-                                {a.ads.filter((d) => d.name !== 'none' || a.ads.length > 1).map((d) => (
-                                  <tr key={d.name}>
-                                    <td style={{ paddingLeft: 88, fontSize: 12, color: 'var(--ds-color-text-faint)' }}>
-                                      ↳ Ad: {d.name === 'none' ? 'no ad tag (utm_content)' : d.name}
-                                      {d.creatives.length > 0 && <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 11 }}> · creative {d.creatives.join(', ')}</span>}
-                                    </td>
-                                    {hasVis && <td className="r num" style={{ fontSize: 12 }}><Dash /></td>}
-                                    <td className="r num" style={{ fontSize: 12 }}>{num(d.sessions)}</td>
-                                    <td className="r num" style={{ fontSize: 12 }}>{pct(d.share)}</td>
-                                    <td className="r num" style={{ fontSize: 12 }}>{num(d.orders)}</td>
-                                    <td className="r num" style={{ fontSize: 12 }}>{pct(d.conversion)}</td>
-                                    <td className="r num" style={{ fontSize: 12 }}>{inr(d.revenue)}</td>
-                                  </tr>
-                                ))}
-                              </React.Fragment>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {data?.visitCheck && <VisitCheck vc={data.visitCheck} dim={dim} busy={busy} />}
-
-          {howCounted}
         </>
       )}
     </div>

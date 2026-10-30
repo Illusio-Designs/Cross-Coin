@@ -681,6 +681,37 @@ exports.getBrandTraffic = async (req, res) => {
       type: path === '/' ? 'Home' : /^\/products?\//.test(path) ? 'Product' : /^\/(collections?|categories|category|shop)\b/.test(path) ? 'Collection' : /^\/cart\b/.test(path) ? 'Cart' : /^\/(blogs?|journal)\b/.test(path) ? 'Blog' : 'Page',
     })).sort((a, b) => b.sessions - a.sessions).slice(0, 15);
 
+    // Tracked visits by hour of the day (India time) and by device type, for
+    // the Traffic page's charts. Device is read from the browser's user agent
+    // (the store-counted figures may not exist for a store).
+    let hourly = [];
+    let trackedDevices = [];
+    try {
+      const [h, d] = await Promise.all([
+        sequelize.query(
+          `SELECT HOUR(CONVERT_TZ(created_at, '+00:00', '+05:30')) AS hour, COUNT(DISTINCT session_id) AS visits
+             FROM utm_tracking WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt}
+            GROUP BY hour`,
+          { replacements: repl, type: QueryTypes.SELECT }),
+        sequelize.query(
+          `SELECT CASE
+                    WHEN LOWER(user_agent) LIKE '%ipad%' OR LOWER(user_agent) LIKE '%tablet%'
+                      OR (LOWER(user_agent) LIKE '%android%' AND LOWER(user_agent) NOT LIKE '%mobile%') THEN 'tablet'
+                    WHEN LOWER(user_agent) LIKE '%mobi%' OR LOWER(user_agent) LIKE '%iphone%' OR LOWER(user_agent) LIKE '%android%' THEN 'mobile'
+                    WHEN user_agent IS NULL OR user_agent = '' THEN 'unknown'
+                    ELSE 'desktop' END AS device,
+                  COUNT(DISTINCT session_id) AS visits
+             FROM utm_tracking WHERE created_at BETWEEN :start AND :end AND ${NOT_BOT}${bFilt}
+            GROUP BY device ORDER BY visits DESC`,
+          { replacements: repl, type: QueryTypes.SELECT }),
+      ]);
+      const byHour = new Map(h.map((r) => [Number(r.hour), Number(r.visits) || 0]));
+      hourly = Array.from({ length: 24 }, (_, i) => ({ hour: i, visits: byHour.get(i) || 0 }));
+      trackedDevices = d.map((r) => ({ device: r.device, visits: Number(r.visits) || 0 }));
+    } catch (e) {
+      logger.warn && logger.warn('hourly/device breakdown skipped: ' + e.message);
+    }
+
     // The latest 10 tracked visits, one by one, plus a check across all of them —
     // to see what the Visits number is made of (an ad tap, someone browsing,
     // the same phone coming back, or a page nobody looked at).
@@ -834,6 +865,8 @@ exports.getBrandTraffic = async (req, res) => {
     res.json({
       success: true,
       visitCheck,
+      hourly,
+      trackedDevices,
       range: { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) },
       // First India day the report shows (see TRAFFIC_DATA_FROM).
       dataFrom: TRAFFIC_DATA_FROM,
