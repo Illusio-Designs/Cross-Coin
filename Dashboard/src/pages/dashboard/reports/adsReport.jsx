@@ -49,7 +49,7 @@ const roasTone = (v) => (v == null ? 'neutral' : v < 1 ? 'problem' : v <= 2 ? 'n
 const muted = { color: 'var(--ds-color-text-muted)' };
 const faint = { color: 'var(--ds-color-text-faint)' };
 const tabular = { fontVariantNumeric: 'tabular-nums' };
-const URL_PARAMS = 'utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}';
+const URL_PARAMS = 'utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&placement={{placement}}';
 const LEVEL_TXT = { campaign: 'Campaign', adset: 'Ad set', ad: 'Ad' };
 const GAP_REASON = {
   no_spend: 'No spend on Meta under this name in this period — renamed, or run from an ad account that isn’t linked.',

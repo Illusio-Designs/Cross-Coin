@@ -290,7 +290,8 @@ Compare **landing page views ↔ our visits**. If visits are far below link clic
 ### 9.4 Ads checklist
 
 - Every ad carries URL parameters:
-  `utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}`
+  `utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&placement={{placement}}`
+- `placement` tells the report where on Meta each visit came from. Placements like **WhatsApp Status** and **Audience Network** open the link in the phone's normal browser (Chrome), with no Facebook-app label and no referrer, so without it they look like plain Facebook or Direct visits.
 - Without them GA files Meta ad visits under **(direct) / (none)** — GA ignores `fbclid`, and Android often opens the link without a referrer.
 - Campaign goal **Sales** (Purchase), not Traffic, once the pixel fires Purchase.
 - Domain verified in Meta Business (meta tag in the root layout).

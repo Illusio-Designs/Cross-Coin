@@ -725,6 +725,32 @@ exports.getBrandTraffic = async (req, res) => {
           { replacements: { startDay: startDayOf(start), endDay: dayOf(end), ...(hasBrand ? { brandId: brandIdNum } : {}) }, type: QueryTypes.SELECT });
         if (m && Number(m.n) > 0) metaClicks = Number(m.clicks) || 0;
       } catch (_) { /* no ad spend synced yet */ }
+      // Where on Meta each ad visit came from (Facebook feed, Reels, Instagram,
+      // WhatsApp Status, Audience Network…), when the ad's URL parameters
+      // carry Meta's placement: …&placement={{placement}} (or utm_placement).
+      let placements = [];
+      try {
+        const PLACEMENT = `SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(u.landing_page, 'placement=', -1), '&', 1), '#', 1)`;
+        const rows = await sequelize.query(
+          `SELECT ${PLACEMENT} AS placement,
+                  COUNT(DISTINCT u.session_id) AS visits,
+                  COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM funnel_events fe WHERE fe.session_id = u.session_id) THEN u.session_id END) AS active,
+                  COUNT(DISTINCT o.id) AS orders
+             FROM utm_tracking u
+             LEFT JOIN orders o ON o.utm_tracking_id = u.id
+                  AND (o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))
+            WHERE u.created_at BETWEEN :start AND :end AND u.landing_page LIKE '%placement=%' AND ${notBot('u.')}${bFiltU}
+            GROUP BY placement ORDER BY visits DESC LIMIT 20`,
+          { replacements: repl, type: QueryTypes.SELECT });
+        const label = (v) => {
+          let t = String(v || '');
+          try { t = decodeURIComponent(t.replace(/\+/g, ' ')); } catch (_) { /* keep raw */ }
+          return t.replace(/_/g, ' ').trim() || 'unknown';
+        };
+        placements = rows.map((r) => ({ placement: label(r.placement), visits: Number(r.visits) || 0, active: Number(r.active) || 0, orders: Number(r.orders) || 0 }));
+      } catch (e) {
+        logger.warn && logger.warn('placement breakdown skipped: ' + e.message);
+      }
       const usesOf = new Map(clickIds.map((r) => [r.id, Number(r.uses) || 0]));
       const fbclidOf = (url) => { const m = /[?&]fbclid=([^&#]*)/.exec(String(url || '')); return m ? m[1] : null; };
       const sm = summary[0] || {};
@@ -750,6 +776,7 @@ exports.getBrandTraffic = async (req, res) => {
         fbclid: Number(sm.fbclid) || 0,
         fbclidIds: Number(sm.fbclid_ids) || 0,
         metaClicks,
+        placements,
         paid: Number(sm.paid) || 0,
         active: Number(sm.active) || 0,
         latest: latest.map((r) => ({

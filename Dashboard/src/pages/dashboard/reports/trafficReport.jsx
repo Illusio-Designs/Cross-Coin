@@ -278,6 +278,27 @@ function VisitCheck({ vc, dim, busy }) {
         </div>
       </div>
 
+      <div className="rep-vc-listhead"><span className="rep-kl">Where on Meta the ad visits came from</span><span className="rep-kf">Facebook feed, Reels, Instagram, WhatsApp Status, other apps…</span></div>
+      <div className="rep-tbl-wrap" style={{ marginBottom: 20 }}>
+        <table className="rep-table">
+          <thead><tr><th>Placement</th><th className="r">Visits</th><th className="r">Viewed a product</th><th className="r">Orders</th></tr></thead>
+          <tbody>
+            {(vc.placements || []).length ? vc.placements.map((p) => (
+              <tr key={p.placement}>
+                <td>{p.placement}</td>
+                <td className="r num">{num(p.visits)}</td>
+                <td className="r num">{num(p.active)} <span style={{ color: 'var(--ds-color-text-muted)' }}>({vcPct(p.active, p.visits)}%)</span></td>
+                <td className="r num">{num(p.orders)}</td>
+              </tr>
+            )) : (
+              <tr><td colSpan={4} style={{ color: 'var(--ds-color-text-muted)', fontSize: 13, lineHeight: 1.5 }}>
+                No placement on the ad links yet. Add <code>&amp;placement=&#123;&#123;placement&#125;&#125;</code> to the end of each ad’s URL parameters in Ads Manager (Ad → Tracking → URL parameters) and new ad visits will be split here by Facebook feed, Reels, Instagram, WhatsApp Status and other apps.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
       <div className="rep-vc-listhead"><span className="rep-kl">Latest 10 visits</span><span className="rep-kf">newest first</span></div>
       <div className="rep-tbl-wrap">
         <table className="rep-table">
