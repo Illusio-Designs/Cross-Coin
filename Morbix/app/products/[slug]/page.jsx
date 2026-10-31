@@ -9,6 +9,7 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks';
 import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
+import LazyMount from '@/components/common/LazyMount';
 import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers, brandFetch } from '@/lib/api';
 import '@/app/styles/pdp.css';
 
@@ -122,30 +123,47 @@ export default async function ProductPage({ params }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
 
-      <ProductVideos videos={product.videos} />
+      {/* Everything below the first screen is built only as the shopper
+          scrolls near it (LazyMount), so the photo, price and Buy button
+          load and respond first. The product's own text (conditions,
+          manufacturing details) stays in the page for search engines and is
+          only skipped by the browser until it is scrolled to (pdp-later). */}
+      <LazyMount minHeight={480}>
+        <ProductVideos videos={product.videos} />
+      </LazyMount>
 
       {/* ── Conditions it can help with ── */}
-      <ConditionsSection />
-      <CustomerComfortInsights image={product.detailImage} />
+      <div className="pdp-later">
+        <ConditionsSection />
+      </div>
+      <LazyMount minHeight={520}>
+        <CustomerComfortInsights image={product.detailImage} />
+      </LazyMount>
 
       {/* ── Manufacturing details ── */}
-      <div className="pdd-wrap">
+      <div className="pdd-wrap pdp-later">
         <ProductDetailBlocks product={product} />
       </div>
 
       {/* ── Reviews: brand-wide moving wall + Write-a-review for this product ── */}
-      <Suspense fallback={null}>
-        <PdpReviews productId={product.id} />
-      </Suspense>
+      <LazyMount minHeight={520}>
+        <Suspense fallback={null}>
+          <PdpReviews productId={product.id} />
+        </Suspense>
+      </LazyMount>
 
-      <Suspense fallback={null}>
-        <PdpRelated product={product} />
-      </Suspense>
+      <LazyMount minHeight={460}>
+        <Suspense fallback={null}>
+          <PdpRelated product={product} />
+        </Suspense>
+      </LazyMount>
 
       {/* ── FAQ (admin-managed) — last section before the footer ── */}
-      <Suspense fallback={null}>
-        <PdpFaqs />
-      </Suspense>
+      <LazyMount minHeight={360}>
+        <Suspense fallback={null}>
+          <PdpFaqs />
+        </Suspense>
+      </LazyMount>
     </div>
   );
 }

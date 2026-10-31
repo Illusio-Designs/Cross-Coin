@@ -268,3 +268,8 @@
 /* Original customer comfort infographic, served by the frontend. */
 .customer-comfort-insights { width: 100%; max-width: var(--maxw); margin: 24px auto 0; overflow: hidden; border-radius: var(--r-lg); }
 .customer-comfort-insights img { display: block; width: 100%; height: auto; }
+
+/* Sections below the first screen: the browser skips laying them out and
+   painting them until they come near the screen (they stay in the page for
+   search engines). The size hint keeps the scrollbar steady. */
+.pdp-later { content-visibility: auto; contain-intrinsic-size: auto 600px; }
