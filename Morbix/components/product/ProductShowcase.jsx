@@ -46,8 +46,35 @@ function tidyDescription(html) {
       const src = raw.replace(/&amp;/g, '&');
       const set = ikSrcSet(src, DESC_WIDTHS);
       const attr = (v) => v.replace(/&/g, '&amp;');
-      return `${a}src="${attr(ikSrc(src, 1100))}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+      // data-* only: the picture is fetched when it comes near the screen
+      // (DescriptionHtml below), not with the first screen — the browser's
+      // own lazy loading starts far earlier on slow connections.
+      return `${a}data-src="${attr(ikSrc(src, 1100))}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
     });
+}
+
+// The product description (admin rich text) with its pictures attached only
+// when they are within ~300px of the screen.
+function DescriptionHtml({ html }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return undefined;
+    const imgs = [...root.querySelectorAll('img[data-src]')];
+    const show = (img) => {
+      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
+      img.src = img.dataset.src;
+      img.removeAttribute('data-src');
+      img.removeAttribute('data-srcset');
+    };
+    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: '300px 0px' });
+    imgs.forEach((img) => io.observe(img));
+    return () => io.disconnect();
+  }, [html]);
+  return <div ref={ref} className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // Description pictures fill the "About" card: the screen width less the page
@@ -638,7 +665,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       <div className="pdp-about">
         <h2>Product description</h2>
         {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-          ? <div className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: tidyDescription(product.descriptionHtml) }} />
+          ? <DescriptionHtml html={tidyDescription(product.descriptionHtml)} />
           : product.description
             ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
             : <p className="muted">No description available for this product yet.</p>}

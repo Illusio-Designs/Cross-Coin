@@ -90,7 +90,7 @@ export default async function RootLayout({ children }) {
             scroll or key (globals.css: html:not(.mx-go) .marquee-track). A bar
             in motion from the first frame keeps the screen "changing" while the
             page loads, which page-speed tests count against it. */}
-        <script dangerouslySetInnerHTML={{ __html: "(function(){var d=document.documentElement,e=['pointerdown','touchstart','keydown','scroll','mousemove'],g=function(){d.classList.add('mx-go');e.forEach(function(k){removeEventListener(k,g)})};e.forEach(function(k){addEventListener(k,g,{passive:true})})})()" }} />
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var d=document.documentElement,e=['pointerdown','touchstart','keydown','wheel'],g=function(){d.classList.add('mx-go');e.forEach(function(k){removeEventListener(k,g)})};e.forEach(function(k){addEventListener(k,g,{passive:true})})})()" }} />
         {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
         <noscript><style>{'.shimmer-img{opacity:1!important}.shimmer-img-skeleton{display:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll

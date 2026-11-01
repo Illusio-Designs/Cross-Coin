@@ -43,7 +43,7 @@ let preloadArmed = false;
 export function preloadShiprocket() {
   if (preloadArmed || typeof window === 'undefined') return;
   preloadArmed = true;
-  const evs = ['pointerdown', 'touchstart', 'keydown', 'scroll'];
+  const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
   const go = () => {
     evs.forEach((e) => window.removeEventListener(e, go));
     const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));

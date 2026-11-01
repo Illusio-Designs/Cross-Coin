@@ -39,7 +39,8 @@ export default function SentryInit() {
     let timer = null;
     let started = false;
     let cancelled = false;
-    const TRIGGERS = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    // Real input only (pages fire scroll events by themselves while loading).
+    const TRIGGERS = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
 
     const load = () => {
       if (cancelled) return;
@@ -63,7 +64,7 @@ export default function SentryInit() {
         .catch(() => { /* SDK failed to load — storefront unaffected */ });
     };
     // The SDK is large JavaScript. It loads when the shopper first
-    // interacts (tap, key, scroll), when an error happens, or 30 s after the
+    // interacts (tap, key, mouse wheel), when an error happens, or 30 s after the
     // page has loaded — whichever comes first — and then at the next idle
     // moment, so its parsing never lands on the first paint, on hydration or
     // on the tap itself. (Loaded on a timer a few seconds after load it still

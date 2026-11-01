@@ -45,6 +45,9 @@
 /* Rich product description (server-sanitized HTML: formatting + <img>) */
 .pdp-desc-rich { color: var(--ink-soft); font-size: 15px; line-height: 1.65; }
 .pdp-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+/* A description picture not yet fetched (attached when near the screen) keeps
+   its box from its width/height attributes. */
+.pdp-desc-rich img[data-src] { background: #f1f4f6; }
 .pdp-desc-rich p { color: var(--ink-soft); font-size: 15px; margin: 0 0 14px; }
 .pdp-desc-rich h2, .pdp-desc-rich h3.rt-lg { color: var(--ink); font-size: clamp(19px, 2.2vw, 23px); font-weight: 900; margin: 22px 0 10px; }
 .pdp-desc-rich h4 { color: var(--ink); font-size: 15px; font-weight: 800; margin: 16px 0 6px; }

@@ -61,15 +61,17 @@ export default function Analytics({ initial = null }) {
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   // Visitors who did NOT come from an ad get Google's tags (GA4, Tag
-  // Manager) and Clarity once they first touch, scroll or type — or after 20
-  // seconds — instead of during page load: those scripts (~300 KB) are what
+  // Manager) and Clarity once they first touch, click, type or use the mouse
+  // wheel — or after 20 seconds — instead of during page load: those scripts (~300 KB) are what
   // kept the phone busy while the product photo and Buy button were loading.
   // Nothing is lost: page views and events wait in a queue until they load.
   // Visitors from an ad (paid) still get everything at once.
   const [late, setLate] = useState(false);
   useEffect(() => {
     if (!cfg || cfg.paid || late) return undefined;
-    const evs = ['pointerdown', 'touchstart', 'keydown', 'scroll', 'mousemove'];
+    // Real input only: a page fires scroll events by itself while it loads
+    // (smooth scrolling, scroll restoration), which started everything early.
+    const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
     let timer = null;
     const go = () => { evs.forEach((e) => window.removeEventListener(e, go)); clearTimeout(timer); setLate(true); };
     evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
@@ -103,7 +105,7 @@ export default function Analytics({ initial = null }) {
               n.queue=[];var L=function(){t=b.createElement(e);t.async=!0;
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)};
-              var G=function(){var d=0,x=['pointerdown','touchstart','keydown','scroll','mousemove'],g=function(){if(d)return;d=1;x.forEach(function(k){f.removeEventListener(k,g)});f.requestIdleCallback?f.requestIdleCallback(L,{timeout:2000}):L()};x.forEach(function(k){f.addEventListener(k,g,{once:true,passive:true})});setTimeout(g,20000)};
+              var G=function(){var d=0,x=['pointerdown','touchstart','keydown','wheel'],g=function(){if(d)return;d=1;x.forEach(function(k){f.removeEventListener(k,g)});f.requestIdleCallback?f.requestIdleCallback(L,{timeout:2000}):L()};x.forEach(function(k){f.addEventListener(k,g,{once:true,passive:true})});setTimeout(g,20000)};
               /[?&]fbclid=/.test(f.location.search)?L():b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               var am={};try{var c=document.cookie.match(/(?:^|; )_mvid=([a-f0-9]{64})/);if(c)am.external_id=c[1];var r=JSON.parse(window.localStorage.getItem('fb_am')||'null');if(r&&/^[a-f0-9]{64}$/.test(r.em||''))am.em=r.em;if(r&&/^[a-f0-9]{64}$/.test(r.ph||''))am.ph=r.ph;}catch(x){}
