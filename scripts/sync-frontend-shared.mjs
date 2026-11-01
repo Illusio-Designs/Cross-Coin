@@ -91,6 +91,11 @@ const FILES = [
     dest: (base) => `${base}components/SentryInit.jsx`,
   },
   {
+    // The slice of the Sentry SDK SentryInit loads (next to it).
+    source: 'shared/frontend/sentryLite.js',
+    dest: (base) => `${base}components/sentryLite.js`,
+  },
+  {
     // WhatsApp abandoned-cart recovery link: read ?recover/&cart, fetch the
     // server-side cart by token, build the capture items (all 7).
     source: 'shared/frontend/cartRecovery.js',

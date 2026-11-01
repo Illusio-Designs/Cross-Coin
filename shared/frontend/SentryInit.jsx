@@ -5,7 +5,8 @@ import { useEffect } from 'react';
 /**
  * Sentry bootstrap — SAFE BY DESIGN.
  *
- * Loads @sentry/browser via a dynamic import on the shopper's first
+ * Loads Sentry (init + captureException only, see sentryLite.js) via a
+ * dynamic import on the shopper's first
  * interaction, the first error, or 30 s after load (then when the browser is
  * idle), so it can NEVER block the build, the first paint or hydration; errors
  * before that are queued and sent once it is ready, and every failure path is
@@ -42,7 +43,7 @@ export default function SentryInit() {
 
     const load = () => {
       if (cancelled) return;
-      import('@sentry/browser')
+      import('./sentryLite')
         .then((Sentry) => {
           if (cancelled) return;
           try {
@@ -61,7 +62,7 @@ export default function SentryInit() {
         })
         .catch(() => { /* SDK failed to load — storefront unaffected */ });
     };
-    // The SDK is ~450 KB of JavaScript. It loads when the shopper first
+    // The SDK is large JavaScript. It loads when the shopper first
     // interacts (tap, key, scroll), when an error happens, or 30 s after the
     // page has loaded — whichever comes first — and then at the next idle
     // moment, so its parsing never lands on the first paint, on hydration or

@@ -36,7 +36,8 @@ function loadMsg91() {
   tryLoad(0);
 }
 
-// Everywhere else the widget waits until the page has fully loaded and the
+// Loaded only on the login and register pages (the only places with an OTP).
+// Without `eager` the widget waits until the page has fully loaded and the
 // browser is idle (plus a few seconds), so it never competes with the page's
 // own pictures and code; the login/register pages pass `eager` because the
 // shopper is about to ask for an OTP there.

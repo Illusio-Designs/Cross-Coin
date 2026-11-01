@@ -61,7 +61,7 @@ export default function Analytics({ initial = null }) {
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   // Visitors who did NOT come from an ad get Google's tags (GA4, Tag
-  // Manager) and Clarity once they first touch, scroll or type — or after 8
+  // Manager) and Clarity once they first touch, scroll or type — or after 20
   // seconds — instead of during page load: those scripts (~300 KB) are what
   // kept the phone busy while the product photo and Buy button were loading.
   // Nothing is lost: page views and events wait in a queue until they load.
@@ -73,7 +73,7 @@ export default function Analytics({ initial = null }) {
     let timer = null;
     const go = () => { evs.forEach((e) => window.removeEventListener(e, go)); clearTimeout(timer); setLate(true); };
     evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
-    timer = setTimeout(go, 8000);
+    timer = setTimeout(go, 20000);
     return () => { evs.forEach((e) => window.removeEventListener(e, go)); clearTimeout(timer); };
   }, [cfg, late]);
 
@@ -86,7 +86,7 @@ export default function Analytics({ initial = null }) {
       <GoogleTagManager containerId={now ? gtmId : null} />
       {/* The pixel queue (fbq) is ready at once; the ~100 KB pixel library
           itself loads after the page has loaded, on the shopper's first
-          touch / scroll (or after 8 s), then sends everything queued. It starts with the match keys we have: the
+          touch / scroll (or after 20 s), then sends everything queued. It starts with the match keys we have: the
           anonymous visitor id (_mvid) and, for a returning buyer, their hashed
           email / phone. Visitors arriving from a Meta ad (fbclid in
           the address) get it at once instead: many of them leave within
@@ -103,7 +103,7 @@ export default function Analytics({ initial = null }) {
               n.queue=[];var L=function(){t=b.createElement(e);t.async=!0;
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)};
-              var G=function(){var d=0,x=['pointerdown','touchstart','keydown','scroll','mousemove'],g=function(){if(d)return;d=1;x.forEach(function(k){f.removeEventListener(k,g)});f.requestIdleCallback?f.requestIdleCallback(L,{timeout:2000}):L()};x.forEach(function(k){f.addEventListener(k,g,{once:true,passive:true})});setTimeout(g,8000)};
+              var G=function(){var d=0,x=['pointerdown','touchstart','keydown','scroll','mousemove'],g=function(){if(d)return;d=1;x.forEach(function(k){f.removeEventListener(k,g)});f.requestIdleCallback?f.requestIdleCallback(L,{timeout:2000}):L()};x.forEach(function(k){f.addEventListener(k,g,{once:true,passive:true})});setTimeout(g,20000)};
               /[?&]fbclid=/.test(f.location.search)?L():b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
               var am={};try{var c=document.cookie.match(/(?:^|; )_mvid=([a-f0-9]{64})/);if(c)am.external_id=c[1];var r=JSON.parse(window.localStorage.getItem('fb_am')||'null');if(r&&/^[a-f0-9]{64}$/.test(r.em||''))am.em=r.em;if(r&&/^[a-f0-9]{64}$/.test(r.ph||''))am.ph=r.ph;}catch(x){}
