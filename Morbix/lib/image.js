@@ -1,5 +1,5 @@
 /* ImageKit sizing — ask for the size an image is actually shown at instead of
-   the original upload. Width only (`tr=w-<px>,q-78,f-auto`; f-auto serves
+   the original upload. Width only (`tr=w-<px>,q-72,f-auto`; f-auto serves
    WebP/AVIF), replacing any `tr=` already on the URL so there is never a second
    transform. Non-ImageKit URLs (local /public files, data: URLs) pass through.
 
@@ -15,7 +15,7 @@ export function ikSrc(src, width) {
   if (!resizable(src)) return src;
   const [base, query = ''] = src.split('?');
   const rest = query.split('&').filter((p) => p && !/^tr=/.test(p));
-  return `${base}?${[`tr=w-${Math.round(width)},q-78,f-auto`, ...rest].join('&')}`;
+  return `${base}?${[`tr=w-${Math.round(width)},q-72,f-auto`, ...rest].join('&')}`;
 }
 
 /** `srcSet` for an ImageKit URL at the given widths; undefined otherwise. */
