@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   compress: true,
+  // Put the page's CSS inside the HTML instead of separate files: those are
+  // requests the browser must download before it can draw anything (page
+  // speed: "render-blocking requests").
+  experimental: { inlineCss: true },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

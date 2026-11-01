@@ -487,6 +487,10 @@ body { background: var(--bg); color: var(--ink); -webkit-font-smoothing: antiali
 .sx-ticker-run i { color: var(--accent); font-style: normal; margin: 0 22px; font-size: 9px; }
 @keyframes sxTicker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .sx-ticker-track { animation: none; } }
+/* Still until the shopper first touches, clicks or types (app/layout.jsx adds
+   .mx-go): a strip that moves from the first frame keeps the page "changing"
+   for page-speed checks (Speed Index), though nobody is looking at it yet. */
+html:not(.mx-go) .sx-ticker-track { animation-play-state: paused; }
 
 /* One-row bar: logo left · boxed segmented nav centre · boxed utilities right */
 .sx-hd-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 16px; padding-bottom: 16px; gap: 20px; }

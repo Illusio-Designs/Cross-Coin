@@ -36,10 +36,9 @@ function loadMsg91() {
   tryLoad(0);
 }
 
-// Everywhere else the widget waits until the page has fully loaded and the
-// browser is idle (plus a few seconds), so it never competes with the page's
-// own pictures and code; the login/register pages pass `eager` because the
-// shopper is about to ask for an OTP there.
+// Mounted only on the login and register pages (with `eager`: the shopper is
+// about to ask for an OTP there), never site-wide — the OTP code is not
+// needed anywhere else. Without `eager` it waits for page load + idle.
 export default function Msg91Loader({ eager = false }) {
   useEffect(() => {
     if (eager) { loadMsg91(); return undefined; }

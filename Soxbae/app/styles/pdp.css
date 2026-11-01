@@ -164,6 +164,7 @@
 .pdx-story-sec h2 { margin: 0 0 18px; font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.1; font-size: clamp(24px, 2.8vw, 34px); color: var(--ink); }
 .pdx-desc-rich { max-width: 66ch; }
 .pdx-desc-rich img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; display: block; }
+.pdx-desc-rich img[data-src] { background: #f1f4f6; }
 .pdx-desc-rich h2, .pdx-desc-rich h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); margin: 22px 0 10px; }
 .pdx-desc-rich h3 { font-size: clamp(17px, 1.8vw, 20px); }
 .pdx-desc-rich h2, .pdx-desc-rich h3.rt-lg { font-size: clamp(20px, 2.2vw, 26px); }

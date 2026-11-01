@@ -27,7 +27,7 @@ const THUMB_WIDTHS = [112, 144, 216];
 const THUMB_SIZES = '(max-width: 900px) 62px, 64px';
 // Description pictures: the text column (66ch, ~600px) or the screen width
 // less the padding on phones.
-const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_WIDTHS = [400, 480, 600, 800, 1100];
 const DESC_SIZES = '(max-width: 860px) calc(100vw - 40px), 600px';
 
 // The admin's rich description sits under the page's "Product description"
@@ -50,8 +50,35 @@ function tidyDescription(html) {
       const src = raw.replace(/&amp;/g, '&');
       const set = ikSrcSet(src, DESC_WIDTHS);
       const attr = (v) => v.replace(/&/g, '&amp;');
-      return `${a}src="${attr(ikSrc(src, 1100))}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+      // data-* only: the picture is fetched when it comes near the screen
+      // (DescriptionHtml below), not with the first screen — the browser's
+      // own lazy loading starts far earlier on slow connections.
+      return `${a}data-src="${attr(ikSrc(src, 1100))}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
     });
+}
+
+// The product description (admin rich text) with its pictures attached only
+// when they are within ~300px of the screen.
+function DescriptionHtml({ html }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return undefined;
+    const imgs = [...root.querySelectorAll('img[data-src]')];
+    const show = (img) => {
+      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
+      img.src = img.dataset.src;
+      img.removeAttribute('data-src');
+      img.removeAttribute('data-srcset');
+    };
+    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: '300px 0px' });
+    imgs.forEach((img) => io.observe(img));
+    return () => io.disconnect();
+  }, [html]);
+  return <div ref={ref} className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
@@ -616,7 +643,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div className="pdx-about-main">
               <h2 className="pdx-description-title">Product description</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-                ? <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: tidyDescription(product.descriptionHtml) }} />
+                ? <DescriptionHtml html={tidyDescription(product.descriptionHtml)} />
                 : product.description
                   ? <p className="pdx-about-desc">{product.description}</p>
                   : <p className="pdx-about-desc muted">No description available for this product yet.</p>}
