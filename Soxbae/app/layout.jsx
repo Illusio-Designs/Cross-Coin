@@ -47,7 +47,26 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }) {
+// The store's tracking IDs (GA4, Meta pixel, Clarity), read on the server and
+// cached 5 minutes, so the page arrives with them and tracking starts without
+// waiting for another request. Null when the API can't be reached: the
+// browser then fetches them itself.
+async function trackingConfig() {
+  try {
+    const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/public/tracking-config`, {
+      headers: { 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae' },
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(3000),
+    });
+    const d = await r.json();
+    return d?.success ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }) {
+  const tracking = await trackingConfig();
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <head>
@@ -81,7 +100,7 @@ export default function RootLayout({ children }) {
             </SmoothScroll>
             <FloatingWidgets />
             <ToastHost />
-            <Analytics />
+            <Analytics initial={tracking} />
           </CartProvider>
         </AuthProvider>
       </body>

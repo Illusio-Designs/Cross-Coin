@@ -11,15 +11,16 @@ import { useConsent } from '@/lib/consent';
  * Analytics — GA4 + Meta Pixel + Microsoft Clarity, driven by the platform
  * tracking-config (Brand Settings), matching the Crosscoin storefront.
  *
- * IDs are fetched from /api/public/tracking-config at runtime, scoped to this
- * brand via the X-Brand-Name header, so changing GA_MEASUREMENT_ID /
- * FB_PIXEL_ID / CLARITY_ID in the dashboard takes effect on the next page
- * load — no redeploy or build-time env var required.
+ * IDs come from /api/public/tracking-config, scoped to this brand via the
+ * X-Brand-Name header — read by the layout on the server (cached 5 minutes,
+ * passed in as `initial`), else fetched here — so changing GA_MEASUREMENT_ID /
+ * FB_PIXEL_ID / CLARITY_ID in the dashboard takes effect within minutes, no
+ * redeploy or build-time env var required.
  */
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const BRAND = process.env.NEXT_PUBLIC_BRAND_NAME || 'soxbae';
 
-export default function Analytics() {
+export default function Analytics({ initial = null }) {
   const [cfg, setCfg] = useState(null);
   const pathname = usePathname();
   const consent = useConsent();
@@ -27,8 +28,13 @@ export default function Analytics() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return;
     let aborted = false;
-    fetch(`${API_URL}/api/public/tracking-config`, { headers: { 'X-Brand-Name': BRAND } })
-      .then((r) => r.json())
+    // The layout already fetched the IDs on the server (cached 5 minutes), so
+    // tracking starts at once instead of after a round trip to the API — many
+    // ad visitors leave within seconds. Fetched here only when it couldn't.
+    const config = initial?.success
+      ? Promise.resolve(initial)
+      : fetch(`${API_URL}/api/public/tracking-config`, { cache: 'no-store', headers: { 'X-Brand-Name': BRAND } }).then((r) => r.json());
+    config
       .then((d) => {
         if (aborted || !d?.success) return;
         setCfg({
@@ -36,11 +42,14 @@ export default function Analytics() {
           gaId: d.ga_measurement_id || null,
           fbId: d.fb_pixel_id || null,
           clarityId: d.clarity_id || null,
+          // Arrived from an ad or a tagged link: GA4 loads at once (below),
+          // so short visits from paid traffic are still counted.
+          paid: /[?&](gclid|gbraid|wbraid|fbclid|utm_source)=/.test(window.location.search),
         });
       })
       .catch(() => {});
     return () => { aborted = true; };
-  }, []);
+  }, [initial, consent.analytics, consent.marketing]);
 
   // Fire a page_view / PageView on client-side route changes.
   useEffect(() => {
@@ -52,14 +61,19 @@ export default function Analytics() {
   }, [pathname, cfg, consent.analytics, consent.marketing]);
 
   if (!cfg) return null;
-  const { gaId, fbId, clarityId, gtmId } = cfg;
+  const { gaId, fbId, clarityId, gtmId, paid } = cfg;
 
   return (
     <>
       <GoogleTagManager containerId={gtmId} />
       {/* The pixel queue (fbq) is ready at once; the ~100 KB pixel library
           itself loads after the page has loaded and the browser is idle, then
-          sends everything queued. The Conversions API copy is unaffected. */}
+          sends everything queued. It starts with the match keys we have: the
+          anonymous visitor id (_mvid) and, for a returning buyer, their hashed
+          email / phone. Visitors arriving from a Meta ad (fbclid in
+          the address) get it at once instead: many of them leave within
+          seconds, and Meta counts a landing page view only when the pixel
+          fires. The Conversions API copy is unaffected. */}
       {fbId && consent.marketing && (
         <>
           <Script id="fb-pixel" strategy="afterInteractive"
@@ -72,9 +86,10 @@ export default function Analytics() {
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)};
               var G=function(){setTimeout(function(){f.requestIdleCallback?f.requestIdleCallback(L,{timeout:4000}):L()},1500)};
-              b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
+              /[?&]fbclid=/.test(f.location.search)?L():b.readyState==='complete'?G():f.addEventListener('load',G,{once:true})}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              window._fbqId='${fbId}';fbq('init', '${fbId}');
+              var am={};try{var c=document.cookie.match(/(?:^|; )_mvid=([a-f0-9]{64})/);if(c)am.external_id=c[1];var r=JSON.parse(window.localStorage.getItem('fb_am')||'null');if(r&&/^[a-f0-9]{64}$/.test(r.em||''))am.em=r.em;if(r&&/^[a-f0-9]{64}$/.test(r.ph||''))am.ph=r.ph;}catch(x){}
+              window._fbqId='${fbId}';fbq('init', '${fbId}', am);
               window.dispatchEvent(new Event('brand-fbq-ready'));
             ` }}
           />
@@ -88,8 +103,8 @@ export default function Analytics() {
 
       {gaId && (
         <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="lazyOnload" />
-          <Script id="ga4-init" strategy="lazyOnload"
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy={paid ? 'afterInteractive' : 'lazyOnload'} />
+          <Script id="ga4-init" strategy={paid ? 'afterInteractive' : 'lazyOnload'}
             dangerouslySetInnerHTML={{ __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}

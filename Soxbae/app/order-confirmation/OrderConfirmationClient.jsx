@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Icon from '@/components/Icon';
 import { useCart } from '@/context/CartContext';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '@/lib/api/shiprocketCheckout';
-import { fbPurchase } from '@/utils/pixel';
+import { fbPurchase, rememberBuyer } from '@/utils/pixel';
 import { takePurchaseForThankYou } from '@/lib/thankYou';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
@@ -48,6 +48,10 @@ export default function OrderConfirmationClient({ order, id, oid, ost }) {
         dropSession(SR_SOURCE_KEY);
         if (fromCart) clear();
         const contents = o.items || [];
+        // The buyer's hashed email / phone (from our server): the browser
+        // Purchase then matches as well as the server's, and so do their
+        // later visits.
+        if (o.am) rememberBuyer(o.am);
         fbPurchase(o.order_number, {
           content_ids: contents.map((i) => i.id),
           content_type: 'product',

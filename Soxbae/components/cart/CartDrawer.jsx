@@ -25,7 +25,7 @@ import { getUserAddresses, createShippingAddress } from '@/lib/api/addresses';
 import { getBestsellers, getBundleTiers, getProductBySlug } from '@/lib/api';
 import { fbTrack, fbPurchase, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
-import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { shiprocketEnabled, openShiprocketCheckout, loadShiprocketSdk } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import '@/app/styles/cart.css';
@@ -492,14 +492,14 @@ export default function CartDrawer() {
     setQty(packAnchor.key, Math.max(1, P - others));
   };
 
-  // Shiprocket Checkout (when switched on for Soxbae) replaces the drawer's
-  // checkout step (and its coupon box — Shiprocket applies its own coupons).
-  // Carts with a pack stay on our own checkout: Shiprocket prices each pair
-  // from the catalog and can't apply pack prices.
-  const [srOn, setSrOn] = useState(false);
+  // Soxbae checks out only through Shiprocket Checkout (packs included — their
+  // price comes from the offers set up in Shiprocket). It replaces the drawer's
+  // checkout step and its coupon box (Shiprocket applies its own coupons). Only
+  // a clear "switched off" for the store brings back our own checkout.
+  const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
+  const useShiprocket = !srOff && items.length > 0;
 
   // Clamp the coupon so an over-large coupon can never make the order negative.
   // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
@@ -542,6 +542,9 @@ export default function CartDrawer() {
     cartPageView();
     setCoStep(1);
     if (items.length === 0) return;
+    // Opening a cart with items is the strongest sign of checkout: download
+    // the checkout script now, so BUY NOW doesn't wait for it.
+    shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
     // Re-arm the whole-cart shimmer for this open (cart has items to load for).
     setLdCoupons(false); setLdSuggest(false); setLdFees(false);
     viewCart({
@@ -565,12 +568,24 @@ export default function CartDrawer() {
       currency: 'INR',
     });
     if (useShiprocket) {
+      setError('');
       setSrBusy(true);
       try {
-        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
-        return;
+        const on = await shiprocketEnabled();
+        if (on === false) {
+          setSrOff(true); // switched off for the store: use the drawer's own checkout
+        } else {
+          const old = items.filter((i) => i.variationId == null);
+          if (old.length) {
+            setError(`Please remove ${old.map((i) => i.name).join(', ')} from the cart and add ${old.length > 1 ? 'them' : 'it'} again, then check out.`);
+            return;
+          }
+          await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+          return;
+        }
       } catch {
-        // Shiprocket couldn't start: carry on with our own checkout.
+        setError('Checkout couldn’t open. Please check your connection and tap again.');
+        return;
       } finally {
         setSrBusy(false);
       }
