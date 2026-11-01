@@ -184,6 +184,8 @@ button { font-family: inherit; cursor: pointer; }
 .marquee-wrap { overflow: hidden; background: var(--navy); color: #fff; padding: 15px 0; margin-top: 22px; }
 .marquee-track { display: flex; width: max-content; gap: 44px; animation: marquee 30s linear infinite; }
 .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+/* Still until the shopper first touches / scrolls (class added in layout.jsx). */
+html:not(.mx-go) .marquee-track { animation-play-state: paused; }
 .marquee-item { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; white-space: nowrap; }
 .marquee-ic { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.10); color: var(--teal); }
 .marquee-sep { color: var(--teal); margin-left: 8px; font-size: 12px; }

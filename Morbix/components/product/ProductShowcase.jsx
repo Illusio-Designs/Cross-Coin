@@ -52,7 +52,7 @@ function tidyDescription(html) {
 
 // Description pictures fill the "About" card: the screen width less the page
 // and card padding on phones, about 680px beside the specs on desktop.
-const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_WIDTHS = [400, 480, 600, 800, 1100];
 const DESC_SIZES = '(max-width: 760px) calc(100vw - 96px), 680px';
 
 // Main photo: the screen width less the page padding on phones, 600px on
