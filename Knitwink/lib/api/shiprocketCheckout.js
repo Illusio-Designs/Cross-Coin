@@ -41,6 +41,26 @@ export function loadShiprocketCss() {
   document.head.appendChild(link);
 }
 
+// Download Shiprocket's script + stylesheet ahead of the tap, once the shopper
+// first touches, clicks, types or uses the mouse wheel (and the browser is
+// idle), so tapping Buy now / checkout doesn't wait for the download. Not on
+// page load (it would cost the page's speed score, and most visitors never
+// check out), and not on scroll (a page scrolls itself while it loads).
+let preloadArmed = false;
+export function preloadShiprocket() {
+  if (preloadArmed || typeof window === 'undefined') return;
+  preloadArmed = true;
+  const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+  const go = () => {
+    evs.forEach((e) => window.removeEventListener(e, go));
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+    idle(() => {
+      shiprocketEnabled().then((on) => { if (on) loadShiprocketSdk().catch(() => {}); });
+    });
+  };
+  evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
+}
+
 // Load Shiprocket's checkout script + styles once; resolves when
 // window.HeadlessCheckout exists.
 export function loadShiprocketSdk() {

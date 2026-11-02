@@ -1,4 +1,5 @@
 import LoginClient from './LoginClient'
+import Msg91Loader from '@/components/Msg91Loader';
 import { SITE_NAME } from '@/lib/constants'
 
 const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com'
@@ -12,5 +13,5 @@ export const metadata = {
 }
 
 export default function LoginPage() {
-  return <LoginClient />
+  return <><Msg91Loader eager /><LoginClient /></>
 }

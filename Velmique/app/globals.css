@@ -1,7 +1,39 @@
 /* Global base: Tailwind (used by the shared cart drawer and floating
    widgets), accessibility primitives, the onyx & gold design tokens, and the
    react-toastify skin. Page and shell styling lives in app/mint.css. Fonts
-   (Playfair Display + Inter) load via the Google Fonts link in app/layout.jsx. */
+   (Playfair Display + Inter) are self-hosted below under their real family
+   names. */
+
+/* Basic Latin characters only — the same files Google serves for 'latin'
+   (public/fonts, preloaded in app/layout.jsx). Served from our own domain
+   instead of a render-blocking Google Fonts stylesheet; and Google's
+   "extended Latin" files (whose range covers the rupee sign, so every page
+   with a price downloaded them on the first screen) are left out: ₹ comes
+   from the phone's own font instead. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url(/fonts/inter-latin-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(/fonts/playfair-display-latin-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url(/fonts/playfair-display-latin-italic.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

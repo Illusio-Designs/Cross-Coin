@@ -11,6 +11,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 })
 
 const nextConfig: NextConfig = {
+  // Put the page's CSS inside the HTML instead of separate files: those are
+  // requests the browser must download before it can draw anything (page
+  // speed: "render-blocking requests").
+  experimental: { inlineCss: true },
+
   // Packages that DO NOT get bundled into the SSR chunk and are loaded
   // via Node's require() at runtime. Two reasons we need this list:
   //

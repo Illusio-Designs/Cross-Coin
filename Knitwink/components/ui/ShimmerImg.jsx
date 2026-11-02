@@ -12,7 +12,7 @@ import { ikUrl, ikSrcSet } from '@/lib/image';
  * on error the `fallback` is rendered (or the empty box) — never a
  * forever-skeleton.
  *
- *   width    → ImageKit width transform (`?tr=w-…,q-78,f-auto`)
+ *   width    → ImageKit width transform (`?tr=w-…,q-72,f-auto`)
  *   widths   → srcSet widths (+ pass `sizes`)
  *   priority → eager + fetchPriority high (the LCP image); otherwise lazy
  *

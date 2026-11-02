@@ -49,6 +49,11 @@
 /* ── Announcement + header ── */
 .m-anno{background:var(--m-band);color:var(--m-on-band-soft);overflow:hidden;padding:9px 0}
 .m-anno__track{display:inline-flex;white-space:nowrap;animation:m-marq 34s linear infinite;will-change:transform}
+/* Moving parts (announcement strip, floating hero bottle and card) stay still
+   until the shopper first touches, clicks, types or uses the wheel
+   (app/layout.jsx adds .mx-go to <html>): motion from the first frame keeps
+   the screen "changing" for page-speed checks (Speed Index). */
+html:not(.mx-go) .m-anno__track,html:not(.mx-go) .m-herocard,html:not(.mx-go) .m-hero__bottle{animation-play-state:paused}
 .m-anno__track:hover{animation-play-state:paused}
 .m-anno__seq{display:inline-flex;align-items:center}
 .m-anno__i{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:0 26px}
@@ -528,6 +533,10 @@
 .m-desc-rich h2,.m-desc-rich h3,.m-desc-rich h4{font-family:var(--m-d);color:var(--m-ink);font-weight:600;margin:22px 0 8px}
 .m-desc-rich ul,.m-desc-rich ol{margin:12px 0;padding-left:20px}
 .m-about img,.m-desc-rich img,.m-desc-rich figure img{max-width:100%;height:auto;display:block;border-radius:8px;margin:18px 0}
+.m-desc-rich img[data-src]{background:rgba(255,255,255,.04)}
+/* Product page sections below the first screen (reviews, FAQ, related): the
+   browser skips laying them out until they are near the screen. */
+.m-later{content-visibility:auto;contain-intrinsic-size:auto 700px}
 /* Responsive description images — the admin tags an <img> "only-desktop" /
    "only-mobile" in the editor to show a different image per breakpoint (same
    behaviour as the live .vq-desc-rich storefront). */

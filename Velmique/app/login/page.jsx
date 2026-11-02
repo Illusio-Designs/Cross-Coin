@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Msg91Loader from '@/components/Msg91Loader';
 import { pageMeta } from '@/lib/site';
 import LoginClient from './LoginClient';
 import { AuthCardSkeleton, PageHeadSkeleton } from '../_components/Skeleton';
@@ -13,5 +14,5 @@ const Shell = (
 export const metadata = pageMeta({ title: 'Sign In — Velmique', description: 'Sign in to your Velmique account with your mobile number.', path: '/login', noindex: true });
 
 export default function LoginPage() {
-  return <Suspense fallback={Shell}><LoginClient /></Suspense>;
+  return <><Msg91Loader eager /><Suspense fallback={Shell}><LoginClient /></Suspense></>;
 }

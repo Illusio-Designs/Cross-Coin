@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import Msg91Loader from '@/components/Msg91Loader';
 import { pageMeta } from '@/lib/site';
 import RegisterClient from './RegisterClient';
 import { AuthCardSkeleton, PageHeadSkeleton } from '../_components/Skeleton';
@@ -13,5 +14,5 @@ const Shell = (
 export const metadata = pageMeta({ title: 'Create an Account — Velmique', description: 'Create your Velmique account with your mobile number.', path: '/register', noindex: true });
 
 export default function RegisterPage() {
-  return <Suspense fallback={Shell}><RegisterClient /></Suspense>;
+  return <><Msg91Loader eager /><Suspense fallback={Shell}><RegisterClient /></Suspense></>;
 }

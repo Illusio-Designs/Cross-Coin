@@ -22,7 +22,7 @@ const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
 const ik = (src, w) => {
   if (!src || typeof src !== 'string') return src;
   if (src.includes('ik.imagekit.io') && !/[?&]tr=/.test(src)) {
-    return `${src.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+    return `${src.split('?')[0]}?tr=w-${w},q-72,f-auto`;
   }
   return src;
 };

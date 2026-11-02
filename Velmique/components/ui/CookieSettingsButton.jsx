@@ -1,13 +1,8 @@
 'use client';
-import { openCookieSettings } from '@/lib/consent';
 
-/* Footer link that reopens the cookie preferences so a visitor can review or
-   withdraw analytics/marketing consent at any time (DPDP: withdrawal must be
-   as easy as giving consent). */
-export default function CookieSettingsButton({ className = '' }) {
-  return (
-    <button type="button" onClick={openCookieSettings} className={className}>
-      Cookie Settings
-    </button>
-  );
+/* No cookie preferences on Velmique: every visitor is tracked (lib/consent), so
+   there is nothing to reopen. Kept (rendering nothing) so the footers that
+   place it keep working. */
+export default function CookieSettingsButton() {
+  return null;
 }

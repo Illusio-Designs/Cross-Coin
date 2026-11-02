@@ -3,7 +3,7 @@
    An existing `tr=` query transform is replaced, never stacked; every other
    query param is kept. Non-ImageKit URLs (local /public files, data: URLs,
    other hosts) are returned untouched. */
-const Q = 78;
+const Q = 72;
 
 export function ik(src, w) {
   if (!src || typeof src !== 'string') return src || '';

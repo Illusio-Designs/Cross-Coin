@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { confirmCheckoutReturn } from '@/lib/api/orders';
 import { SR_SOURCE_KEY } from '@/lib/api/shiprocketCheckout';
-import { fbPurchase } from '@/utils/pixel';
+import { fbPurchase, rememberBuyer } from '@/utils/pixel';
 import { takePurchaseForThankYou } from '@/lib/thankYou';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
@@ -47,6 +47,10 @@ export default function CheckoutReturn({ mode, orderId, orderNumber }) {
         .then((o) => {
           if (!o?.order_number) return;
           const contents = o.items || [];
+          // The buyer's hashed email / phone (from our server): the browser
+          // Purchase then matches as well as the server's, and so do their
+          // later visits.
+          if (o.am) rememberBuyer(o.am);
           fbPurchase(o.order_number, {
             content_ids: contents.map((i) => i.id),
             content_type: 'product',

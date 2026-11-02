@@ -4,7 +4,7 @@
 // returned untouched.
 const IK_HOST = 'ik.imagekit.io'
 
-export function ikUrl(src, w, q = 78) {
+export function ikUrl(src, w, q = 72) {
   if (!src || typeof src !== 'string' || !w || !src.includes(IK_HOST)) return src
   const [base, query = ''] = src.split('?')
   const rest = query.split('&').filter((p) => p && !/^tr=/.test(p))

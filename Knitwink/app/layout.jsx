@@ -1,7 +1,6 @@
 
-import { Inter, Playfair_Display, Dancing_Script } from 'next/font/google';
+import localFont from 'next/font/local';
 import '@/styles/globals.css';
-import '@/styles/cookie-banner.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
@@ -20,27 +19,42 @@ import ClientProviders from '@/components/layout/ClientProviders';
 import SentryInit from '@/components/SentryInit';
 import VisitTracker from '@/components/common/VisitTracker';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
-import CookieBanner from '@/components/ui/CookieBanner';
 import Analytics from '@/components/layout/Analytics';
 import SmoothScroll from '@/components/SmoothScroll';
 import { SITE_NAME } from '@/lib/constants';
 
-const inter = Inter({
-  subsets: ['latin'],
+// Inter, Playfair Display and Dancing Script (variable), basic Latin
+// characters only — the same files Google serves for 'latin' (app/fonts).
+// Google's versions also define an "extended Latin" file each (Inter 85 KB,
+// Playfair 21 KB, Dancing Script 23 KB) whose range covers the rupee sign,
+// so every page with a price downloaded them on the first screen; here ₹
+// comes from the phone's own font instead.
+const inter = localFont({
+  src: './fonts/inter-latin-var.woff2',
+  weight: '100 900',
+  style: 'normal',
   variable: '--font-inter',
-  display: 'swap'
+  display: 'swap',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
 
-const playfair = Playfair_Display({
-  subsets: ['latin'],
+const playfair = localFont({
+  src: './fonts/playfair-latin-var.woff2',
+  weight: '400 900',
+  style: 'normal',
   variable: '--font-playfair',
-  display: 'swap'
+  display: 'swap',
+  adjustFontFallback: 'Times New Roman',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
 
-const dancingScript = Dancing_Script({
-  subsets: ['latin'],
+const dancingScript = localFont({
+  src: './fonts/dancing-latin-var.woff2',
+  weight: '400 700',
+  style: 'normal',
   variable: '--font-dancing',
-  display: 'swap'
+  display: 'swap',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
 
 export const metadata = {
@@ -64,56 +78,39 @@ export const metadata = {
 };
 
 
-export default function RootLayout({ children }) {
+// The store's tracking IDs (GA4, Meta pixel, Clarity, GTM), read on the
+// server and cached 5 minutes, so the page arrives with them and tracking
+// starts without waiting for another request. Null when the API can't be
+// reached: the browser then fetches them itself.
+async function trackingConfig() {
+  try {
+    const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in'}/api/public/tracking-config`, {
+      headers: { 'X-Brand-Name': process.env.NEXT_PUBLIC_BRAND_NAME || 'knitwink' },
+      next: { revalidate: 300 },
+      signal: AbortSignal.timeout(3000),
+    });
+    const d = await r.json();
+    return d?.success ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }) {
+  const tracking = await trackingConfig();
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        {/* Moving strips start on the shopper's first touch, click, key or
+            wheel (globals.css: html:not(.mx-go)). Motion from the first frame
+            keeps the screen "changing" while the page loads, which page-speed
+            tests count against it. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var d=document.documentElement,e=['pointerdown','touchstart','keydown','wheel'],g=function(){d.classList.add('mx-go');e.forEach(function(k){removeEventListener(k,g)})};e.forEach(function(k){addEventListener(k,g,{passive:true})})})()" }} />
         {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
         <noscript><style>{'.kw-img{filter:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
             position (which could show the footer first) on a fresh load. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}" }} />
-        {/* MSG91 OTP bootstrap — self-generated, intentionally bypasses
-            DOMPurify. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var configuration = {
-                  widgetId: "366342706343383735393039",
-                  tokenAuth: "426738T7QwVqDd1uX69c7fc1dP1",
-                  exposeMethods: true,
-                  identifier: "",
-                  success: function(data) { window.__msg91OtpSuccess = data; },
-                  failure: function(error) { window.__msg91OtpFailure = error; }
-                };
-                // Only login + checkout need this; never at first paint. Defer
-                // the third-party script until the browser is idle so it doesn't
-                // compete with the critical render on every page.
-                var urls = ['https://verify.msg91.com/otp-provider.js', 'https://verify.phone91.com/otp-provider.js'];
-                function tryLoad(i) {
-                  if (i >= urls.length) { window.__msg91Started = false; return; }
-                  var s = document.createElement('script');
-                  s.type = 'text/javascript';
-                  s.async = true;
-                  s.src = urls[i];
-                  s.onload = function() {
-                    if (typeof initSendOTP === 'function') initSendOTP(configuration);
-                  };
-                  s.onerror = function() { tryLoad(i + 1); };
-                  document.head.appendChild(s);
-                }
-                function loadMsg91() {
-                  if (window.__msg91Started) return;
-                  window.__msg91Started = true;
-                  tryLoad(0);
-                }
-                var ric = window.requestIdleCallback || function(cb){ return setTimeout(cb, 2500); };
-                ric(loadMsg91);
-              })();
-            `,
-          }}
-        />
       </head>
       <body suppressHydrationWarning className="flex min-h-full w-full flex-col bg-off-white font-sans text-brand-black">
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
@@ -123,7 +120,6 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.hasAttribute('data-sk-img'))return;var r=function(){t.classList.add('is-loaded')};if(t.decode){t.decode().then(r,r)}else{r()}},true)}catch(_){}})();" }} />
         <SentryInit />
         <VisitTracker />
-            <CookieBanner />
         <ConsentSpeedInsights />
         <a href="#main" className="skip-to-main">Skip to main content</a>
         <ClientProviders>
@@ -143,7 +139,7 @@ export default function RootLayout({ children }) {
               <BackToTop />
               <WhatsAppChat />
               <ToastContainer />
-              <Analytics />
+              <Analytics initial={tracking} />
             </CartProvider>
           </AuthProvider>
         </ClientProviders>

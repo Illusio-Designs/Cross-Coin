@@ -30,7 +30,8 @@ const CrossSell = dynamic(() => import('@/components/product/CrossSell').then(m 
 })
 import SeoWrapper from '@/components/SeoWrapper'
 import ProductDetailBlocks from '@/components/product/ProductDetailBlocks'
-import { richHtml } from '@/lib/richHtml'
+import DescriptionHtml from '@/components/product/DescriptionHtml'
+import LazyMount from '@/components/common/LazyMount'
 
 export default function ProductDetailClient({ initialHandle, initialProduct, initialBestsellers } = {}) {
   // initialHandle comes from the server shell on first load. On client-
@@ -121,7 +122,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
             <div className="flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-4 lg:py-24">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gray-500">Why We Love This</p>
               {/<[a-z][\s\S]*>/i.test(product.descriptionHtml || '') ? (
-                <div className="knit-desc-rich mt-5 text-sm leading-[1.85] text-gray-800" {...richHtml(product.descriptionHtml)} />
+                <DescriptionHtml className="knit-desc-rich mt-5 text-sm leading-[1.85] text-gray-800" html={product.descriptionHtml} />
               ) : (
                 <p className="mt-5 whitespace-pre-line text-sm leading-[1.85] text-gray-800 text-justify">{product.description}</p>
               )}
@@ -179,13 +180,18 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
         </section>
       )}
 
-      {/* Care and manufacturing */}
-      <section className="bg-white">
+      {/* Care and manufacturing — the browser skips laying it out until it is
+          near the screen (content-visibility, globals.css .pdp-later). */}
+      <section className="bg-white pdp-later">
         <div className="mx-auto max-w-site px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
           <ProductDetailBlocks product={product} />
         </div>
       </section>
 
+      {/* Below the first screen: built only when the shopper scrolls near
+          (LazyMount), so the photo, price and Add to cart load and respond
+          first. The JSON-LD above still describes the product for search. */}
+      <LazyMount minHeight={1400}>
       {/* Feature Highlight — last image of first variation in center circle */}
       {(() => {
         const firstColor = product.colors?.[0]?.name
@@ -200,6 +206,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
 
       {/* Cross-sell */}
         <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
+      </LazyMount>
     </SeoWrapper>
   )
 }

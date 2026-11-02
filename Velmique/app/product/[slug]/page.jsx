@@ -8,6 +8,7 @@ import { getFaqs } from '@/lib/api/faqs';
 import { getPackTiers, getBundleTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 import PdpGallery from '../../_components/PdpGallery';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import ReviewRow from '../../_components/ReviewRow';
@@ -252,7 +253,7 @@ export default async function MaisonProduct({ params }) {
               <span className="m-eyebrow">Details</span>
               <h2 className="m-rsec__h">About this fragrance</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-                ? <div className="m-desc-rich" {...richHtml(product.descriptionHtml)} />
+                ? <DescriptionHtml className="m-desc-rich" html={richHtml(product.descriptionHtml).dangerouslySetInnerHTML.__html} />
                 : product.description ? <p className="m-rsec__p">{product.description}</p> : <p className="m-rsec__p">No description available for this fragrance yet.</p>}
             </div>
 
@@ -360,7 +361,7 @@ export default async function MaisonProduct({ params }) {
       {/* Reviews — the wall when there are any, and always a way to write one
           (also opened by the WhatsApp review-request link, ?review=open). */}
       {reviews.length ? (
-        <section className="m-section" id="reviews"><div className="m-wrap">
+        <section className="m-section m-later" id="reviews"><div className="m-wrap">
           <div className="m-revhead">
             <div><span className="m-eyebrow">Customer reviews</span><h2 style={{ fontSize: 'clamp(28px,4vw,42px)', marginTop: 8 }}>Loved &amp; Verified.</h2></div>
             <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars" aria-label={`${Number(rating).toFixed(1)} out of 5`}>{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
@@ -380,7 +381,7 @@ export default async function MaisonProduct({ params }) {
           </div>
         </div></section>
       ) : (
-        <section className="m-section" id="reviews" style={{ paddingBottom: 0 }}><div className="m-wrap">
+        <section className="m-section m-later" id="reviews" style={{ paddingBottom: 0 }}><div className="m-wrap">
           <div className="m-empty">
             <h3>No reviews yet</h3>
             <p style={{ marginBottom: 20 }}>Tried {product.name}? Be the first to tell others how it wears.</p>
@@ -391,7 +392,7 @@ export default async function MaisonProduct({ params }) {
 
       {/* FAQ — admin-managed, from the backend */}
       {faqs.length ? (
-        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
+        <section className="m-section m-later" style={{ paddingTop: 0 }}><div className="m-wrap">
           <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
           <div className="m-faq">
             {faqs.map((f) => (
@@ -406,7 +407,7 @@ export default async function MaisonProduct({ params }) {
 
       {/* You may also like */}
       {related.length ? (
-        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
+        <section className="m-section m-later" style={{ paddingTop: 0 }}><div className="m-wrap">
           <div className="m-shead"><span className="m-eyebrow">You may also like</span><h2>Complete Your Collection.</h2></div>
           <div className="m-pgrid">{related.map((p) => <ProductCard key={p.id} product={p} />)}</div>
         </div></section>
