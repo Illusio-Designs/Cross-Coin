@@ -61,8 +61,14 @@ export default function Document({ tracking }) {
   const { gaId, fbId, clarityId, gtmId, adsId, adsLabel, adsLabels } = tracking || {};
 
   return (
-    <Html lang="en">
+    <Html lang="en" suppressHydrationWarning>
       <Head>
+        {/* Moving strips (ticker, coupon strip, hero coin) start on the
+            shopper's first touch, click, key or wheel (mintCss.js:
+            html:not(.mx-go)). Motion from the first frame keeps the screen
+            "changing" while the page loads, which page-speed tests count
+            against it. */}
+        <script dangerouslySetInnerHTML={{ __html: "(function(){var d=document.documentElement,e=['pointerdown','touchstart','keydown','wheel'],g=function(){d.classList.add('mx-go');e.forEach(function(k){removeEventListener(k,g)})};e.forEach(function(k){addEventListener(k,g,{passive:true})})})()" }} />
         {/* Pictures wait (hidden) until fully loaded; with JavaScript off, show them straight away. */}
         <noscript><style>{'.cc-test-root img.ccimg{opacity:1!important}.cc-test-root :has(> img.ccimg){animation:none!important;background-image:none!important}'}</style></noscript>
         {/* Run before paint so the browser never restores the previous scroll
@@ -143,7 +149,9 @@ export default function Document({ tracking }) {
                 // Facebook pixel stub (queues) + PageView, with an event id the
                 // Analytics component relays to the Conversions API (consent-gated)
                 (fbId ? "!function(f,b,e,v,n){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);" : "") +
-                (fbId ? `if(MK){window._fbqId='${fbId}';fbq('init','${fbId}');window.__fbPv0='PageView_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);fbq('track','PageView',{},{eventID:window.__fbPv0});}` : "") +
+                // A past buyer's hashed email / phone (fbAdvancedMatching.js
+                // rememberBuyer) start the pixel, for better match quality.
+                (fbId ? `if(MK){window._fbqId='${fbId}';var am={};try{am=JSON.parse(localStorage.getItem('fb_am')||'{}')||{};}catch(e){}if(am.em||am.ph){window.__fbUser=Object.assign({},am,window.__fbUser||{});}fbq('init','${fbId}',am);window.__fbPv0='PageView_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);fbq('track','PageView',{},{eventID:window.__fbPv0});}` : "") +
                 // Clarity stub (queues)
                 (clarityId ? "window.clarity=window.clarity||function(){(clarity.q=clarity.q||[]).push(arguments)};" : "") +
                 // Deferred loader for the heavy external scripts
@@ -154,8 +162,16 @@ export default function Document({ tracking }) {
                 (fbId ? "if(MK)inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
                 (clarityId ? `if(!BLOCK&&AN)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
                 "}" +
-                "['pointerdown','keydown','touchstart','scroll'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
-                "if('requestIdleCallback'in window){requestIdleCallback(boot,{timeout:4000});}else{setTimeout(boot,3500);}" +
+                // Visitors from an ad (click id or utm_source in the link) get
+                // everything at once. Everyone else: on the first real touch,
+                // click, key or mouse wheel — or after 20 s. Not on scroll or
+                // idle: a page scrolls itself while it loads (smooth scroll,
+                // scroll restoration) and the browser goes idle within a few
+                // seconds, which started ~300 KB of tags while the first
+                // screen was still loading. Events wait in the queues above.
+                "if(/[?&](gclid|gbraid|wbraid|fbclid|utm_source)=/.test(location.search)){boot();}else{" +
+                "['pointerdown','keydown','touchstart','wheel'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
+                "setTimeout(boot,20000);}" +
                 "})();",
             }}
           />

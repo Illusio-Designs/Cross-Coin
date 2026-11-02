@@ -8,6 +8,7 @@ import { clearCart } from '../../components/test/store';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '../../lib/shiprocketCheckout';
 import { takePurchaseForThankYou } from '../../lib/thankYou';
+import { rememberBuyer } from '../../utils/fbAdvancedMatching';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } };
 const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch (_) { /* blocked */ } };
@@ -67,6 +68,10 @@ export default function TestThankYou() {
         if (readSession(SR_FIRED_KEY) === String(o.order_number)) return;
         writeSession(SR_FIRED_KEY, String(o.order_number));
         const contents = o.items || [];
+        // The buyer's hashed email / phone (from our server): the browser
+        // Purchase then matches as well as the server's, and so do their
+        // later visits.
+        if (o.am) rememberBuyer(o.am);
         try {
           fbqTrack('Purchase', {
             content_ids: contents.map((i) => String(i.id)), content_type: 'product',

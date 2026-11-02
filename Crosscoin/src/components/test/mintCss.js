@@ -84,6 +84,16 @@ export const MINT_CSS = `.cc-test-root{
 .cc-test-root[data-theme="dark"] .ticker, .cc-test-root:not([data-theme="light"]) .ticker{ background: #0b0718; }
 .cc-test-root .ticker__track{ display: flex; gap: 40px; width: max-content; white-space: nowrap; padding: 8px 0; animation: tick 30s linear infinite; font-family: var(--ff-mono, "Space Mono"), monospace; font-size: 12px; letter-spacing: .04em; }
 .cc-test-root .ticker:hover .ticker__track{ animation-play-state: paused; }
+/* Moving strips stay still until the shopper first touches, clicks, types
+   or uses the wheel (_document adds .mx-go to <html>): a strip in motion from
+   the first frame keeps the screen "changing" for page-speed checks (Speed
+   Index), though nobody is looking at it yet. */
+html:not(.mx-go) .cc-test-root .ticker__track, html:not(.mx-go) .cc-test-root .coupstrip__track,
+html:not(.mx-go) .cc-test-root .hero__coin, html:not(.mx-go) .cc-test-root .hero__coin span{ animation-play-state: paused; }
+/* Product page sections below the first screen (Ideal for, Care, Who makes
+   it): the browser skips laying them out until they are near the screen. */
+.cc-test-root .pdlater{ content-visibility: auto; contain-intrinsic-size: auto 420px; }
+.cc-test-root .legal img[data-src]{ background: var(--paper-2); }
 .cc-test-root .ticker__track b{ color: #fff; }
 .cc-test-root .ticker__item{ display: inline-flex; align-items: center; gap: 8px; }
 .cc-test-root .ticker__ic{ display: inline-flex; color: var(--gold); flex: 0 0 auto; }

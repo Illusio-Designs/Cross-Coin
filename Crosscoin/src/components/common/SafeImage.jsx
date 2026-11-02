@@ -18,7 +18,7 @@ function computeImageSrc({ imageData, fallbackSrc, isLogo, isProductCard, isSlid
     // delivers WebP/AVIF automatically based on the browser's Accept header.
     if (newSrc && newSrc.includes('ik.imagekit.io') && !/[?&]tr=/.test(newSrc)) {
       const w = isSlider ? 1600 : (isProductCard ? 600 : 800);
-      newSrc = `${newSrc.split('?')[0]}?tr=w-${w},q-78,f-auto`;
+      newSrc = `${newSrc.split('?')[0]}?tr=w-${w},q-72,f-auto`;
     }
   }
   if (!newSrc && !isLogo && !isProductCard) newSrc = fallbackSrc;

@@ -18,6 +18,7 @@ import { packPairCount } from '../../components/test/packPairCount';
 import BundleCards from '../../components/test/BundleCards';
 import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
+import LazyMount from '../../components/common/LazyMount';
 
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -30,15 +31,42 @@ const fmtReviewDate = (d) => {
 
 // Description pictures fill the "About this product" column (or the screen
 // width on phones): sized copies instead of the original upload.
-const DESC_WIDTHS = [480, 640, 800, 1100];
+const DESC_WIDTHS = [400, 480, 640, 800, 1100];
 const DESC_SIZES = '(max-width: 860px) calc(100vw - 64px), 640px';
 function sizeDescImages(html) {
   return String(html || '').replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
     const src = raw.replace(/&amp;/g, '&');
     const set = ikSrcSet(src, DESC_WIDTHS);
     const attr = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    return `${a}src="${attr(ikTransform(src, 1100) || src)}"${set ? ` srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
+    // data-* only: the picture is fetched when it comes near the screen
+    // (DescriptionHtml below), not with the first screen — the browser's own
+    // lazy loading starts far earlier on slow connections.
+    return `${a}data-src="${attr(ikTransform(src, 1100) || src)}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
   });
+}
+
+// The product description (admin rich text) with its pictures attached only
+// when they are within ~300px of the screen.
+function DescriptionHtml({ html }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return undefined;
+    const imgs = [...root.querySelectorAll('img[data-src]')];
+    const show = (img) => {
+      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
+      img.src = img.dataset.src;
+      img.removeAttribute('data-src');
+      img.removeAttribute('data-srcset');
+    };
+    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: '300px 0px' });
+    imgs.forEach((img) => io.observe(img));
+    return () => io.disconnect();
+  }, [html]);
+  return <div ref={ref} className="legal" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 const plainText = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -391,7 +419,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
               <h2>About this product</h2>
               {descHtml
                 ? (hydrated
-                  ? <div className="legal" dangerouslySetInnerHTML={{ __html: sizeDescImages(sanitizeRich(descHtml)) }} />
+                  ? <DescriptionHtml html={sizeDescImages(sanitizeRich(descHtml))} />
                   : <div className="legal">{plainText(descHtml)}</div>)
                 : <p className="muted" style={{ color: 'var(--ink-soft)', lineHeight: 1.7 }}>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</p>}
             </div>
@@ -405,7 +433,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
         </section>
 
         {/* Ideal for */}
-        <section className="block" style={{ paddingTop: 0 }}>
+        <section className="block pdlater" style={{ paddingTop: 0 }}>
           <div className="sechead"><div><span className="eyebrow">Ideal for</span><h2>Where it earns its keep</h2></div></div>
           <div className="idealrow">
             {[
@@ -418,7 +446,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
         </section>
 
         {/* Washing instructions (same care set as the live store) */}
-        <section className="block" style={{ paddingTop: 0 }}>
+        <section className="block pdlater" style={{ paddingTop: 0 }}>
           <div className="sechead"><div><span className="eyebrow">Care</span><h2>Washing instructions</h2></div></div>
           <div className="washbox">
             {[
@@ -433,7 +461,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
         </section>
 
         {/* Manufacturing details (same as the live store) */}
-        <section className="block" style={{ paddingTop: 0 }}>
+        <section className="block pdlater" style={{ paddingTop: 0 }}>
           <div className="sechead"><div><span className="eyebrow">Manufacturing details</span><h2>Who makes it</h2></div></div>
           <div className="mfgrow">
             <div className="mfgaddr">Obzus India Private Limited, Survey No. 1288, Vajepar, Third Floor, Royal Plaza, Opp. New Chandresh Society, Panchasar Road, Morbi - 363641, Gujarat (India)</div>
@@ -445,8 +473,13 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
         </section>
       </div>
 
-      <SocksComparison />
+      {/* Below the first screen: built only when the shopper scrolls near
+          (LazyMount), so the photo, price and Buy button load and respond
+          first. The page's JSON-LD (pages/products/[slug]) still carries the
+          reviews and FAQ for search engines. */}
+      <LazyMount minHeight={700}><SocksComparison /></LazyMount>
 
+      <LazyMount minHeight={1200}>
       <div className="wrap">
         {/* Reviews (real) */}
         <section className="block">
@@ -535,6 +568,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
           </section>
         )}
       </div>
+      </LazyMount>
 
       {/* Sticky buy bar — appears after the main buy panel scrolls away */}
       <div className={`pdpsticky${sticky ? ' on' : ''}`}>

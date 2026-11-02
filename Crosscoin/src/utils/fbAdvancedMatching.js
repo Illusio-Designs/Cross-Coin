@@ -41,3 +41,19 @@ export function fbAdvancedMatching(user) {
     external_id: user.id ? String(user.id) : undefined,
   };
 }
+
+// After an order: the buyer's hashed email / phone (SHA-256, from our server's
+// order confirmation). Kept on this device (localStorage fb_am) so the pixel
+// starts with them on later visits too (_document reads it), and re-inits the
+// pixel now so this page's Purchase matches as well as the server's.
+const AM_KEY = 'fb_am';
+export function rememberBuyer(keys = {}) {
+  if (typeof window === 'undefined') return;
+  const am = {};
+  if (/^[a-f0-9]{64}$/.test(keys.em || '')) am.em = keys.em;
+  if (/^[a-f0-9]{64}$/.test(keys.ph || '')) am.ph = keys.ph;
+  if (!am.em && !am.ph) return;
+  try { localStorage.setItem(AM_KEY, JSON.stringify(am)); } catch (_) { /* blocked */ }
+  window.__fbUser = { ...am, ...(window.__fbUser || {}) };
+  try { if (window.fbq && window._fbqId) window.fbq('init', window._fbqId, am); } catch (_) { /* non-fatal */ }
+}

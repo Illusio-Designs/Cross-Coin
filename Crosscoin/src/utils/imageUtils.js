@@ -79,7 +79,7 @@ const resizable = (url) => url.includes("ik.imagekit.io") || url.includes("/api/
 // Add a width/quality transform to a single URL. Only rewrites ImageKit URLs
 // and our own /api/uploads (any existing ?tr= is replaced); everything else
 // passes through unchanged. Width-only keeps the aspect ratio intact.
-export function ikTransform(url, w, q = 78) {
+export function ikTransform(url, w, q = 72) {
   if (!url || typeof url !== "string" || !resizable(url)) {
     return url || null;
   }
@@ -93,9 +93,9 @@ export const HERO_WIDTHS = [800, 1200, 1600];
 export const HERO_SIZES = "(max-width: 860px) 400px, 560px";
 
 // srcSet of width-only renditions, e.g. ikSrcSet(url, [300, 600]) →
-// "…?tr=w-300,q-78,f-auto 300w, …?tr=w-600,q-78,f-auto 600w". Returns
+// "…?tr=w-300,q-72,f-auto 300w, …?tr=w-600,q-72,f-auto 600w". Returns
 // undefined for other URLs (they have only one size).
-export function ikSrcSet(url, widths, q = 78) {
+export function ikSrcSet(url, widths, q = 72) {
   if (!url || typeof url !== "string" || !resizable(url) || !widths?.length) {
     return undefined;
   }

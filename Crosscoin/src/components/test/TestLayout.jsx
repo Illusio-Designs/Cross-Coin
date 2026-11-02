@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Fraunces, Inter, Space_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups, getCart, restoreCart } from './store';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart } from '../../utils/cartRecovery';
@@ -22,14 +22,41 @@ import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketC
 import { savePurchaseForThankYou } from '../../lib/thankYou';
 import ShiprocketButton from '../checkout/ShiprocketButton';
 
-// Mint fonts, self-hosted by next/font (served from our domain, preloaded,
-// with size-matched fallbacks) instead of a render-blocking Google Fonts
+// Mint fonts, self-hosted (served from our domain, preloaded, with
+// size-matched fallbacks) instead of a render-blocking Google Fonts
 // stylesheet. The Mint CSS reads them through --ff-display / --ff-body /
-// --ff-mono, set on .cc-test-root below. `subsets` is only what is preloaded;
-// other characters (e.g. ₹) load from their own subset when used.
-const fraunces = Fraunces({ subsets: ['latin'], axes: ['opsz'], display: 'swap', variable: '--ff-display' });
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--ff-body' });
-const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], display: 'swap', variable: '--ff-mono' });
+// --ff-mono, set on .cc-test-root below. Basic Latin characters only — the
+// same files Google serves for 'latin' (src/fonts). Google's versions also
+// define an "extended Latin" file each (Inter 85 KB, Fraunces 59 KB, Space
+// Mono 2 × 10 KB) whose range covers the rupee sign, so every page with a
+// price downloaded them on the first screen; here ₹ comes from the phone's
+// own font instead.
+const fraunces = localFont({
+  src: '../../fonts/fraunces-latin-var.woff2',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  variable: '--ff-display',
+  adjustFontFallback: 'Times New Roman',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
+});
+const inter = localFont({
+  src: '../../fonts/inter-latin-var.woff2',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  variable: '--ff-body',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
+});
+const spaceMono = localFont({
+  src: [
+    { path: '../../fonts/spacemono-latin-400.woff2', weight: '400', style: 'normal' },
+    { path: '../../fonts/spacemono-latin-700.woff2', weight: '700', style: 'normal' },
+  ],
+  display: 'swap',
+  variable: '--ff-mono',
+  declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
+});
 const FONT_VARS = `${fraunces.variable} ${inter.variable} ${spaceMono.variable}`;
 
 // Fallbacks used only until the live /api/shipping-fees response arrives.
