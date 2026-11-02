@@ -146,7 +146,22 @@ module.exports.login = async (req, res) => {
         const tokenValid = check.ok;
 
         if (!tokenValid) {
-            return res.status(401).json({ message: 'OTP verification failed. Please try again.' });
+            // Say which check failed (a short code, nothing secret) so the
+            // storefront shows a message the shopper can act on and a bug
+            // report says where to look: the code itself (expired / used /
+            // another number) vs our side (key missing, MSG91 unreachable).
+            const OTP_FAIL = {
+                rejected: [401, 'This code has expired or was already used. Please request a new OTP.'],
+                phone_mismatch: [401, 'This code was sent to a different number. Please request the OTP again.'],
+                missing: [400, 'OTP verification token is required'],
+                bypass_disabled: [401, 'OTP verification failed. Please try again.'],
+                no_number: [502, 'We could not confirm your code with the SMS provider. Please try again.'],
+                error: [502, 'We could not reach the SMS provider to confirm your code. Please try again in a minute.'],
+                not_configured: [503, 'OTP sign-in is not available right now. Please try again later.'],
+            };
+            const [status, message] = OTP_FAIL[check.reason] || [401, 'OTP verification failed. Please try again.'];
+            logger.warn(`[Login] OTP check failed (${check.reason}) for ••${digits.slice(-4)} brand=${req.brandId || '-'}`);
+            return res.status(status).json({ message, reason: check.reason || 'failed' });
         }
 
         // ── Resolve the consumer for THIS brand ───────────────────────────────
