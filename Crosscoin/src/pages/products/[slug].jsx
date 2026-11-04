@@ -26,12 +26,16 @@ import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 
-async function fetchJson(url) {
+async function fetchJson(url, { required = false } = {}) {
   try {
-    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' } });
-    if (!r.ok) return null;
+    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' }, cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`Product API request failed (${r.status})`);
     return await r.json();
-  } catch {
+  } catch (error) {
+    // ISR must retain the last good product page after temporary API failures,
+    // rather than publishing and caching a false 404 response.
+    if (required) throw error;
     return null;
   }
 }
@@ -47,12 +51,13 @@ export async function getStaticProps({ params }) {
   if (!slug) return { notFound: true };
 
   const [productResp, faqResp] = await Promise.all([
-    fetchJson(`${API_URL}/api/products/by-slug/${encodeURIComponent(slug)}`),
+    fetchJson(`${API_URL}/api/products/by-slug/${encodeURIComponent(slug)}`, { required: true }),
     fetchJson(`${API_URL}/api/public/faqs?type=global`),
   ]);
 
-  if (!productResp?.success || !productResp?.data) {
-    return { notFound: true, revalidate: 60 };
+  if (productResp === null) return { notFound: true, revalidate: 60 };
+  if (!productResp?.success || !productResp?.data?.id) {
+    throw new Error('Product API returned an invalid product response');
   }
 
   // SEO win: if the requested slug is a legacy form (e.g. contains parens),
