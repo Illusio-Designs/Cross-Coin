@@ -1,3 +1,4 @@
+const { normalizeDescriptionMedia } = require('../utils/descriptionMedia.js');
 const { applyBrandPrice } = require('../utils/brandPrice.js');
 const { parseProductAttributes, mergeProductAttributes } = require('../utils/productAttributes.js');
 const { videosFromAttributes, detailImageFromAttributes } = require('../utils/productVideos.js');
@@ -65,12 +66,12 @@ const formatProductResponse = (product) => {
   productData.videos = videosFromAttributes(productData.attributes);
   productData.detailImage = detailImageFromAttributes(productData.attributes);
 
-  // Heal local fallback image URLs embedded in the rich-text description:
-  // rewrite /uploads/ → /api/uploads/ (unless already /api/uploads/) so images
-  // saved while ImageKit was over quota load from the Node app on production.
-  if (typeof productData.description === 'string' && productData.description.includes('/uploads/')) {
-    productData.description = productData.description.replace(/(?<!\/api)\/uploads\//g, '/api/uploads/');
-  }
+  // Local uploads live on the API host; avoid storefront-relative paths and
+  // preserve external CDN URLs that happen to contain an /uploads/ directory.
+  productData.description = normalizeDescriptionMedia(
+    productData.description,
+    process.env.BACKEND_URL || 'https://api.crosscoin.in'
+  );
 
   // Format dimensions - handle JSON string conversion
   if (productData.dimensions) {

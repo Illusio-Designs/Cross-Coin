@@ -95,15 +95,15 @@ const PlainTable = Table.extend({
 function resolveMediaUrl(path) {
   if (!path || typeof path !== 'string') return null;
   if (path.startsWith('http') || path.startsWith('data:')) return path;
-  if (path.startsWith('/uploads/')) return `${API_URL}${path}`;
-  return `${API_URL}/uploads/products/${path.replace(/^\/+/, '')}`;
+  if (/^\/(?:api\/)?uploads\//.test(path)) return `${API_URL.replace(/\/$/, '')}${path.replace(/^\/(?:api\/)?uploads\//, '/api/uploads/')}`;
+  return `${API_URL}/api/uploads/products/${path.replace(/^\/+/, '')}`;
 }
 
 // Photos-library paths (same rules as the Media gallery page).
 function libraryUrl(path) {
   if (!path || typeof path !== 'string') return null;
   if (path.startsWith('http')) return path;
-  if (path.startsWith('/uploads/')) return `${API_URL}${path}`;
+  if (/^\/(?:api\/)?uploads\//.test(path)) return `${API_URL.replace(/\/$/, '')}${path.replace(/^\/(?:api\/)?uploads\//, '/api/uploads/')}`;
   if (/^\/(products|categories|sliders)/.test(path)) return `${IK_URL}${path}`;
   return `${IK_URL}/products/${path.replace(/^\/+/, '')}`;
 }
