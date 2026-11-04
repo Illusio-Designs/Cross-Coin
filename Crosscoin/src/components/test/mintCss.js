@@ -724,4 +724,27 @@ html:not(.mx-go) .cc-test-root .hero__coin, html:not(.mx-go) .cc-test-root .hero
   .cc-test-root .otpbox{ max-width: 42px; }
   .cc-test-root .accttab{ padding: 8px 11px; font-size: 11.5px; }
 }
-.cc-test-root{min-height:100vh;}`;
+.cc-test-root{min-height:100vh;}
+/* Product summary: compact information hierarchy and size controls. */
+.cc-test-root .cc-product-summary .kl{ color:var(--ink); font-family:Inter,sans-serif; font-size:11px; font-weight:700; }
+.cc-test-root .cc-product-summary h1{ font-family:Inter,sans-serif; font-size:clamp(23px,2.2vw,30px); line-height:1.22; letter-spacing:-.025em; margin:7px 0 10px; }
+.cc-test-root .cc-product-summary .rc-box{ background:transparent; border:0; box-shadow:none; padding:0; font-family:Inter,sans-serif; }
+.cc-test-root .cc-product-summary .prow{ font-family:Inter,sans-serif; align-items:center; flex-wrap:wrap; margin:12px 0 5px; gap:12px; }
+.cc-test-root .cc-product-summary .prow .now{ font-size:30px; font-weight:800; }
+.cc-test-root .cc-product-summary .prow .was{ font-size:20px; }
+.cc-test-root .cc-product-summary .prow .off{ background:#18782c; border-radius:6px; font-size:12px; padding:5px 9px; }
+.cc-test-root .cc-product-summary .tax{ font-family:Inter,sans-serif; font-size:12px; }
+.cc-test-root .cc-product-summary .pdpstatus{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; font-family:Inter,sans-serif; }
+.cc-test-root .cc-product-summary .instock{ display:inline-flex; align-items:center; gap:6px; color:#18782c; background:none; border:0; box-shadow:none; padding:0; font-size:12px; font-weight:700; }
+.cc-test-root .cc-product-summary .outstock{ color:var(--crimson); font-size:12px; font-weight:700; }
+.cc-test-root .cc-product-summary .freeship{ display:inline-flex; align-items:center; gap:6px; color:var(--ink); font-size:11px; }
+.cc-test-root .cc-product-summary .optlabel{ font-family:Inter,sans-serif; text-transform:none; letter-spacing:0; font-size:13px; font-weight:600; margin:18px 0 8px; }
+.cc-test-root .cc-product-summary .cc-sizechart{ padding:0; border:0; background:none; color:var(--ink-soft); font:inherit; font-size:12px; text-decoration:underline; cursor:pointer; }
+.cc-test-root .cc-product-summary .size{ font-family:Inter,sans-serif; min-height:38px; padding:8px 14px; border-radius:8px; box-shadow:none; font-size:12px; }
+.cc-test-root .cc-product-summary .size.on{ color:var(--ink); background:var(--paper-2); border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink); }
+.cc-test-root .cc-product-summary .rc-box__s{ background:none; color:var(--ink); padding:0; font-family:Inter,sans-serif; font-size:13px; }
+.cc-test-root .cc-product-summary .rc-box__n{ font-family:Inter,sans-serif; font-size:12px; }
+.cc-test-root .cc-product-summary .cc-rating-star{ color:#e8ac11; }
+.cc-test-root .cc-product-summary .instock svg{ color:#18782c; }
+.cc-test-root .cc-product-summary .freeship svg{ color:var(--ink); }
+`;

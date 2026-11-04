@@ -1,3 +1,4 @@
+import ProductHighlights from '../../components/test/ProductHighlights';
 import SocksComparison from '../../components/test/SocksComparison';
 import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
@@ -358,7 +359,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
             )}
           </div>
 
-          <div className="buy">
+          <div className="buy cc-product-summary">
             <div className="kl">{p.brand}</div>
             <div className="titlerow">
               <h1>{p.name}</h1>
@@ -366,21 +367,25 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
             </div>
             {p.rating && (
               <div className="rc-box" aria-label={`Rated ${p.rating} out of 5${p.revs > 0 ? ` from ${p.revs} reviews` : ''}`}>
-                <span className="rc-box__s">{p.rating}★</span>
+                <span className="rc-box__s">{p.rating} <span className="cc-rating-star" aria-hidden="true">★</span></span>
                 {p.revs > 0 && <span className="rc-box__n">({p.revs} review{p.revs > 1 ? 's' : ''})</span>}
               </div>
             )}
             <div className="prow"><span className="now">{inr(cur.price)}</span>{cur.comparePrice > cur.price && <span className="was">{inr(cur.comparePrice)}</span>}{cur.off > 0 && <span className="off">{cur.off}% OFF</span>}</div>
             <div className="tax">MRP incl. of all taxes</div>
             <div className="pdpstatus">
-              {cur.stock > 0 && cur.stock <= 5
+              {cur.stock != null && cur.stock <= 0
+                ? <span className="outstock">Out of stock</span>
+                : cur.stock > 0 && cur.stock <= 5
                 ? <span className="lowstock">⚠ Only {cur.stock} left</span>
                 : <span className="instock">{I.check(13)} In stock</span>}
               <span className="freeship">{I.truck(15)} <strong>Free shipping</strong> on all orders</span>
             </div>
 
+            <ProductHighlights pairsPerPack={packPairCount(p.raw, cur.id)} />
+
             {sizeOpts.length > 0 && (<>
-              <div className="optlabel">Size {SIZE_GUIDE.rows?.length > 0 && <a onClick={() => setSizeChart(true)}>Size chart</a>}</div>
+              <div className="optlabel">Size {SIZE_GUIDE.rows?.length > 0 && <button type="button" className="cc-sizechart" onClick={() => setSizeChart(true)}>Size chart</button>}</div>
               <div className="sizes">{sizeOpts.map((s) => <button key={s} className={`size${s === size ? ' on' : ''}`} onClick={() => setSize(s)}>{s}</button>)}</div>
             </>)}
 
