@@ -12,7 +12,6 @@ import { addItem } from '../../components/test/store';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
-import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { packPairCount } from '../../components/test/packPairCount';
@@ -30,44 +29,10 @@ const fmtReviewDate = (d) => {
   return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 };
 
-// Description pictures fill the "About this product" column (or the screen
-// width on phones): sized copies instead of the original upload.
-const DESC_WIDTHS = [400, 480, 640, 800, 1100];
-const DESC_SIZES = '(max-width: 860px) calc(100vw - 64px), 640px';
-function sizeDescImages(html) {
-  return String(html || '').replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
-    const src = raw.replace(/&amp;/g, '&');
-    const set = ikSrcSet(src, DESC_WIDTHS);
-    const attr = (v) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    // data-* only: the picture is fetched when it comes near the screen
-    // (DescriptionHtml below), not with the first screen — the browser's own
-    // lazy loading starts far earlier on slow connections.
-    return `${a}data-src="${attr(ikTransform(src, 1100) || src)}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
-  });
-}
-
-// The product description (admin rich text) with its pictures attached only
-// when they are within ~300px of the screen.
+// Keep the editor's image URLs intact. Transforming signed/CDN URLs or
+// removing src for a custom observer can leave otherwise valid pictures blank.
 function DescriptionHtml({ html }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return undefined;
-    const imgs = [...root.querySelectorAll('img[data-src]')];
-    const show = (img) => {
-      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
-      img.src = img.dataset.src;
-      img.removeAttribute('data-src');
-      img.removeAttribute('data-srcset');
-    };
-    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
-    }, { rootMargin: '300px 0px' });
-    imgs.forEach((img) => io.observe(img));
-    return () => io.disconnect();
-  }, [html]);
-  return <div ref={ref} className="legal" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="legal cc-product-description" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 const plainText = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -424,7 +389,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
               <h2>About this product</h2>
               {descHtml
                 ? (hydrated
-                  ? <DescriptionHtml html={sizeDescImages(sanitizeRich(descHtml))} />
+                  ? <DescriptionHtml html={sanitizeRich(descHtml)} />
                   : <div className="legal">{plainText(descHtml)}</div>)
                 : <p className="muted" style={{ color: 'var(--ink-soft)', lineHeight: 1.7 }}>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</p>}
             </div>
