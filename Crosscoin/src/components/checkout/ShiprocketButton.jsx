@@ -6,7 +6,7 @@ import { preloadShiprocket } from '../../lib/shiprocketCheckout';
 // runs our handler, which opens Shiprocket Checkout for the chosen items.
 // globals.css restyles it in the Add to cart look.
 /* eslint-disable @next/next/no-img-element -- Shiprocket's button images, as Shiprocket serves them */
-export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = false, disabled = false }) {
+export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = false, disabled = false, poweredBy = true }) {
   useEffect(() => { preloadShiprocket(); }, []);
   return (
     <button type="button" className="sr-headless-checkout" name="sr-headless-button" onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}>
@@ -18,9 +18,9 @@ export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = fa
           <div className="loader5" />
           <img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/right_arrow.svg" className="sr-pl-15 sr-checkout-visible1" alt="right_arrow" />
         </div>
-        <div>
+        {poweredBy && <div>
           <span className="sr-powered-by"><img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/powered_by.svg" alt="" /></span>
-        </div>
+        </div>}
       </div>
     </button>
   );

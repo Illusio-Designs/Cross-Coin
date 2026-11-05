@@ -1115,11 +1115,8 @@ export default function TestLayout({ children }) {
             {coupon && disc > 0 && <div className="srow" style={{ padding: '4px 0' }}><span>Discount ({coupon.code})</span><span style={{ color: 'var(--crimson-text)' }}>−{inr(disc)}</span></div>}
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson-text)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
-            {useShiprocket ? (
-              <ShiprocketButton label="BUY NOW" onClick={checkoutShiprocket} busy={srBusy} />
-            ) : (
-              <button className="btn btn--crimson btn--block btn--lg" disabled={!cart.length} onClick={() => { trackInitiateCheckout(); setStep('checkout'); }}>Proceed to checkout · {inr(total)}</button>
-            )}
+            <ShiprocketButton label="BUY NOW" busy={srBusy} disabled={!cart.length} poweredBy={useShiprocket}
+              onClick={(e) => { if (useShiprocket) checkoutShiprocket(e); else { trackInitiateCheckout(); setStep('checkout'); } }} />
             <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}

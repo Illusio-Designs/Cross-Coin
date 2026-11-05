@@ -369,13 +369,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
 
-            {/* Our prepaid discount doesn't apply inside Shiprocket Checkout. */}
-            {useShiprocket ? (
-              <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
-            ) : (<>
-              <div className="prepaidchip">≡ PAY ONLINE &amp; SAVE ₹50 ≡</div>
-              <button className="btn btn--buynow btn--block" onClick={() => add(true)}>{I.cart(18)} Buy it now · Cash on Delivery</button>
-            </>)}
+            <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} poweredBy={useShiprocket} />
             {prodReviews.items.length > 0 && <div style={{ marginTop: 18 }}><ProductReviewCarousel key={p.id} reviews={prodReviews.items} /></div>}
           </div>
         </div>
