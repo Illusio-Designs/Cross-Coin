@@ -13,6 +13,7 @@
  *   CUSTOM_CHECKOUT_HMAC_SECRET  — shared secret for the HMAC signature
  * Push is silently skipped for brands that haven't configured them.
  */
+const { validOverride } = require('../utils/brandPrice.js');
 const crypto = require('crypto');
 const axios = require('axios');
 const {
@@ -49,6 +50,8 @@ const parseAttrs = (a) => {
 // Maps one Product row (with ProductVariations, ProductImages, Category
 // includes) to the checkout provider's product shape.
 function mapProduct(p, { vendor = '' } = {}) {
+  // productIncludes scopes Brands to one site before catalog mapping.
+  const sitePrice = p.Brands?.length === 1 ? validOverride(p.Brands[0].ProductBrand?.price_override) : null;
   const images = p.ProductImages || [];
   const primary = images.find((i) => i.is_primary) || images[0] || null;
   const imgSrcFor = (variationId) => {
@@ -83,7 +86,7 @@ function mapProduct(p, { vendor = '' } = {}) {
     return {
       id: Number(v.id),
       title: Object.values(optionValues).join(' / ') || v.sku || 'Default',
-      price: money(v.price),
+      price: money(sitePrice ?? v.price),
       compare_at_price: v.comparePrice != null && Number(v.comparePrice) > 0 ? money(v.comparePrice) : null,
       sku: v.sku || '',
       created_at: iso(v.createdAt),
@@ -172,7 +175,7 @@ function mapCollection(c) {
 
 // Standard includes for a checkout product query, scoped to one brand.
 const productIncludes = (brandId) => [
-  { model: Brand, as: 'Brands', attributes: ['id', 'name'], through: { attributes: [] }, required: true, where: { id: brandId } },
+  { model: Brand, as: 'Brands', attributes: ['id', 'name'], through: { attributes: ['price_override'] }, required: true, where: { id: brandId } },
   { model: ProductVariation, as: 'ProductVariations', required: false },
   { model: ProductImage, as: 'ProductImages', required: false },
   { model: Category, required: false },

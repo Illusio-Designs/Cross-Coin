@@ -101,9 +101,9 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
   const [rv, setRv] = useState({ name: '', email: '', rating: 5, comment: '', busy: false, done: false, err: '' });
   // Shiprocket Checkout (when switched on for CrossCoin): Buy now opens it
   // straight away with just this selection.
-  const [srOn, setSrOn] = useState(false);
+  const [srOn, setSrOn] = useState(true);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on !== false); }); return () => { live = false; }; }, []);
 
   useEffect(() => {
     let off = false;
@@ -274,9 +274,8 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
 
-  // Multi-pair packs keep using our own checkout: Shiprocket prices each pair
-  // from the catalog (no pack price) and can't carry a colour per pair.
-  const useShiprocket = srOn && !p.raw?.brandPriceOverride && !(hasPacks && selOpt && selOpt.pairs > 1);
+  // Packs use Shiprocket too; matching bundle offers live in Shiprocket.
+  const useShiprocket = srOn;
   const onBuyNow = async (e) => {
     if (srBusy) return;
     const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty };
@@ -290,10 +289,10 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
     } catch (_) { /* analytics never blocks the checkout */ }
     setSrBusy(true);
     try {
+      if ((await shiprocketEnabled()) === false) { setSrOn(false); add(true); return; }
       await openShiprocketCheckout(e, [line], 'buy-now');
     } catch (_) {
-      // Shiprocket couldn't start: fall back to our own checkout.
-      add(true);
+      toast('Checkout couldn’t open. Please check your connection and tap Buy now again.');
     } finally {
       setSrBusy(false);
     }

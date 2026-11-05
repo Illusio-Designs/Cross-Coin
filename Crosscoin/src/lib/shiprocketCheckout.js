@@ -20,15 +20,15 @@ let enabledPromise = null;
 let sdkPromise = null;
 
 // Is Shiprocket Checkout switched on for CrossCoin (Brand settings → Payments →
-// Shiprocket Checkout, with keys saved)? Asked once per visit; any failure
-// means "no", so the store's own checkout is used.
+// Shiprocket Checkout, with keys saved)? Only an explicit disabled status
+// selects the store checkout; unknown status can be retried.
 export function shiprocketEnabled() {
-  if (typeof window === 'undefined') return Promise.resolve(false);
   if (!enabledPromise) {
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
-      .then((d) => !!d?.enabled)
-      .catch(() => false);
+      .then((d) => (typeof d?.enabled === 'boolean' ? d.enabled : null))
+      .catch(() => null)
+      .then((on) => { if (on === null) enabledPromise = null; return on; });
   }
   return enabledPromise;
 }
@@ -56,7 +56,7 @@ export function preloadShiprocket() {
     evs.forEach((e) => window.removeEventListener(e, go));
     const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
     idle(() => {
-      shiprocketEnabled().then((on) => { if (on) loadShiprocketSdk().catch(() => {}); });
+      shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
     });
   };
   evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));

@@ -668,15 +668,12 @@ export default function TestLayout({ children }) {
 
   const showToast = (m) => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
 
-  // Shiprocket Checkout (when switched on for CrossCoin) replaces the drawer's
-  // checkout step, and its coupon box — Shiprocket applies its own coupons, so
-  // ours is dropped while it's on. Carts with pack-priced lines (a bundle pack,
-  // or a line repriced to a Buy More, Save More tier) stay on our own checkout:
-  // Shiprocket prices each pair from the catalog and can't apply pack prices.
-  const [srOn, setSrOn] = useState(false);
+  // Match Morbix/Soxbae: Shiprocket handles packs too. Matching discounts
+  // are configured in Shiprocket rather than passed as client prices.
+  const [srOn, setSrOn] = useState(true);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null && !i.sitePriced && !i.packId && !(i.unit < i.base));
+  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on !== false); }); return () => { live = false; }; }, []);
+  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null);
   useEffect(() => { if (useShiprocket && coupon) setCoupon(null); }, [useShiprocket, coupon]);
 
   // Order math (same rules as the live cart): free-shipping threshold + fees come
@@ -739,9 +736,10 @@ export default function TestLayout({ children }) {
     trackInitiateCheckout();
     setSrBusy(true);
     try {
+      if ((await shiprocketEnabled()) === false) { setSrOn(false); setStep('checkout'); return; }
       await openShiprocketCheckout(e, cart.map((i) => ({ variationId: i.vid, quantity: i.qty })), 'cart');
     } catch (_) {
-      setStep('checkout');
+      showToast('Checkout couldn’t open. Please check your connection and try again.');
     } finally {
       setSrBusy(false);
     }
