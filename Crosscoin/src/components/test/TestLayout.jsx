@@ -736,7 +736,8 @@ export default function TestLayout({ children }) {
     trackInitiateCheckout();
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled()) === false) { setSrOn(false); setStep('checkout'); return; }
+      if ((await shiprocketEnabled({ refresh: true })) === false) { setSrOn(false); showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
+      setSrOn(true);
       await openShiprocketCheckout(e, cart.map((i) => ({ variationId: i.vid, quantity: i.qty })), 'cart');
     } catch (_) {
       showToast('Checkout couldn’t open. Please check your connection and try again.');
@@ -1116,7 +1117,7 @@ export default function TestLayout({ children }) {
             {youSave > 0 && <div className="srow" style={{ padding: '4px 0', color: 'var(--crimson-text)', fontWeight: 700 }}><span>You save</span><span>{inr(youSave)}</span></div>}
             <div className="srow total" style={{ marginTop: 4, marginBottom: 12 }}><span>Total</span><span>{inr(total)}</span></div>
             <ShiprocketButton label="BUY NOW" busy={srBusy} disabled={!cart.length} poweredBy={useShiprocket}
-              onClick={(e) => { if (useShiprocket) checkoutShiprocket(e); else { trackInitiateCheckout(); setStep('checkout'); } }} />
+              onClick={checkoutShiprocket} />
             <div className="cotrust"><span>{I.shield(14)} Secure</span><span>{I.ret(14)} Easy returns</span><span>{I.cart(14)} Razorpay</span></div>
           </div>
         </>)}

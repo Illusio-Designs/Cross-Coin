@@ -279,7 +279,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
   const onBuyNow = async (e) => {
     if (srBusy) return;
     const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty };
-    if (!useShiprocket || line.variationId == null) { add(true); return; }
+    if (line.variationId == null) { toast('Please select an available product option before checking out.'); return; }
     try {
       fbqTrack('InitiateCheckout', {
         content_ids: [String(p.id)], content_type: 'product', content_name: p.name,
@@ -289,7 +289,8 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
     } catch (_) { /* analytics never blocks the checkout */ }
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled()) === false) { setSrOn(false); add(true); return; }
+      if ((await shiprocketEnabled({ refresh: true })) === false) { setSrOn(false); toast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
+      setSrOn(true);
       await openShiprocketCheckout(e, [line], 'buy-now');
     } catch (_) {
       toast('Checkout couldn’t open. Please check your connection and tap Buy now again.');

@@ -22,7 +22,8 @@ let sdkPromise = null;
 // Is Shiprocket Checkout switched on for CrossCoin (Brand settings → Payments →
 // Shiprocket Checkout, with keys saved)? Only an explicit disabled status
 // selects the store checkout; unknown status can be retried.
-export function shiprocketEnabled() {
+export function shiprocketEnabled({ refresh = false } = {}) {
+  if (refresh) enabledPromise = null;
   if (!enabledPromise) {
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
