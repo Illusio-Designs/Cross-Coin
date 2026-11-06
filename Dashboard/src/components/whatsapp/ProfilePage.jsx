@@ -127,7 +127,7 @@ const FAIL_ADVICE = [
 const adviceFor = (reason) => (FAIL_ADVICE.find(([re]) => re.test(reason)) || [null, 'Open Failed sends on the Settings page to see the messages and customers affected.'])[1];
 
 const NAME_STATUS = {
-  APPROVED: ['success', 'Approved'], AVAILABLE_WITHOUT_REVIEW: ['success', 'Approved'],
+  APPROVED: ['success', 'Approved'], AVAILABLE_WITHOUT_REVIEW: ['neutral', 'Available without review'],
   PENDING_REVIEW: ['warn', 'Pending review'], DECLINED: ['danger', 'Rejected'], EXPIRED: ['danger', 'Expired'],
 };
 // Review state of a requested display name (Meta's fields first, then our own record).
@@ -135,12 +135,13 @@ function nameReview(number, req) {
   const s = String(number?.pendingNameStatus || '').toUpperCase();
   if (number?.pendingName && s && s !== 'NONE') {
     if (/PENDING/.test(s)) return { tone: 'warn', label: 'Pending review', name: number.pendingName };
-    if (/APPROVED|AVAILABLE/.test(s)) return { tone: 'success', label: 'Approved', name: number.pendingName };
+    if (s === 'APPROVED') return { tone: 'success', label: 'Name-change review approved', name: number.pendingName, note: 'Meta reports approval for this requested name. Check the display name above to confirm it is active.' };
+    if (s === 'AVAILABLE_WITHOUT_REVIEW') return { tone: 'neutral', label: 'Available without review', name: number.pendingName };
     if (/DECLINED|REJECTED|EXPIRED/.test(s)) return { tone: 'danger', label: 'Rejected', name: number.pendingName };
   }
   if (!req?.name) return null;
   const at = new Date(req.at);
-  if (number?.verifiedName && number.verifiedName.toLowerCase() === req.name.toLowerCase()) return { tone: 'success', label: 'Approved', name: req.name, at };
+  if (number?.verifiedName && number.verifiedName.toLowerCase() === req.name.toLowerCase() && String(number.nameStatus).toUpperCase() === 'APPROVED') return { tone: 'success', label: 'Current name approved', name: req.name, at };
   if (/DECLINED|REJECTED/.test(String(number?.nameStatus || '').toUpperCase())) return { tone: 'danger', label: 'Rejected', name: req.name, at };
   if (Date.now() - at.getTime() < 30 * 86400000) return { tone: 'warn', label: 'Pending review', name: req.name, at };
   return null;
@@ -615,7 +616,8 @@ export default function ProfilePage({ isAdmin = false, goTo, brands = [] }) {
                   </div>
                   {review && (
                     <span className="wpp-small">
-                      <Badge tone={review.tone}>{review.label}</Badge> <span className="wpb-strong">“{review.name}”</span>
+                      <span className="wpb-faint">Requested name: </span><Badge tone={review.tone}>{review.label}</Badge> <span className="wpb-strong">“{review.name}”</span>
+                      {review.note && <span className="wpb-faint"> · {review.note}</span>}
                       {review.at && !Number.isNaN(review.at.getTime()) && <span className="wpb-faint"> · asked {day(review.at)}</span>}
                       {review.tone === 'warn' && <span className="wpb-faint"> · Meta usually decides in 1 to 3 days.</span>}
                     </span>
