@@ -62,21 +62,27 @@ export async function getAllProducts(revalidate) {
 }
 
 export async function getProductBySlug(slug, revalidate) {
-  // Fetched fresh by default (no revalidate → cache: 'no-store') so a
-  // newly-added or just-edited product is never hidden behind a stale server
-  // cache. The cached product page passes a short revalidate instead.
+  const handle = typeof slug === 'string' || typeof slug === 'number' ? String(slug).trim() : '';
+  if (!handle || ['undefined', 'null'].includes(handle)) return null;
   try {
-    const data = await brandFetch(`/api/products/by-slug/${slug}`, revalidate);
+    const data = await brandFetch(`/api/products/by-slug/${encodeURIComponent(handle)}`, revalidate);
     const p = data?.data || data;
-    if (p?.id) return mapProduct(p);
-  } catch { /* fall through to id lookup */ }
-  // A product with no slug resolves by its numeric id instead.
-  if (/^\d+$/.test(String(slug))) {
+    if (!p?.id) throw new Error('Product API returned an invalid product response');
+    return mapProduct(p);
+  } catch (error) {
+    // Only a genuine missing product is a 404. A temporary API or mapping
+    // failure must reach the retry boundary, preserving the last good ISR page.
+    if (error.status !== 404) throw error;
+  }
+  if (/^\d+$/.test(handle)) {
     try {
-      const data = await brandFetch(`/api/products/${slug}`, revalidate);
+      const data = await brandFetch(`/api/products/${handle}`, revalidate);
       const p = data?.data || data;
-      if (p?.id) return mapProduct(p);
-    } catch { /* not found */ }
+      if (!p?.id) throw new Error('Product API returned an invalid product response');
+      return mapProduct(p);
+    } catch (error) {
+      if (error.status !== 404) throw error;
+    }
   }
   return null;
 }
@@ -557,7 +563,7 @@ function mapProduct(p) {
 
   return {
     id: p.id,
-    slug: str(p.slug),
+    slug: str(p.slug) || str(p.id),
     name: str(p.name),
     category: str(p.category?.name || p.Category?.name || p.category),
     categorySlug: str(p.category?.slug || p.Category?.slug || ''),

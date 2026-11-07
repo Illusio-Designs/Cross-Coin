@@ -6,7 +6,7 @@
 // still checks cookie paths against the page first loaded.
 export const PDP_COLOR_COOKIE = 'pdp_color';
 
-export const productHref = (slug) => `/products/${slug}`;
+export const productHref = (slug) => `/products/${encodeURIComponent(String(slug))}`;
 
 // Call when a card is clicked: remembers its colour for that product
 // (10 minutes, so a reload keeps it); a card without one clears any old pick.
