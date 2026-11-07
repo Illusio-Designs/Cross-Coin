@@ -5,9 +5,11 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../lib/api/shiprocketCheckout.js'), 'utf8')
   .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+const diagnosticSource = fs.readFileSync(path.join(__dirname, '../lib/checkoutDiagnostics.js'), 'utf8').replace(/^export /gm, '');
 function setup({ response, sdk } = {}) {
   const requests = [], openings = [], stored = [];
   const context = vm.createContext({
+    URL, Event,
     API_URL: 'https://api.test', BRAND: 'soxbae', trackingIds: () => ({ fbp: 'fixture' }),
     window: { location: { origin: 'https://soxbaesocks.com', href: 'https://soxbaesocks.com/products/socks' },
       HeadlessCheckout: { addToCart: (...args) => { openings.push(args); return sdk?.(...args); } } },
@@ -18,6 +20,7 @@ function setup({ response, sdk } = {}) {
       return response || { ok: true, json: async () => ({ success: true, token: 'fixture-token' }) };
     },
   });
+  vm.runInContext(diagnosticSource, context);
   vm.runInContext(source, context);
   return { open: context.openShiprocketCheckout, requests, openings, stored };
 }

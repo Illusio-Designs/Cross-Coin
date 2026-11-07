@@ -1,3 +1,4 @@
+import CheckoutDiagnostics from '@/components/checkout/CheckoutDiagnostics';
 import localFont from 'next/font/local';
 import './globals.css';
 import SmoothScroll from '@/components/SmoothScroll';
@@ -107,6 +108,7 @@ export default async function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.classList.contains('shimmer-img'))return;var r=function(){if(t.naturalWidth>0)t.classList.add('is-loaded')};if(t.decode){t.decode().then(r,function(){})}else{r()}},true)}catch(_){}})();" }} />
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
+        <CheckoutDiagnostics />
         <SentryInit />
         <VisitTracker />
         <ConsentSpeedInsights />
