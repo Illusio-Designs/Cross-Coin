@@ -21,9 +21,10 @@ export default function CheckoutDiagnostics() {
   const text = report ? JSON.stringify(report, null, 2) : 'No checkout attempt recorded. Tap Buy Now or checkout from the cart once.';
   return (
     <aside className="checkout-diagnostics" aria-label="Checkout diagnostic report">
-      <div className="checkout-diagnostics__head"><b>Checkout test report</b><button type="button" onClick={() => setExpanded(!expanded)}>{expanded ? 'Minimize' : 'Show report'}</button></div>
+      <div className="checkout-diagnostics__head"><b>Checkout test report · v2</b><button type="button" onClick={() => setExpanded(!expanded)}>{expanded ? 'Minimize' : 'Show report'}</button></div>
       {expanded && <>
         <p>{report?.providerReturned ? 'Shiprocket returned to the store before checkout completed.' : 'Test mode is on. This report survives a reload in this tab.'}</p>
+        {report?.providerReturned && !report?.stages?.length && <p>The return was detected, but no opening trace was captured. Tap Buy Now once from this test page to start a new report.</p>}
         <pre tabIndex={0}>{text}</pre>
         {report && <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(text); setCopied(true); } catch { setCopied(false); } }}>{copied ? 'Copied' : 'Copy report'}</button>}
         <small>No payment tokens, keys or customer details are included.</small>

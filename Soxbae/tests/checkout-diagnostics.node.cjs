@@ -44,3 +44,38 @@ test('provider return keeps original stages across reload and records safe provi
   assert.equal(new URL(context.window.location.href).searchParams.get('checkout_debug'), '1');
   assert.ok(!context.window.location.href.includes('fastrr_redirect'));
 });
+test('return URL restores opening stages even when browser storage is empty after redirect', () => {
+  const before = setup('https://www.soxbae.com/products/socks?checkout_debug=1');
+  before.context.startCheckoutDiagnostic('buy-now');
+  before.context.checkoutDiagnosticStep('button_tapped');
+  before.context.startCheckoutDiagnostic('buy-now', { preserveTap: true });
+  before.context.checkoutDiagnosticStep('token_response', { httpStatus: 200, tokenPresent: true, catalogReady: true });
+  before.context.checkoutDiagnosticStep('sdk_open_requested');
+  const fallback = before.context.checkoutFallbackUrl(before.context.window.location.href);
+  const after = setup(`${fallback}&attributes[fastrr_redirect]=1&attributes[fastrr_redirect_uuid]=0568693f`);
+  after.context.recordCheckoutReturn();
+  const report = after.context.readCheckoutDiagnostic();
+  assert.equal(report.version, 2);
+  assert.equal(report.traceRecoveredFromReturnUrl, true);
+  assert.equal(report.stages[0].stage, 'button_tapped');
+  assert.equal(report.stages[1].httpStatus, 200);
+  assert.equal(report.stages[2].stage, 'sdk_open_requested');
+  assert.ok(!after.context.window.location.href.includes('checkout_trace'));
+});
+test('malformed or extra fields in return traces cannot inject secrets into the report', () => {
+  const trace = { version: 2, source: 'cart', token: 'secret-token', startedAt: 'unsafe-value', stages: [
+    { stage: 'token_response', token: 'secret-token', httpStatus: 200, at: 'unsafe-value' },
+    { stage: 'arbitrary-secret-stage', at: 'unsafe-value' },
+  ] };
+  const { context } = setup(`https://www.soxbae.com/products/socks?checkout_debug=1&checkout_trace=${encodeURIComponent(JSON.stringify(trace))}&attributes[fastrr_redirect]=1`);
+  context.recordCheckoutReturn();
+  const text = JSON.stringify(context.readCheckoutDiagnostic());
+  assert.ok(!text.includes('secret-token')); assert.ok(!text.includes('unsafe-value')); assert.ok(!text.includes('arbitrary-secret-stage'));
+});
+test('storage-blocked browsers can still capture an in-memory trace for the return URL', () => {
+  const { context } = setup('https://www.soxbae.com/products/socks?checkout_debug=1');
+  context.sessionStorage = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  context.startCheckoutDiagnostic('cart'); context.checkoutDiagnosticStep('opening_started');
+  assert.equal(context.readCheckoutDiagnostic().stages.length, 1);
+  assert.ok(new URL(context.checkoutFallbackUrl(context.window.location.href)).searchParams.has('checkout_trace'));
+});

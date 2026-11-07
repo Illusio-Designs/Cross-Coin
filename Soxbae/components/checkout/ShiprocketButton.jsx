@@ -1,5 +1,6 @@
 'use client';
 
+import { startCheckoutDiagnostic, checkoutDiagnosticStep } from '@/lib/checkoutDiagnostics';
 import { useEffect } from 'react';
 import { loadShiprocketCss, preloadShiprocket } from '@/lib/api/shiprocketCheckout';
 
@@ -7,12 +8,12 @@ import { loadShiprocketCss, preloadShiprocket } from '@/lib/api/shiprocketChecko
 // stylesheet (loaded here), the way their Shopify app renders it. The click
 // runs our handler, which opens Shiprocket Checkout for the chosen items.
 /* eslint-disable @next/next/no-img-element -- Shiprocket's button images, as Shiprocket serves them */
-export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = false, disabled = false }) {
+export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = false, disabled = false, diagnosticSource = 'buy-now' }) {
   // Their stylesheet now; their script on the shopper's first touch or scroll,
   // so tapping the button doesn't wait for the download.
   useEffect(() => { loadShiprocketCss(); preloadShiprocket(); }, []);
   return (
-    <button type="button" className="sr-headless-checkout" name="sr-headless-button" onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}>
+    <button type="button" className="sr-headless-checkout" name="sr-headless-button" onClickCapture={() => { startCheckoutDiagnostic(diagnosticSource); checkoutDiagnosticStep('button_tapped'); }} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}>
       <div className="sr-d-flex flex-center">
         <div className="sr-d-flex full-width flex-center">
           <span className="sr-checkout-visible2">{busy ? 'OPENING…' : label}</span>

@@ -1516,7 +1516,7 @@ export default function CartDrawer() {
                 <>
                   {error && <p className="cd-error">{error}</p>}
                   {useShiprocket ? (
-                    <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={srBusy} disabled={processing} />
+                    <ShiprocketButton label="BUY NOW" diagnosticSource="cart" onClick={goToCheckout} busy={srBusy} disabled={processing} />
                   ) : (
                   <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
                     Proceed to checkout · ₹{total.toFixed(0)}

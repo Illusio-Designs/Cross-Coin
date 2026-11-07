@@ -89,7 +89,7 @@ export function loadShiprocketSdk() {
 export function openShiprocketCheckout(event, lines, source = 'buy-now') {
   if (openingPromise) return openingPromise;
   const open = async () => {
-    startCheckoutDiagnostic(source);
+    startCheckoutDiagnostic(source, { preserveTap: true });
     checkoutDiagnosticStep('opening_started');
     const byVariant = new Map();
     for (const line of lines || []) {
