@@ -558,6 +558,8 @@ export default function CartDrawer() {
   /* Advance to the checkout step. Fires InitiateCheckout (Meta) + begin_checkout
      (GA4) + first-party funnel — tied to checkout intent, not drawer open. */
   const goToCheckout = async (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     if (!items.length || srBusy) return;
     fbTrack('InitiateCheckout', {
       content_ids: items.map((i) => String(i.id)),

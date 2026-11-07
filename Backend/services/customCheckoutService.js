@@ -298,7 +298,14 @@ async function pushProduct(productId, brandId = 1) {
 // stock count alone is pushed in the background.
 async function ensureProductsPushed(brandId, variantIds) {
   await loadPushed(brandId);
-  const vars = await ProductVariation.findAll({ where: { id: variantIds.map(Number).filter(Boolean) }, attributes: ['id', 'productId'] });
+  const requested = [...new Set(variantIds.map(Number))];
+  if (!requested.length || requested.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    const error = new Error('Invalid product options for checkout'); error.status = 400; throw error;
+  }
+  const vars = await ProductVariation.findAll({ where: { id: requested }, attributes: ['id', 'productId'] });
+  if (vars.length !== requested.length) {
+    const error = new Error('Some product options are no longer available'); error.status = 409; throw error;
+  }
   const ids = [...new Set(vars.map((v) => v.productId))];
   const results = await Promise.all(ids.map(async (pid) => {
     const body = await productBody(pid, brandId);

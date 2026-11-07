@@ -1,0 +1,75 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '../lib/api/shiprocketCheckout.js'), 'utf8')
+  .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+function setup({ response, sdk } = {}) {
+  const requests = [], openings = [], stored = [];
+  const context = vm.createContext({
+    API_URL: 'https://api.test', BRAND: 'soxbae', trackingIds: () => ({ fbp: 'fixture' }),
+    window: { location: { origin: 'https://soxbaesocks.com', href: 'https://soxbaesocks.com/products/socks' },
+      HeadlessCheckout: { addToCart: (...args) => { openings.push(args); return sdk?.(...args); } } },
+    sessionStorage: { setItem: (...args) => stored.push(args) },
+    fetch: async (url, options) => {
+      requests.push({ url, options });
+      if (response instanceof Error) throw response;
+      return response || { ok: true, json: async () => ({ success: true, token: 'fixture-token' }) };
+    },
+  });
+  vm.runInContext(source, context);
+  return { open: context.openShiprocketCheckout, requests, openings, stored };
+}
+test('Buy Now and cart use Soxbae brand, correct return URL and session source', async () => {
+  for (const source of ['buy-now', 'cart']) {
+    const c = setup();
+    await c.open({}, [{ variationId: 12, quantity: 2 }], source);
+    const request = c.requests[0], payload = JSON.parse(request.options.body);
+    assert.equal(request.options.headers['X-Brand-Name'], 'soxbae');
+    assert.equal(payload.redirect_url, 'https://soxbaesocks.com/order-confirmation');
+    assert.deepEqual(payload.items, [{ variant_id: '12', quantity: 2 }]);
+    assert.equal(c.openings[0][1], 'fixture-token');
+    assert.deepEqual(c.stored[0], ['soxbae-sr-source', source]);
+  }
+});
+test('duplicate cart lines for the same variation become one provider line', async () => {
+  const c = setup();
+  await c.open({}, [{ variationId: 12, quantity: 2 }, { variationId: '12', quantity: 1 }], 'cart');
+  assert.deepEqual(JSON.parse(c.requests[0].options.body).items, [{ variant_id: '12', quantity: 3 }]);
+});
+test('rapid taps share one opening and remain pending until SDK settles', async () => {
+  let finish;
+  const c = setup({ sdk: () => new Promise((resolve) => { finish = resolve; }) });
+  const a = c.open({}, [{ variationId: 12, quantity: 1 }]);
+  const b = c.open({}, [{ variationId: 12, quantity: 1 }]);
+  assert.equal(a, b);
+  let settled = false; a.then(() => { settled = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(c.requests.length, 1); assert.equal(c.openings.length, 1); assert.equal(settled, false);
+  finish(); await a; assert.equal(settled, true);
+});
+test('asynchronous SDK failure reaches the caller and a later tap can retry', async () => {
+  let count = 0;
+  const c = setup({ sdk: () => ++count === 1 ? Promise.reject(new Error('SDK failed')) : Promise.resolve() });
+  await assert.rejects(c.open({}, [{ variationId: 12, quantity: 1 }]), /SDK failed/);
+  await c.open({}, [{ variationId: 12, quantity: 1 }]);
+  assert.equal(c.requests.length, 2);
+});
+test('failed catalog or token response never opens the provider', async () => {
+  for (const response of [
+    { ok: false, json: async () => ({ success: false, message: 'Products could not sync' }) },
+    { ok: true, json: async () => ({ success: true }) },
+    { ok: false, json: async () => ({ success: true, token: 'invalid' }) },
+    new Error('Network failed'),
+  ]) {
+    const c = setup({ response });
+    await assert.rejects(c.open({}, [{ variationId: 12, quantity: 1 }]));
+    assert.equal(c.openings.length, 0);
+  }
+});
+test('invalid product options and quantities are rejected before token creation', async () => {
+  for (const lines of [[], [{ variationId: null, quantity: 1 }], [{ variationId: 'bad', quantity: 1 }], [{ variationId: 1, quantity: 0 }], [{ variationId: 1, quantity: 1.5 }]]) {
+    const c = setup(); await assert.rejects(c.open({}, lines)); assert.equal(c.requests.length, 0);
+  }
+});

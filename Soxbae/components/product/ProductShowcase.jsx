@@ -345,6 +345,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   // Otherwise Soxbae's cart drawer is the checkout, so Buy now adds the
   // selection and opens it straight away (no "added" toast in between).
   const onBuyNow = async (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     if (!inStock || srBusy) return;
     const lines = useShiprocket ? buyNowLines() : [];
     if (!lines.length || lines.some((l) => l.variationId == null)) { addToCart(); return; }
