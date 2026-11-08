@@ -116,7 +116,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
         body: JSON.stringify({ items, custom_attributes, redirect_url: `${window.location.origin}/order-confirmation` }),
       }).then(async (r) => {
         const data = await r.json().catch(() => ({}));
-        checkoutDiagnosticStep('token_response', { httpStatus: r.status, tokenPresent: !!(data?.result?.token || data?.token), catalogReady: Array.isArray(data?.catalogPush) && data.catalogPush.length > 0, productCount: data?.catalogPush?.length || 0 });
+        checkoutDiagnosticStep('token_response', { httpStatus: r.status, tokenPresent: !!(data?.result?.token || data?.token), code: data?.code, catalogReady: Array.isArray(data?.catalogPush) && data.catalogPush.length > 0 && data.catalogPush.every((row) => [true, 'unchanged', 'background'].includes(row?.pushed)), productCount: data?.catalogPush?.length || 0 });
         if (!r.ok || !data?.success) throw new Error(data?.message || 'Checkout could not be started');
         return data;
       }),

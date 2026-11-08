@@ -1,3 +1,4 @@
+const { assertCatalogPushAccepted } = require('../utils/checkoutCatalog.js');
 /**
  * Custom Checkout catalog service (Shiprocket-Checkout-compatible).
  *
@@ -205,7 +206,9 @@ async function productBody(productId, brandId) {
   const vendor = p.Brands?.[0]?.name || '';
   return JSON.stringify(mapProduct(p, { vendor }));
 }
-const hashOf = (body) => crypto.createHash('sha1').update(body).digest('hex');
+// Older cache entries did not validate HTTP-200 business rejections. Recheck
+// each product once under the acknowledgement-aware catalog contract.
+const hashOf = (body) => crypto.createHash('sha1').update(`catalog-ack-v2:${body}`).digest('hex');
 // What a checkout depends on: title, status, and per variant its price,
 // compare-at price and whether it is in stock. Stock counts and edit times
 // change with every sale; they are refreshed in the background, never on the
@@ -272,7 +275,7 @@ async function pushProduct(productId, brandId = 1) {
     const body = await productBody(productId, brandId);
     if (!body) return { skipped: 'not_found' };
     const hmac = crypto.createHmac('sha256', cfg.secret).update(body, 'utf8').digest('base64');
-    await axios.post(PUSH_PRODUCT_URL, body, {
+    const response = await axios.post(PUSH_PRODUCT_URL, body, {
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': cfg.apiKey,
@@ -280,12 +283,13 @@ async function pushProduct(productId, brandId = 1) {
       },
       timeout: 15000,
     });
+    assertCatalogPushAccepted(response.data);
     rememberPush(brandId, productId, body);
     logger.info(`[custom-checkout] pushed product ${productId} (brand ${brandId})`);
     return { pushed: true };
   } catch (err) {
     logger.warn(`[custom-checkout] product push failed (${productId}, brand ${brandId}): ${err?.response?.status || ''} ${err.message}`);
-    return { error: err.message, status: err?.response?.status, provider: err?.response?.data };
+    return { error: err.message, code: err.code, status: err.status || err?.response?.status, provider: err?.response?.data };
   }
 }
 

@@ -136,7 +136,7 @@ exports.createToken = async (req, res) => {
     res.json({ success: true, ...data, catalogPush });
   } catch (err) {
     logger.error('[custom-checkout] createToken failed: ' + (err?.response?.status || '') + ' ' + err.message);
-    res.status(err.status || 502).json({ success: false, message: err.message, provider: err?.response?.data });
+    res.status(err.status || 502).json({ success: false, message: err.message, code: String(err.code || '').startsWith('CHECKOUT_') ? err.code : 'CHECKOUT_TOKEN_FAILED', provider: err?.response?.data });
   }
 };
 

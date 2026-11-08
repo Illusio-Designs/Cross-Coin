@@ -60,7 +60,7 @@ function traceFromUrl(url) {
       for (const key of ['httpStatus', 'itemCount', 'productCount', 'tokenPresent', 'catalogReady']) {
         if (typeof step[key] === 'boolean' || typeof step[key] === 'number') safe[key] = step[key];
       }
-      if (step.code === 'CHECKOUT_OPEN_FAILED') safe.code = step.code;
+      if (['CHECKOUT_OPEN_FAILED', 'CHECKOUT_CATALOG_REJECTED', 'CHECKOUT_CATALOG_UNAVAILABLE', 'CHECKOUT_TOKEN_FAILED'].includes(step.code)) safe.code = step.code;
       return safe;
     });
     return { version: 2, source: value.source === 'cart' ? 'cart' : 'buy-now',

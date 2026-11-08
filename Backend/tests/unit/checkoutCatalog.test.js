@@ -26,3 +26,9 @@ test.each([true, 'unchanged', 'background'])('valid catalog state %s creates bra
   expect(service.createCheckoutToken).toHaveBeenCalledWith(2, expect.objectContaining({ items: [{ variant_id: '12', quantity: 2 }] }), 'https://soxbaesocks.com/order-confirmation');
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, token: 'fixture-token' }));
 });
+test('provider business rejection is reported distinctly and no checkout token is issued', async () => {
+  service.ensureProductsPushed.mockResolvedValue([{ productId: 1, code: 'CHECKOUT_CATALOG_REJECTED', error: 'Shiprocket rejected the product catalog update.' }]);
+  const res = response(); await createToken(request(), res);
+  expect(service.createCheckoutToken).not.toHaveBeenCalled();
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, code: 'CHECKOUT_CATALOG_REJECTED' }));
+});
