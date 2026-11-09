@@ -2,7 +2,7 @@
 // request bodies or provider response bodies; only the explicitly listed fields.
 const KEY = 'soxbae-checkout-diagnostic-v1';
 let memoryReport = null;
-const STAGES = new Set(['button_tapped', 'opening_started', 'token_requested', 'sdk_ready', 'token_response', 'sdk_open_requested', 'sdk_call_returned', 'opening_failed']);
+const STAGES = new Set(['button_tapped', 'opening_started', 'token_requested', 'sdk_ready', 'token_response', 'sdk_open_requested', 'sdk_call_returned', 'opening_failed', 'token_metadata']);
 export const DIAGNOSTIC_EVENT = 'soxbae-checkout-diagnostic';
 export function checkoutDiagnosticsEnabled() {
   return typeof window !== 'undefined' && new URL(window.location.href).searchParams.get('checkout_debug') === '1';
@@ -19,7 +19,8 @@ export function startCheckoutDiagnostic(source, { preserveTap = false } = {}) {
   if (!checkoutDiagnosticsEnabled()) return;
   const previous = readCheckoutDiagnostic();
   if (preserveTap && previous?.stages?.at(-1)?.stage === 'button_tapped' && Date.now() - Date.parse(previous.startedAt) < 10000) return;
-  save({ version: 2, source: source === 'cart' ? 'cart' : 'buy-now', origin: window.location.origin,
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  save({ version: 3, browser: /Safari/i.test(userAgent) && !/Chrome|CriOS|Android|FxiOS|EdgiOS/i.test(userAgent) ? 'Safari' : 'Other', source: source === 'cart' ? 'cart' : 'buy-now', origin: window.location.origin,
     path: window.location.pathname, startedAt: new Date().toISOString(), stages: [] });
 }
 export function checkoutDiagnosticStep(stage, fields = {}) {
@@ -27,9 +28,11 @@ export function checkoutDiagnosticStep(stage, fields = {}) {
   const report = readCheckoutDiagnostic();
   if (!report) return;
   const safe = {};
-  for (const key of ['httpStatus', 'itemCount', 'productCount', 'tokenPresent', 'catalogReady']) {
+  for (const key of ['httpStatus', 'itemCount', 'productCount', 'tokenPresent', 'catalogReady', 'tokenSecondsRemaining', 'cookiesEnabled', 'secureContext']) {
     if (typeof fields[key] === 'boolean' || typeof fields[key] === 'number') safe[key] = fields[key];
   }
+  if (['jwt', 'opaque'].includes(fields.tokenFormat)) safe.tokenFormat = fields.tokenFormat;
+  if (Array.isArray(fields.variantIds)) safe.variantIds = fields.variantIds.filter((id) => /^\d{1,20}$/.test(String(id))).slice(0, 20).map(String);
   if (/^[A-Z0-9_]{1,60}$/.test(fields.code || '')) safe.code = fields.code;
   report.stages = [...(report.stages || []).slice(-23), { stage, at: new Date().toISOString(), ...safe }];
   save(report);
@@ -44,7 +47,7 @@ export function checkoutFallbackUrl(href, { includeTrace = true } = {}) {
   if (includeTrace && url.searchParams.get('checkout_debug') === '1' && report?.stages?.length) {
     // This contains only opt-in, allowlisted diagnostics. No SDK access token,
     // customer information or tracking identifiers are put in the return URL.
-    url.searchParams.set('checkout_trace', JSON.stringify({ version: 2, source: report.source, startedAt: report.startedAt, stages: report.stages.slice(-12) }));
+    url.searchParams.set('checkout_trace', JSON.stringify({ version: 3, browser: report.browser, source: report.source, startedAt: report.startedAt, stages: report.stages.slice(-12) }));
   }
   return url.href;
 }
@@ -53,17 +56,19 @@ function traceFromUrl(url) {
   if (!raw || raw.length > 5000) return null;
   try {
     const value = JSON.parse(raw);
-    if (value.version !== 2 || !Array.isArray(value.stages)) return null;
+    if (![2, 3].includes(value.version) || !Array.isArray(value.stages)) return null;
     const stages = value.stages.filter((step) => step && STAGES.has(step.stage)).slice(-12).map((step) => {
       const safe = { stage: step.stage };
       if (typeof step.at === 'string' && /^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(step.at)) safe.at = step.at;
-      for (const key of ['httpStatus', 'itemCount', 'productCount', 'tokenPresent', 'catalogReady']) {
+      for (const key of ['httpStatus', 'itemCount', 'productCount', 'tokenPresent', 'catalogReady', 'tokenSecondsRemaining', 'cookiesEnabled', 'secureContext']) {
         if (typeof step[key] === 'boolean' || typeof step[key] === 'number') safe[key] = step[key];
       }
-      if (['CHECKOUT_OPEN_FAILED', 'CHECKOUT_CATALOG_REJECTED', 'CHECKOUT_CATALOG_UNAVAILABLE', 'CHECKOUT_TOKEN_FAILED'].includes(step.code)) safe.code = step.code;
+      if (['jwt', 'opaque'].includes(step.tokenFormat)) safe.tokenFormat = step.tokenFormat;
+      if (Array.isArray(step.variantIds)) safe.variantIds = step.variantIds.filter((id) => /^\d{1,20}$/.test(String(id))).slice(0, 20).map(String);
+      if (['CHECKOUT_TOKEN_EXPIRED', 'CHECKOUT_OPEN_FAILED', 'CHECKOUT_CATALOG_REJECTED', 'CHECKOUT_CATALOG_UNAVAILABLE', 'CHECKOUT_TOKEN_FAILED'].includes(step.code)) safe.code = step.code;
       return safe;
     });
-    return { version: 2, source: value.source === 'cart' ? 'cart' : 'buy-now',
+    return { version: 3, ...(value.browser === 'Safari' || value.browser === 'Other' ? { browser: value.browser } : {}), source: value.source === 'cart' ? 'cart' : 'buy-now',
       ...(typeof value.startedAt === 'string' && /^\d{4}-\d{2}-\d{2}T[0-9:.]+Z$/.test(value.startedAt) ? { startedAt: value.startedAt } : {}),
       origin: window.location.origin, path: window.location.pathname, stages, traceRecoveredFromReturnUrl: true };
   } catch { return null; }
@@ -73,7 +78,9 @@ export function recordCheckoutReturn() {
   const url = new URL(window.location.href);
   if (!url.searchParams.has('attributes[fastrr_redirect]')) return;
   const ids = url.searchParams.getAll('attributes[fastrr_redirect_uuid]').filter((id) => /^[a-zA-Z0-9-]{1,80}$/.test(id));
-  const report = traceFromUrl(url) || readCheckoutDiagnostic() || { version: 2, origin: window.location.origin, path: window.location.pathname, stages: [] };
+  const trace = traceFromUrl(url);
+  const stored = readCheckoutDiagnostic();
+  const report = (trace && stored?.startedAt === trace.startedAt ? { ...stored, traceRecoveredFromReturnUrl: true } : trace || stored) || { version: 3, origin: window.location.origin, path: window.location.pathname, stages: [] };
   report.providerReturned = true;
   report.redirectIds = ids.slice(-6);
   report.returnedAt = new Date().toISOString();

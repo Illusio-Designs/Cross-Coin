@@ -55,7 +55,7 @@ test('return URL restores opening stages even when browser storage is empty afte
   const after = setup(`${fallback}&attributes[fastrr_redirect]=1&attributes[fastrr_redirect_uuid]=0568693f`);
   after.context.recordCheckoutReturn();
   const report = after.context.readCheckoutDiagnostic();
-  assert.equal(report.version, 2);
+  assert.equal(report.version, 3);
   assert.equal(report.traceRecoveredFromReturnUrl, true);
   assert.equal(report.stages[0].stage, 'button_tapped');
   assert.equal(report.stages[1].httpStatus, 200);

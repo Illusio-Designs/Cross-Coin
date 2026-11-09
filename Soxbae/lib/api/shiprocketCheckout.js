@@ -107,7 +107,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
     const custom_attributes = {};
     for (const k of Object.keys(ids)) if (ids[k] != null && ids[k] !== '') custom_attributes[k] = String(ids[k]);
 
-    checkoutDiagnosticStep('token_requested', { itemCount: items.reduce((sum, item) => sum + item.quantity, 0) });
+    checkoutDiagnosticStep('token_requested', { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), variantIds: items.map((item) => item.variant_id), secureContext: window.isSecureContext === true, cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled === true : false });
     const [sdk, res] = await Promise.all([
       loadShiprocketSdk().then((sdk) => { checkoutDiagnosticStep('sdk_ready'); return sdk; }),
       fetch(`${API_URL}/api/custom-checkout/token`, {
@@ -123,6 +123,18 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
     ]);
     const token = res?.result?.token || res?.token;
     if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
+    // Inspect only expiry metadata for diagnostics; never record the token or
+    // decoded customer/merchant claims. Decoding does not verify its signature.
+    const tokenFormat = String(token).split('.').length === 3 ? 'jwt' : 'opaque';
+    let tokenSecondsRemaining;
+    if (tokenFormat === 'jwt') {
+      try {
+        const encoded = String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const claims = JSON.parse(window.atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')));
+        if (typeof claims.exp === 'number' && Number.isFinite(claims.exp)) tokenSecondsRemaining = Math.floor(claims.exp - Date.now() / 1000);
+      } catch { /* opaque or non-decodable provider token */ }
+    }
+    checkoutDiagnosticStep('token_metadata', { tokenFormat, tokenSecondsRemaining });
     try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch { /* blocked */ }
     // If Shiprocket can't open its checkout it sends the shopper back here.
     checkoutDiagnosticStep('sdk_open_requested');

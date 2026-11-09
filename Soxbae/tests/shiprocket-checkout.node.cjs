@@ -6,12 +6,12 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../lib/api/shiprocketCheckout.js'), 'utf8')
   .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
 const diagnosticSource = fs.readFileSync(path.join(__dirname, '../lib/checkoutDiagnostics.js'), 'utf8').replace(/^export /gm, '');
-function setup({ response, sdk } = {}) {
+function setup({ response, sdk, debug = false } = {}) {
   const requests = [], openings = [], stored = [];
   const context = vm.createContext({
-    URL, Event,
+    URL, Event, navigator: { userAgent: 'Version/18.0 Mobile Safari/605.1.15', cookieEnabled: true },
     API_URL: 'https://api.test', BRAND: 'soxbae', trackingIds: () => ({ fbp: 'fixture' }),
-    window: { location: { origin: 'https://soxbaesocks.com', href: 'https://soxbaesocks.com/products/socks' },
+    window: { atob, isSecureContext: true, location: { origin: 'https://soxbaesocks.com', href: 'https://soxbaesocks.com/products/socks' + (debug ? '?checkout_debug=1' : '') },
       HeadlessCheckout: { addToCart: (...args) => { openings.push(args); return sdk?.(...args); } } },
     sessionStorage: { setItem: (...args) => stored.push(args) },
     fetch: async (url, options) => {
@@ -22,7 +22,7 @@ function setup({ response, sdk } = {}) {
   });
   vm.runInContext(diagnosticSource, context);
   vm.runInContext(source, context);
-  return { open: context.openShiprocketCheckout, requests, openings, stored };
+  return { open: context.openShiprocketCheckout, report: context.readCheckoutDiagnostic, requests, openings, stored };
 }
 test('Buy Now and cart use Soxbae brand, correct return URL and session source', async () => {
   for (const source of ['buy-now', 'cart']) {
@@ -75,4 +75,17 @@ test('invalid product options and quantities are rejected before token creation'
   for (const lines of [[], [{ variationId: null, quantity: 1 }], [{ variationId: 'bad', quantity: 1 }], [{ variationId: 1, quantity: 0 }], [{ variationId: 1, quantity: 1.5 }]]) {
     const c = setup(); await assert.rejects(c.open({}, lines)); assert.equal(c.requests.length, 0);
   }
+});
+test('Safari diagnostic captures cookie flags, selected options and token expiry without token or claims', async () => {
+  const token = `${Buffer.from('{}').toString('base64url')}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 120, customer: 'PRIVATE-CUSTOMER' })).toString('base64url')}.signature`;
+  const c = setup({ debug: true, response: { ok: true, status: 200, json: async () => ({ success: true, token }) } });
+  await c.open({}, [{ variationId: 12, quantity: 1 }]);
+  const report = c.report();
+  assert.equal(report.browser, 'Safari');
+  const requested = report.stages.find((stage) => stage.stage === 'token_requested');
+  assert.equal(requested.cookiesEnabled, true); assert.equal(requested.secureContext, true);
+  assert.equal(requested.variantIds[0], '12');
+  const metadata = report.stages.find((stage) => stage.stage === 'token_metadata');
+  assert.equal(metadata.tokenFormat, 'jwt'); assert.ok(metadata.tokenSecondsRemaining > 0 && metadata.tokenSecondsRemaining <= 120);
+  assert.ok(!JSON.stringify(report).includes(token)); assert.ok(!JSON.stringify(report).includes('PRIVATE-CUSTOMER'));
 });
