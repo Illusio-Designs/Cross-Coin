@@ -33,5 +33,5 @@ test('Soxbae deployment and robots use the same website domain', () => {
   vm.createContext(context);
   vm.runInContext(source + '\nglobalThis.result = robots();', context);
   assert.equal(context.result.sitemap, 'https://soxbae.com/sitemap.xml');
-  assert.equal(context.result.host, 'https://soxbae.com');
+  assert.equal(context.result.host, 'soxbae.com'); // robots Host is a hostname, without a scheme
 });

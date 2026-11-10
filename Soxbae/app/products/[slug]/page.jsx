@@ -28,7 +28,7 @@ export async function generateStaticParams() {
   return [];
 }
 
-const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbaesocks.com').replace(/\/+$/, '');
+const SITE_URL = (process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://soxbae.com').replace(/\/+$/, '');
 const BRAND = 'Soxbae';
 
 export async function generateMetadata({ params }) {

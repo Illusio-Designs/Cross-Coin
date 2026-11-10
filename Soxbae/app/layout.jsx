@@ -39,7 +39,7 @@ const fraunces = localFont({
 });
 
 export const metadata = {
-  metadataBase: new URL('https://soxbaesocks.com'),
+  metadataBase: new URL('https://soxbae.com'),
   title: {
     default: 'Soxbae — Premium socks for sport & city life',
     template: '%s | Soxbae',
