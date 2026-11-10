@@ -11,7 +11,7 @@ function setup({ response, sdk, debug = false } = {}) {
   const context = vm.createContext({
     URL, Event, navigator: { userAgent: 'Version/18.0 Mobile Safari/605.1.15', cookieEnabled: true },
     API_URL: 'https://api.test', BRAND: 'soxbae', trackingIds: () => ({ fbp: 'fixture' }),
-    window: { atob, isSecureContext: true, location: { origin: 'https://soxbaesocks.com', href: 'https://soxbaesocks.com/products/socks' + (debug ? '?checkout_debug=1' : '') },
+    window: { atob, isSecureContext: true, location: { origin: 'https://www.soxbae.com', href: 'https://www.soxbae.com/products/socks' + (debug ? '?checkout_debug=1' : '') },
       HeadlessCheckout: { addToCart: (...args) => { openings.push(args); return sdk?.(...args); } } },
     sessionStorage: { setItem: (...args) => stored.push(args) },
     fetch: async (url, options) => {
@@ -30,7 +30,7 @@ test('Buy Now and cart use Soxbae brand, correct return URL and session source',
     await c.open({}, [{ variationId: 12, quantity: 2 }], source);
     const request = c.requests[0], payload = JSON.parse(request.options.body);
     assert.equal(request.options.headers['X-Brand-Name'], 'soxbae');
-    assert.equal(payload.redirect_url, 'https://soxbaesocks.com/order-confirmation');
+    assert.equal(payload.redirect_url, 'https://www.soxbae.com/order-confirmation');
     assert.deepEqual(payload.items, [{ variant_id: '12', quantity: 2 }]);
     assert.equal(c.openings[0][1], 'fixture-token');
     assert.deepEqual(c.stored[0], ['soxbae-sr-source', source]);
@@ -88,4 +88,17 @@ test('Safari diagnostic captures cookie flags, selected options and token expiry
   const metadata = report.stages.find((stage) => stage.stage === 'token_metadata');
   assert.equal(metadata.tokenFormat, 'jwt'); assert.ok(metadata.tokenSecondsRemaining > 0 && metadata.tokenSecondsRemaining <= 120);
   assert.ok(!JSON.stringify(report).includes(token)); assert.ok(!JSON.stringify(report).includes('PRIVATE-CUSTOMER'));
+});
+
+test('all checkout entry points prevent native form or link navigation', async () => {
+  const c = setup(); let prevented = 0, stopped = 0;
+  await c.open({ preventDefault() { prevented++; }, stopPropagation() { stopped++; } }, [{ variationId: 696, quantity: 1 }]);
+  assert.equal(prevented, 1); assert.equal(stopped, 1);
+  assert.equal(c.openings.length, 1);
+});
+test('backend rejection code survives into the phone diagnostic', async () => {
+  const c = setup({ debug: true, response: { ok: false, status: 502, json: async () => ({ success: false, code: 'CHECKOUT_CATALOG_REJECTED', message: 'Catalog rejected' }) } });
+  await assert.rejects(c.open({}, [{ variationId: 696, quantity: 1 }]));
+  assert.equal(c.report().stages.at(-1).code, 'CHECKOUT_CATALOG_REJECTED');
+  assert.equal(c.openings.length, 0);
 });

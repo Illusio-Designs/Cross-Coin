@@ -74,9 +74,13 @@ function traceFromUrl(url) {
   } catch { return null; }
 }
 export function recordCheckoutReturn() {
-  if (!checkoutDiagnosticsEnabled()) return;
+  if (typeof window === 'undefined') return;
   const url = new URL(window.location.href);
   if (!url.searchParams.has('attributes[fastrr_redirect]')) return;
+  if (!checkoutDiagnosticsEnabled()) {
+    window.history.replaceState(window.history.state, '', checkoutFallbackUrl(url.href, { includeTrace: false }));
+    return;
+  }
   const ids = url.searchParams.getAll('attributes[fastrr_redirect_uuid]').filter((id) => /^[a-zA-Z0-9-]{1,80}$/.test(id));
   const trace = traceFromUrl(url);
   const stored = readCheckoutDiagnostic();

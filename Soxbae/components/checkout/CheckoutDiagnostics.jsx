@@ -10,9 +10,9 @@ export default function CheckoutDiagnostics() {
   const [expanded, setExpanded] = useState(true);
   const [manualCopy, setManualCopy] = useState(false);
   useEffect(() => {
+    recordCheckoutReturn();
     if (!checkoutDiagnosticsEnabled()) return;
     setEnabled(true);
-    recordCheckoutReturn();
     const update = () => { setReport(readCheckoutDiagnostic()); setCopied(false); };
     update();
     window.addEventListener(DIAGNOSTIC_EVENT, update);

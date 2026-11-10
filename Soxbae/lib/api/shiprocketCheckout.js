@@ -17,6 +17,7 @@ const SDK_CSS = 'https://checkout-ui.shiprocket.com/assets/styles/shopify.css';
 export const SR_SOURCE_KEY = 'soxbae-sr-source';
 
 let enabledPromise = null;
+let enabledAt = 0;
 let sdkPromise = null;
 let openingPromise = null;
 
@@ -26,7 +27,9 @@ let openingPromise = null;
 // back the store's own checkout; if the question itself fails the answer is
 // null ("don't know") and it is asked again next time.
 export function shiprocketEnabled() {
+  if (Date.now() - enabledAt > 30000) enabledPromise = null;
   if (!enabledPromise) {
+    enabledAt = Date.now();
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
       .then((d) => (typeof d?.enabled === 'boolean' ? d.enabled : null))
@@ -36,23 +39,23 @@ export function shiprocketEnabled() {
   return enabledPromise;
 }
 
-// Download Shiprocket's script + stylesheet ahead of the tap, once the shopper
-// first touches, scrolls or types on the page (and the browser is idle), so
-// tapping Buy now / checkout doesn't wait for the download. Not on page load:
-// it would cost the page's speed score, and most visitors never check out.
+// Warm static checkout assets after rendering or on first interaction. Tokens
+// are still requested only for the current selection when checkout is tapped.
 let preloadArmed = false;
 export function preloadShiprocket() {
   if (preloadArmed || typeof window === 'undefined') return;
   preloadArmed = true;
   const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+  let started = false;
   const go = () => {
+    if (started) return;
+    started = true;
     evs.forEach((e) => window.removeEventListener(e, go));
-    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
-    idle(() => {
-      shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
-    });
+    loadShiprocketSdk().catch(() => { preloadArmed = false; });
   };
   evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
+  if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 1500 });
+  else setTimeout(go, 750);
 }
 
 // Shiprocket's stylesheet (their checkout window + their Buy now button).
@@ -87,6 +90,9 @@ export function loadShiprocketSdk() {
 // 'cart' or 'buy-now'. The shopper's browser ids + cookie choice ride along,
 // so the order's Meta / GA4 Purchase matches them even if the tab is closed.
 export function openShiprocketCheckout(event, lines, source = 'buy-now') {
+  // Protect every caller, including sticky buttons and future form buttons.
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   if (openingPromise) return openingPromise;
   const open = async () => {
     startCheckoutDiagnostic(source, { preserveTap: true });
@@ -117,7 +123,11 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
       }).then(async (r) => {
         const data = await r.json().catch(() => ({}));
         checkoutDiagnosticStep('token_response', { httpStatus: r.status, tokenPresent: !!(data?.result?.token || data?.token), code: data?.code, catalogReady: Array.isArray(data?.catalogPush) && data.catalogPush.length > 0 && data.catalogPush.every((row) => [true, 'unchanged', 'background'].includes(row?.pushed)), productCount: data?.catalogPush?.length || 0 });
-        if (!r.ok || !data?.success) throw new Error(data?.message || 'Checkout could not be started');
+        if (!r.ok || !data?.success) {
+          const error = new Error(data?.message || 'Checkout could not be started');
+          error.code = data?.code || 'CHECKOUT_TOKEN_FAILED';
+          throw error;
+        }
         return data;
       }),
     ]);
@@ -142,7 +152,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
     checkoutDiagnosticStep('sdk_call_returned');
   };
   openingPromise = open().catch((error) => {
-    checkoutDiagnosticStep('opening_failed', { code: 'CHECKOUT_OPEN_FAILED' });
+    checkoutDiagnosticStep('opening_failed', { code: /^CHECKOUT_[A-Z_]+$/.test(error?.code || '') ? error.code : 'CHECKOUT_OPEN_FAILED' });
     throw error;
   }).finally(() => { openingPromise = null; });
   return openingPromise;

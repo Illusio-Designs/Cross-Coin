@@ -79,3 +79,13 @@ test('storage-blocked browsers can still capture an in-memory trace for the retu
   assert.equal(context.readCheckoutDiagnostic().stages.length, 1);
   assert.ok(new URL(context.checkoutFallbackUrl(context.window.location.href)).searchParams.has('checkout_trace'));
 });
+
+test('normal shoppers also get a clean returned URL without storing debug reports', () => {
+  const { context } = setup('https://www.soxbae.com/products/socks?color=Black&attributes[fastrr_redirect]=1&attributes[fastrr_redirect_uuid]=abc');
+  context.recordCheckoutReturn();
+  const url = new URL(context.window.location.href);
+  assert.equal(url.searchParams.get('color'), 'Black');
+  assert.equal(url.searchParams.has('attributes[fastrr_redirect]'), false);
+  assert.equal(url.searchParams.has('attributes[fastrr_redirect_uuid]'), false);
+  assert.equal(context.readCheckoutDiagnostic(), null);
+});
