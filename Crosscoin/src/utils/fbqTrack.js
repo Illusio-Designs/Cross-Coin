@@ -227,3 +227,32 @@ export function relayFirstPageView() {
   window.__fbPv0 = null; // once
   try { relayToCapi('PageView', id, {}); } catch (_) { /* never throw */ }
 }
+
+// Browser Purchase waits for a late-loaded pixel, as on Morbix. The backend
+// remains authoritative for GA4 and CAPI; reuse its Meta event id for dedupe.
+const pendingPurchases = new Map();
+export function fbPurchase(orderNumber, params = {}) {
+  if (typeof window === 'undefined' || !orderNumber || orderNumber === '—') return Promise.resolve(false);
+  const order = String(orderNumber);
+  const key = `cc-purchase-fired:${order}`;
+  try { if (sessionStorage.getItem(key) === '1') return Promise.resolve(true); } catch { /* optional storage */ }
+  if (pendingPurchases.has(order)) return pendingPurchases.get(order);
+  const send = new Promise((resolve) => {
+    let tries = 0;
+    const attempt = () => {
+      if (typeof window.fbq === 'function' && hasMarketingConsent()) {
+        if (fbqTrack('Purchase', { ...params, order_id: order }, { eventID: `Purchase_${order}` })) {
+          try { sessionStorage.setItem(key, '1'); } catch { /* optional storage */ }
+          resolve(true); return;
+        }
+      }
+      if (++tries >= 120) { resolve(false); return; }
+      setTimeout(attempt, 1000);
+    };
+    // Schedule once so even a synchronous pixel stub cannot race map insertion.
+    setTimeout(attempt, 0);
+  });
+  pendingPurchases.set(order, send);
+  send.then((sent) => { if (!sent) pendingPurchases.delete(order); });
+  return send;
+}

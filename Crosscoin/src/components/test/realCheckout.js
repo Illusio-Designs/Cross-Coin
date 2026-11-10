@@ -9,7 +9,7 @@ import {
 } from '../../services/publicApi';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '';
-const TEST_NOTE = 'TEST PREVIEW ORDER (placed from /test design preview)';
+const checkoutNote = () => typeof window !== 'undefined' && /^\/test(?:\/|$)/.test(window.location.pathname) ? 'TEST PREVIEW ORDER (placed from /test design preview)' : '';
 
 function uid() {
   try { return (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(16).slice(2); }
@@ -62,7 +62,7 @@ export async function placeCodGuest({ cart, form, couponId, discount }) {
   const body = {
     items: buildItems(cart),
     payment_type: 'cod',
-    notes: TEST_NOTE,
+    notes: checkoutNote(),
     discount_amount: discount || 0,
     coupon_id: couponId || null,
     idempotency_key: uid(),
@@ -95,7 +95,7 @@ export async function placePrepaidGuest({ cart, form, couponId, discount, onSucc
   const init = await initiateGuestCheckout({
     items: buildItems(cart),
     payment_type: 'razorpay',
-    notes: TEST_NOTE,
+    notes: checkoutNote(),
     discount_amount: discount || 0,
     coupon_id: couponId || null,
     idempotency_key: uid(),
@@ -125,7 +125,7 @@ export async function placePrepaidGuest({ cart, form, couponId, discount, onSucc
     amount: rzp.amount,
     currency: rzp.currency || 'INR',
     name: 'Cross Coin',
-    description: 'Payment for Cross Coin Order (test preview)',
+    description: checkoutNote() ? 'Payment for Cross Coin Order (test preview)' : 'Payment for Cross Coin Order',
     order_id: rzp.id,
     prefill: { name: form.name, email: form.email, contact: form.phone },
     theme: { color: '#CE1E36' },

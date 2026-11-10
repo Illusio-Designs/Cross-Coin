@@ -14,7 +14,7 @@ const { assertCatalogPushAccepted } = require('../utils/checkoutCatalog.js');
  *   CUSTOM_CHECKOUT_HMAC_SECRET  — shared secret for the HMAC signature
  * Push is silently skipped for brands that haven't configured them.
  */
-const { validOverride } = require('../utils/brandPrice.js');
+const { validOverride, createBrandPriceResolver } = require('../utils/brandPrice.js');
 const crypto = require('crypto');
 const axios = require('axios');
 const {
@@ -573,15 +573,16 @@ async function ingestCheckoutOrder(brandId, p) {
 
     // Resolve cart lines against real variations.
     const lines = [];
+    const sitePrice = createBrandPriceResolver(brandId);
     for (const it of items) {
       const v = await ProductVariation.findByPk(it.variant_id, { transaction: t });
       if (!v) { const e = new Error(`Unknown variant_id ${it.variant_id}`); e.status = 400; throw e; }
       const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
-      const price = Number(v.price) || 0;
+      const price = await sitePrice(v.productId, v.price);
       lines.push({ product_id: v.productId, variation_id: v.id, quantity: qty, price, discount: 0, subtotal: price * qty });
     }
 
-    // Line prices come from OUR variations; the provider's totals must agree
+    // Line prices come from OUR brand/variation prices; provider totals must agree
     // with them (small tolerance for rounding) or the order is not ingested.
     const linesTotal = lines.reduce((a, l) => a + l.subtotal, 0);
     const subtotal = linesTotal;

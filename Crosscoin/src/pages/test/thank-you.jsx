@@ -5,16 +5,13 @@ import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { I } from '../../components/test/ui';
 import { clearCart } from '../../components/test/store';
-import { fbqTrack } from '@/utils/fbqTrack';
+import { fbPurchase } from '@/utils/fbqTrack';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '../../lib/shiprocketCheckout';
 import { takePurchaseForThankYou } from '../../lib/thankYou';
 import { rememberBuyer } from '../../utils/fbAdvancedMatching';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } };
 const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch (_) { /* blocked */ } };
-const writeSession = (k, v) => { try { sessionStorage.setItem(k, v); } catch (_) { /* blocked */ } };
-// Last Shiprocket order whose Purchase fired here, so a reload doesn't send it again.
-const SR_FIRED_KEY = 'cc-sr-fired';
 
 /* The thank-you page after every order (/thank-you and /order-confirmation):
      our own checkout      → ?order=<order number>  (older links: ?order_number=)
@@ -51,7 +48,7 @@ export default function TestThankYou() {
     if (order) {
       const data = takePurchaseForThankYou(order);
       if (data) {
-        try { fbqTrack('Purchase', data, { eventID: 'Purchase_' + order }); } catch (_) { /* analytics never blocks the page */ }
+        try { fbPurchase(order, data); } catch (_) { /* analytics never blocks the page */ }
       }
       return;
     }
@@ -65,20 +62,18 @@ export default function TestThankYou() {
         setSr({ key, phase: 'done', orderNumber: o.order_number });
         dropSession(SR_SOURCE_KEY);
         if (fromCart) clearCart();
-        if (readSession(SR_FIRED_KEY) === String(o.order_number)) return;
-        writeSession(SR_FIRED_KEY, String(o.order_number));
         const contents = o.items || [];
         // The buyer's hashed email / phone (from our server): the browser
         // Purchase then matches as well as the server's, and so do their
         // later visits.
         if (o.am) rememberBuyer(o.am);
         try {
-          fbqTrack('Purchase', {
+          fbPurchase(o.order_number, {
             content_ids: contents.map((i) => String(i.id)), content_type: 'product',
             contents,
             num_items: contents.reduce((s, i) => s + (i.quantity || 1), 0),
             value: Number(o.value || 0), currency: 'INR',
-          }, { eventID: 'Purchase_' + o.order_number });
+          });
         } catch (_) { /* analytics never blocks the page */ }
       })
       .catch(() => {
@@ -90,15 +85,19 @@ export default function TestThankYou() {
   }, [router.isReady, key, order, oid, ost]);
 
   // done (our own order, or no order in the URL) | failed | loading | pending.
-  const phase = !router.isReady ? 'loading' : order || !oid ? 'done' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
+  const phase = !router.isReady ? 'loading' : order ? 'done' : !oid ? 'none' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
   const orderNo = order || (sr.key === key ? sr.orderNumber || '' : '');
   const failed = phase === 'failed';
 
   return (
     <TestLayout>
-      <Head><title>{failed ? 'Payment not completed — CrossCoin' : 'Order confirmed — CrossCoin Mint preview'}</title><meta name="robots" content="noindex, nofollow" /></Head>
+      <Head><title>{failed ? 'Payment not completed — CrossCoin' : phase === 'none' ? 'Orders — CrossCoin' : 'Order confirmation — CrossCoin'}</title><meta name="robots" content="noindex, nofollow" /></Head>
       <div className="wrap" style={{ maxWidth: 560, paddingBlock: '48px 70px', textAlign: 'center' }}>
-        {failed ? (<>
+        {phase === 'none' ? (<>
+          <h1 style={{ margin: '20px 0 8px' }}>No order to show</h1>
+          <p style={{ color: 'var(--ink-soft)' }}>There is no order reference in this link. Check your order message or contact support.</p>
+          <button className="btn btn--crimson" onClick={() => router.push(R.shop)}>Continue shopping</button>
+        </>) : failed ? (<>
           <h1 style={{ fontFamily: 'Fraunces,serif', fontSize: 'clamp(26px,5vw,40px)', margin: '20px 0 8px' }}>Your order isn&rsquo;t placed yet</h1>
           <p style={{ color: 'var(--ink-soft)', fontSize: 14.5, lineHeight: 1.6, marginTop: 10 }}>
             The checkout didn&rsquo;t go through{ost ? <span className="mono"> ({ost.toLowerCase()})</span> : null}, so nothing was charged. You can try again whenever you&rsquo;re ready.
@@ -109,15 +108,15 @@ export default function TestThankYou() {
           </div>
         </>) : (<>
           <div className="tyseal">{I.check(34)}</div>
-          <h1 style={{ fontFamily: 'Fraunces,serif', fontSize: 'clamp(26px,5vw,40px)', margin: '20px 0 8px' }}>{phase === 'loading' ? 'Confirming your order…' : 'Order placed'}</h1>
+          <h1 style={{ fontFamily: 'Fraunces,serif', fontSize: 'clamp(26px,5vw,40px)', margin: '20px 0 8px' }}>{phase === 'loading' ? 'Confirming your order…' : phase === 'pending' ? 'Order confirmation pending' : 'Order placed'}</h1>
           {phase === 'loading'
             ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>This takes a moment.</p>
             : phase === 'pending'
-              ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Your order is received. We&rsquo;ll send the order number and updates to you.</p>
+              ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>We haven&rsquo;t confirmed this order in our system yet. Please keep your Shiprocket order reference and contact support.</p>
               : orderNo
                 ? <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Order <b style={{ color: 'var(--crimson-text)' }}>{orderNo}</b> is confirmed.</p>
                 : <p className="mono" style={{ fontSize: 14, color: 'var(--ink-soft)' }}>Your order is confirmed.</p>}
-          {phase !== 'loading' && (
+          {phase === 'done' && (
             <p style={{ color: 'var(--ink-soft)', fontSize: 14.5, lineHeight: 1.6, marginTop: 10 }}>
               A confirmation has been sent to your email. Estimated delivery by <b>{eta}</b>.
             </p>
