@@ -118,6 +118,26 @@ function readCookie(name) {
   } catch (_) { return undefined; }
 }
 
+function readFbc() {
+  const cookie = readCookie('_fbc');
+  if (cookie) return cookie;
+  try {
+    const click = new URLSearchParams(window.location.search).get('fbclid') || localStorage.getItem('fbclid');
+    if (click) return `fb.1.${Date.now()}.${click}`;
+  } catch (_) { /* blocked storage */ }
+  return undefined;
+}
+
+function rememberedBuyer() {
+  try {
+    const buyer = JSON.parse(localStorage.getItem('fb_am') || 'null') || {};
+    const out = {};
+    if (/^[a-f0-9]{64}$/.test(buyer.em || '')) out.em = buyer.em;
+    if (/^[a-f0-9]{64}$/.test(buyer.ph || '')) out.ph = buyer.ph;
+    return out;
+  } catch (_) { return {}; }
+}
+
 // Browser ad/analytics ids for server-side attribution on order/checkout
 // requests (what Shopify's Meta & Google apps attach): Meta _fbp/_fbc and the
 // GA4 client id from the `_ga` cookie (`GA1.1.<id>` → `<id>`), plus whether the
@@ -128,7 +148,7 @@ export function trackingIds() {
   try {
     const fbp = readCookie('_fbp');
     if (fbp) out.fbp = fbp;
-    const fbc = readCookie('_fbc');
+    const fbc = readFbc();
     if (fbc) out.fbc = fbc;
     // Anonymous visitor id (_mvid, set by the store's edge): Meta external_id.
     const vid = readCookie('_mvid');
@@ -155,18 +175,18 @@ function hasMarketingConsent() {
 // if the page is navigating away (e.g. InitiateCheckout → redirect to payment).
 // Sent only with marketing consent (DPDP) — the browser pixel is a queue-only
 // stub until consent, so the server copy must not go out without it either.
-function relayToCapi(event, eventID, params) {
+function relayToCapi(event, eventID, params, sourceUrl) {
   try {
     if (!hasMarketingConsent()) return;
-    const u = (typeof window !== 'undefined' && window.__fbUser) || {};
+    const u = { ...rememberedBuyer(), ...((typeof window !== 'undefined' && window.__fbUser) || {}) };
     const body = JSON.stringify({
       event_name: event,
       event_id: eventID,
-      event_source_url: typeof window !== 'undefined' ? window.location.href : undefined,
+      event_source_url: sourceUrl || (typeof window !== 'undefined' ? window.location.href : undefined),
       custom_data: params,
       user_data: { em: u.em, ph: u.ph, fn: u.fn, ln: u.ln, external_id: u.external_id, visitor_id: (readCookie('_mvid') || '').match(/^[a-f0-9]{64}$/) ? readCookie('_mvid') : undefined },
       fbp: readCookie('_fbp'),
-      fbc: readCookie('_fbc'),
+      fbc: readFbc(),
     });
     fetch(`${API_URL}/api/facebook-pixel/track`, {
       method: 'POST',
@@ -180,6 +200,43 @@ function relayToCapi(event, eventID, params) {
   }
 }
 
+// Keep early Meta events until the pixel loads, without repeating GA4 or
+// first-party events. Preserve the original page and shared browser/server ID.
+const pendingMeta = [];
+let metaWaiting = false;
+function sendMeta(event, params, eventID, sourceUrl) {
+  try { window.fbq('track', event, params, { eventID }); } catch (_) { return false; }
+  if (RELAY_EVENTS.has(event)) relayToCapi(event, eventID, params, sourceUrl);
+  return true;
+}
+function holdMeta(event, params, eventID) {
+  if (pendingMeta.length < 50) pendingMeta.push({ event, params, eventID, url: window.location.href, at: Date.now() });
+  if (metaWaiting) return;
+  metaWaiting = true;
+  let tries = 0;
+  const flush = () => {
+    if (typeof window.fbq !== 'function' || !hasMarketingConsent()) return false;
+    for (const row of pendingMeta.splice(0)) {
+      if (row.at >= Date.now() - 600000) sendMeta(row.event, row.params, row.eventID, row.url);
+    }
+    metaWaiting = false;
+    window.removeEventListener('brand-fbq-ready', flush);
+    return true;
+  };
+  window.addEventListener('brand-fbq-ready', flush);
+  const tick = () => {
+    if (flush()) return;
+    if (++tries >= 600) {
+      pendingMeta.length = 0;
+      metaWaiting = false;
+      window.removeEventListener('brand-fbq-ready', flush);
+      return;
+    }
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 500);
+}
+
 export function fbqTrack(event, params = {}, options = {}) {
   if (typeof window === 'undefined') return false;
   if (BLOCKED_EVENTS.includes(event)) return false;
@@ -190,17 +247,12 @@ export function fbqTrack(event, params = {}, options = {}) {
   // First-party funnel event → our own DB (fires regardless of Meta/GA presence).
   fpTrack(event, params);
 
-  if (!window.fbq) return false;
   const eventID = options.eventID || makeEventId(event);
-  try {
-    // Always pass eventID so the browser event can be deduplicated server-side.
-    window.fbq('track', event, params, { eventID });
-  } catch (error) {
+  if (typeof window.fbq !== 'function') {
+    holdMeta(event, params, eventID);
     return false;
   }
-
-  if (RELAY_EVENTS.has(event)) relayToCapi(event, eventID, params);
-  return true;
+  return sendMeta(event, params, eventID, window.location.href);
 }
 
 // The cart drawer counts as a page: Meta PageView in the browser + its

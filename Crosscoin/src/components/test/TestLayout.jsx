@@ -712,7 +712,7 @@ export default function TestLayout({ children }) {
   // consent; view_cart in our own funnel events).
   useEffect(() => {
     if (!drawer) return;
-    try { if (window.gtag) window.gtag('event', 'page_view', { page_location: window.location.origin + '/cart', page_path: '/cart', page_title: 'Cart' }); } catch (_) { /* never throw */ }
+    try { gtagTrack('page_view', { page_location: window.location.origin + '/cart', page_path: '/cart', page_title: 'Cart' }); } catch (_) { /* never throw */ }
     trackCartPageView();
   }, [drawer]);
   // GA4 view_cart — once per drawer open, when it shows the cart with items.
