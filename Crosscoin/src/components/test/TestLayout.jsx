@@ -18,7 +18,7 @@ import { placeCodGuest, placePrepaidGuest } from './realCheckout';
 import { fbqTrack, trackCartPageView, trackShippingInfoFp } from '@/utils/fbqTrack';
 import { gtagTrack } from '@/utils/gtagTrack';
 import { useWishlist, wishCount } from './wishlist';
-import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import { shiprocketEnabled, openShiprocketCheckout, preloadShiprocket } from '../../lib/shiprocketCheckout';
 import { savePurchaseForThankYou } from '../../lib/thankYou';
 import ShiprocketButton from '../checkout/ShiprocketButton';
 
@@ -515,6 +515,10 @@ const MOBILE_CSS = `
 
 export default function TestLayout({ children }) {
   const router = useRouter();
+  useEffect(() => {
+    preloadShiprocket();
+    router.prefetch('/order-confirmation');
+  }, [router]);
   const cart = useCart();
   const count = cartCount(cart);
   const wish = useWishlist();
@@ -736,7 +740,7 @@ export default function TestLayout({ children }) {
     trackInitiateCheckout();
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled({ refresh: true })) === false) { setSrOn(false); showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
+      if ((await shiprocketEnabled()) === false) { setSrOn(false); showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
       setSrOn(true);
       await openShiprocketCheckout(e, cart.map((i) => ({ variationId: i.vid, quantity: i.qty })), 'cart');
     } catch (_) {

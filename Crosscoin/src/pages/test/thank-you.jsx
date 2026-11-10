@@ -78,7 +78,7 @@ export default function TestThankYou() {
       })
       .catch(() => {
         if (handled.current !== key) return;
-        if (tries > 1) setTimeout(() => confirm(tries - 1), 2500);
+        if (tries > 1) setTimeout(() => confirm(tries - 1), tries === 3 ? 500 : 1500);
         else setSr({ key, phase: 'pending' });
       });
     confirm(3);

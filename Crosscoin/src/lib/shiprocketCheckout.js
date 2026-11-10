@@ -17,14 +17,16 @@ const SDK_CSS = 'https://checkout-ui.shiprocket.com/assets/styles/shopify.css';
 export const SR_SOURCE_KEY = 'cc-sr-source';
 
 let enabledPromise = null;
+let enabledAt = 0;
 let sdkPromise = null;
 
 // Is Shiprocket Checkout switched on for CrossCoin (Brand settings → Payments →
 // Shiprocket Checkout, with keys saved)? Only an explicit disabled status
 // selects the store checkout; unknown status can be retried.
 export function shiprocketEnabled({ refresh = false } = {}) {
-  if (refresh) enabledPromise = null;
+  if (refresh || Date.now() - enabledAt > 30000) enabledPromise = null;
   if (!enabledPromise) {
+    enabledAt = Date.now();
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
       .then((r) => r.json())
       .then((d) => (typeof d?.enabled === 'boolean' ? d.enabled : null))
@@ -43,24 +45,23 @@ export function loadShiprocketCss() {
   document.head.appendChild(link);
 }
 
-// Download Shiprocket's script + stylesheet ahead of the tap, once the shopper
-// first touches, clicks, types or uses the mouse wheel (and the browser is
-// idle), so tapping Buy now / checkout doesn't wait for the download. Not on
-// page load (it would cost the page's speed score, and most visitors never
-// check out), and not on scroll (a page scrolls itself while it loads).
+// Warm checkout after the first render, or immediately on interaction. Only
+// static assets are loaded here; tokens are always created for the actual tap.
 let preloadArmed = false;
 export function preloadShiprocket() {
   if (preloadArmed || typeof window === 'undefined') return;
   preloadArmed = true;
   const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+  let started = false;
   const go = () => {
+    if (started) return;
+    started = true;
     evs.forEach((e) => window.removeEventListener(e, go));
-    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
-    idle(() => {
-      shiprocketEnabled().then((on) => { if (on !== false) loadShiprocketSdk().catch(() => {}); });
-    });
+    loadShiprocketSdk().catch(() => { preloadArmed = false; });
   };
   evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
+  if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 1500 });
+  else setTimeout(go, 750);
 }
 
 // Load Shiprocket's checkout script + styles once; resolves when
@@ -107,7 +108,7 @@ export async function openShiprocketCheckout(event, lines, source = 'buy-now') {
   if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
   try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch (_) { /* blocked */ }
   // If Shiprocket can't open its checkout it sends the shopper back here.
-  sdk.addToCart(event, token, { fallbackUrl: window.location.href });
+  await sdk.addToCart(event, token, { fallbackUrl: window.location.href });
 }
 
 // Back from Shiprocket: our backend verifies the order with Shiprocket, saves

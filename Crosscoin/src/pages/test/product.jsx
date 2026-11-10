@@ -289,7 +289,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
     } catch (_) { /* analytics never blocks the checkout */ }
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled({ refresh: true })) === false) { setSrOn(false); toast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
+      if ((await shiprocketEnabled()) === false) { setSrOn(false); toast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
       setSrOn(true);
       await openShiprocketCheckout(e, [line], 'buy-now');
     } catch (_) {

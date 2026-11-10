@@ -507,15 +507,15 @@ async function purchasePayload(brandId, orderNumber) {
     include: [{ model: OrderItem, as: 'OrderItems' }],
   });
   if (!order) return null;
-  const [guest, addr] = await Promise.all([
+  const pids = [...new Set((order.OrderItems || []).map((i) => i.product_id).filter(Boolean))];
+  const [guest, addr, prods] = await Promise.all([
     order.guest_user_id ? GuestUser.findByPk(order.guest_user_id) : null,
     order.shipping_address_id ? ShippingAddress.findByPk(order.shipping_address_id) : null,
+    pids.length ? Product.findAll({ where: { id: pids }, attributes: ['id', 'name'] }) : [],
   ]);
   const amount = Number(order.final_amount) || 0;
   const email = guest?.email || null;
   // Product names, so GA4's product reports show real names, not "(not set)".
-  const pids = [...new Set((order.OrderItems || []).map((i) => i.product_id).filter(Boolean))];
-  const prods = pids.length ? await Product.findAll({ where: { id: pids }, attributes: ['id', 'name'] }) : [];
   const nameOf = new Map(prods.map((p) => [p.id, p.name]));
   return {
     brand_id: brandId, order_number: order.order_number,
