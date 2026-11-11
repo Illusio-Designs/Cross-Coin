@@ -289,6 +289,12 @@ export function fbPurchase(orderNumber, params = {}) {
   const key = `cc-purchase-fired:${order}`;
   try { if (sessionStorage.getItem(key) === '1') return Promise.resolve(true); } catch { /* optional storage */ }
   if (pendingPurchases.has(order)) return pendingPurchases.get(order);
+  // A queued fbq stub alone cannot transmit the event. Wake the deferred
+  // tracking loader now, even after client-side navigation to confirmation.
+  try {
+    window.__brandPurchaseReady = true;
+    window.dispatchEvent(new Event('brand-purchase-ready'));
+  } catch (_) { /* optional browser event */ }
   const send = new Promise((resolve) => {
     let tries = 0;
     const attempt = () => {

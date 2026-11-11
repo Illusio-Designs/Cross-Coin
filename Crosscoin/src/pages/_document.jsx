@@ -169,7 +169,10 @@ export default function Document({ tracking }) {
                 // scroll restoration) and the browser goes idle within a few
                 // seconds, which started ~300 KB of tags while the first
                 // screen was still loading. Events wait in the queues above.
-                "if(/[?&](gclid|gbraid|wbraid|fbclid|utm_source)=/.test(location.search)){boot();}else{" +
+                // A return from hosted checkout is a fresh page load, often
+                // without another tap. Flush conversion queues immediately.
+                "window.addEventListener('brand-purchase-ready',boot,{once:true});" +
+                "if(/^\\/(?:order-confirmation|thank-you|test\\/thank-you)\\/?$/.test(P)||window.__brandPurchaseReady||/[?&](gclid|gbraid|wbraid|fbclid|utm_source)=/.test(location.search)){boot();}else{" +
                 "['pointerdown','keydown','touchstart','wheel'].forEach(function(e){window.addEventListener(e,boot,{capture:true,passive:true,once:true});});" +
                 "setTimeout(boot,20000);}" +
                 "})();",
