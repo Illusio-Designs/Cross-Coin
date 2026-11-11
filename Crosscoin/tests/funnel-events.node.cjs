@@ -29,7 +29,7 @@ test('early product/cart/checkout events retain one GA4, first-party and matched
   assert.equal(s.requests.length, 6);
   assert.equal(s.google.length, 5);
   s.context.window.location.href = 'https://www.crosscoin.in/other';
-  s.context.window.fbq = (...args) => s.pixel.push(args);
+  s.context.window.fbq = Object.assign((...args) => s.pixel.push(args), { callMethod() {} });
   s.timers.shift()();
   assert.equal(s.pixel.length, 6);
   const relays = s.requests.filter((r) => r.url.endsWith('/api/facebook-pixel/track'));
@@ -61,7 +61,7 @@ test('attribution retains click, visit, GA client/session and remembered buyer',
 });
 test('Purchase fires once with server event ID, without another GA4 or CAPI purchase', async () => {
   const s = setup();
-  s.context.window.fbq = (...args) => s.pixel.push(args);
+  s.context.window.fbq = Object.assign((...args) => s.pixel.push(args), { callMethod() {} });
   const pending = s.context.fbPurchase('CC-42', { value: 799, currency: 'INR' });
   s.timers.shift()();
   assert.equal(await pending, true);
@@ -74,7 +74,7 @@ test('Purchase fires once with server event ID, without another GA4 or CAPI purc
 test('pixel ready notification flushes page views once; polling does not repeat them', () => {
   const s = setup();
   s.context.fbqTrack('PageView', {}, { ga4: false });
-  s.context.window.fbq = (...args) => s.pixel.push(args);
+  s.context.window.fbq = Object.assign((...args) => s.pixel.push(args), { callMethod() {} });
   s.listeners['brand-fbq-ready']();
   while (s.timers.length) s.timers.shift()();
   assert.equal(s.pixel.length, 1);
@@ -84,7 +84,7 @@ test('pixel ready notification flushes page views once; polling does not repeat 
 });
 test('cart view records the first-party visit and Meta PageView without starting checkout', () => {
   const s = setup();
-  s.context.window.fbq = (...args) => s.pixel.push(args);
+  s.context.window.fbq = Object.assign((...args) => s.pixel.push(args), { callMethod() {} });
   s.context.trackCartPageView();
   assert.equal(s.requests.filter((r) => r.body.event === 'view_cart').length, 1);
   assert.equal(s.pixel.length, 1);

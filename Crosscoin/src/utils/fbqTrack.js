@@ -1,5 +1,6 @@
 import { gtagTrack } from './gtagTrack';
 import { getConsent } from '../lib/consent';
+import { ensurePurchasePixel } from './purchasePixel';
 
 // Facebook Pixel event tracking utility.
 //
@@ -286,7 +287,9 @@ const pendingPurchases = new Map();
 export function fbPurchase(orderNumber, params = {}) {
   if (typeof window === 'undefined' || !orderNumber || orderNumber === '—') return Promise.resolve(false);
   const order = String(orderNumber);
-  const key = `cc-purchase-fired:${order}`;
+  // Old markers could mean only "queued in a stub". Use a new version after
+  // requiring a live library; Meta still deduplicates by Purchase_<order>.
+  const key = `cc-purchase-fired-v2:${order}`;
   try { if (sessionStorage.getItem(key) === '1') return Promise.resolve(true); } catch { /* optional storage */ }
   if (pendingPurchases.has(order)) return pendingPurchases.get(order);
   // A queued fbq stub alone cannot transmit the event. Wake the deferred
@@ -295,10 +298,14 @@ export function fbPurchase(orderNumber, params = {}) {
     window.__brandPurchaseReady = true;
     window.dispatchEvent(new Event('brand-purchase-ready'));
   } catch (_) { /* optional browser event */ }
+  try { ensurePurchasePixel().catch(() => {}); } catch (_) { /* tracking cannot block checkout */ }
   const send = new Promise((resolve) => {
     let tries = 0;
     const attempt = () => {
-      if (typeof window.fbq === 'function' && hasMarketingConsent()) {
+      if (tries > 0 && tries % 10 === 0) {
+        try { ensurePurchasePixel().catch(() => {}); } catch (_) { /* retry config/library recovery */ }
+      }
+      if (typeof window.fbq?.callMethod === 'function' && hasMarketingConsent()) {
         if (fbqTrack('Purchase', { ...params, order_id: order }, { eventID: `Purchase_${order}` })) {
           try { sessionStorage.setItem(key, '1'); } catch { /* optional storage */ }
           resolve(true); return;

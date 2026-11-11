@@ -7,7 +7,7 @@ import { I } from '../../components/test/ui';
 import { clearCart } from '../../components/test/store';
 import { fbPurchase } from '@/utils/fbqTrack';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '../../lib/shiprocketCheckout';
-import { takePurchaseForThankYou } from '../../lib/thankYou';
+import { takePurchaseForThankYou, completePurchaseForThankYou } from '../../lib/thankYou';
 import { rememberBuyer } from '../../utils/fbAdvancedMatching';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } };
@@ -20,7 +20,7 @@ const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch (_) { /
    the same id the server's Conversions API event uses, so Meta counts the
    sale once.
    - Our own checkout: the order is already saved; its Purchase details come
-     from sessionStorage (no details → it was already fired, nothing sent).
+     from sessionStorage and are kept until the browser pixel is ready.
    - Shiprocket: on SUCCESS our backend confirms the order with Shiprocket and
      answers with our order number; any other status means the payment didn't
      complete. A checkout started from the cart empties the cart once the
@@ -48,7 +48,7 @@ export default function TestThankYou() {
     if (order) {
       const data = takePurchaseForThankYou(order);
       if (data) {
-        try { fbPurchase(order, data); } catch (_) { /* analytics never blocks the page */ }
+        try { fbPurchase(order, data).then((sent) => { if (sent) completePurchaseForThankYou(order); }); } catch (_) { /* analytics never blocks the page */ }
       }
       return;
     }

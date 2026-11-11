@@ -14,11 +14,22 @@ test('late pixel still receives one Purchase and only then marks it sent', async
   const { context, calls, timers, storage } = setup();
   const a = context.fbPurchase('CC-1', { value: 799 }); const b = context.fbPurchase('CC-1', { value: 799 });
   assert.equal(a, b); timers.shift()(); assert.equal(calls.length, 0); assert.equal(storage.size, 0);
-  context.window.fbq = () => {}; timers.shift()(); assert.equal(await a, true);
+  context.window.fbq = Object.assign(() => {}, { callMethod() {} }); timers.shift()(); assert.equal(await a, true);
   assert.equal(calls.length, 1); assert.equal(calls[0].options.eventID, 'Purchase_CC-1'); assert.equal(calls[0].params.order_id, 'CC-1');
   await context.fbPurchase('CC-1', { value: 799 }); assert.equal(calls.length, 1);
 });
 test('missing order reference never schedules or sends Purchase', async () => {
   const { context, timers, calls } = setup(); assert.equal(await context.fbPurchase('', {}), false);
   assert.equal(timers.length, 0); assert.equal(calls.length, 0);
+});
+
+test('queue-only stub does not count as a sent Purchase', async () => {
+  const { context, calls, timers, storage } = setup();
+  context.window.fbq = () => {};
+  const pending = context.fbPurchase('CC-stub', { value: 799 });
+  timers.shift()();
+  assert.equal(calls.length, 0); assert.equal(storage.size, 0);
+  context.window.fbq.callMethod = () => {};
+  timers.shift()();
+  assert.equal(await pending, true); assert.equal(calls.length, 1);
 });
