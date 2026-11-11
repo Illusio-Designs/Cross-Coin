@@ -2,7 +2,10 @@ export default function SocksComparison() {
   return (
     <section className="comparison" aria-label="Cross Coin socks compared with ordinary socks">
       <div className="wrap">
-        <img src="/crosscoin-socks-comparison.png" width="2075" height="758" loading="lazy"
+        <img src="/crosscoin-socks-comparison-1600.webp"
+          srcSet="/crosscoin-socks-comparison-640.webp 640w, /crosscoin-socks-comparison-960.webp 960w, /crosscoin-socks-comparison-1600.webp 1600w"
+          sizes="(max-width: 1240px) calc(100vw - 32px), 1200px"
+          width="2075" height="758" loading="lazy" decoding="async"
           alt="Ordinary socks versus Cross Coin: keeps feet fresh all day, soft and comfortable feel, stays in place without slipping, premium skin-friendly fabric, and long-lasting vibrant colors." />
       </div>
       <style jsx>{`

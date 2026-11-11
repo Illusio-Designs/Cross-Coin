@@ -32,7 +32,8 @@ const fmtReviewDate = (d) => {
 // Keep the editor's image URLs intact. Transforming signed/CDN URLs or
 // removing src for a custom observer can leave otherwise valid pictures blank.
 function DescriptionHtml({ html }) {
-  return <div className="legal cc-product-description" dangerouslySetInnerHTML={{ __html: html }} />;
+  const lazyHtml = html.replace(/<img\b(?![^>]*\sloading\s*=)/gi, '<img loading="lazy"');
+  return <div className="legal cc-product-description" dangerouslySetInnerHTML={{ __html: lazyHtml }} />;
 }
 const plainText = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 

@@ -517,7 +517,9 @@ export default function TestLayout({ children }) {
   const router = useRouter();
   useEffect(() => {
     preloadShiprocket();
-    router.prefetch('/order-confirmation');
+    const prepareReturn = () => router.prefetch('/order-confirmation');
+    window.addEventListener('pointerdown', prepareReturn, { once: true, passive: true });
+    return () => window.removeEventListener('pointerdown', prepareReturn);
   }, [router]);
   const cart = useCart();
   const count = cartCount(cart);
@@ -595,12 +597,22 @@ export default function TestLayout({ children }) {
     return () => document.removeEventListener('mouseleave', onLeave);
   }, [drawer]);
 
-  // Phone lead popup — timed, once per visitor (localStorage).
+  // Start the lead offer after genuine interaction, not while the first screen
+  // is still loading or when the customer is checking out.
   useEffect(() => {
+    if (drawer || /\/(?:order-confirmation|thank-you)(?:\?|$)/.test(router.asPath)) return;
     try { if (localStorage.getItem('cc_test_lead') === '1') return; } catch (_) {}
-    const t = setTimeout(() => setLead((s) => ({ ...s, open: true })), 18000);
-    return () => clearTimeout(t);
-  }, []);
+    let timer;
+    const events = ['pointerdown', 'keydown', 'wheel'];
+    const arm = () => {
+      events.forEach((event) => window.removeEventListener(event, arm));
+      timer = setTimeout(() => {
+        if (document.visibilityState === 'visible') setLead((s) => ({ ...s, open: true }));
+      }, 18000);
+    };
+    events.forEach((event) => window.addEventListener(event, arm, { once: true, passive: true }));
+    return () => { clearTimeout(timer); events.forEach((event) => window.removeEventListener(event, arm)); };
+  }, [drawer, router.asPath]);
 
   const submitLead = async (e) => {
     e && e.preventDefault();

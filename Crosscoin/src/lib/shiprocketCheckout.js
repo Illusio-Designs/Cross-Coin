@@ -45,8 +45,8 @@ export function loadShiprocketCss() {
   document.head.appendChild(link);
 }
 
-// Warm checkout after the first render, or immediately on interaction. Only
-// static assets are loaded here; tokens are always created for the actual tap.
+// Warm checkout on actual shopping interaction so the SDK does not compete
+// with the product image and hydration on an untouched landing page.
 let preloadArmed = false;
 export function preloadShiprocket() {
   if (preloadArmed || typeof window === 'undefined') return;
@@ -60,8 +60,6 @@ export function preloadShiprocket() {
     loadShiprocketSdk().catch(() => { preloadArmed = false; });
   };
   evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
-  if (window.requestIdleCallback) window.requestIdleCallback(go, { timeout: 1500 });
-  else setTimeout(go, 750);
 }
 
 // Load Shiprocket's checkout script + styles once; resolves when

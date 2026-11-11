@@ -20,12 +20,13 @@ function setup() {
   vm.runInContext(source, context);
   return { context, requests, scripts, timers, listeners, opens, advance: () => { now += 31000; } };
 }
-test('preload starts SDK before tapping without creating a checkout token', () => {
+test('preload waits for shopping interaction and creates no checkout token', () => {
   const s = setup();
   s.context.preloadShiprocket();
   assert.equal(s.scripts.length, 0);
   const onTouch = s.listeners.touchstart;
-  s.timers.shift()();
+  assert.equal(s.timers.length, 0);
+  onTouch();
   onTouch();
   assert.equal(s.scripts.length, 1);
   assert.equal(s.requests.length, 0);
@@ -42,7 +43,7 @@ test('recent enabled check is reused; stale status is refreshed', async () => {
 test('opening reuses warmed SDK and requests a fresh token with actual lines', async () => {
   const s = setup();
   s.context.preloadShiprocket();
-  s.timers.shift()();
+  s.listeners.pointerdown();
   s.context.window.HeadlessCheckout = { addToCart: (...args) => s.opens.push(args) };
   s.scripts[0].onload();
   await s.context.openShiprocketCheckout({}, [{ variationId: 12, quantity: 2 }], 'cart');

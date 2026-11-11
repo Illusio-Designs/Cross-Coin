@@ -74,7 +74,14 @@ export function getBlogImageSrc(url, { w, h, q = 80 } = {}) {
 // Our own uploads (/api/uploads/…, used when ImageKit is over quota) take the
 // same transform: the API resizes them and serves WebP (Backend
 // utils/imageResizer.js). Without it they downloaded at full size.
-const resizable = (url) => url.includes("ik.imagekit.io") || url.includes("/api/uploads/");
+const resizable = (url) => {
+  try {
+    const parsed = new URL(url, 'https://www.crosscoin.in');
+    const api = new URL(process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in');
+    return parsed.hostname === 'ik.imagekit.io' ||
+      (parsed.origin === api.origin && /^\/(?:api\/)?uploads\//.test(parsed.pathname));
+  } catch (_) { return false; }
+};
 
 // Add a width/quality transform to a single URL. Only rewrites ImageKit URLs
 // and our own /api/uploads (any existing ?tr= is replaced); everything else
@@ -83,7 +90,10 @@ export function ikTransform(url, w, q = 72) {
   if (!url || typeof url !== "string" || !resizable(url)) {
     return url || null;
   }
-  return `${url.split("?")[0]}?tr=w-${w},q-${q},f-auto`;
+  const [withoutHash, hash] = url.split('#');
+  const [base, query = ''] = withoutHash.split('?');
+  const rest = query.split('&').filter((part) => part && !/^tr=/.test(part));
+  return `${base}?${[`tr=w-${w},q-${q},f-auto`, ...rest].join('&')}${hash ? `#${hash}` : ''}`;
 }
 
 // Mint home hero banner renditions + sizes. Shared by the hero <img> (Thumb in
