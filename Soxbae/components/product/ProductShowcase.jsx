@@ -25,17 +25,9 @@ const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
 const MAIN_SIZES = '(max-width: 900px) calc(100vw - 40px), 620px';
 const THUMB_WIDTHS = [112, 144, 216];
 const THUMB_SIZES = '(max-width: 900px) 62px, 64px';
-// Description pictures: the text column (66ch, ~600px) or the screen width
-// less the padding on phones.
-const DESC_WIDTHS = [400, 480, 600, 800, 1100];
-const DESC_SIZES = '(max-width: 860px) calc(100vw - 40px), 600px';
-
-// The admin's rich description sits under the page's "Product description"
-// (h2), so its own headings become h3/h4 (in order for screen readers and
-// page checks); a class keeps each former level looking as it did (rt-h1,
-// rt-lg for h2, rt-h5, rt-h6; app/globals.css .pdx-desc-rich). Its pictures
-// load lazily (they are below the gallery) and come in screen-sized copies
-// (ImageKit or our own uploads), not the original upload.
+// Keep description image URLs exactly as saved in admin. Native lazy loading
+// leaves a real src in the HTML and does not depend on an observer or a
+// successful resized-image request.
 function tidyDescription(html) {
   return String(html || '')
     .replace(/<(\/?)h([1-6])(\s[^>]*)?>/gi, (m, close, lvl, attrs = '') => {
@@ -45,40 +37,11 @@ function tidyDescription(html) {
       const cls = { 1: 'rt-h1', 2: 'rt-lg', 5: 'rt-h5', 6: 'rt-h6' }[n];
       return cls ? `<h${to} class="${cls}"${attrs}>` : `<h${to}${attrs}>`;
     })
-    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"')
-    .replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
-      const src = raw.replace(/&amp;/g, '&');
-      const set = ikSrcSet(src, DESC_WIDTHS);
-      const attr = (v) => v.replace(/&/g, '&amp;');
-      // data-* only: the picture is fetched when it comes near the screen
-      // (DescriptionHtml below), not with the first screen — the browser's
-      // own lazy loading starts far earlier on slow connections.
-      return `${a}data-src="${attr(ikSrc(src, 1100))}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
-    });
+    .replace(/<img\b(?![^>]*\sloading\s*=)/gi, '<img loading="lazy"');
 }
 
-// The product description (admin rich text) with its pictures attached only
-// when they are within ~300px of the screen.
 function DescriptionHtml({ html }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return undefined;
-    const imgs = [...root.querySelectorAll('img[data-src]')];
-    const show = (img) => {
-      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
-      img.src = img.dataset.src;
-      img.removeAttribute('data-src');
-      img.removeAttribute('data-srcset');
-    };
-    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
-    }, { rootMargin: '300px 0px' });
-    imgs.forEach((img) => io.observe(img));
-    return () => io.disconnect();
-  }, [html]);
-  return <div ref={ref} className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
