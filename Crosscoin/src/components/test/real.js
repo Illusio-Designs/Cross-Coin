@@ -114,7 +114,7 @@ export function normalizeProduct(p) {
   }).filter((v) => v.price > 0 || v.colors.length);
 
   let images = [];
-  try { images = (selectProductImages(p, v0, 5) || []).map(getImageUrl).filter(Boolean); } catch (_) {}
+  try { images = (selectProductImages(p, v0) || []).map(getImageUrl).filter(Boolean); } catch (_) {}
   const mainImg = imgOf(selectProductImage(p, v0)) || images[0] || '';
 
   const rating = p.avgRating != null ? p.avgRating : (p.avg_rating != null ? parseFloat(p.avg_rating) : null);
