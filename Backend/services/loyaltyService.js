@@ -3,6 +3,7 @@ const { User } = require('../model/userModel');
 const { LoyaltyTransaction } = require('../model/loyaltyTransactionModel');
 const settingsHelper = require('./settingsHelper');
 const { logger } = require('../config/logging');
+const { deferTransactionEffect } = require('../utils/transactionEffects.js');
 
 function parsePositiveInt(value, fallback) {
   const parsed = parseInt(value, 10);
@@ -77,7 +78,7 @@ async function creditPoints(userId, orderId, orderAmount, brandId = 1, options =
     if (ownTx) await tx.commit();
 
     // Fire WhatsApp loyalty notification (non-blocking)
-    setImmediate(async () => {
+    const notify = async () => {
       try {
         if (user.phone) {
           const whatsappService = require('./whatsappService.js');
@@ -88,7 +89,9 @@ async function creditPoints(userId, orderId, orderAmount, brandId = 1, options =
           }, brandId);
         }
       } catch (e) { logger.warn('WhatsApp loyalty notification failed:', e.message); }
-    });
+    };
+    if (ownTx) setImmediate(notify);
+    else deferTransactionEffect(tx, `loyalty notice order ${orderId}`, notify);
 
     return transaction;
   } catch (error) {

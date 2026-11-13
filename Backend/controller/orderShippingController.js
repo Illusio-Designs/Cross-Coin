@@ -21,6 +21,7 @@ const { getAddressHash } = require('../services/addressQualityService.js');
 const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
 const { auditLog: orderAuditLog } = require('../services/orderService.js');
 const crypto = require('crypto');
+const { deferTransactionEffect, commitTransaction, rollbackTransaction } = require('../utils/transactionEffects.js');
 const { paymentStatusAfterCancellation, cancellationRefundInfo } = require('../services/orderPaymentPolicy.js');
 
 // Use the same courier progression rules for pushed scans and tracking polls.
@@ -331,9 +332,6 @@ async function restoreRtoStockOnce(order, transaction, source, reason) {
   );
   if (Number(done?.n) > 0) return 0;
 
-  // An order that came back never counts for loyalty points.
-  loyaltyService.reversePointsLater(order.id, { reason: 'returned to us (RTO)' });
-
   const items = await OrderItem.findAll({ where: { order_id: order.id }, transaction });
   let units = 0;
   for (const item of items) {
@@ -355,6 +353,9 @@ async function restoreRtoStockOnce(order, transaction, source, reason) {
           item.quantity, before, after, source, `Auto-restored via ${source}. Reason: ${reason || 'RTO'}`], transaction }
     );
   }
+  deferTransactionEffect(transaction, `RTO loyalty ${order.order_number}`, () => {
+    loyaltyService.reversePointsLater(order.id, { reason: 'returned to us (RTO)' });
+  });
   logger.info(`📦 RTO stock restored for ${order.order_number}: ${units} unit(s) via ${source}`);
   return units;
 }
@@ -393,7 +394,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
       // iThink's webhook panel sends a test/verification request with a sample
       // or empty body. A 400 here makes the panel mark the URL invalid and stop
       // deliveries entirely, so acknowledge pings with a 200 instead.
-      await transaction.rollback();
+      await rollbackTransaction(transaction);
       logger.info('🔔 Shipping webhook ping (no waybill/order id) — acknowledged.');
       return res.status(200).json({ success: true, message: 'Webhook endpoint reachable' });
     }
@@ -416,7 +417,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
         { replacements: [eventKey] }
       );
       if (dup.length && dup[0].processed) {
-        await transaction.rollback();
+        await rollbackTransaction(transaction);
         logger.info(`↩︎ Duplicate shipping webhook ignored (event_key=${eventKey})`);
         return res.status(200).json({ success: true, message: 'Webhook already processed (duplicate)' });
       }
@@ -442,7 +443,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
     try {
       const { applyReversePickupEvent } = require('./returnController.js');
       if (waybill && await applyReversePickupEvent(waybill, status)) {
-        await transaction.rollback();
+        await rollbackTransaction(transaction);
         if (webhookEventId) {
           sequelize.query(
             "UPDATE shipment_webhook_events SET processed = true, processedAt = NOW(), processing_error = NULL WHERE id = ?",
@@ -488,7 +489,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
       // makes some courier panels retry or count the webhook as failing, so
       // acknowledge with 200 and mark the stored event as ignored instead.
       logger.info(`🔔 Shipping webhook for unknown waybill/order (${waybill || order_id}) — acknowledged and ignored.`);
-      await transaction.rollback();
+      await rollbackTransaction(transaction);
       if (webhookEventId) {
         sequelize.query(
           "UPDATE shipment_webhook_events SET processed = true, processedAt = NOW(), processing_error = 'ignored: no matching order' WHERE id = ?",
@@ -624,7 +625,12 @@ module.exports.handleShippingWebhook = async (req, res) => {
       });
     }
 
-    await transaction.commit();
+    if (statusAdvanced && ['rto delivered', 'returned_rto'].includes(orderStatus) && order.payment_type !== 'cod') {
+      deferTransactionEffect(transaction, `RTO refund ${order.order_number}`, () =>
+        require('../services/refundService.js').autoRefundOnRtoReceipt(order.id, `RTO received at warehouse (${rto_reason || 'Return to Origin'})`, null));
+    }
+
+    await commitTransaction(transaction);
 
     // Mark the raw event as successfully processed (best-effort).
     if (webhookEventId) {
@@ -695,11 +701,6 @@ module.exports.handleShippingWebhook = async (req, res) => {
             await whatsappService.sendRtoPrepaid(phone, {
               name, orderNumber: order.order_number, amount: Number(order.final_amount || 0).toFixed(2),
             }, order.brand_id || 1);
-          } else {
-            // Prepaid parcel RECEIVED at warehouse → issue the real refund now.
-            // processRefund sends its own "Refund Initiated" WhatsApp message.
-            const refundService = require('../services/refundService.js');
-            await refundService.autoRefundOnRtoReceipt(order.id, `RTO received at warehouse (${rto_reason || 'Return to Origin'})`, null);
           }
         }
       } catch (waErr) {
@@ -708,7 +709,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
     });
 
   } catch (error) {
-    await transaction.rollback();
+    await rollbackTransaction(transaction);
     logger.error("❌ Error processing Shipping webhook:", error);
     // Flag the stored raw event so it can be retried/inspected (best-effort).
     if (webhookEventId) {
@@ -901,14 +902,14 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
   const localTransaction = transaction || await sequelize.transaction();
   const shouldCommit = !transaction;
 
-  // Resolve provider if not supplied (callers may not pass it yet during refactor).
-  if (!provider) {
-    const resolved = await resolveProviderForOrder(order);
-    provider = resolved.service;
-    providerName = resolved.name;
-  }
-
   try {
+    // Resolve inside the owned transaction's failure handling too.
+    if (!provider) {
+      const resolved = await resolveProviderForOrder(order);
+      provider = resolved.service;
+      providerName = resolved.name;
+    }
+
     logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}${selectedLogistics ? ` with courier: ${selectedLogistics}` : ''}`);
 
     // STEP 1: Check if order is already synced or currently syncing
@@ -917,7 +918,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
 
     if (isSyncing) {
       logger.debug(`⏳ Order ${order.order_number} is currently syncing. Skipping to avoid duplicate...`);
-      if (shouldCommit) await localTransaction.commit();
+      if (shouldCommit) await commitTransaction(localTransaction);
 
       return {
         success: false,
@@ -935,29 +936,33 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       // pickup_hold_until) and let the daily pickup-hold cron book it a day
       // later. Fail-soft: shouldHoldForPickup returns null on any error, so a
       // schedule problem never stalls a booking.
+      let holdUntil = null, nextAllowed = null;
       try {
         const pickupSvc = require('../services/pickupScheduleService.js');
-        const holdUntil = await pickupSvc.shouldHoldForPickup();
+        holdUntil = await pickupSvc.shouldHoldForPickup();
         if (holdUntil) {
-          let nextAllowed = null;
           try { nextAllowed = await pickupSvc.getNextPickupDate(); } catch (_) {}
-          await order.update({
-            shipping_sync_status: 'pending',
-            pickup_hold_until: holdUntil,
-            ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
-          }, { transaction: localTransaction });
-          if (shouldCommit) await localTransaction.commit();
-          logger.info(`[pickup] Holding ${order.order_number} — booking now would pick up on blocked ${holdUntil}; will auto-book after then (pickup ~a day later).`);
-          return {
-            success: false,
-            held: true,
-            action: 'held',
-            holdUntil,
-            error: `Pickup on ${holdUntil} is a no-pickup day — order held and will book automatically after that day.`,
-          };
         }
       } catch (e) {
         logger.warn(`[pickup] hold check failed for ${order.order_number}: ${e.message}`);
+      }
+      // A failed save/commit is not a failed schedule lookup: never continue
+      // into courier booking after failing to persist an intentional hold.
+      if (holdUntil) {
+        await order.update({
+          shipping_sync_status: 'pending',
+          pickup_hold_until: holdUntil,
+          ...(nextAllowed ? { scheduled_pickup_date: nextAllowed } : {}),
+        }, { transaction: localTransaction });
+        if (shouldCommit) await commitTransaction(localTransaction);
+        logger.info(`[pickup] Holding ${order.order_number} — booking now would pick up on blocked ${holdUntil}; will auto-book after then (pickup ~a day later).`);
+        return {
+          success: false,
+          held: true,
+          action: 'held',
+          holdUntil,
+          error: `Pickup on ${holdUntil} is a no-pickup day — order held and will book automatically after that day.`,
+        };
       }
 
       // STEP 2: Order not synced — create at the active provider.
@@ -971,8 +976,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
         logger.debug(`🔄 Order ${order.order_number}: no courier given — auto-selecting for iThink.`);
         const auto = await module.exports.autoSelectCourierWithFallback(order, provider, localTransaction);
         if (shouldCommit) {
-          if (auto.success) await localTransaction.commit();
-          else await localTransaction.rollback();
+          if (auto.success) await commitTransaction(localTransaction);
+          else await rollbackTransaction(localTransaction);
         }
         return auto.success
           ? { success: true, action: 'synced', provider: providerName, courier: auto.courier, ...(auto.result || {}) }
@@ -986,10 +991,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       if (createResult.success) {
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
 
-        if (shouldCommit) await localTransaction.commit();
-
         // "Packed & ready" WhatsApp — the order is now booked with a courier.
-        setImmediate(async () => {
+        deferTransactionEffect(localTransaction, `packed notice ${order.order_number}`, async () => {
           try {
             const whatsappService = require('../services/whatsappService.js');
             const addr = await ShippingAddress.findOne({ where: { id: order.shipping_address_id } });
@@ -999,6 +1002,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
             await whatsappService.sendOrderPacked(phone, { name, orderNumber: order.order_number }, order.brand_id || 1);
           } catch (e) { logger.warn(`[WhatsApp] order_packed notify failed for ${order.order_number}: ${e.message}`); }
         });
+
+        if (shouldCommit) await commitTransaction(localTransaction);
 
         return {
           success: true,
@@ -1021,7 +1026,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       if (updateResult.success) {
         logger.debug(`✅ Order ${order.order_number} status updated via ${providerName}`);
 
-        if (shouldCommit) await localTransaction.commit();
+        if (shouldCommit) await commitTransaction(localTransaction);
 
         return {
           success: true,
@@ -1039,7 +1044,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
 
   } catch (error) {
     logger.error(`❌ Enhanced sync failed for ${order.order_number}:`, error.message);
-    if (shouldCommit) await localTransaction.rollback();
+    if (shouldCommit) await rollbackTransaction(localTransaction);
 
     return {
       success: false,
@@ -1628,7 +1633,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
         // round-trip through a SELECT first.
         const _qualityOrder = order;
         const _qualityNewStatus = newStatus;
-        setImmediate(async () => {
+        deferTransactionEffect(transaction, `address quality ${order.order_number}`, async () => {
           try {
             const addr = _qualityOrder.ShippingAddress
               || (_qualityOrder.shipping_address_id
@@ -1654,12 +1659,17 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
           }
         });
 
+        if (['rto delivered', 'returned_rto'].includes(newStatus) && order.payment_type !== 'cod') {
+          deferTransactionEffect(transaction, `RTO refund ${order.order_number}`, () =>
+            require('../services/refundService.js').autoRefundOnRtoReceipt(order.id, 'Prepaid RTO received at warehouse', null));
+        }
+
         // Notify customer via WhatsApp (fire-and-forget, runs after transaction commits)
         const _notifyPhone = order.shipping_address_id;
         const _notifyOrder = order;
         const _notifyStatus = newStatus;
         const _notifyPrev = prevStatusForRto;
-        setImmediate(async () => {
+        deferTransactionEffect(transaction, `status notice ${order.order_number}`, async () => {
           try {
             await require('../services/ndrService.js')
               .onStatus(_notifyOrder, _notifyStatus, statusData.remark || statusData.ndr_reason || statusData.reason || null)
@@ -1714,11 +1724,6 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
                 await whatsappSvc.sendRtoPrepaid(phone, {
                   name, orderNumber: _notifyOrder.order_number, amount: Number(_notifyOrder.final_amount || 0).toFixed(2),
                 }, _notifyOrder.brand_id || 1);
-              } else {
-                // Prepaid parcel received at warehouse → issue the real refund now
-                // (processRefund sends its own "Refund Initiated" message).
-                const refundService = require('../services/refundService.js');
-                await refundService.autoRefundOnRtoReceipt(_notifyOrder.id, 'Prepaid RTO received at warehouse', null);
               }
             }
           } catch (waErr) {
@@ -2059,7 +2064,7 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
           const refreshResult = await module.exports.updateOrderStatusFromShipping(order, orderTx);
 
           if (refreshResult.success) {
-            await orderTx.commit();
+            await commitTransaction(orderTx);
 
             if (refreshResult.statusChanged) {
               results.updated++;
@@ -2076,7 +2081,7 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
               results.unchanged++;
             }
           } else {
-            await orderTx.rollback();
+            await rollbackTransaction(orderTx);
             results.errors++;
             results.errors_list.push({
               order_number: order.order_number,
@@ -2086,7 +2091,7 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
             });
           }
         } catch (err) {
-          await orderTx.rollback();
+          await rollbackTransaction(orderTx);
           results.errors++;
           results.errors_list.push({
             order_number: order.order_number,
