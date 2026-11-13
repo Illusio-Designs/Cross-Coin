@@ -8,6 +8,8 @@
 
 const { logger } = require('../config/logging.js');
 const orderEmitter = require('./orderEvents.js');
+const { committedTransaction } = require('../utils/committedTransaction.js');
+const { paymentStatusAfterCancellation, assertPaymentCanConfirm } = require('./orderPaymentPolicy.js');
 
 // ── State machine ─────────────────────────────────────────────────────────────
 
@@ -83,7 +85,7 @@ async function confirmOrder(orderId, adminId) {
   const { OrderStatusHistory } = require('../model/orderStatusHistoryModel.js');
   const { sequelize } = require('../config/db.js');
 
-  return sequelize.transaction(async (t) => {
+  return committedTransaction(sequelize, async (t, afterCommit) => {
     // Row lock — prevents race condition if admin clicks confirm twice
     const [rows] = await sequelize.query(
       'SELECT * FROM orders WHERE id = ? FOR UPDATE',
@@ -93,6 +95,7 @@ async function confirmOrder(orderId, adminId) {
     const order = await Order.findByPk(orderId, { transaction: t });
 
     assertTransition(order.status, 'confirmed');
+    assertPaymentCanConfirm(order);
 
     await order.update({ status: 'confirmed' }, { transaction: t });
     await OrderStatusHistory.create({
@@ -105,23 +108,21 @@ async function confirmOrder(orderId, adminId) {
     await auditLog(order.id, 'confirm', adminId, 'admin', {}, t);
 
     // Emit events AFTER commit
-    setImmediate(() => {
+    afterCommit(`confirm ${order.order_number}`, async () => {
       try { orderEmitter.emit('order.confirmed', order); } catch (e) { logger.warn('[orderService] order.confirmed emit failed:', e.message); }
       // Courier booking is done from the Dashboard; just log the sync state.
       const { OrderShipment } = require('../model/orderShipmentModel.js');
 
-      (async () => {
-        try {
-          const shipment = await OrderShipment.findOne({ where: { order_id: order.id } });
-          if (shipment) {
-            logger.info(`[orderService] Order ${order.order_number} already synced with ${shipment.provider}`);
-          } else {
-            logger.info(`[orderService] Order ${order.order_number} confirmed — awaiting courier booking.`);
-          }
-        } catch (e) {
-          logger.warn('[orderService] Auto-sync logic failed:', e.message);
+      try {
+        const shipment = await OrderShipment.findOne({ where: { order_id: order.id } });
+        if (shipment) {
+          logger.info(`[orderService] Order ${order.order_number} already synced with ${shipment.provider}`);
+        } else {
+          logger.info(`[orderService] Order ${order.order_number} confirmed — awaiting courier booking.`);
         }
-      })();
+      } catch (e) {
+        logger.warn('[orderService] Auto-sync logic failed:', e.message);
+      }
     });
 
     return order;
@@ -138,7 +139,7 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
   const loyaltyService = require('./loyaltyService.js');
   const { sequelize } = require('../config/db.js');
 
-  return sequelize.transaction(async (t) => {
+  return committedTransaction(sequelize, async (t, afterCommit) => {
     // Row lock — prevents concurrent cancel + confirm race
     const [rows] = await sequelize.query(
       'SELECT * FROM orders WHERE id = ? FOR UPDATE',
@@ -176,7 +177,7 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
       await loyaltyService.refundPoints(order.user_id, order.id, order.brand_id || 1, { transaction: t });
     }
 
-    const newPaymentStatus = order.payment_status === 'paid' ? 'refund_pending' : 'cancelled';
+    const newPaymentStatus = paymentStatusAfterCancellation(order.payment_status);
 
     await order.update({ status: 'cancelled', payment_status: newPaymentStatus }, { transaction: t });
 
@@ -192,11 +193,11 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
     // Cancel at the shipping provider that issued the AWB (after commit), so a
     // synced/booked order is cancelled on BOTH sides — our DB (above) and the
     // courier (iThink order/cancel.json).
-    cancelAtCourier(order, reason);
+    afterCommit(`courier cancellation ${order.order_number}`, () => cancelAtCourier(order, reason));
 
     // Auto-refund prepaid orders
     if (order.payment_status === 'refund_pending') {
-      setImmediate(async () => {
+      afterCommit(`cancellation refund ${order.order_number}`, async () => {
         try {
           const { autoRefundOnCancel } = require('./refundService.js');
           await autoRefundOnCancel(order.id, reason, cancelledBy);
@@ -205,7 +206,7 @@ async function cancelOrder(orderId, { reason, cancelledBy, isAdmin = false }) {
     }
 
     order._cancelReason = reason;
-    setImmediate(() => { try { orderEmitter.emit('order.cancelled', order); } catch (e) { logger.warn('[orderService] order.cancelled emit failed:', e.message); } });
+    afterCommit(`cancellation notification ${order.order_number}`, () => orderEmitter.emit('order.cancelled', order));
 
     return order;
   });

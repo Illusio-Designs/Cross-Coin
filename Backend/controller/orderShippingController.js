@@ -21,6 +21,7 @@ const { getAddressHash } = require('../services/addressQualityService.js');
 const { AddressQualityScore } = require('../model/addressQualityScoreModel.js');
 const { auditLog: orderAuditLog } = require('../services/orderService.js');
 const crypto = require('crypto');
+const { paymentStatusAfterCancellation, cancellationRefundInfo } = require('../services/orderPaymentPolicy.js');
 
 // ── Shipment status progression guard ───────────────────────────────────────
 // Courier webhooks can arrive out of order or be re-delivered (a late
@@ -729,7 +730,7 @@ module.exports.handleShippingWebhook = async (req, res) => {
           await whatsappService.sendOrderCancelled(phone, {
             name,
             orderNumber: order.order_number,
-            refundInfo: order.payment_status === 'refund_pending' ? 'Refund will be processed in 5-7 business days' : 'No refund applicable'
+            refundInfo: cancellationRefundInfo(order)
           }, order.brand_id || 1);
         } else if (orderStatus === 'rto' || orderStatus === 'rto delivered' || orderStatus === 'returned_rto') {
           const isWarehouseReceipt = orderStatus === 'rto delivered' || orderStatus === 'returned_rto';
@@ -1552,17 +1553,10 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
           updateData.payment_status = 'paid';
           logger.debug(`💰 Order ${order.order_number} is delivered COD. Updating payment status to paid...`);
         } else if (newStatus === 'cancelled' || newStatus === 'rto' || newStatus === 'rto delivered') {
-          // Cancelled, RTO, or RTO Delivered orders: update payment status
-          if (order.payment_type === 'cod') {
-            updateData.payment_status = 'cancelled';
-            logger.debug(`❌ Order ${order.order_number} is ${newStatus}. Updating COD payment status to cancelled...`);
-          } else if (order.payment_status === 'paid') {
-            updateData.payment_status = 'refund_pending';
-            logger.debug(`💸 Order ${order.order_number} is ${newStatus}. Updating prepaid payment status to refund_pending...`);
-          } else {
-            updateData.payment_status = 'cancelled';
-            logger.debug(`❌ Order ${order.order_number} is ${newStatus}. Updating payment status to cancelled...`);
-          }
+          // Preserve refunds while closing fulfillment. COD still has no
+          // online refund to initiate, but an existing refund must survive.
+          updateData.payment_status = order.payment_type === 'cod' && order.payment_status === 'paid'
+            ? 'cancelled' : paymentStatusAfterCancellation(order.payment_status);
         }
 
         // Update order status and payment status
@@ -1746,9 +1740,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
               await whatsappSvc.sendOrderCancelled(phone, {
                 name,
                 orderNumber: _notifyOrder.order_number,
-                refundInfo: _notifyOrder.payment_status === 'refund_pending'
-                  ? 'Refund will be processed in 5-7 business days'
-                  : 'No refund applicable',
+                refundInfo: cancellationRefundInfo(_notifyOrder),
               }, _notifyOrder.brand_id || 1);
             } else if (_notifyStatus === 'rto' || _notifyStatus === 'rto delivered' || _notifyStatus === 'returned_rto') {
               const isWarehouseReceipt = _notifyStatus === 'rto delivered' || _notifyStatus === 'returned_rto';

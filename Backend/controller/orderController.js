@@ -2046,7 +2046,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       const order = await orderService.confirmOrder(req.params.id, req.user.id);
       res.json({ success: true, message: 'Order confirmed', order });
     } catch (error) {
-      const status = error.message.includes('Cannot transition') ? 400 : 500;
+      const status = error.status || (error.message.includes('Cannot transition') ? 400 : 500);
       res.status(status).json({ success: false, message: error.message });
     }
   };

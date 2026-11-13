@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const { logger } = require('../config/logging.js');
+const { cancellationRefundInfo } = require('./orderPaymentPolicy.js');
 
 const orderEmitter = new EventEmitter();
 orderEmitter.setMaxListeners(20);
@@ -128,17 +129,8 @@ orderEmitter.on('order.cancelled', async (order) => {
     const { ShippingAddress } = require('../model/shippingAddressModel.js');
     const addr = await ShippingAddress.findByPk(order.shipping_address_id);
     if (addr?.phone) {
-      // Payment-aware refund line. The {{4}} slot is the template's "💳 Refund:"
-      // value — it must describe the refund, NOT the cancellation reason. Rules:
-      //  • COD cancellation  → no refund (nothing was paid).
-      //  • Prepaid cancellation → refund is initiated (orderService.cancelOrder's
-      //    autoRefundOnCancel issues it and sends its own "Refund Initiated" note);
-      //    here we just confirm it's on the way.
-      const isCod = order.payment_type === 'cod';
-      const wasPaid = ['paid', 'refund_pending', 'refunded', 'partial_refund'].includes(order.payment_status);
-      const refundInfo = isCod || !wasPaid
-        ? 'No payment was collected, so no refund is needed.'
-        : `Your refund of ₹${Number(order.final_amount || 0).toFixed(2)} will be credited to your original payment method within 5–7 working days.`;
+      // Cancellation is not proof that the gateway has processed a refund.
+      const refundInfo = cancellationRefundInfo(order);
       await whatsappService.sendOrderCancelled(addr.phone, {
         name: (addr.full_name || '').split(' ')[0] || 'there',
         orderNumber: order.order_number,

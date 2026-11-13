@@ -2,6 +2,7 @@
 
 const { logger } = require('../config/logging.js');
 const { sequelize } = require('../config/db.js');
+const { committedTransaction } = require('../utils/committedTransaction.js');
 
 /**
  * Refund Service — handles full and partial refunds via Razorpay.
@@ -34,7 +35,7 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
   const whatsappService = require('./whatsappService.js');
   const { ShippingAddress } = require('../model/shippingAddressModel.js');
 
-  return sequelize.transaction(async (t) => {
+  return committedTransaction(sequelize, async (t, afterCommit) => {
     const payment = await Payment.findByPk(paymentId, { transaction: t });
     if (!payment) throw new Error('Payment not found');
 
@@ -152,12 +153,14 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
     }, t);
 
     // Take back the loyalty points this order earned (prorated for a partial refund).
-    require('./loyaltyService.js').reversePointsLater(order.id, {
-      amount: isPartial ? refundAmount : null, ref: refundId, reason: isPartial ? 'part refunded' : 'refunded',
+    afterCommit(`refund loyalty ${order.order_number}`, () => {
+      require('./loyaltyService.js').reversePointsLater(order.id, {
+        amount: isPartial ? refundAmount : null, ref: refundId, reason: isPartial ? 'part refunded' : 'refunded',
+      });
     });
 
     // Send WhatsApp notification (after commit)
-    setImmediate(async () => {
+    afterCommit(`refund notification ${order.order_number}`, async () => {
       try {
         const addr = await ShippingAddress.findByPk(order.shipping_address_id);
         if (addr?.phone) {
