@@ -2028,10 +2028,10 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       const { processRefund } = require('../services/refundService.js');
       const result = await processRefund({
         paymentId: payment.id,
-        amount: req.body && req.body.amount != null ? parseFloat(req.body.amount) : null, // null = full refund
+        amount: req.body && req.body.amount != null ? req.body.amount : null, // validate raw input in refundService
         reason: (req.body && req.body.reason ? String(req.body.reason) : 'Refund issued by admin'),
         adminId: req.user.id,
-        brandId: payment.brand_id || 1,
+        brandId: req.brand?.id || req.brandId || payment.brand_id || 1,
       });
       res.json({ success: true, message: 'Refund processed successfully', refund: result });
     } catch (error) {

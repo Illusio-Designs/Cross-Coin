@@ -67,3 +67,28 @@ test('custom-checkout refund keeps its provider route, amount and brand',async()
  expect(gateway.createRefund).not.toHaveBeenCalled();
  expect(loyalty.reversePointsLater).toHaveBeenCalledWith(1,expect.objectContaining({amount:200,ref:'provider_refund_fixture'}));
 });
+test.each([0,'0','',NaN,Infinity,-1,'200oops',true,0.001,799.01])('invalid amount %p never calls a gateway or writes a refund',async(amount)=>{
+ releaseCommit();await expect(processRefund({...options,amount})).rejects.toThrow('Refund amount');
+ expect(gateway.createRefund).not.toHaveBeenCalled();expect(custom.initiateRefund).not.toHaveBeenCalled();expect(Payment.create).not.toHaveBeenCalled();
+});
+test.each(['payment','order','request'])('wrong %s brand cannot use another store refund credentials',async(kind)=>{
+ const payment=await Payment.findByPk(),order=await Order.findByPk();if(kind==='payment')payment.brand_id=4;if(kind==='order')order.brand_id=4;
+ releaseCommit();await expect(processRefund({...options,brandId:kind==='request'?4:3})).rejects.toThrow('requested store');expect(gateway.createRefund).not.toHaveBeenCalled();expect(custom.initiateRefund).not.toHaveBeenCalled();
+});
+test('a negative refund ledger row is never treated as a captured payment',async()=>{
+ const payment=await Payment.findByPk();payment.amount_paid=-79900;releaseCommit();await expect(processRefund(options)).rejects.toThrow('payment amount');expect(gateway.createRefund).not.toHaveBeenCalled();
+});
+test('a COD payment cannot use the hosted-checkout refund route',async()=>{
+ const payment=await Payment.findByPk();Object.assign(payment,{payment_type:'cod',payment_gateway:'CustomCheckout'});releaseCommit();await expect(processRefund(options)).rejects.toThrow('manual payout');expect(custom.initiateRefund).not.toHaveBeenCalled();
+});
+test('simultaneous refund requests serialize on the order and re-read the payment before calling the gateway',async()=>{
+ let lock=Promise.resolve();const order=await Order.findByPk();
+ Order.findByPk.mockImplementation(async(id,{transaction,lock:forUpdate})=>{
+  expect(forUpdate).toBe(true);const previous=lock;lock=new Promise(resolve=>{transaction.release=resolve;});await previous;return order;
+ });
+ sequelize.transaction.mockImplementation(async work=>{const t={};try{return await work(t);}finally{t.release?.();}});
+ const results=await Promise.allSettled([processRefund(options),processRefund(options)]);
+ expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);expect(results.filter(r=>r.status==='rejected')).toHaveLength(1);
+ expect(gateway.createRefund).toHaveBeenCalledTimes(1);expect(Payment.create).toHaveBeenCalledTimes(1);
+ expect(Payment.findByPk).toHaveBeenCalledWith(10,expect.objectContaining({lock:true}));
+});

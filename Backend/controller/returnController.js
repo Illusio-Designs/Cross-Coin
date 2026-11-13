@@ -9,6 +9,7 @@ const { Return, Order, User, Payment, OrderStatusHistory } = require('../model/a
 const imagekitService = require('../services/imagekitService.js');
 const settingsHelper = require('../services/settingsHelper.js');
 const refundService = require('../services/refundService.js');
+const { resolveRefundAmount } = require('../utils/refundAmount.js');
 
 const VALID_REASONS = ['damaged', 'defective', 'wrong', 'notdesc', 'changed', 'other'];
 const REASONS_NEED_PHOTO = ['damaged', 'defective', 'wrong', 'notdesc'];
@@ -182,7 +183,7 @@ async function restockReturn(ret, order, adminId) {
 async function issueReturnRefund(ret, order, adminId, brandId) {
   const { Op } = require('sequelize');
   const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
-  const refundAmount = ret.refund_amount != null ? Number(ret.refund_amount) : eligible;
+  const { amount: refundAmount } = resolveRefundAmount(ret.refund_amount, eligible);
 
   // Gateway payments are stored as 'successful' / 'completed' (no 'paid');
   // 'refund_pending' is a paid payment whose earlier refund failed (retry).
@@ -198,7 +199,7 @@ async function issueReturnRefund(ret, order, adminId, brandId) {
     }
     const result = await refundService.processRefund({
       paymentId: payment.id,
-      amount: refundAmount >= eligible ? null : refundAmount,
+      amount: refundAmount,
       reason: `Return ${ret.return_number} (${ret.reason})`,
       adminId,
       brandId,
@@ -485,9 +486,9 @@ module.exports.approveReturn = async (req, res) => {
     const brandId = brandOf(req, ret, order);
 
     const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
-    let refundAmount = req.body.refund_amount != null ? Number(req.body.refund_amount) : eligible;
-    if (!Number.isFinite(refundAmount) || refundAmount < 0) refundAmount = eligible;
-    refundAmount = Math.min(refundAmount, eligible);
+    let refundAmount;
+    try { refundAmount = resolveRefundAmount(req.body.refund_amount, eligible).amount; }
+    catch (error) { return res.status(400).json({ success: false, message: error.message }); }
     const charges = Math.max(0, +(eligible - refundAmount).toFixed(2));
     const adminNote = req.body.admin_note ? String(req.body.admin_note).slice(0, 1000) : null;
 
@@ -594,11 +595,9 @@ module.exports.refundReturn = async (req, res) => {
     // (deduct shipping / damage charges for a part refund).
     if (req.body.refund_amount != null) {
       const eligible = Number(ret.requested_amount) || Number(order.final_amount) || 0;
-      const amt = Number(req.body.refund_amount);
-      if (!Number.isFinite(amt) || amt <= 0 || amt > eligible + 0.01) {
-        return res.status(400).json({ success: false, message: `Refund amount must be between ₹1 and ₹${eligible}.` });
-      }
-      const refundAmount = Math.round(amt * 100) / 100;
+      let refundAmount;
+      try { refundAmount = resolveRefundAmount(req.body.refund_amount, eligible).amount; }
+      catch (error) { return res.status(400).json({ success: false, message: error.message }); }
       await ret.update({ refund_amount: refundAmount, charges_deducted: Math.max(0, +(eligible - refundAmount).toFixed(2)) });
     }
     let r;

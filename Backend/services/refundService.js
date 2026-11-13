@@ -3,6 +3,7 @@
 const { logger } = require('../config/logging.js');
 const { sequelize } = require('../config/db.js');
 const { committedTransaction } = require('../utils/committedTransaction.js');
+const { resolveRefundAmount } = require('../utils/refundAmount.js');
 
 /**
  * Refund Service — handles full and partial refunds via Razorpay.
@@ -36,8 +37,19 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
   const { ShippingAddress } = require('../model/shippingAddressModel.js');
 
   return committedTransaction(sequelize, async (t, afterCommit) => {
-    const payment = await Payment.findByPk(paymentId, { transaction: t });
-    if (!payment) throw new Error('Payment not found');
+    // Lock fulfillment first, matching cancellation/shipping lock order. Then
+    // re-read the payment with a lock so a waiting refund sees the first result.
+    const reference = await Payment.findByPk(paymentId, { transaction: t });
+    if (!reference) throw new Error('Payment not found');
+    const order = await Order.findByPk(reference.order_id, { transaction: t, lock: true });
+    if (!order) throw new Error('Order not found for this payment');
+    const payment = await Payment.findByPk(paymentId, { transaction: t, lock: true });
+    if (!payment || String(payment.order_id) !== String(order.id)) throw new Error('Payment does not belong to this order');
+    if (!Number.isSafeInteger(Number(brandId)) || Number(brandId) <= 0 ||
+        Number(payment.brand_id) !== Number(brandId) || Number(order.brand_id) !== Number(brandId)) {
+      throw new Error('Payment and order must belong to the requested store');
+    }
+    if (payment.payment_type === 'cod') throw new Error('Cash on Delivery refunds require the manual payout workflow');
 
     // Custom-checkout payments refund through the provider's refund API, not
     // our Razorpay keys (their pg transaction belongs to the provider's MID).
@@ -57,9 +69,6 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       throw new Error(`Cannot refund payment in "${payment.status}" status`);
     }
 
-    const order = await Order.findByPk(payment.order_id, { transaction: t });
-    if (!order) throw new Error('Order not found for this payment');
-
     const REFUNDABLE_ORDER = ['cancelled', 'return_initiated', 'returned_rto', 'rto delivered'];
     if (!REFUNDABLE_ORDER.includes(order.status)) {
       throw new Error(`Refund not allowed for orders in "${order.status}" status`);
@@ -69,13 +78,9 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
     // payment row (Razorpay 'pay_…' and CustomCheckout) stores amount_paid in
     // PAISE; reading it as rupees made every full refund request 100x the
     // money, so Razorpay rejected it and orders stuck at refund_pending.
-    const paidRupees = Math.abs(parseFloat(payment.amount_paid) || 0) / 100;
-    const refundAmount = amount ? parseFloat(amount) : paidRupees;
-    if (refundAmount <= 0 || refundAmount > paidRupees + 0.01) {
-      throw new Error(`Invalid refund amount: ₹${refundAmount}. Max: ₹${paidRupees.toFixed(2)}`);
-    }
-
-    const isPartial = refundAmount < paidRupees - 0.01;
+    const paidPaise = Number(payment.amount_paid);
+    if (!Number.isSafeInteger(paidPaise) || paidPaise <= 0) throw new Error('The refundable payment amount is invalid');
+    const { amount: refundAmount, paise: refundPaise, isPartial } = resolveRefundAmount(amount, paidPaise / 100);
 
     // Call the gateway's refund API (provider for custom checkout, else Razorpay)
     let refundId, refundStatus;
@@ -126,11 +131,13 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
     await Payment.create({
       order_id: order.id,
       user_id: order.user_id,
-      payment_type: 'razorpay',
+      guest_user_id: payment.guest_user_id || null,
+      payment_type: payment.payment_type,
+      payment_gateway: payment.payment_gateway || (isCustomCheckout ? 'CustomCheckout' : 'Razorpay'),
       transaction_id: refundId,
       razorpay_order_id: payment.razorpay_order_id,
       // Store in paise like every other gateway payment row.
-      amount_paid: -Math.round(refundAmount * 100),
+      amount_paid: -refundPaise,
       status: 'refunded',
       notes: `Refund for order ${order.order_number}: ${reason}`,
       brand_id: brandId,
