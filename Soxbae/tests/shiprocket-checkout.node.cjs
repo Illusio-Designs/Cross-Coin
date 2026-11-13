@@ -21,6 +21,7 @@ function setup({ response, sdk, debug = false } = {}) {
     },
   });
   vm.runInContext(diagnosticSource, context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../../shared/frontend/buyingFlow.js'), 'utf8').replace(/^export /gm, ''), context);
   vm.runInContext(source, context);
   return { open: context.openShiprocketCheckout, report: context.readCheckoutDiagnostic, requests, openings, stored };
 }

@@ -415,8 +415,13 @@ async function handlePaymentSuccess({
             name: i.Product?.name || '',
           })),
         };
-        await sendFacebookEvent('Purchase', eventPayload);
-        await sendGAEvent('purchase', eventPayload);
+        await Promise.allSettled([
+              Promise.resolve().then(() => sendFacebookEvent('Purchase', eventPayload)),
+              Promise.resolve().then(() => sendGAEvent('purchase', eventPayload)),
+            ]).then((results) => {
+              const failed = results.find((result) => result.status === 'rejected');
+              if (failed) throw failed.reason;
+            });
       } catch (err) {
         logger.error('Analytics Purchase event error:', err.message);
       }

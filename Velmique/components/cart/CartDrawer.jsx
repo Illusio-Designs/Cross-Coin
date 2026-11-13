@@ -859,7 +859,7 @@ export default function CartDrawer() {
     try {
       const data = buildCodOrder(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(data) : await createGuestOrder(data);
-      if (!result?.order) throw new Error('Order creation failed.');
+      if (!result?.order?.order_number) throw new Error('Order confirmation is pending. Please contact support.');
       const orderNumber = result.order.order_number;
       const purchaseData = buildPurchaseData(orderNumber, finalPayable);
       clearCart(true);
@@ -897,6 +897,7 @@ export default function CartDrawer() {
             reservation_id:    reservationId,
           });
           const orderNumber = result.order?.order_number;
+          if (!orderNumber || orderNumber === '—') throw new Error('Payment confirmation is pending. Please contact support before paying again.');
           const purchaseData = buildPurchaseData(orderNumber, finalPayable);
           clearCart(true);
           toastPaymentSuccess();

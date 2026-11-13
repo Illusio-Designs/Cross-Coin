@@ -1,3 +1,4 @@
+import { runCheckoutOpening, normalizeCheckoutLines, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from '../buyingFlow';
 /* Velmique — Shiprocket Checkout (their hosted checkout opens over the store).
 
    Flow: our backend signs a checkout token for the bag (the secret never
@@ -90,31 +91,37 @@ export function loadShiprocketSdk() {
 // `source` is 'cart' (the bag) or 'buy-now' (one product page selection).
 // The shopper's browser ids + cookie choice ride along in custom_attributes,
 // so the order's Meta Purchase can match them even if the tab is closed.
-export async function openShiprocketCheckout(event, lines, source = 'buy-now') {
-  const items = lines
-    .filter((l) => l.variationId != null)
-    .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
-  if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
+export function openShiprocketCheckout(event, lines, source = 'buy-now') {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  return runCheckoutOpening(BRAND, async () => {
+    lines = normalizeCheckoutLines(lines);
+    const items = lines
+      .filter((l) => l.variationId != null)
+      .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
+    if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
 
-  const ids = trackingIds();
-  const custom_attributes = {};
-  for (const k of Object.keys(ids)) if (ids[k] != null && ids[k] !== '') custom_attributes[k] = String(ids[k]);
+    const ids = trackingIds();
+    const custom_attributes = {};
+    for (const k of Object.keys(ids)) if (ids[k] != null && ids[k] !== '') custom_attributes[k] = String(ids[k]);
 
-  const [sdk, res] = await Promise.all([
-    loadShiprocketSdk(),
-    fetch(`${API_URL}/api/custom-checkout/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-      body: JSON.stringify({
-        items,
-        custom_attributes,
-        redirect_url: `${window.location.origin}/order-confirmation`,
-      }),
-    }).then((r) => r.json().catch(() => ({}))),
-  ]);
-  const token = res?.result?.token || res?.token;
-  if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
-  try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch { /* blocked */ }
-  // If Shiprocket can't open its checkout it sends the shopper back here.
-  sdk.addToCart(event, token, { fallbackUrl: window.location.href });
+    const [sdk, res] = await Promise.all([
+      loadShiprocketSdk(),
+      fetch(`${API_URL}/api/custom-checkout/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+        body: JSON.stringify({
+          items,
+          custom_attributes,
+          redirect_url: `${window.location.origin}/order-confirmation`,
+        }),
+      }).then(readCheckoutTokenResponse),
+    ]);
+    const token = res?.result?.token || res?.token;
+    if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
+    try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch { /* blocked */ }
+    // If Shiprocket can't open its checkout it sends the shopper back here.
+    await sdk.addToCart(event, token, { fallbackUrl: cleanCheckoutFallbackUrl(window.location.href) });
+
+});
 }

@@ -8,15 +8,16 @@ const source = fs.readFileSync(path.join(__dirname, '../src/lib/shiprocketChecko
 function setup() {
   const requests = [], scripts = [], timers = [], listeners = {}, opens = [];
   let now = 100000;
-  const context = vm.createContext({
+  const context = vm.createContext({ URL,
     window: { location: { origin: 'https://www.crosscoin.in', href: 'https://www.crosscoin.in/products/socks' },
       addEventListener: (name, fn) => { listeners[name] = fn; }, removeEventListener: (name) => { delete listeners[name]; },
       requestIdleCallback: (fn) => timers.push(fn) },
     document: { querySelector: () => null, createElement: () => ({}), head: { appendChild: () => {} }, body: { appendChild: (s) => scripts.push(s) } },
     Date: { now: () => now }, process: { env: {} }, trackingIds: () => ({ utm_session_id: 'visit-1' }),
     sessionStorage: { setItem: () => {} }, setTimeout: (fn) => timers.push(fn),
-    fetch: async (url, args) => { requests.push({ url, args }); return { json: async () => url.endsWith('/status') ? { enabled: true } : { success: true, token: 'fresh-token' } }; },
+    fetch: async (url, args) => { requests.push({ url, args }); return { ok: true, json: async () => url.endsWith('/status') ? { enabled: true } : { success: true, token: 'fresh-token' } }; },
   });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../../shared/frontend/buyingFlow.js'), 'utf8').replace(/^export /gm, ''), context);
   vm.runInContext(source, context);
   return { context, requests, scripts, timers, listeners, opens, advance: () => { now += 31000; } };
 }

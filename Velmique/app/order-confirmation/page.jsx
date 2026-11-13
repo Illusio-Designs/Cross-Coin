@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { pageMeta } from '@/lib/site';
 import CheckoutReturn from './CheckoutReturn';
 
-export const metadata = pageMeta({ title: 'Order Confirmed — Velmique Maison de Parfum', description: 'Your Velmique order.', path: '/order-confirmation', noindex: true });
+export const metadata = pageMeta({ title: 'Order confirmation — Velmique Maison de Parfum', description: 'Your Velmique order.', path: '/order-confirmation', noindex: true });
 
 /* The thank-you page after every order. The browser Purchase fires here,
    once, with the event id Purchase_<order number> — the same id the server's
@@ -30,23 +30,22 @@ export default function OrderConfirmation({ searchParams }) {
         <div className="m-oc__badge m-oc__badge--warn" aria-hidden="true">!</div>
         <span className="m-eyebrow">Payment not completed</span>
         <h1>Your order isn&rsquo;t placed yet.</h1>
-        <p className="m-oc__lede">The checkout didn&rsquo;t go through{ost ? ` (${ost.toLowerCase()})` : ''}, so nothing was charged. Your bag is saved — you can try again whenever you&rsquo;re ready.</p>
+        <p className="m-oc__lede">The checkout didn&rsquo;t go through{ost ? ` (${ost.toLowerCase()})` : ''}, so we couldn’t confirm the order. Check your payment status before trying again. Your bag is saved — you can try again whenever you&rsquo;re ready.</p>
         <CheckoutReturn mode="retry" />
       </div></section>
     );
   }
 
-  const order = ownOrder || oid;
   return (
     <section className="m-section"><div className="m-wrap m-oc">
-      {ownOrder ? <CheckoutReturn mode="own" orderNumber={ownOrder} /> : <CheckoutReturn mode="success" orderId={oid} />}
+      <CheckoutReturn mode={ownOrder ? "own" : "success"} orderNumber={ownOrder} orderId={oid}>
       <div className="m-oc__badge" aria-hidden="true">
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
       </div>
       <span className="m-eyebrow">Merci beaucoup</span>
       <h1>Order Placed.</h1>
       <p className="m-oc__lede">
-        Thank you for your order — <b>#{order}</b> is confirmed.
+        Thank you for your order.
         We&rsquo;ll send updates to you on WhatsApp.
       </p>
       <div className="m-oc__steps">
@@ -59,6 +58,7 @@ export default function OrderConfirmation({ searchParams }) {
         <Link className="m-btn" href="/account">My orders</Link>
         <Link className="m-btn" href="/shop">Continue shopping</Link>
       </div>
+      </CheckoutReturn>
     </div></section>
   );
 }

@@ -32,3 +32,9 @@ test('provider business rejection is reported distinctly and no checkout token i
   expect(service.createCheckoutToken).not.toHaveBeenCalled();
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, code: 'CHECKOUT_CATALOG_REJECTED' }));
 });
+test.each([0,-1,1.5,'bad'])('invalid quantity %s is rejected before catalog sync or token creation',async(quantity)=>{
+ const req=request();req.body.items[0].quantity=quantity;const res=response();await createToken(req,res);expect(res.status).toHaveBeenCalledWith(400);expect(service.ensureProductsPushed).not.toHaveBeenCalled();expect(service.createCheckoutToken).not.toHaveBeenCalled();
+});
+test('duplicate variant lines are combined before provider token creation',async()=>{
+ const req=request();req.body.items.push({variant_id:12,quantity:1});service.ensureProductsPushed.mockResolvedValue([{productId:1,pushed:'unchanged'}]);service.createCheckoutToken.mockResolvedValue({token:'fixture-token'});await createToken(req,response());expect(service.createCheckoutToken).toHaveBeenCalledWith(2,expect.objectContaining({items:[{variant_id:'12',quantity:3}]}),expect.anything());
+});

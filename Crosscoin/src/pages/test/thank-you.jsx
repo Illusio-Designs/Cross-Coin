@@ -7,7 +7,7 @@ import { I } from '../../components/test/ui';
 import { clearCart } from '../../components/test/store';
 import { fbPurchase } from '@/utils/fbqTrack';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '../../lib/shiprocketCheckout';
-import { takePurchaseForThankYou, completePurchaseForThankYou } from '../../lib/thankYou';
+import { takePurchaseForThankYou, completePurchaseForThankYou, hasConfirmedPurchase } from '../../lib/thankYou';
 import { rememberBuyer } from '../../utils/fbAdvancedMatching';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch (_) { return null; } };
@@ -47,6 +47,7 @@ export default function TestThankYou() {
 
     if (order) {
       const data = takePurchaseForThankYou(order);
+      setSr({ key, phase: hasConfirmedPurchase(order) ? 'done' : 'pending', orderNumber: order });
       if (data) {
         try { fbPurchase(order, data).then((sent) => { if (sent) completePurchaseForThankYou(order); }); } catch (_) { /* analytics never blocks the page */ }
       }
@@ -58,6 +59,7 @@ export default function TestThankYou() {
     // Shiprocket may need a moment to have the order ready: try 3 times.
     const confirm = (tries) => confirmShiprocketOrder(oid)
       .then((o) => {
+        try {
         if (handled.current !== key) return;
         setSr({ key, phase: 'done', orderNumber: o.order_number });
         dropSession(SR_SOURCE_KEY);
@@ -75,6 +77,8 @@ export default function TestThankYou() {
             value: Number(o.value || 0), currency: 'INR',
           });
         } catch (_) { /* analytics never blocks the page */ }
+
+        } catch (_) { /* A saved order stays confirmed if optional browser effects fail. */ }
       })
       .catch(() => {
         if (handled.current !== key) return;
@@ -85,7 +89,7 @@ export default function TestThankYou() {
   }, [router.isReady, key, order, oid, ost]);
 
   // done (our own order, or no order in the URL) | failed | loading | pending.
-  const phase = !router.isReady ? 'loading' : order ? 'done' : !oid ? 'none' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
+  const phase = !router.isReady ? 'loading' : order ? (sr.key === key ? sr.phase : 'loading') : !oid ? 'none' : ost !== 'SUCCESS' ? 'failed' : sr.key === key ? sr.phase : 'loading';
   const orderNo = order || (sr.key === key ? sr.orderNumber || '' : '');
   const failed = phase === 'failed';
 
@@ -100,7 +104,7 @@ export default function TestThankYou() {
         </>) : failed ? (<>
           <h1 style={{ fontFamily: 'Fraunces,serif', fontSize: 'clamp(26px,5vw,40px)', margin: '20px 0 8px' }}>Your order isn&rsquo;t placed yet</h1>
           <p style={{ color: 'var(--ink-soft)', fontSize: 14.5, lineHeight: 1.6, marginTop: 10 }}>
-            The checkout didn&rsquo;t go through{ost ? <span className="mono"> ({ost.toLowerCase()})</span> : null}, so nothing was charged. You can try again whenever you&rsquo;re ready.
+            The checkout didn&rsquo;t go through{ost ? <span className="mono"> ({ost.toLowerCase()})</span> : null}, so we couldn’t confirm the order. Check your payment status before trying again. You can try again whenever you&rsquo;re ready.
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 26 }}>
             <button className="btn btn--crimson btn--lg" onClick={() => window.dispatchEvent(new CustomEvent('cc-test-opencart'))}>Open my cart</button>

@@ -1,3 +1,4 @@
+import { runCheckoutOpening, confirmVerifiedOrder, normalizeCheckoutLines, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from '../buyingFlow';
 /* Velquira — Shiprocket Checkout (their hosted checkout opens over the store).
 
    Our backend signs a checkout token for the chosen lines (the secret never
@@ -63,41 +64,50 @@ export function loadShiprocketSdk() {
 // Open Shiprocket Checkout for lines [{ variationId, quantity }]. `source` is
 // 'cart' or 'buy-now'. The shopper's browser ids + cookie choice ride along,
 // so the order's Meta / GA4 Purchase matches them even if the tab is closed.
-export async function openShiprocketCheckout(event, lines, source = 'buy-now') {
-  const items = lines
-    .filter((l) => l.variationId != null)
-    .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
-  if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
+export function openShiprocketCheckout(event, lines, source = 'buy-now') {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  return runCheckoutOpening(BRAND, async () => {
+    lines = normalizeCheckoutLines(lines);
+    const items = lines
+      .filter((l) => l.variationId != null)
+      .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
+    if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
 
-  const ids = trackingIds();
-  const custom_attributes = {};
-  for (const k of Object.keys(ids)) if (ids[k] != null && ids[k] !== '') custom_attributes[k] = String(ids[k]);
+    const ids = trackingIds();
+    const custom_attributes = {};
+    for (const k of Object.keys(ids)) if (ids[k] != null && ids[k] !== '') custom_attributes[k] = String(ids[k]);
 
-  const [sdk, res] = await Promise.all([
-    loadShiprocketSdk(),
-    fetch(`${API_URL}/api/custom-checkout/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-      body: JSON.stringify({ items, custom_attributes, redirect_url: `${window.location.origin}/order-confirmation` }),
-    }).then((r) => r.json().catch(() => ({}))),
-  ]);
-  const token = res?.result?.token || res?.token;
-  if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
-  try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch { /* blocked */ }
-  // If Shiprocket can't open its checkout it sends the shopper back here.
-  sdk.addToCart(event, token, { fallbackUrl: window.location.href });
+    const [sdk, res] = await Promise.all([
+      loadShiprocketSdk(),
+      fetch(`${API_URL}/api/custom-checkout/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+        body: JSON.stringify({ items, custom_attributes, redirect_url: `${window.location.origin}/order-confirmation` }),
+      }).then(readCheckoutTokenResponse),
+    ]);
+    const token = res?.result?.token || res?.token;
+    if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');
+    try { sessionStorage.setItem(SR_SOURCE_KEY, source); } catch { /* blocked */ }
+    // If Shiprocket can't open its checkout it sends the shopper back here.
+    await sdk.addToCart(event, token, { fallbackUrl: cleanCheckoutFallbackUrl(window.location.href) });
+
+});
 }
 
 // Back from Shiprocket: our backend verifies the order with Shiprocket, saves
 // it and answers with our own order number.
-export async function confirmShiprocketOrder(oid) {
-  const res = await fetch(`${API_URL}/api/custom-checkout/confirm`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-    body: JSON.stringify({ ...trackingIds(), oid }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
-  return data;
+export function confirmShiprocketOrder(oid) {
+  return confirmVerifiedOrder(BRAND, oid, async () => {
+    const res = await fetch(`${API_URL}/api/custom-checkout/confirm`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+      body: JSON.stringify({ ...trackingIds(), oid }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
+    return data;
+
+});
 }

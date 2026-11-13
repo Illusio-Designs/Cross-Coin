@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '../..');
 function load(folder, brand, origin) {
   const requests = [], openings = [];
-  const rel = folder === 'Crosscoin' ? 'src/lib/shiprocketCheckout.js' : 'lib/api/shiprocketCheckout.js';
+  const rel = folder === 'Crosscoin' ? 'src/lib/shiprocketCheckout.js' : folder === 'Gripzus' ? 'src/services/shiprocketCheckout.js' : 'lib/api/shiprocketCheckout.js';
   const source = fs.readFileSync(path.join(root, folder, rel), 'utf8').replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
   const context = vm.createContext({
     process: { env: { NEXT_PUBLIC_BRAND_NAME: brand } }, URL, URLSearchParams,
@@ -17,14 +17,15 @@ function load(folder, brand, origin) {
     sessionStorage: { setItem() {} },
     fetch: async (url, args) => { requests.push({ url, args }); return { ok: true, status: 200, json: async () => ({ success: true, result: { token: 'fixture-token' } }) }; },
   });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../../shared/frontend/buyingFlow.js'), 'utf8').replace(/^export /gm, ''), context);
   vm.runInContext(source, context);
   return { open: context.openShiprocketCheckout, requests, openings };
 }
 for (const source of ['buy-now', 'cart']) {
   for (const quantity of [1, 2, 3]) {
-    test(`${source}, quantity ${quantity}: same provider contract on all three stores`, async () => {
+    test(`${source}, quantity ${quantity}: same provider contract on all seven stores`, async () => {
       let reference;
-      for (const [folder, brand, origin] of [['Morbix','morbix','https://www.morbixsocks.com'],['Soxbae','soxbae','https://www.soxbae.com'],['Crosscoin','crosscoin','https://www.crosscoin.in']]) {
+      for (const [folder, brand, origin] of [['Morbix','morbix','https://www.morbixsocks.com'],['Soxbae','soxbae','https://www.soxbae.com'],['Crosscoin','crosscoin','https://www.crosscoin.in'],['Knitwink','knitwink','https://knitwink.com'],['Velmique','velmique','https://velmique.co.in'],['Velquira','velquira','https://velquira.in'],['Gripzus','gripzus','https://gripzus.com']]) {
         const c = load(folder, brand, origin);
         await c.open({ preventDefault() {}, stopPropagation() {} }, [{ variationId: 696, quantity }], source);
         assert.equal(c.requests.length, 1);

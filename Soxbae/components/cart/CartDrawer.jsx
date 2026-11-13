@@ -862,6 +862,7 @@ export default function CartDrawer() {
   });
 
   const finishSuccess = (order) => {
+    if (!order?.order_number && !order?.orderNumber) throw new Error('Order confirmation is pending. Please contact support before paying again.');
     const orderNumber = order?.order_number || order?.orderNumber || '—';
     // Meta Purchase (deduped with the backend's server-side event) — build the
     // custom_data from the cart BEFORE it is cleared, using the amount actually
@@ -908,7 +909,7 @@ export default function CartDrawer() {
             reservation_id: reservationId,
           });
           finishSuccess(result.order);
-        } catch { finishSuccess(null); }
+        } catch { setError('Payment confirmation is pending. Please contact support before paying again.'); toast.error('Payment confirmation is pending. Please contact support before paying again.'); }
         finally { setProcessing(false); }
       },
       modal: { ondismiss: () => { setError('Payment was cancelled. You can retry below.'); setRetryState({ reservationId, count: 0 }); setProcessing(false); } },

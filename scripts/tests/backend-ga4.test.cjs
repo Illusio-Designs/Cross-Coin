@@ -27,6 +27,9 @@ function setup({ secret = true, failNetwork = false } = {}) {
   }, { GA_API_SECRET: 'must-not-use-global', GA_MEASUREMENT_ID: 'G-GLOBAL' });
   const sender = load('integration/googleAnalytics.js', {
     '../services/settingsHelper': helper,
+    express: { Router: () => ({ post() {} }) },
+    crypto: require('node:crypto'),
+    '../middleware/authMiddleware.js': { isAuthenticated() {}, isAdmin() {} },
     axios: { post: async (url, data) => {
       requests.push({ url: new URL(url), data });
       if (failNetwork) throw new Error('network unavailable');

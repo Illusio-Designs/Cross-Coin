@@ -1,3 +1,4 @@
+jest.mock('../../utils/encryption.js', () => ({ phoneHash: jest.fn(() => 'fixture-phone-hash') }));
 jest.mock('axios', () => ({}), { virtual: true });
 jest.mock('sequelize', () => ({ QueryTypes: {} }), { virtual: true });
 jest.mock('../../config/db.js', () => ({ sequelize: { transaction: jest.fn(async (fn) => fn({})) } }));
@@ -5,7 +6,7 @@ jest.mock('../../model/associations.js', () => ({
   Product: { addHook: jest.fn() }, Category: { addHook: jest.fn() },
   ProductVariation: { findByPk: jest.fn(), decrement: jest.fn() },
   Order: { findOne: jest.fn(), create: jest.fn() }, OrderItem: { bulkCreate: jest.fn() },
-  GuestUser: { findOne: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn() },
+  GuestUser: { findOne: jest.fn(), create: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn() },
 }));
 jest.mock('../../model/productBrandModel.js', () => ({ ProductBrand: { findOne: jest.fn() } }));
 jest.mock('../../services/settingsHelper.js', () => ({}));
@@ -54,7 +55,46 @@ test('incorrect provider total is rejected and never saved or tracked', async ()
   expect(models.Order.create).not.toHaveBeenCalled(); expect(scheduled).toHaveLength(0);
 });
 test('duplicate confirmation returns existing order without duplicating items, stock or Purchase', async () => {
-  models.Order.findOne.mockResolvedValue({ order_number: 'CC-EXISTING' });
+  models.Order.findOne.mockResolvedValue({ order_number: 'CC-EXISTING', brand_id: 1 });
   expect(await ingestCheckoutOrder(1, provider())).toEqual({ created: false, order_number: 'CC-EXISTING' });
   expect(models.Order.create).not.toHaveBeenCalled(); expect(models.ProductVariation.decrement).not.toHaveBeenCalled(); expect(scheduled).toHaveLength(0);
+});
+
+test('unpaid prepaid return does not create an order, change stock or send Purchase', async () => {
+  expect(await ingestCheckoutOrder(1, provider({ payment_status: 'pending' }))).toEqual({ skipped: 'awaiting_payment' });
+  expect(models.Order.create).not.toHaveBeenCalled(); expect(models.ProductVariation.decrement).not.toHaveBeenCalled(); expect(scheduled).toHaveLength(0);
+});
+test('phone-only buyer uses encrypted lookup hash and an internal valid email', async () => {
+  models.GuestUser.findOne.mockResolvedValue(null); models.GuestUser.create.mockResolvedValue({ id: 9 });
+  await ingestCheckoutOrder(1, provider());
+  expect(models.GuestUser.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { phoneHashValue: 'fixture-phone-hash' } }));
+  expect(models.GuestUser.create).toHaveBeenCalledWith(expect.objectContaining({ email: expect.stringMatching(/^checkout-[a-f0-9]+@guest\.invalid$/) }), expect.anything());
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ status: 'successful', brand_id: 1 }), expect.anything());
+});
+test('payment ledger failure rejects the transaction and schedules no success events', async () => {
+  models.Payment.create.mockRejectedValueOnce(new Error('ledger unavailable'));
+  await expect(ingestCheckoutOrder(1, provider())).rejects.toThrow('ledger unavailable');
+  expect(scheduled).toHaveLength(0);
+});
+test('racing callback acknowledges winner after unique-key rollback', async () => {
+  models.Order.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ order_number: 'CC-WINNER', brand_id: 1 });
+  models.Order.create.mockRejectedValueOnce(Object.assign(new Error('duplicate'), { name: 'SequelizeUniqueConstraintError' }));
+  expect(await ingestCheckoutOrder(1, provider())).toEqual({ created: false, order_number: 'CC-WINNER' });
+  expect(scheduled).toHaveLength(0);
+});
+test('existing provider ID from another store never leaks an order number', async () => {
+  models.Order.findOne.mockResolvedValue({ order_number: 'OTHER-ORDER', brand_id: 2 });
+  await expect(ingestCheckoutOrder(1, provider())).rejects.toThrow('different store');
+  expect(models.Order.create).not.toHaveBeenCalled();
+});
+test('Meta failure cannot suppress the GA4 Purchase', async () => {
+  sendFacebookEvent.mockRejectedValueOnce(new Error('Meta unavailable'));
+  await ingestCheckoutOrder(1, provider());
+  for (const run of scheduled) await run();
+  expect(sendGAEvent).toHaveBeenCalledWith('purchase', expect.objectContaining({ order_number: 'CC-TEST-1', brand_id: 1 }));
+});
+test('COD saves an unpaid order awaiting address confirmation, with linked payment ledger', async () => {
+  await ingestCheckoutOrder(1, provider({payment_type:'COD',payment_status:'pending'}));
+  expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({payment_type:'cod',payment_status:'pending',status:'awaiting_confirmation',cod_address_confirmed:false}),expect.anything());
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({guest_user_id:9,payment_type:'cod',status:'pending'}),expect.anything());
 });

@@ -282,8 +282,13 @@ module.exports.updateOrderPayment = async (req, res) => {
           marketing_consent: req.body?.marketing_consent, consent_session_id: req.cookies?.session_id || null,
           items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity, price: parseFloat(i.price || 0), name: i.Product?.name || '' })),
         };
-        await sendFacebookEvent('Purchase', eventPayload);
-        await sendGAEvent('purchase', eventPayload);
+        await Promise.allSettled([
+              Promise.resolve().then(() => sendFacebookEvent('Purchase', eventPayload)),
+              Promise.resolve().then(() => sendGAEvent('purchase', eventPayload)),
+            ]).then((results) => {
+              const failed = results.find((result) => result.status === 'rejected');
+              if (failed) throw failed.reason;
+            });
       } catch (err) { logger.error('Analytics Purchase event error:', err.message); }
     });
 

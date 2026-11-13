@@ -109,9 +109,19 @@ exports.createToken = async (req, res) => {
     // Crosscoin when the store isn't named.
     if (!req.brandId) return res.status(400).json({ success: false, message: 'X-Brand-Name is required' });
     const brandId = req.brandId;
-    const items = Array.isArray(req.body.items) ? req.body.items
-      .map((i) => ({ variant_id: String(i.variant_id ?? i.variationId ?? ''), quantity: Math.max(1, parseInt(i.quantity, 10) || 1) }))
-      .filter((i) => i.variant_id) : [];
+    const rawItems = Array.isArray(req.body.items) ? req.body.items : [];
+    if (rawItems.some((i) => !i || !/^[1-9]\d*$/.test(String(i.variant_id ?? i.variationId ?? '')) ||
+      !Number.isSafeInteger(Number(i.quantity)) || Number(i.quantity) <= 0)) {
+      return res.status(400).json({ success: false, code: 'CHECKOUT_INVALID_ITEMS', message: 'Choose valid product options and whole quantities' });
+    }
+    const quantities = new Map();
+    for (const i of rawItems) {
+      const id = String(i.variant_id ?? i.variationId);
+      const total = (quantities.get(id) || 0) + Number(i.quantity);
+      if (!Number.isSafeInteger(total)) return res.status(400).json({ success: false, code: 'CHECKOUT_INVALID_ITEMS', message: 'Quantity is too large' });
+      quantities.set(id, total);
+    }
+    const items = [...quantities].map(([variant_id, quantity]) => ({ variant_id, quantity }));
     if (!items.length) return res.status(400).json({ success: false, message: 'items are required' });
     // The shopper's own IP + browser, captured here (the request comes from
     // their browser) and carried through the checkout, so the server Purchase
@@ -384,6 +394,9 @@ exports.confirmReturn = async (req, res) => {
     const result = await verifyAndIngest(brandId, oid);
     if (!result?.order_number) return res.json({ ok: false, ...result });
     const track = await svc.purchasePayload(brandId, result.order_number);
+    if (!track || !Array.isArray(track.items) || !track.items.length) {
+      return res.status(409).json({ ok: false, code: 'CHECKOUT_CONFIRMATION_PENDING', message: 'Order confirmation is still pending for this store' });
+    }
     if (track && req.body?.marketing_consent === true) {
       const payload = {
         ...track, marketing_consent: true,

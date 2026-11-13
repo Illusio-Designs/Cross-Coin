@@ -1,12 +1,17 @@
+// @generated — DO NOT EDIT. Source: shared/frontend/thankYou.js
+// Edit that file then run: node scripts/sync-frontend-shared.mjs
+import { resetNativeOrderAttempts } from './buyingFlow';
 // Hand-off from our own checkout to the thank-you page: the Purchase details
 // (built from the cart before it was emptied), keyed by order number, so the
 // page fires the Purchase once.
 export const PURCHASE_KEY = 'cc-purchase';
 let memoryPurchase = null;
+const receiptKey = (order) => `${PURCHASE_KEY}:confirmed:${String(order)}`;
 
 export function savePurchaseForThankYou(orderNumber, data) {
   memoryPurchase = { orderNumber: String(orderNumber), data };
-  try { sessionStorage.setItem(PURCHASE_KEY, JSON.stringify(memoryPurchase)); } catch (_) { /* blocked */ }
+  try { sessionStorage.setItem(PURCHASE_KEY, JSON.stringify(memoryPurchase)); sessionStorage.setItem(receiptKey(orderNumber), '1'); } catch (_) { /* blocked */ }
+  try { resetNativeOrderAttempts('crosscoin'); } catch (_) { /* optional checkout bookkeeping */ }
 }
 
 export function takePurchaseForThankYou(orderNumber) {
@@ -26,4 +31,10 @@ export function completePurchaseForThankYou(orderNumber) {
     const saved = JSON.parse(sessionStorage.getItem(PURCHASE_KEY) || 'null');
     if (String(saved?.orderNumber) === String(orderNumber)) sessionStorage.removeItem(PURCHASE_KEY);
   } catch (_) { /* optional storage */ }
+}
+
+// Only code that has just saved an order creates this receipt; a URL alone is not a receipt.
+export function hasConfirmedPurchase(orderNumber) {
+  if (takePurchaseForThankYou(orderNumber)) return true;
+  try { return sessionStorage.getItem(receiptKey(orderNumber)) === '1'; } catch (_) { return false; }
 }

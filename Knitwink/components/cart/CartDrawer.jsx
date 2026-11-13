@@ -1090,7 +1090,7 @@ export function CartDrawer() {
     try {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-      if (!result?.order) throw new Error('Order creation failed.');
+      if (!result?.order?.order_number) throw new Error('Order confirmation is pending. Please contact support.');
       const orderNumber = result.order.order_number;
       const purchaseData = buildPurchaseData(orderNumber, finalTotal);
       clearCart();
@@ -1127,14 +1127,14 @@ export function CartDrawer() {
             reservation_id: reservationId,
           });
           const orderNumber = result.order?.order_number;
+          if (!orderNumber || orderNumber === '—') throw new Error('Payment confirmation is pending. Please contact support before paying again.');
           const purchaseData = buildPurchaseData(orderNumber, prepaidPayable);
           clearCart();
           setPaymentFailed({ error: null, rzpOrder: null, retryCount: 0, reservationId: null });
           toastOrderPlaced(orderNumber);
           showThankYou(orderNumber, purchaseData);
         } catch {
-          toastOrderPlaced('—');
-          clearCart();
+          setPaymentFailed({ error: 'Payment confirmation is pending. Please contact support before paying again.', reservationId });
         } finally {
           setIsProcessing(false);
         }

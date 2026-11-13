@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '../src/utils/purchasePixel.js'), 'utf8').replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+const source = fs.readFileSync(path.join(__dirname, '../src/utils/purchasePixel.js'), 'utf8').replace(/^import .*;\n/gm, '').replace(/^import .*;$/gm, '').replace(/^export /gm, '');
 function setup(config = { success: true, fb_pixel_id: '123456789' }) {
   const requests = [], scripts = [], events = [], timers = [];
   const context = vm.createContext({ process: { env: {} }, getConsent: () => ({ marketing: true }),
@@ -45,7 +45,7 @@ test('existing initialized stub reuses its pixel and script', async () => {
   s.scripts[0].listeners.load();
   assert.equal(await a, true);
 });
-const handoff = fs.readFileSync(path.join(__dirname, '../src/lib/thankYou.js'), 'utf8').replace(/^export /gm, '');
+const handoff = fs.readFileSync(path.join(__dirname, '../src/lib/thankYou.js'), 'utf8').replace(/^import .*;$/gm, '').replace(/^export /gm, '');
 test('native order handoff survives retries, is cleared only after successful send', () => {
   const data = new Map();
   const context = vm.createContext({ sessionStorage: { getItem: (k) => data.get(k), setItem: (k,v) => data.set(k,v), removeItem: (k) => data.delete(k) } });

@@ -1,3 +1,4 @@
+import { runNativeOrder } from '../lib/buyingFlow';
 /* Gripzus — orders API. Same endpoints as Knitwink, gripzus brand. */
 
 import { trackingIds } from '../utils/pixel';
@@ -67,6 +68,7 @@ function withTracking(data) {
 }
 
 export async function createOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: headers(getToken()),
@@ -75,9 +77,12 @@ export async function createOrder(orderData) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 export async function createGuestOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: headers(),
@@ -92,6 +97,8 @@ export async function createGuestOrder(orderData) {
   }
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 /* ── Checkout (prepaid / Razorpay) ───────────────────────────────── */

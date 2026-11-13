@@ -1,3 +1,4 @@
+import { runNativeOrder } from '../../lib/buyingFlow';
 import axios from "axios";
 import { API_URL, BRAND_NAME, addBrandHeader, attachFbTracking } from "./config";
 import { trackingIds } from "../../utils/fbqTrack";
@@ -17,6 +18,7 @@ export const getUserOrders = async (params = {}) => {
 };
 
 export const createOrder = async (orderData) => {
+  return runNativeOrder(BRAND_NAME, orderData, async () => {
   try {
     const token = localStorage.getItem("token");
     const utmSessionId = localStorage.getItem('utm_session_id');
@@ -29,9 +31,12 @@ export const createOrder = async (orderData) => {
     });
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }
+
+  });
 };
 
 export const createGuestOrder = async (orderData) => {
+  return runNativeOrder(BRAND_NAME, orderData, async () => {
   try {
     const utmSessionId = localStorage.getItem('utm_session_id');
     if (utmSessionId) orderData.utm_session_id = utmSessionId;
@@ -47,6 +52,8 @@ export const createGuestOrder = async (orderData) => {
     }
     return response.data;
   } catch (error) { throw error.response?.data || error.message; }
+
+  });
 };
 
 export const trackOrderByOrderNumber = async (orderNumber) => {

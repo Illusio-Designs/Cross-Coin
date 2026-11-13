@@ -1,3 +1,5 @@
+import { runNativeOrder } from '../buyingFlow';
+import { confirmVerifiedOrder } from '../buyingFlow';
 /* Velmique orders / checkout / payments client.
    Same endpoints + payload shapes as Knitwink — brand=velmique. */
 
@@ -69,6 +71,7 @@ function withTracking(data) {
 }
 
 export async function createOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: authHeaders(),
@@ -77,9 +80,12 @@ export async function createOrder(orderData) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 export async function createGuestOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: publicHeaders(),
@@ -95,6 +101,8 @@ export async function createGuestOrder(orderData) {
   }
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 export async function cancelOrder(orderId, reason = '') {
@@ -265,14 +273,17 @@ export async function getMyReturns() {
 // order with the provider, saves it, and (with marketing consent) sends Meta
 // the server Purchase with this shopper's browser ids. Returns our order
 // number + contents for the matching browser Purchase.
-export async function confirmCheckoutReturn(oid) {
-  const res = await fetch(`${API_URL}/api/custom-checkout/confirm`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
-    body: JSON.stringify(withTracking({ oid })),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
-  return data;
+export function confirmCheckoutReturn(oid) {
+  return confirmVerifiedOrder(BRAND, oid, async () => {
+    const res = await fetch(`${API_URL}/api/custom-checkout/confirm`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
+      body: JSON.stringify(withTracking({ oid })),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.message || 'Could not confirm the order');
+    return data;
+
+});
 }

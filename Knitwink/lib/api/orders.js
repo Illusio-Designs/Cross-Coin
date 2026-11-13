@@ -1,3 +1,4 @@
+import { runNativeOrder } from '../buyingFlow';
 import { trackingIds } from '@/utils/pixel'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in'
@@ -63,6 +64,7 @@ function withTracking(data) {
 }
 
 export async function createOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const token = getToken()
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
@@ -72,10 +74,13 @@ export async function createOrder(orderData) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || 'Order creation failed')
   return data
+
+  });
 }
 
 // Create guest order
 export async function createGuestOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: headers(),
@@ -90,6 +95,8 @@ export async function createGuestOrder(orderData) {
   }
   if (!res.ok) throw new Error(data.message || 'Order creation failed')
   return data
+
+  });
 }
 
 // Track order by order number (public)

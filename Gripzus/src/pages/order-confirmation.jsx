@@ -6,7 +6,7 @@ import PageHero from '../components/common/PageHero';
 import { useCart } from '../context/CartContext';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '../services/shiprocketCheckout';
 import { fbPurchase } from '../utils/pixel';
-import { takePurchaseForThankYou } from '../lib/thankYou';
+import { takePurchaseForThankYou, hasConfirmedPurchase } from '../lib/thankYou';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
 const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch { /* blocked */ } };
@@ -39,7 +39,7 @@ function ThankYou({ order, oid, ost, waiting = false }) {
   const { clearCart, openCart, hydrated } = useCart();
   const [state, setState] = useState(() => {
     if (waiting) return { phase: 'loading' };
-    if (order) return { phase: 'done', orderNumber: order };
+    if (order) return { phase: 'loading' };
     if (!oid) return { phase: 'none' };
     return ost === 'SUCCESS' ? { phase: 'loading' } : { phase: 'failed', ost };
   });
@@ -52,7 +52,8 @@ function ThankYou({ order, oid, ost, waiting = false }) {
 
     if (order) {
       const data = takePurchaseForThankYou(order);
-      if (data) fbPurchase(order, data);
+      setState(hasConfirmedPurchase(order) ? { phase: 'done', orderNumber: order } : { phase: 'pending' });
+      if (data) { try { fbPurchase(order, data); } catch (_) { /* optional tracking */ } }
       return;
     }
     if (!oid || ost !== 'SUCCESS') return;
@@ -61,6 +62,7 @@ function ThankYou({ order, oid, ost, waiting = false }) {
     // Shiprocket may need a moment to have the order ready: try 3 times.
     const confirm = (tries) => confirmShiprocketOrder(oid)
       .then((o) => {
+        try {
         dropSession(SR_SOURCE_KEY);
         clearPending.current = fromCart;
         setState({ phase: 'done', orderNumber: o.order_number });
@@ -74,9 +76,11 @@ function ThankYou({ order, oid, ost, waiting = false }) {
           currency: 'INR',
           order_id: o.order_number,
         });
+
+        } catch (_) { /* A saved order stays confirmed if optional browser effects fail. */ }
       })
       .catch(() => {
-        if (tries > 1) setTimeout(() => confirm(tries - 1), 2500);
+        if (tries > 1) setTimeout(() => confirm(tries - 1), tries === 3 ? 500 : 1500);
         else setState({ phase: 'pending' });
       });
     confirm(3);
@@ -92,13 +96,13 @@ function ThankYou({ order, oid, ost, waiting = false }) {
   const { phase } = state;
   let hero;
   if (phase === 'failed') {
-    hero = { eyebrow: 'Payment not completed', title: 'Not placed', accent: 'yet.', intro: `The checkout didn’t go through${state.ost ? ` (${state.ost.toLowerCase()})` : ''}, so nothing was charged. You can try again whenever you’re ready.` };
+    hero = { eyebrow: 'Payment not completed', title: 'Not placed', accent: 'yet.', intro: `The checkout didn’t go through${state.ost ? ` (${state.ost.toLowerCase()})` : ''}, so we couldn’t confirm the order. Check your payment status before trying again. You can try again whenever you’re ready.` };
   } else if (phase === 'none') {
     hero = { eyebrow: 'Orders', title: 'No order', accent: 'to show.', intro: 'Your orders are listed in your account.' };
   } else if (phase === 'done') {
     hero = { eyebrow: 'Thank you', title: 'Order', accent: 'placed.', intro: <>Order <b className="text-ink">#{state.orderNumber}</b> is confirmed. We&rsquo;ll send updates to you on WhatsApp.</> };
   } else if (phase === 'pending') {
-    hero = { eyebrow: 'Thank you', title: 'Order', accent: 'received.', intro: 'We’ll send the order number and updates to you on WhatsApp.' };
+    hero = { eyebrow: 'Thank you', title: 'Confirmation', accent: 'pending.', intro: 'We have not confirmed this order yet. Keep your checkout reference and contact support before paying again.' };
   } else {
     hero = { eyebrow: 'Thank you', title: 'Confirming', accent: 'your order…', intro: 'This takes a moment.' };
   }

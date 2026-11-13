@@ -1,3 +1,4 @@
+import { resetNativeOrderAttempts } from '../../lib/buyingFlow';
 ﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
@@ -1130,7 +1131,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
     try {
       const orderData = buildCodOrderData(generateIdempotencyKey());
       const result = isAuthenticated ? await createOrder(orderData) : await createGuestOrder(orderData);
-      if (!result?.order) throw new Error('Order creation failed.');
+      if (!result?.order?.order_number) throw new Error('Order confirmation is pending. Please contact support.');
+      resetNativeOrderAttempts('crosscoin');
       trackPurchase(finalTotal, result.order.order_number);
       clearCart();
       clearBuyNow();

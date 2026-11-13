@@ -1,3 +1,5 @@
+// @generated — DO NOT EDIT. Source: shared/frontend/purchasePixel.js
+// Edit that file then run: node scripts/sync-frontend-shared.mjs
 import { getConsent } from '../lib/consent';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -44,7 +46,7 @@ export function ensurePurchasePixel() {
       };
       const timeout = setTimeout(() => finish(false), 15000);
       script.addEventListener('load', () => finish(typeof window.fbq?.callMethod === 'function'), { once: true });
-      script.addEventListener('error', () => { if (!existing) script.remove(); finish(false); }, { once: true });
+      script.addEventListener('error', () => { script.remove(); finish(false); }, { once: true });
       if (!existing) { script.src = LIBRARY; script.async = true; document.head.appendChild(script); }
     });
   })().catch(() => false).then((ready) => { pending = null; return ready; });

@@ -1,3 +1,4 @@
+import { runNativeOrder } from '../buyingFlow';
 /* Orders / checkout / payments API — mirrors Knitwink/lib/api/orders.js.
  *
  * Covers the full purchase flow against the Cross-Coin backend:
@@ -71,6 +72,7 @@ function withTracking(data) {
 }
 
 export async function createOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders`, {
     method: 'POST',
     headers: authHeaders(),
@@ -79,9 +81,12 @@ export async function createOrder(orderData) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 export async function createGuestOrder(orderData) {
+  return runNativeOrder(BRAND, orderData, async () => {
   const res = await fetch(`${API_URL}/api/orders/guest-checkout`, {
     method: 'POST',
     headers: authHeaders(),
@@ -93,6 +98,8 @@ export async function createGuestOrder(orderData) {
   if (newToken) setToken(newToken);
   if (!res.ok) throw new Error(data.message || 'Order creation failed');
   return data;
+
+  });
 }
 
 // ── Order tracking (public) ────────────────────────────────────────────────

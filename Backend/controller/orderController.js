@@ -281,6 +281,10 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         });
         if (existingOrder) {
           await transaction.rollback();
+          if (String(existingOrder.user_id) !== String(userId) ||
+              String(existingOrder.brand_id) !== String(req.brandId || req.brand?.id || 1)) {
+            return res.status(409).json({ message: "Order retry key belongs to another checkout" });
+          }
           return res.status(200).json({ message: "Order already created", order: existingOrder });
         }
       }
@@ -826,8 +830,13 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
                 name: i.Product?.name || '',
               })),
             };
-            await sendFacebookEvent("Purchase", eventPayload);
-            await sendGAEvent("purchase", eventPayload);
+            await Promise.allSettled([
+              Promise.resolve().then(() => sendFacebookEvent('Purchase', eventPayload)),
+              Promise.resolve().then(() => sendGAEvent('purchase', eventPayload)),
+            ]).then((results) => {
+              const failed = results.find((result) => result.status === 'rejected');
+              if (failed) throw failed.reason;
+            });
           } catch (fbErr) {
             logger.error("createOrder: analytics event error:", fbErr.message);
           }

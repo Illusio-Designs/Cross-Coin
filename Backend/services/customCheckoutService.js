@@ -16,6 +16,7 @@ const { assertCatalogPushAccepted } = require('../utils/checkoutCatalog.js');
  */
 const { validOverride, createBrandPriceResolver } = require('../utils/brandPrice.js');
 const crypto = require('crypto');
+const { phoneHash } = require('../utils/encryption.js');
 const axios = require('axios');
 const {
   Product, ProductVariation, ProductImage, Category, Brand,
@@ -514,14 +515,14 @@ async function purchasePayload(brandId, orderNumber) {
     pids.length ? Product.findAll({ where: { id: pids }, attributes: ['id', 'name'] }) : [],
   ]);
   const amount = Number(order.final_amount) || 0;
-  const email = guest?.email || null;
+  const email = guest?.email && !/@guest\.invalid$/i.test(guest.email) ? guest.email : null;
   // Product names, so GA4's product reports show real names, not "(not set)".
   const nameOf = new Map(prods.map((p) => [p.id, p.name]));
   return {
     brand_id: brandId, order_number: order.order_number,
     external_id: order.user_id || await customerIdFor(brandId, email),
     total_amount: amount, final_amount: amount, currency: 'INR',
-    email: guest?.email || null, phone: addr?.phone || guest?.phone || null,
+    email, phone: addr?.phone || guest?.phone || null,
     first_name: guest?.firstName || null, last_name: guest?.lastName || null,
     zip_code: addr?.pincode || null, city: addr?.city || null, state: addr?.state || null, country: 'in',
     items: (order.OrderItems || []).map((i) => ({ product_id: i.product_id, quantity: i.quantity, price: Number(i.price) || 0, name: nameOf.get(i.product_id) || '' })),
@@ -542,7 +543,18 @@ async function ingestCheckoutOrder(brandId, p) {
 
   const idemKey = `cco:${platformId}`.slice(0, 100);
   const already = await Order.findOne({ where: { idempotency_key: idemKey } });
-  if (already) return { created: false, order_number: already.order_number };
+  if (already) {
+    if (Number(already.brand_id) !== Number(brandId)) {
+      const error = new Error('Checkout order belongs to a different store'); error.status = 409; throw error;
+    }
+    return { created: false, order_number: already.order_number };
+  }
+
+  const pay = (p.payments || [])[0] || {};
+  const isCod = isCodOrder(p, pay);
+  const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
+  // A successful SDK return is not proof that a prepaid payment completed.
+  if (!isCod && !paid) return { skipped: 'awaiting_payment' };
 
   const { generateUniqueOrderNumber } = require('./orderCreationService.js');
   const { toSmallestUnit } = require('../utils/amountConverter.js');
@@ -554,9 +566,13 @@ async function ingestCheckoutOrder(brandId, p) {
   const utmTrackingId = await visitIdFor(p);
   return sequelize.transaction(async (t) => {
     // Guest identity (custom-checkout shoppers have no local account).
-    let guest = phone ? await GuestUser.findOne({ where: { phone }, transaction: t }) : null;
+    const hash = phoneHash(phone);
+    let guest = phone ? await GuestUser.findOne({ where: hash ? { phoneHashValue: hash } : { phone }, transaction: t }) : null;
     if (!guest) {
-      guest = await GuestUser.create({ firstName, lastName, email: p.email || ship.email || null, phone: phone || null }, { transaction: t });
+      // The guest schema requires an email even when hosted checkout collects
+      // only a phone. This internal identity is excluded from checkout buyer matching.
+      const guestEmail = p.email || ship.email || `checkout-${crypto.createHash('sha256').update(`${brandId}:${phone || platformId}`).digest('hex').slice(0, 24)}@guest.invalid`;
+      guest = await GuestUser.create({ firstName, lastName, email: guestEmail, phone: phone || null }, { transaction: t });
     }
 
     const address = await ShippingAddress.create({
@@ -596,10 +612,6 @@ async function ingestCheckoutOrder(brandId, p) {
     }
     if (discount > subtotal) { const e = new Error(`Discount larger than the order for ${platformId}`); e.status = 422; throw e; }
     const finalAmount = expected;
-    const pay = (p.payments || [])[0];
-    const isCod = isCodOrder(p, pay);
-    // A COD order isn't paid until the courier collects the cash.
-    const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
 
     const order = await Order.create({
       order_number: await generateUniqueOrderNumber(t, brandId),
@@ -629,25 +641,22 @@ async function ingestCheckoutOrder(brandId, p) {
       await ProductVariation.decrement('stock', { by: l.quantity, where: { id: l.variation_id }, transaction: t });
     }
 
-    if (pay) {
-      try {
-        await Payment.create({
-          order_id: order.id,
-          user_id: null,
-          payment_type: isCod ? 'cod' : 'razorpay',
-          transaction_id: pay.txn_id || pay.pg_transaction_id || null,
-          amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
-          status: !isCod && String(pay.payment_status || '').toLowerCase() === 'success' ? 'successful' : 'pending',
-          // Gateway marks the refund route: these payments refund via the
-          // checkout provider's refund API, never our own Razorpay keys.
-          payment_gateway: 'CustomCheckout',
-          notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
-          brand_id: brandId,
-        }, { transaction: t });
-      } catch (e) {
-        logger.warn(`[custom-checkout] payment record failed for order ${order.order_number}: ${e.message}`);
-      }
-    }
+    // Save the payment ledger in the same transaction as the order and stock.
+    // A ledger failure must be retried, not silently produce a partial order.
+    await Payment.create({
+      order_id: order.id,
+      user_id: null,
+      guest_user_id: guest.id,
+      payment_type: isCod ? 'cod' : 'razorpay',
+      transaction_id: pay.txn_id || pay.pg_transaction_id || null,
+      amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
+      status: paid ? 'successful' : 'pending',
+      // Gateway marks the refund route: these payments refund via the
+      // checkout provider's refund API, never our own Razorpay keys.
+      payment_gateway: 'CustomCheckout',
+      notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
+      brand_id: brandId,
+    }, { transaction: t });
 
     logger.info(`[custom-checkout] ingested order ${order.order_number} (platform ${platformId}, brand ${brandId})`);
     const track = {
@@ -701,8 +710,13 @@ async function ingestCheckoutOrder(brandId, p) {
           try {
             const { sendFacebookEvent } = require('../integration/facebookPixel.js');
             const { sendGAEvent } = require('../integration/googleAnalytics.js');
-            await sendFacebookEvent('Purchase', track);
-            await sendGAEvent('purchase', track);
+            await Promise.allSettled([
+              Promise.resolve().then(() => sendFacebookEvent('Purchase', track)),
+              Promise.resolve().then(() => sendGAEvent('purchase', track)),
+            ]).then((results) => {
+              const failed = results.find((result) => result.status === 'rejected');
+              if (failed) throw failed.reason;
+            });
           } catch (e) { logger.warn('[custom-checkout] Purchase analytics failed: ' + e.message); }
         });
       }
@@ -710,6 +724,14 @@ async function ingestCheckoutOrder(brandId, p) {
       delete result._track;
     }
     return result;
+  }).catch(async (error) => {
+    // The webhook and browser return may race. The unique order key wins;
+    // the losing transaction rolls back, then acknowledges the saved order.
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const existing = await Order.findOne({ where: { idempotency_key: idemKey, brand_id: brandId } });
+      if (existing) return { created: false, order_number: existing.order_number };
+    }
+    throw error;
   });
 }
 

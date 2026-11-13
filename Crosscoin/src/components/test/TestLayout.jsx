@@ -826,6 +826,7 @@ export default function TestLayout({ children }) {
     } catch (_) { /* analytics never blocks the order */ }
     setOrderErr(''); setPlacing(true);
     const done = (no) => {
+      if (!no || no === '—') { setOrderErr('Order confirmation is pending. Please contact support before paying again.'); setPlacing(false); return; }
       // The thank-you page fires the Meta Pixel + CAPI Purchase (deduped by
       // Purchase_<order>), once. Hand it the cart contents BEFORE clearCart.
       const purchase = {

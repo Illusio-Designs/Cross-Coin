@@ -6,7 +6,7 @@ import { CheckCircle, Clock, Truck, XCircle } from 'lucide-react';
 import { useCartContext } from '@/context/CartContext';
 import { confirmShiprocketOrder, SR_SOURCE_KEY } from '@/lib/api/shiprocketCheckout';
 import { fbPurchase, rememberBuyer } from '@/utils/pixel';
-import { takePurchaseForThankYou } from '@/lib/thankYou';
+import { takePurchaseForThankYou, hasConfirmedPurchase } from '@/lib/thankYou';
 
 const readSession = (k) => { try { return sessionStorage.getItem(k); } catch { return null; } };
 const dropSession = (k) => { try { sessionStorage.removeItem(k); } catch { /* blocked */ } };
@@ -26,7 +26,7 @@ const BTN_LINK = 'text-sm text-brand-black underline underline-offset-4 hover:te
 export default function OrderConfirmationClient({ order, oid, ost }) {
   const { clearCart, setIsDrawerOpen, cartReady } = useCartContext();
   const [state, setState] = useState(() => {
-    if (order) return { phase: 'done', orderNumber: order };
+    if (order) return { phase: 'loading' };
     if (!oid) return { phase: 'none' };
     return ost === 'SUCCESS' ? { phase: 'loading' } : { phase: 'failed', ost };
   });
@@ -40,7 +40,8 @@ export default function OrderConfirmationClient({ order, oid, ost }) {
 
     if (order) {
       const data = takePurchaseForThankYou(order);
-      if (data) fbPurchase(order, data);
+      setState(hasConfirmedPurchase(order) ? { phase: 'done', orderNumber: order } : { phase: 'pending' });
+      if (data) { try { fbPurchase(order, data); } catch (_) { /* optional tracking */ } }
       return;
     }
     if (!oid || ost !== 'SUCCESS') return;
@@ -49,6 +50,7 @@ export default function OrderConfirmationClient({ order, oid, ost }) {
     // Shiprocket may need a moment to have the order ready: try 3 times.
     const confirm = (tries) => confirmShiprocketOrder(oid)
       .then((o) => {
+        try {
         clearPending.current = fromCart;
         setState({ phase: 'done', orderNumber: o.order_number });
         dropSession(SR_SOURCE_KEY);
@@ -66,9 +68,11 @@ export default function OrderConfirmationClient({ order, oid, ost }) {
           currency: 'INR',
           order_id: o.order_number,
         });
+
+        } catch (_) { /* A saved order stays confirmed if optional browser effects fail. */ }
       })
       .catch(() => {
-        if (tries > 1) setTimeout(() => confirm(tries - 1), 2500);
+        if (tries > 1) setTimeout(() => confirm(tries - 1), tries === 3 ? 500 : 1500);
         else setState({ phase: 'pending' });
       });
     confirm(3);
@@ -93,7 +97,7 @@ export default function OrderConfirmationClient({ order, oid, ost }) {
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Payment not completed</p>
             <h1 className="font-display text-3xl font-normal text-brand-black">Your order isn&apos;t placed yet</h1>
             <p className="max-w-md text-base leading-relaxed text-gray-600">
-              The checkout didn&apos;t go through{state.ost ? ` (${state.ost.toLowerCase()})` : ''}, so nothing was charged. You can try again whenever you&apos;re ready.
+              The checkout didn&apos;t go through{state.ost ? ` (${state.ost.toLowerCase()})` : ''}, so we couldn’t confirm the order. Check your payment status before trying again. You can try again whenever you&apos;re ready.
             </p>
           </>
         ) : phase === 'none' ? (
@@ -106,11 +110,11 @@ export default function OrderConfirmationClient({ order, oid, ost }) {
           <>
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Thank you</p>
             <h1 className="font-display text-3xl font-normal text-brand-black">
-              {phase === 'loading' ? 'Confirming your order…' : 'Order placed!'}
+              {phase === 'loading' ? 'Confirming your order…' : phase === 'pending' ? 'Order confirmation pending' : 'Order placed!'}
             </h1>
             <p className="max-w-md text-base leading-relaxed text-gray-600">
               {phase === 'done' ? <>Order <b className="text-brand-black">#{state.orderNumber}</b> is confirmed. We&apos;ll send updates to you on WhatsApp.</> : null}
-              {phase === 'pending' ? <>Your order is received. We&apos;ll send the order number and updates to you on WhatsApp.</> : null}
+              {phase === 'pending' ? <>We haven&apos;t confirmed this order in our system yet. Keep your checkout reference and contact support before paying again.</> : null}
               {phase === 'loading' ? <>This takes a moment.</> : null}
             </p>
           </>

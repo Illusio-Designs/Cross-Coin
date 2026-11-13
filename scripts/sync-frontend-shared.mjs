@@ -59,7 +59,12 @@ const PDP_COLOR_REWRITE = { Morbix: true, Soxbae: true };
 
 // Shared file → { source, dest(base, brand), brands?, vars?(brand) }
 // (brands omitted = all 7; vars = extra placeholder → value replacements)
+const PURCHASE_KEYS = { Crosscoin: 'cc-purchase', Morbix: 'mbx-purchase', Soxbae: 'soxbae-purchase', Knitwink: 'kw-purchase', Velmique: 'vlq-purchase', Velquira: 'vq-purchase', Gripzus: 'gz-purchase' };
+
 const FILES = [
+  { source: 'shared/frontend/buyingFlow.js', dest: (base) => `${base}lib/buyingFlow.js` },
+  { source: 'shared/frontend/purchasePixel.js', dest: (base) => `${base}utils/purchasePixel.js` },
+  { source: 'shared/frontend/thankYou.js', dest: (base) => `${base}lib/thankYou.js`, vars: (brand) => ({ __PURCHASE_KEY__: PURCHASE_KEYS[brand] }) },
   {
     // Lenis smooth scroll, mounted once in each store's root layout / _app.
     source: 'shared/frontend/SmoothScroll.jsx',

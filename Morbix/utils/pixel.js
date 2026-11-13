@@ -1,5 +1,8 @@
 // @generated — DO NOT EDIT. Source: shared/frontend/pixel.js
 // Edit that file then run: node scripts/sync-frontend-shared.mjs
+import { getConsent } from '../lib/consent';
+import { ensurePurchasePixel } from './purchasePixel';
+import { completePurchaseForThankYou } from '../lib/thankYou';
 // Guarded Meta Pixel event helper + Conversions API relay.
 //
 // Fires the browser pixel with a shared eventID and mirrors the funnel events to
@@ -393,18 +396,33 @@ export function trackingIds() {
 // two into one conversion instead of double-counting. Because the server
 // already sends Purchase via the Conversions API, this is intentionally NOT
 // relayed again here — the browser pixel is the second, deduped leg.
+const pendingPurchases = new Map();
 export function fbPurchase(orderNumber, params = {}) {
-  if (typeof window === 'undefined') return;
-  if (!orderNumber || orderNumber === '—') return; // no real order → skip
-
-  // GA4 purchase is sent by the server only (with this shopper's GA client id,
-  // see trackingIds) — as Shopify does — so it is never counted twice.
-
-  // Meta: the server sends Purchase via CAPI with the same event id; this is
-  // the browser leg. Held until the pixel exists instead of being dropped.
-  const send = () => { try { window.fbq('track', 'Purchase', params, { eventID: `Purchase_${orderNumber}` }); } catch (_) { /* never throw */ } };
-  if (window.fbq) { send(); return; }
-  let tries = 0;
-  const wait = () => { if (window.fbq) { send(); return; } if (++tries < 120) setTimeout(wait, 1000); };
-  setTimeout(wait, 500);
+  if (typeof window === 'undefined' || !orderNumber || orderNumber === '—') return Promise.resolve(false);
+  const order = String(orderNumber);
+  const key = `morbix-purchase-fired-v2:${order}`;
+  try { if (sessionStorage.getItem(key) === '1') return Promise.resolve(true); } catch (_) { /* optional storage */ }
+  if (pendingPurchases.has(order)) return pendingPurchases.get(order);
+  const prepare = () => { try { ensurePurchasePixel().catch(() => {}); } catch (_) { /* optional tracking */ } };
+  prepare();
+  const send = new Promise((resolve) => {
+    let tries = 0;
+    const attempt = () => {
+      if (tries && tries % 10 === 0) prepare();
+      if (typeof window.fbq?.callMethod === 'function' && getConsent().marketing) {
+        try {
+          window.fbq('track', 'Purchase', { ...params, order_id: order }, { eventID: `Purchase_${order}` });
+          try { sessionStorage.setItem(key, '1'); } catch (_) { /* optional storage */ }
+          completePurchaseForThankYou(order);
+          resolve(true); return;
+        } catch (_) { /* retry while the pixel is unavailable */ }
+      }
+      if (++tries >= 120) { resolve(false); return; }
+      setTimeout(attempt, 1000);
+    };
+    setTimeout(attempt, 0);
+  });
+  pendingPurchases.set(order, send);
+  send.then((sent) => { if (!sent) pendingPurchases.delete(order); });
+  return send;
 }

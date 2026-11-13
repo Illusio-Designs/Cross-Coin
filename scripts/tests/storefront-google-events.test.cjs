@@ -7,7 +7,7 @@ const root = path.join(__dirname, '../..');
 function browser() {
   const events = [];
   const context = {
-    process: { env: {} },
+    process: { env: {} }, getConsent: () => ({ marketing: true }), setTimeout() {},
     window: { __brandGa4Ready: true, gtag: (...args) => events.push(args), location: { pathname: '/' }, addEventListener() {} },
     sessionStorage: { getItem: () => null, setItem() {} },
     fetch: async () => ({}),
@@ -20,7 +20,7 @@ for (const brand of ['Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira', 'Gr
   test(`${brand}: Google ecommerce events work independently of the Meta pixel`, () => {
     const { context, events } = browser();
     const file = `${brand}/${brand === 'Gripzus' ? 'src/' : ''}utils/pixel.js`;
-    const source = fs.readFileSync(path.join(root, file), 'utf8').replace(/export /g, '');
+    const source = fs.readFileSync(path.join(root, file), 'utf8').replace(/^import .*;\n/gm, '').replace(/export /g, '');
     vm.runInContext(source + '\nglobalThis.api = { fbTrack, viewCart, addShippingInfo, addPaymentInfo, fbPurchase };', context);
     const api = context.api;
     api.fbTrack('ViewContent', payload);
@@ -30,16 +30,16 @@ for (const brand of ['Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira', 'Gr
     api.addShippingInfo(payload);
     api.addPaymentInfo(payload);
     api.fbPurchase('TEST-ORDER-1', payload);
-    assert.deepEqual(events.map(row => row[1]), ['view_item', 'add_to_cart', 'view_cart', 'begin_checkout', 'add_shipping_info', 'add_payment_info', 'purchase']);
+    assert.deepEqual(events.map(row => row[1]), ['view_item', 'add_to_cart', 'view_cart', 'begin_checkout', 'add_shipping_info', 'add_payment_info']);
     assert.ok(events.every(row => row[2].currency === 'INR' && row[2].value === 598));
-    assert.equal(events.at(-1)[2].transaction_id, 'TEST-ORDER-1');
+    // Purchase revenue is authoritative on the backend, never duplicated in GA4 here.
     assert.equal(events.at(-1)[2].items[0].quantity, 2);
   });
 }
 test('Crosscoin: its separate utilities send Google funnel and purchase events', () => {
   const { context, events } = browser();
   for (const file of ['Crosscoin/src/utils/gtagTrack.js', 'Crosscoin/src/utils/fbqTrack.js']) {
-    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/export /g, '').replace("import { gtagTrack } from './gtagTrack';", ''), context);
+    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/^import .*;\n/gm, '').replace(/export /g, '').replace("import { gtagTrack } from './gtagTrack';", ''), context);
   }
   context.payload = payload;
   vm.runInContext("fbqTrack('ViewContent', payload); fbqTrack('AddToCart', payload); fbqTrack('InitiateCheckout', payload); gtagTrack('purchase', {transaction_id:'TEST-CROSS-1', value:598, currency:'INR'});", context);
@@ -54,7 +54,7 @@ for (const brand of ['Morbix', 'Soxbae', 'Knitwink', 'Velmique', 'Velquira', 'Gr
     context.window.__brandGa4Ready = false;
     context.window.addEventListener = (name, fn) => listeners.set(name, fn);
     const file = `${brand}/${brand === 'Gripzus' ? 'src/' : ''}utils/pixel.js`;
-    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/export /g, ''), context);
+    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/^import .*;\n/gm, '').replace(/export /g, ''), context);
     context.payload = payload;
     vm.runInContext("trackPageView('/products'); trackPageView('/products'); fbTrack('ViewContent', payload); fbTrack('AddToCart', payload); viewCart(payload);", context);
     assert.equal(events.length, 0);
@@ -74,7 +74,7 @@ test('Crosscoin cart emits one begin_checkout while keeping the Meta checkout ev
   context.window.location.href = 'https://crosscoin.in';
   context.document = { cookie: '' };
   for (const file of ['Crosscoin/src/utils/gtagTrack.js', 'Crosscoin/src/utils/fbqTrack.js']) {
-    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/export /g, '').replace("import { gtagTrack } from './gtagTrack';", ''), context);
+    vm.runInContext(fs.readFileSync(path.join(root, file), 'utf8').replace(/^import .*;\n/gm, '').replace(/export /g, '').replace("import { gtagTrack } from './gtagTrack';", ''), context);
   }
   const cart = fs.readFileSync(path.join(root, 'Crosscoin/src/components/cart/CartDrawer.jsx'), 'utf8');
   const start = cart.indexOf("    fbqTrack('InitiateCheckout', {");
@@ -93,7 +93,7 @@ test('Crosscoin buffers early purchases and deduplicates them even when storage 
   context.window.__brandGa4Ready = false;
   context.window.addEventListener = (name, fn) => listeners.set(name, fn);
   context.sessionStorage = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
-  vm.runInContext(fs.readFileSync(path.join(root, 'Crosscoin/src/utils/gtagTrack.js'), 'utf8').replace(/export /g, ''), context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'Crosscoin/src/utils/gtagTrack.js'), 'utf8').replace(/^import .*;\n/gm, '').replace(/export /g, ''), context);
   vm.runInContext("gtagTrack('add_to_cart', {value:299}); gtagTrack('purchase', {transaction_id:'CROSS-101'}); gtagTrack('purchase', {transaction_id:'CROSS-101'});", context);
   assert.equal(events.length, 0);
   context.window.gtag = (...args) => events.push(args);
