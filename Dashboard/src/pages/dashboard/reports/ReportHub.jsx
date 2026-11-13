@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { ReportFiltersContext, useReportFiltersProvider } from '../../../lib/reportFilters';
 import Reports from './reports';
+import MarketingOrdersReport from './marketingOrdersReport';
 import RevenueProfitReport from './revenueProfit';
 import ProductReport from './productReport';
 import InventoryReport from './inventoryReport';
@@ -27,6 +28,7 @@ export const REPORT_GROUPS = {
     title: 'Sales reports',
     tabs: [
       { key: 'overview', label: 'Overview', view: 'reports', Component: Reports },
+      { key: 'marketing-orders', label: 'Marketing Orders', view: 'report-marketing-orders', Component: MarketingOrdersReport },
       { key: 'profit', label: 'Revenue & profit', view: 'revenue-profit', Component: RevenueProfitReport },
       { key: 'products', label: 'Products', view: 'report-products', Component: ProductReport },
       { key: 'inventory', label: 'Inventory', view: 'report-inventory', Component: InventoryReport },

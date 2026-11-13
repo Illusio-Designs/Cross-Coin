@@ -207,6 +207,7 @@ function Dashboard() {
       case 'reports-marketing': return <ReportHub group="marketing" />;
       case 'reports': case 'traffic-report': case 'revenue-profit': case 'report-location':
       case 'report-products': case 'report-customers': case 'report-inventory': case 'report-coupons':
+      case 'report-marketing-orders':
       case 'report-ads':
         return <ReportHub group={LEGACY_REPORT_VIEWS[currentView].group} initialTab={LEGACY_REPORT_VIEWS[currentView].tab} />;
       case 'leads':           return <Leads />;
