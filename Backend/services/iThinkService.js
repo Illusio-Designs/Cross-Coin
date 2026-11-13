@@ -1033,13 +1033,13 @@ class IThinkService {
    * Interface-compatible with the shipping status mapper().
    */
   mapStatusToCrossCoin(iThinkStatus) {
-    if (!iThinkStatus) return 'processing';
-    const s = iThinkStatus.toLowerCase().trim();
+    if (!iThinkStatus) return null;
+    const s = String(iThinkStatus).toLowerCase().trim();
 
     const mapping = {
-      // iThink "Push Order Statuses" panel can emit these channel labels
-      // (Ready to Ship → "Shipped"). Map them so a pushed status never
-      // falls through to the "processing" default and moves an order backward.
+      // Recognize the Push Order Statuses channel labels alongside tracking
+      // statuses (Ready to Ship → "Shipped"). Unrecognized scans are ignored.
+      'processing':             'processing',
       'shipped':                'shipped',
       'ready to ship':          'shipped',
       'manifested':             'manifested',
@@ -1058,14 +1058,14 @@ class IThinkService {
       'order cancelled':        'order cancelled',
     };
 
-    const mapped = mapping[s];
+    const mapped = Object.prototype.hasOwnProperty.call(mapping, s) ? mapping[s] : null;
     if (mapped) {
       logger.debug(`📊 iThink status mapping: "${iThinkStatus}" → "${mapped}"`);
       return mapped;
     }
 
-    logger.debug(`⚠️ Unknown iThink status: "${iThinkStatus}", defaulting to "processing"`);
-    return 'processing';
+    logger.debug(`⚠️ Unknown iThink status: "${iThinkStatus}", leaving order status unchanged`);
+    return null;
   }
 
   // Alias so the provider factory can call the same method name as Shipping

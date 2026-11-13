@@ -23,51 +23,8 @@ const { auditLog: orderAuditLog } = require('../services/orderService.js');
 const crypto = require('crypto');
 const { paymentStatusAfterCancellation, cancellationRefundInfo } = require('../services/orderPaymentPolicy.js');
 
-// ── Shipment status progression guard ───────────────────────────────────────
-// Courier webhooks can arrive out of order or be re-delivered (a late
-// "manifested" scan landing after "delivered"). Rank each status so we only
-// ever advance an order's status forward — a lower-ranked (stale/duplicate)
-// event is logged as a raw event but must NOT move the order backward.
-const SHIPMENT_STATUS_PRIORITY = {
-  'pending': 0,
-  'awaiting_confirmation': 0,
-  'processing': 10,
-  'confirmed': 10,
-  'manifested': 20,
-  'booked': 25,
-  'pickup initiated': 30,
-  'shipped': 40,
-  'in transit': 45,
-  'out for delivery': 60,
-  'undelivered': 70,
-  'delivered': 100,
-  'rto': 80,
-  'return_initiated': 80,
-  'rto delivered': 110,
-  'returned_rto': 110,
-  'cancelled': 100,
-  'order cancelled': 100,
-};
-
-// Terminal/exception states are ALWAYS allowed even if "lower" ranked, because
-// they legitimately follow a delivery attempt (NDR, RTO, cancellation).
-const ALWAYS_ALLOW_STATUS = new Set([
-  'undelivered', 'rto', 'return_initiated', 'rto delivered', 'returned_rto',
-  'cancelled', 'order cancelled',
-]);
-
-function shouldAdvanceOrderStatus(current, incoming) {
-  if (!incoming) return false;
-  if (!current) return true;
-  if (incoming === current) return false;                 // no-op / duplicate
-  if (ALWAYS_ALLOW_STATUS.has(incoming)) return true;     // NDR / RTO / cancel
-  // After a failed attempt the courier re-attempts: undelivered → out for
-  // delivery is a real step even though it ranks lower.
-  if (current === 'undelivered' && incoming === 'out for delivery') return true;
-  const cur = SHIPMENT_STATUS_PRIORITY[current] ?? -1;
-  const inc = SHIPMENT_STATUS_PRIORITY[incoming] ?? -1;
-  return inc >= cur;                                       // only forward
-}
+// Use the same courier progression rules for pushed scans and tracking polls.
+const { shouldAdvanceOrderStatus } = require('../services/shipmentStatusPolicy.js');
 
 // ── Shipping sync retry policy ──────────────────────────────────────────────
 // A transient failure (provider timeout / 5xx / auth blip) is worth retrying.
@@ -517,19 +474,12 @@ module.exports.handleShippingWebhook = async (req, res) => {
           attributes: ["id", "email", "firstName", "lastName"],
         },
         {
-          model: OrderItem,
-          as: "OrderItems",
-          include: [
-            { model: Product, as: "Product" },
-            { model: ProductVariation, as: "ProductVariation" }
-          ]
-        },
-        {
           model: Payment,
           as: "Payment"
         }
       ],
-      transaction
+      transaction,
+      lock: true,
     });
 
     if (!order) {
@@ -1470,6 +1420,16 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
     const trackingResult = await provider.getTrackingHistory(waybill);
     logger.debug(`📡 ${providerName} tracking response:`, JSON.stringify(trackingResult, null, 2));
 
+    // The provider call can take seconds. Lock and reload AFTER it returns so
+    // a webhook or another poll cannot apply the same transition twice.
+    // Lock the base order row without has-many joins/subqueries. Poll side
+    // effects fetch their address separately and do not need eager associations.
+    if (!transaction) throw new Error('A transaction is required for shipping status updates');
+    await order.reload({ transaction, lock: true, include: [] });
+    if (String(order.shipping_waybill || order.tracking_number) !== String(waybill)) {
+      return { success: true, statusChanged: false, message: 'Tracking reference changed; stale response ignored' };
+    }
+
     // Extract tracking data based on provider format
     let statusData = null;
     let providerStatus = null;
@@ -1537,7 +1497,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
 
       logger.debug(`📊 ${providerName} status: "${providerStatus}" → CrossCoin status: "${newStatus}"`);
 
-      const statusChanged = order.status !== newStatus;
+      const statusChanged = shouldAdvanceOrderStatus(order.status, newStatus);
 
       if (statusChanged) {
         const prevStatusForRto = order.status;
@@ -1641,7 +1601,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
           }
         }
 
-        logger.debug(`✅ Order ${order.order_number} status updated: ${order.status} → ${newStatus}`);
+        logger.debug(`✅ Order ${order.order_number} status updated: ${prevStatusForRto} → ${newStatus}`);
 
         // Audit trail: record every shipping-driven status transition.
         try {
@@ -1651,7 +1611,7 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
             null,
             `${providerName || 'shipping'}_sync`,
             {
-              from: order.status,
+              from: prevStatusForRto,
               to: newStatus,
               provider: providerName,
               provider_status: providerStatus,
@@ -1770,7 +1730,8 @@ module.exports.updateOrderStatusFromShipping = async (order, transaction, provid
           success: true,
           statusChanged: true,
           newStatus: newStatus,
-          message: `Status updated from ${order.status} to ${newStatus}`
+          previousStatus: prevStatusForRto,
+          message: `Status updated from ${prevStatusForRto} to ${newStatus}`
         };
       } else {
         logger.debug(`📋 Order ${order.order_number} status unchanged: ${order.status}`);
@@ -2105,7 +2066,7 @@ module.exports.bulkRefreshShippingStatus = async (req, res) => {
               results.details.push({
                 order_number: order.order_number,
                 order_id: order.id,
-                previous_status: order.status,
+                previous_status: refreshResult.previousStatus,
                 new_status: refreshResult.newStatus,
                 waybill: order.shipping_waybill,
                 payment_status_changed: refreshResult.newStatus === 'delivered' || refreshResult.newStatus === 'rto',
