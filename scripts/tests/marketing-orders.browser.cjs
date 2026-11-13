@@ -36,13 +36,15 @@ const services=`export const brandService={getAllBrands:async()=>({success:true,
   await page.addScriptTag({path:outfile});await page.getByRole('heading',{name:'Marketing Orders',exact:true}).waitFor();
   await page.getByRole('cell',{name:'CANCEL-1',exact:true}).waitFor();assert.equal(await page.getByRole('cell',{name:'RTO-1',exact:true}).count(),1);
   await page.getByRole('button',{name:'Next',exact:true}).click();await page.getByText('Page 2 of 2',{exact:true}).waitFor();assert.ok(requests.some(r=>r.page==='2'));
-  await page.getByRole('button',{name:'All orders',exact:true}).click();await page.getByText('RTO',{exact:true}).last().click();await page.getByText('1 matching orders',{exact:true}).waitFor();assert.equal(await page.getByRole('cell',{name:'CANCEL-1',exact:true}).count(),0);assert.ok(requests.some(r=>r.stage==='rto'));
-  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export all matching orders'}).click();assert.match((await download).suggestedFilename(),/^marketing-orders-/);assert.ok(requests.some(r=>r.format==='csv'&&r.stage==='rto'));
+  assert.equal(await page.getByRole('columnheader',{name:/^(Cancelled|RTO|Returned|Status)$/}).count(),0);
+  assert.equal(await page.getByRole('button',{name:'All orders',exact:true}).count(),0);
+  assert.ok((await page.locator('.rep-kpi').first().innerText()).includes('8'));
+  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export all matching orders'}).click();assert.match((await download).suggestedFilename(),/^marketing-orders-/);assert.ok(requests.some(r=>r.format==='csv'&&!r.stage));
   await page.getByRole('button',{name:'All brands',exact:true}).click();await page.getByText('Soxbae',{exact:true}).click();await page.getByText(/No spend rows were imported for: Soxbae/).waitFor();assert.ok(requests.some(r=>r.brandId==='2'));
   await page.getByLabel('Start date').fill('2026-11-01');await page.waitForFunction(()=>document.querySelector('input[aria-label="Start date"]').value==='2026-11-01');
   await page.waitForTimeout(200);assert.ok(requests.some(r=>r.startDate==='2026-11-01'));assert.deepEqual(errors,[]);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);assert.equal(overflow,false,`Page overflow at ${width}px`);
-  await page.screenshot({path:path.join(temp,`marketing-orders-${width}.png`),fullPage:true});console.log(`PASS ${width}px: cancelled/RTO orders, pagination, filters, CSV, missing spend, no page overflow`);await page.close();
+  await page.screenshot({path:path.join(temp,`marketing-orders-${width}.png`),fullPage:true});console.log(`PASS ${width}px: combined total orders without status breakdowns, pagination, filters, CSV, missing spend, no page overflow`);await page.close();
  }}finally{await browser.close();}
  console.log('Screenshots: '+temp);
 })().catch(e=>{console.error(e);process.exit(1)});
