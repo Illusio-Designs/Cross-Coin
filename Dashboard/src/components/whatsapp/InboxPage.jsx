@@ -166,13 +166,12 @@ function ThreadSkeleton({ rows = SKEL_THREAD, day = true, label = 'Loading messa
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// One of our messages from the last 10 minutes that WhatsApp hasn't confirmed
-// (delivered / read) or rejected yet.
+// Only the visible open thread is polled for outstanding delivery/read
+// receipts. A late receipt for an older message must still appear while the
+// agent is watching; polling stops once all outgoing messages are read/failed.
 function hasUnconfirmed(list) {
-  const cutoff = Date.now() - 10 * 60 * 1000;
   return (list || []).some((m) => m.direction === 'outbound'
-    && (m.status === 'sent' || m.status === 'sending' || !m.status)
-    && new Date(m.createdAt || m.sent_at || 0).getTime() > cutoff);
+    && (m.status === 'sent' || m.status === 'sending' || m.status === 'delivered' || !m.status));
 }
 
 export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUnreadChange }) {
@@ -217,6 +216,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   const [loadingOlder, setLoadingOlder] = useState(false);
   const openReqRef = useRef(null);
   const msgAbortRef = useRef(null);
+  const msgRefreshRef = useRef(new Map());
+  const liveListRef = useRef({ busy: false, again: false });
   const cacheRef = useRef(new Map());
   const prefetchingRef = useRef(new Set());
   const messagesBoxRef = useRef(null);
@@ -272,6 +273,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   };
 
   const fetchConversations = async ({ silent = false } = {}) => {
+    if (silent && liveListRef.current.busy) { liveListRef.current.again = true; return; }
+    if (silent) liveListRef.current.busy = true;
     const req = ++convReqRef.current;
     if (!silent) { setConvLoading(true); setConvError(null); pageRef.current = 1; }
     try {
@@ -292,6 +295,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       if (!silent) { setConversations([]); setTotal(0); setConvError(errMsg(e, 'Could not load chats')); }
     } finally {
       if (req === convReqRef.current) setConvLoading(false);
+      if (silent) {
+        liveListRef.current.busy = false;
+        if (liveListRef.current.again) { liveListRef.current.again = false; fetchRef.current({ silent: true }); }
+      }
     }
   };
   const fetchRef = useRef(fetchConversations);
@@ -420,17 +427,27 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     setLoadingOlder(false);
   };
 
-  const refreshActiveMessages = async (convId) => {
-    try {
-      const { data } = await adminApi.get(`${W}/conversations/${convId}/messages`);
-      if (data?.success && openReqRef.current === convId) {
-        setMessages((prev) => {
-          const merged = mergeMessages(prev, data.messages || []);
-          touchCache(convId, merged);
-          return merged;
-        });
-      }
-    } catch { /* next live update will retry */ }
+  const refreshActiveMessages = (convId) => {
+    const running = msgRefreshRef.current.get(convId);
+    if (running) { running.again = true; return running.promise; }
+    const state = { again: false, promise: null };
+    state.promise = (async () => {
+      do {
+        state.again = false;
+        try {
+          const { data } = await adminApi.get(`${W}/conversations/${convId}/messages`);
+          if (data?.success && openReqRef.current === convId) {
+            setMessages((prev) => {
+              const merged = mergeMessages(prev, data.messages || []);
+              touchCache(convId, merged);
+              return merged;
+            });
+          }
+        } catch { /* the next visible-chat check can retry */ }
+      } while (state.again && openReqRef.current === convId);
+    })().finally(() => msgRefreshRef.current.delete(convId));
+    msgRefreshRef.current.set(convId, state);
+    return state.promise;
   };
 
   // Deep link (Orders, customer profile, search, abandoned carts…).
@@ -439,57 +456,64 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extra]);
 
-  // ════ Live updates (long-poll /stream) ═══════════════════════════════════
-  const onLive = (streamConvs) => {
-    fetchRef.current({ silent: true });
-    const open = activeRef.current;
-    if (!open) return;
-    const updated = streamConvs.find((c) => c.id === open.id);
-    if (updated && (!open.last_message_at || new Date(updated.last_message_at) > new Date(open.last_message_at))) {
-      activeRef.current = { ...open, last_message_at: updated.last_message_at };
-      setActiveConv((prev) => (prev && prev.id === open.id ? { ...prev, last_message_at: updated.last_message_at, last_message: updated.last_message } : prev));
-      refreshActiveMessages(open.id);
-    } else if (hasUnconfirmed(messagesRef.current)) {
-      // Delivered / read / failed ticks don't move last_message_at, so keep
-      // re-reading the open chat while one of our recent messages is unconfirmed.
-      refreshActiveMessages(open.id);
+  // ════ Live changes: cheap signal, one list refresh, active-chat receipts ═══
+  const lastLiveListRef = useRef(0);
+  const onLive = (change) => {
+    if (change.kind === 'initial' || change.kind === 'message' || change.kind === 'conversation' || Date.now() - lastLiveListRef.current >= 20000) {
+      lastLiveListRef.current = Date.now();
+      fetchRef.current({ silent: true });
     }
+    const open = activeRef.current;
+    if (open && (change.changed || hasUnconfirmed(messagesRef.current))) refreshActiveMessages(open.id);
   };
   const onLiveRef = useRef(onLive);
   onLiveRef.current = onLive;
 
   useEffect(() => {
-    let alive = true;
-    let controller = null;
-    let timer = null;
-    let since = null;
-    const MIN_GAP = 3000; // never hot-loop if the server answers instantly
+    let alive = true, controller = null, timer = null, after = null, legacySince = null, failures = 0, resumeRefresh = true;
     const loop = async () => {
-      if (!alive) return;
-      controller = new AbortController();
+      if (!alive || document.hidden) return;
+      const ac = new AbortController();
+      controller = ac;
       const started = Date.now();
       try {
         const { data } = await adminApi.get(`${W}/stream`, {
-          params: { brandId: brandId || 'all', status: 'all', ...(since ? { since } : {}) },
-          signal: controller.signal,
+          params: { changes: '1', ...(after == null ? {} : { after }), ...(legacySince ? { since: legacySince } : {}) },
+          signal: ac.signal,
           timeout: 40000,
         });
-        if (!alive) return;
-        if (data?.success) {
-          const convs = data.conversations || [];
-          const first = since === null;
-          const newest = convs[0]?.last_message_at || null;
-          since = newest || data.serverTime || since || new Date().toISOString();
-          if (!first) onLiveRef.current(convs);
-        }
-        timer = setTimeout(loop, Math.max(0, MIN_GAP - (Date.now() - started)));
+        if (!alive || controller !== ac || document.hidden) return;
+        if (!data?.success) throw new Error('Inbox live update failed');
+        // Keep the inbox working if the dashboard deploys before the API.
+        const legacy = data.after == null && Array.isArray(data.conversations);
+        legacySince = legacy ? (data.conversations[0]?.last_message_at || data.serverTime || legacySince) : null;
+        after = data.after;
+        failures = 0;
+        const change = legacy ? { ...data, kind: 'message', changed: true } : data;
+        onLiveRef.current(resumeRefresh ? { ...change, kind: 'initial', changed: true } : change);
+        resumeRefresh = false;
+        timer = setTimeout(loop, Math.max(0, 1000 - (Date.now() - started)));
       } catch (e) {
-        if (!alive || isCancel(e)) return;
-        timer = setTimeout(loop, 5000);
+        if (!alive || controller !== ac || isCancel(e) || document.hidden) return;
+        failures++;
+        timer = setTimeout(loop, Math.min(10000, 1000 * 2 ** Math.min(failures - 1, 4)));
       }
     };
+    const resume = () => {
+      clearTimeout(timer);
+      controller?.abort();
+      controller = null;
+      if (!document.hidden) { resumeRefresh = true; loop(); }
+    };
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('focus', resume);
     loop();
-    return () => { alive = false; clearTimeout(timer); if (controller) { try { controller.abort(); } catch { /* ignore */ } } };
+    return () => {
+      alive = false; clearTimeout(timer); controller?.abort();
+      liveListRef.current.again = false;
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('focus', resume);
+    };
   }, [brandId]);
 
   // ════ Context (orders + reply window) ════════════════════════════════════
@@ -577,8 +601,8 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       setConversations((prev) => prev.map((c) => (c.id === msg.conversation_id ? { ...c, last_message: msg.body, last_message_at: new Date().toISOString(), waiting_since: null } : c)));
       // The send to WhatsApp finishes in the background — pick up "Not sent"
       // (or the first tick) without waiting for the next live update.
-      [4000, 12000].forEach((ms) => setTimeout(() => {
-        if (activeRef.current?.id === msg.conversation_id) refreshActiveMessages(msg.conversation_id);
+      [1000, 3000].forEach((ms) => setTimeout(() => {
+        if (!document.hidden && activeRef.current?.id === msg.conversation_id) refreshActiveMessages(msg.conversation_id);
       }, ms));
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m)));

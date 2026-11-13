@@ -620,6 +620,26 @@ exports.getMessages = async (req, res) => {
 exports.streamUpdates = async (req, res) => {
   try {
     const notificationService = require('../services/notificationService.js');
+    if (req.query.changes === '1') {
+      const raw = req.query.after;
+      if (raw != null && (!/^\d+$/.test(String(raw)) || !Number.isSafeInteger(Number(raw)))) {
+        return res.status(400).json({ success: false, message: 'Invalid inbox cursor' });
+      }
+      const after = raw == null ? null : Number(raw);
+      let newest = await notificationService.getLatestWhatsAppId();
+      let kind = after == null ? 'initial' : newest !== after ? 'message' : 'timeout';
+      if (kind === 'timeout' && req.query.wait !== '0') {
+        const ac = new AbortController();
+        const closed = () => ac.abort();
+        res.on('close', closed);
+        try { kind = await notificationService.waitForWhatsApp(3000, { signal: ac.signal }); }
+        finally { res.removeListener('close', closed); }
+        if (ac.signal.aborted || res.destroyed) return;
+        newest = await notificationService.getLatestWhatsAppId();
+        if (newest !== after) kind = 'message';
+      }
+      return res.json({ success: true, changed: kind !== 'timeout', kind, after: newest, serverTime: new Date() });
+    }
     const wait       = req.query.wait !== '0';
     const sinceTs    = req.query.since ? new Date(req.query.since) : null;
     // Same filters/search/brand rules as GET /conversations (brandId absent =
@@ -707,6 +727,8 @@ exports.sendReply = async (req, res) => {
       } catch (err) {
         await saved.update({ status: 'failed', error_reason: String(errMsg(err)).slice(0, 255) }).catch(() => {});
         logger.error(`[WhatsApp] background reply send failed for ${conv.customer_phone}: ${errMsg(err)}`);
+      } finally {
+        require('../services/notificationService.js').notifyWhatsAppChanged('status');
       }
     });
   } catch (err) {
@@ -781,6 +803,7 @@ exports.resolveConversation = async (req, res) => {
     const conv = await WhatsappConversation.findByPk(id);
     if (!conv) return res.status(404).json({ success: false, message: 'Conversation not found' });
     await conv.update({ status: target });
+    require('../services/notificationService.js').notifyWhatsAppChanged('conversation');
     if (target === 'resolved') await require('../services/whatsappAiService.js').onResolved(conv.id);
     logger.info(`[WhatsApp] conversation ${id} → ${target}`);
     res.json({ success: true, status: conv.status });
@@ -1584,6 +1607,7 @@ exports.receiveWebhook = async (req, res) => {
                   statusUpd.error_reason = String(e.error_data?.details || e.title || e.message || 'Failed').slice(0, 240) + (e.code ? ` (code ${e.code})` : '');
                 }
                 await WhatsappMessage.update(statusUpd, { where: { id: existing.id } });
+                require('../services/notificationService.js').notifyWhatsAppChanged('status');
                 existing.status = next; // keep the map current if the same id recurs in this batch
               }
             } catch (statusErr) {

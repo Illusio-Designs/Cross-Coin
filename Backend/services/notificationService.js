@@ -18,24 +18,28 @@ function broadcast(event, data) {
 const waiters   = new Set(); // any event (orders + whatsapp) — global notifications
 const waWaiters = new Set(); // whatsapp-only — the WhatsApp inbox live stream
 
-function notifyAll(set) {
-  for (const wake of set) { try { wake(); } catch (_) {} }
+function notifyAll(set, reason = 'message') {
+  for (const wake of set) { try { wake(reason); } catch (_) {} }
   set.clear();
 }
 
 // Resolves when a matching event is emitted, or after timeoutMs (whichever first).
-function waitOn(set, timeoutMs) {
+function waitOn(set, timeoutMs, { signal } = {}) {
   return new Promise((resolve) => {
-    let done = false;
-    const finish = () => {
+    let done = false, timer;
+    const abort = () => finish('aborted');
+    const finish = (reason = 'timeout') => {
       if (done) return;
       done = true;
       set.delete(finish);
       clearTimeout(timer);
-      resolve();
+      signal?.removeEventListener('abort', abort);
+      resolve(reason);
     };
+    if (signal?.aborted) { finish('aborted'); return; }
     set.add(finish);
-    const timer = setTimeout(finish, timeoutMs);
+    signal?.addEventListener('abort', abort, { once: true });
+    timer = setTimeout(() => finish('timeout'), timeoutMs);
   });
 }
 
@@ -73,7 +77,17 @@ function watchDb() {
 }
 
 function waitForNotification(timeoutMs = 25000) { const p = waitOn(waiters, timeoutMs); watchDb(); return p; }
-function waitForWhatsApp(timeoutMs = 25000)     { const p = waitOn(waWaiters, timeoutMs); watchDb(); return p; }
+function waitForWhatsApp(timeoutMs = 25000, options = {}) { const p = waitOn(waWaiters, timeoutMs, options); watchDb(); return p; }
+
+async function getLatestWhatsAppId() {
+  const { sequelize } = require('../config/db.js');
+  const [[row]] = await sequelize.query('SELECT MAX(id) AS id FROM whatsapp_messages');
+  return Number(row?.id) || 0;
+}
+
+// Status changes are not new-message alerts: wake the inbox without creating
+// another global notification or changing the conversation preview timestamp.
+function notifyWhatsAppChanged(kind = 'status') { notifyAll(waWaiters, kind); }
 
 function emitNewOrder(order) {
   broadcast('new_order', {
@@ -96,4 +110,4 @@ function emitNewWhatsApp(phone, message) {
   notifyAll(waWaiters); // wakes the WhatsApp inbox live stream
 }
 
-module.exports = { emitNewOrder, emitNewWhatsApp, waitForNotification, waitForWhatsApp };
+module.exports = { emitNewOrder, emitNewWhatsApp, waitForNotification, waitForWhatsApp, getLatestWhatsAppId, notifyWhatsAppChanged };
