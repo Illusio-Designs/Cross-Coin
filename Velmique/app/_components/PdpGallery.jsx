@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from './SkImg';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
-/* Stacked scroll gallery (sticky shots that slide over each other) with a
+/* Thumbnail gallery with a
    click-to-zoom lightbox: tap any image for a fullscreen view, swipe through
    with the arrows or ←/→, close with × / Esc / backdrop tap. */
 export default function PdpGallery({ images = [], name = '' }) {
+  const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(-1);
-  const close = () => setOpen(-1);
+  useEffect(() => { setSelected(0); setOpen(-1); }, [name]);
+  const close = useCallback(() => setOpen(-1), []);
+  const lightboxRef = useFocusTrap(open >= 0, { onEscape: close });
   const step = (d) => setOpen((o) => (o + d + images.length) % images.length);
 
   useEffect(() => {
@@ -30,26 +34,18 @@ export default function PdpGallery({ images = [], name = '' }) {
 
   return (
     <>
-      <div className="m-gstack">
-        {images.map((src, i) => (
-          <button type="button" className="m-gshot m-gshot--btn" key={i} onClick={() => setOpen(i)} aria-label={`Zoom ${name} image ${i + 1}`}>
-            <SkImg
-              src={ik(src, 1200)}
-              srcSet={ikSrcSet(src, [600, 900, 1200])}
-              sizes="(max-width: 980px) 84vw, 580px"
-              alt={`${name} — view ${i + 1}`}
-              loading={i ? 'lazy' : 'eager'}
-              fetchPriority={i ? undefined : 'high'}
-            />
-            <span className="m-gzoom" aria-hidden>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3M11 8v6M8 11h6" /></svg>
-            </span>
-          </button>
-        ))}
+      <div className="v-gallery">
+        <div className="v-gallery__thumbs" aria-label="Product images">
+          {images.map((src,i)=><button key={src+i} type="button" aria-label={`View ${name} image ${i+1}`} aria-pressed={selected===i} className={selected===i?'on':''} onClick={()=>setSelected(i)}><img src={ik(src,160)} alt="" loading={i?'lazy':'eager'}/></button>)}
+        </div>
+        <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${selected+1}`} onClick={()=>setOpen(selected)}>
+          <SkImg key={images[selected]} src={ik(images[selected],1200)} srcSet={ikSrcSet(images[selected],[600,900,1200])} sizes="(max-width:740px) 90vw, 560px" alt={`${name} — view ${selected+1}`} loading="eager" fetchPriority="high" />
+          <span className="v-gallery__zoom" aria-hidden="true">⌕</span>
+        </button>
       </div>
 
       {open >= 0 && (
-        <div className="m-lbx" role="dialog" aria-modal="true" aria-label={`${name} image zoom`} onClick={close}>
+        <div ref={lightboxRef} className="m-lbx" role="dialog" aria-modal="true" aria-label={`${name} image zoom`} onClick={close}>
           <button type="button" className="m-lbx__x" aria-label="Close zoom" onClick={close}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>

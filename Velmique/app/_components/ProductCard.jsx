@@ -37,8 +37,10 @@ export default function ProductCard({ product, priority = false }) {
   const reviews = Number(product.reviews || 0);
   const orig = product.originalPrice && product.originalPrice > product.price ? product.originalPrice : 0;
 
+  const soldOut = product.inStock === false || defVar?.inStock === false;
   const add = (e) => {
     e.preventDefault();
+    if (soldOut) return;
     addToCart({
       id: `${product.id}:${product.defaultVariationId}`,
       productId: product.id,
@@ -70,12 +72,12 @@ export default function ProductCard({ product, priority = false }) {
               fetchPriority={priority ? 'high' : undefined}
             />
           ) : null}</span>
-          <span className="m-card__shade" />
+
         </Link>
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
         <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={wished} onClick={wish}><Heart filled={wished} /></button>
         {rating > 0 ? <span className="m-card__rbadge"><Star />{rating.toFixed(1)}/5</span> : null}
-        <button className="m-card__add" aria-label={`Add ${product.name} to bag`} onClick={add}><Bag />Add to bag</button>
+
       </div>
       <div className="m-card__body">
         <div className="m-card__top">
@@ -84,7 +86,7 @@ export default function ProductCard({ product, priority = false }) {
         </div>
         {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
         {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
-        <button className="m-card__addbody" aria-label={`Add ${product.name} to bag`} onClick={add}><Bag />Add to bag</button>
+        <button className="m-card__addbody" disabled={soldOut} aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`} onClick={add}><Bag />{soldOut ? 'Sold out' : 'Add to Bag'}</button>
       </div>
     </article>
   );

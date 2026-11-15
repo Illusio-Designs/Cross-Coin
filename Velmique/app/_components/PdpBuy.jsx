@@ -203,7 +203,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
   return (
     <>
-      {options.length > 1 && (
+      {options.length > 0 && (
         <div className="m-opt">
           <div className="m-opt__h">Select Size</div>
           <div className="m-sizes">
