@@ -321,8 +321,8 @@ export default async function MaisonProduct({ params }) {
             {(noteTiers.length || notesWithImg.length || noteNames.length) ? (
               <div className="m-rsec">
                 <div className="m-rcompo">
-                  <span className="m-eyebrow" style={{ color: 'var(--m-accent-soft)' }}>What&apos;s inside</span>
-                  <h2 className="m-rsec__h" style={{ color: '#F3E7D5' }}>Fragrance Notes</h2>
+                  <span className="m-eyebrow" style={{ color: 'var(--m-ink-soft)' }}>What&apos;s inside</span>
+                  <h2 className="m-rsec__h" style={{ color: 'var(--m-ink)' }}>Fragrance Notes</h2>
                   {noteTiers.length ? noteTiers.map((t) => (
                     <div key={t.label}>
                       <div className="m-ntier">{t.label}</div>

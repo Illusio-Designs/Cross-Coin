@@ -18,8 +18,8 @@ const NAV = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
   { label: 'Build a Pack', href: '/pack' },
-  { label: 'About', href: '/about' },
-  { label: 'Journal', href: '/journal' },
+  { label: 'Scent Studio', href: '/#scent-studio' },
+  { label: 'Gifting', href: '/pack' },
 ];
 // Extra destinations in the mobile slide-nav (desktop reaches them via icons).
 const MNAV_EXTRA = [
@@ -80,7 +80,7 @@ export default function MintShell({ children }) {
 
   return (
     <>
-      <div className="m-anno"><div className="m-anno__track"><AnnoSeq /><AnnoSeq hidden /></div></div>
+      <div className="v-announcement">Discover your everyday signature <span> | </span> Free shipping on all orders</div>
 
       <header className="m-header">
         <div className="m-wrap m-nav">
@@ -88,7 +88,7 @@ export default function MintShell({ children }) {
           <nav className="m-nav__links" aria-label="Primary">
             {NAV.map((n) => <Link key={n.label} className="m-lnk" href={n.href}>{n.label}</Link>)}
           </nav>
-          <Brand />
+          <Brand text />
           <div className="m-icons">
             <Link href="/search" aria-label="Search">{I.search}</Link>
             <Link href="/wishlist" aria-label="Wishlist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg></Link>

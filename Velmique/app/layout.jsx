@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import './globals.css';
 import './mint.css';
+import './velmique-reference.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { StoreProvider } from '@/lib/store';
@@ -50,8 +51,8 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0d0d0f',
-  colorScheme: 'dark',
+  themeColor: '#faf5f0',
+  colorScheme: 'light',
 };
 
 // The store's tracking IDs (GA4, Meta pixel, Clarity, GTM), read on the
