@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from './SkImg';
+import BrandIcon from '@/components/ui/BrandIcon';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 /* Thumbnail gallery with a
@@ -40,7 +41,7 @@ export default function PdpGallery({ images = [], name = '' }) {
         </div>
         <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${selected+1}`} onClick={()=>setOpen(selected)}>
           <SkImg key={images[selected]} src={ik(images[selected],1200)} srcSet={ikSrcSet(images[selected],[600,900,1200])} sizes="(max-width:740px) 90vw, 560px" alt={`${name} — view ${selected+1}`} loading="eager" fetchPriority="high" />
-          <span className="v-gallery__zoom" aria-hidden="true">⌕</span>
+          <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18}/></span>
         </button>
       </div>
 

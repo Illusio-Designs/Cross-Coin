@@ -4,18 +4,13 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from './SkImg';
+import BrandIcon from '@/components/ui/BrandIcon';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
-const Heart = ({ filled }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg>
-);
-const Star = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>
-);
-const Bag = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8h12l-1 12H7L6 8Z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg>
-);
+const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? 'currentColor' : 'none'} />;
+const Star = () => <BrandIcon name="star" size={13} fill="currentColor" />;
+const Bag = () => <BrandIcon name="bag" size={17} />;
 
 // `priority` — the card is the page's LCP image (home hero bestseller).
 export default function ProductCard({ product, priority = false }) {

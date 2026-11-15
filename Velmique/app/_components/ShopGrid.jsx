@@ -7,6 +7,7 @@ import { getPublicCategories } from '@/lib/api/categories';
 import ProductCard from './ProductCard';
 import Pager from './Pager';
 import FilterChip from '@/components/ui/FilterChip';
+import CustomSelect from '@/components/ui/CustomSelect';
 import { ChipsSkeleton, ProductGridSkeleton, Sk } from './Skeleton';
 
 const PAGE_SIZE = 24;
@@ -141,9 +142,7 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
           <FilterChip selected={Boolean(showFilters || activeFilters)} aria-expanded={showFilters} aria-controls="m-shopfilters" onClick={() => setShowFilters((v) => !v)}>
             Filters{activeFilters ? ` (${activeFilters})` : ''}
           </FilterChip>
-          <select className="m-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
-            {SORTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
-          </select>
+          <CustomSelect value={sort} onChange={setSort} label="Sort products" options={SORTS.map(s => ({ value: s.v, label: s.label }))} />
         </div>
       </div>
 

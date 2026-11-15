@@ -1,4 +1,4 @@
-import { Truck, ShieldCheck, RotateCcw, Gem, Leaf, Hourglass, Heart } from 'lucide-react';
+import { Truck, ShieldCheck, RotateCcw, Gem, Leaf, Hourglass, Heart } from '@/components/ui/BrandIcon';
 import ScentStudio from '@/components/home/ScentStudio';
 import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
