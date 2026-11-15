@@ -6,6 +6,7 @@ import { getPublicProducts } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import ProductCard from './ProductCard';
 import Pager from './Pager';
+import FilterChip from '@/components/ui/FilterChip';
 import { ChipsSkeleton, ProductGridSkeleton, Sk } from './Skeleton';
 
 const PAGE_SIZE = 24;
@@ -118,10 +119,9 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
       {!catsReady ? <ChipsSkeleton /> : null}
       {cats.length > 0 && (
         <nav className="m-filterbar" aria-label="Collections">
-          <Link className={`m-fchip ${!categoryId ? 'on' : ''}`} href="/shop" aria-current={!categoryId ? 'page' : undefined}>All</Link>
+          <FilterChip selected={!categoryId} href="/shop">All</FilterChip>
           {cats.map((c) => (
-            <Link key={c.id} className={`m-fchip ${String(categoryId) === String(c.id) ? 'on' : ''}`} href={`/collections/${c.slug}`}
-              aria-current={String(categoryId) === String(c.id) ? 'page' : undefined}>{c.name}</Link>
+            <FilterChip key={c.id} selected={String(categoryId) === String(c.id)} href={`/collections/${c.slug}`}>{c.name}</FilterChip>
           ))}
         </nav>
       )}
@@ -138,9 +138,9 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
           {loading ? <><Sk w={104} h={12} inline /><span className="sr-only">Loading fragrances…</span></> : `${shown.length} fragrance${shown.length !== 1 ? 's' : ''}`}
         </span>
         <div className="m-toolbar__r">
-          <button type="button" className={`m-fchip ${showFilters || activeFilters ? 'on' : ''}`} aria-expanded={showFilters} aria-controls="m-shopfilters" onClick={() => setShowFilters((v) => !v)}>
+          <FilterChip selected={Boolean(showFilters || activeFilters)} aria-expanded={showFilters} aria-controls="m-shopfilters" onClick={() => setShowFilters((v) => !v)}>
             Filters{activeFilters ? ` (${activeFilters})` : ''}
-          </button>
+          </FilterChip>
           <select className="m-select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
             {SORTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
           </select>
@@ -153,7 +153,7 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
             <legend>Price</legend>
             <div className="m-filters__chips">
               {PRICE_BANDS.map((b) => (
-                <button type="button" key={b.v || 'any'} className={`m-fchip ${band === b.v ? 'on' : ''}`} aria-pressed={band === b.v} onClick={() => setBand(b.v)}>{b.label}</button>
+                <FilterChip key={b.v || 'any'} selected={band === b.v} aria-pressed={band === b.v} onClick={() => setBand(b.v)}>{b.label}</FilterChip>
               ))}
             </div>
           </fieldset>
@@ -162,7 +162,7 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
               <legend>For</legend>
               <div className="m-filters__chips">
                 {allGenders.map((g) => (
-                  <button type="button" key={g} className={`m-fchip ${genders.includes(g) ? 'on' : ''}`} aria-pressed={genders.includes(g)} onClick={() => setGenders((l) => toggleIn(l, g))}>{g}</button>
+                  <FilterChip key={g} selected={genders.includes(g)} aria-pressed={genders.includes(g)} onClick={() => setGenders((l) => toggleIn(l, g))}>{g}</FilterChip>
                 ))}
               </div>
             </fieldset>
@@ -172,7 +172,7 @@ export default function ShopGrid({ categoryId = '', note = '' }) {
               <legend>Season</legend>
               <div className="m-filters__chips">
                 {allSeasons.map((s) => (
-                  <button type="button" key={s} className={`m-fchip ${seasons.includes(s) ? 'on' : ''}`} aria-pressed={seasons.includes(s)} onClick={() => setSeasons((l) => toggleIn(l, s))}>{s}</button>
+                  <FilterChip key={s} selected={seasons.includes(s)} aria-pressed={seasons.includes(s)} onClick={() => setSeasons((l) => toggleIn(l, s))}>{s}</FilterChip>
                 ))}
               </div>
             </fieldset>

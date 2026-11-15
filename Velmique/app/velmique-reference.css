@@ -40,3 +40,51 @@ html[data-maison]{--bg:#faf5f0;--ink:#241b1b;--ink-soft:#675753;--border:#e5d8d1
 html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;pointer-events:none}html[data-maison] .Toastify__toast{pointer-events:auto;background:#fffaf6;color:#4c2531;border:1px solid #e2cdc5;border-radius:10px;box-shadow:0 8px 28px #4923331a}html[data-maison] .Toastify__toast--success .Toastify__toast-icon svg{fill:#6d7d54}
 @media(max-width:740px){html[data-maison] .Toastify__toast-container--top-right{top:100px;right:16px;left:16px;width:auto}.v-gallery__thumbs{width:100%}}
 .v-hero__image img{transform:none;border-radius:18px}.v-hero__image .sk-frame{border-radius:18px}.v-hero__image>span{right:20px;bottom:30px;color:#fff5ed;text-shadow:0 1px 12px #310c1c}
+
+/* Selected links and buttons share the same accessible accent contrast. */
+.m-root .m-fchip.on,
+.m-root .m-fchip.on:hover,
+.m-root .m-tab.on,
+.m-root .m-tab.on:hover,
+.m-root .m-pager__b.on,
+.m-root .m-pager__b.on:hover,
+.m-root .m-badge--info,
+.m-root .m-photos__i button {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: #fff8f3;
+}
+
+/* Custom filter controls, independent of the legacy onyx theme. */
+.m-root .v-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 1px solid #dfcdc4;
+  border-radius: 9px;
+  background: #fffaf6;
+  color: #542039;
+  font: 600 12px/1.4 var(--m-b);
+  letter-spacing: .02em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.m-root .v-filter-chip:hover { background: #f2e3dd; border-color: #b98a98; }
+.m-root .v-filter-chip[data-selected="true"] { background: #57182d; border-color: #57182d; color: #fff8f3; }
+.m-root .v-filter-chip[data-selected="true"]:hover { background: #71273f; border-color: #71273f; color: #fff8f3; }
+.m-root .v-filter-chip:focus-visible { outline: 2px solid #8b415b; outline-offset: 3px; }
+.m-root .v-filter-chip:disabled { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .m-root .v-filter-chip { transition: none; } }
+
+/* Preserve the supplied gold logo artwork in every brand placement. */
+.m-nav>.m-logo-link { order: -1; flex-shrink: 0; }
+.m-nav .m-logo { width: 170px; height: auto; }
+.m-foot__logo .m-logo { width: 190px; height: auto; filter: none; }
+.m-mnav .v-mobile-logo { display: block; margin: 0 0 28px; padding: 0; border: 0; }
+.m-mnav .v-mobile-logo .m-logo { width: 170px; height: auto; max-width: 100%; }
+@media(max-width:740px) { .m-nav>.m-logo-link { order: 0; } .m-nav .m-logo { width: 138px; height: auto; } }

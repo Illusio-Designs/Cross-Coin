@@ -48,14 +48,11 @@ function AnnoSeq({ hidden = false }) {
   );
 }
 
-function Brand({ className = '', text = false }) {
-  if (text) {
-    return <Link href="/" className={`m-brand ${className}`}>VELMIQUE<small>MAISON DE PARFUM</small></Link>;
-  }
+function Brand({ className = '' }) {
   return (
     <Link href="/" className={`m-logo-link ${className}`} aria-label="Velmique">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.webp" alt="Velmique" className="m-logo" />
+      <img src="/logo.webp" alt="Velmique" width="714" height="176" className="m-logo" />
     </Link>
   );
 }
@@ -88,7 +85,7 @@ export default function MintShell({ children }) {
           <nav className="m-nav__links" aria-label="Primary">
             {NAV.map((n) => <Link key={n.label} className="m-lnk" href={n.href}>{n.label}</Link>)}
           </nav>
-          <Brand text />
+          <Brand />
           <div className="m-icons">
             <Link href="/search" aria-label="Search">{I.search}</Link>
             <Link href="/wishlist" aria-label="Wishlist"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M19.5 12.6 12 20l-7.5-7.4a4.6 4.6 0 0 1 0-6.5 4.6 4.6 0 0 1 6.5 0l1 1 1-1a4.6 4.6 0 0 1 6.5 0 4.6 4.6 0 0 1 0 6.5Z" /></svg></Link>
@@ -101,6 +98,7 @@ export default function MintShell({ children }) {
       {/* mobile slide-nav */}
       <div id="m-mnav" className={`m-mnav ${menu ? 'on' : ''}`} role="dialog" aria-modal="true" aria-label="Menu" aria-hidden={!menu} inert={menu ? undefined : ''}>
         <button className="m-mnav__x" aria-label="Close menu" onClick={() => setMenu(false)}>{I.close}</button>
+        <Brand className="v-mobile-logo" />
         {NAV.map((n) => <Link key={n.label} href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
         {MNAV_EXTRA.map((n) => <Link key={n.label} className="m-mnav__sub" href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
       </div>
