@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useId, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { orderService, brandService, trafficReportService, exceptionsService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
@@ -55,63 +55,108 @@ function parseTab(v) {
     return { tab: LEGACY_TAB[v] || v, desk: null };
 }
 
-function OverflowMenu({ items }) {
+
+/** Portal escapes table clipping; measured placement keeps every action reachable. */
+function OverflowMenu({ items = [] }) {
     const [open, setOpen] = useState(false);
-    const [pos, setPos] = useState(null);
-    const btnRef = useRef(null);
-    const menuRef = useRef(null);
-    useEffect(() => {
-        if (!open) return;
-        // The menu is rendered in a PORTAL (document.body), so a click on a menu
-        // item is NOT inside btnRef. Treat clicks inside the menu itself as
-        // "inside" too — otherwise mousedown closed/unmounted the menu before the
-        // item's click could fire, so every action silently did nothing.
-        const onDoc = (e) => {
-            const inBtn = btnRef.current && btnRef.current.contains(e.target);
-            const inMenu = menuRef.current && menuRef.current.contains(e.target);
-            if (!inBtn && !inMenu) setOpen(false);
-        };
-        const onLeave = () => setOpen(false);
-        const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-        document.addEventListener('mousedown', onDoc);
-        window.addEventListener('scroll', onLeave, true);
-        window.addEventListener('resize', onLeave);
-        document.addEventListener('keydown', onKey);
-        return () => {
-            document.removeEventListener('mousedown', onDoc);
-            window.removeEventListener('scroll', onLeave, true);
-            window.removeEventListener('resize', onLeave);
-            document.removeEventListener('keydown', onKey);
-        };
-    }, [open]);
-    if (!items.length) return null;
-    const toggle = () => {
-        if (!open && btnRef.current) {
-            const r = btnRef.current.getBoundingClientRect();
-            setPos({ top: r.bottom + 4, left: Math.max(8, r.right - 200) });
-        }
-        setOpen(o => !o);
+    const [position, setPosition] = useState(null);
+    const trigger = useRef(null);
+    const menu = useRef(null);
+    const focusLast = useRef(false);
+    const menuId = useId();
+
+    const close = (restoreFocus = false) => {
+        setOpen(false);
+        setPosition(null);
+        if (restoreFocus) trigger.current?.focus();
     };
-    return (
-        <>
-            <button ref={btnRef} type="button" className="order-action-btn" title="More actions"
-                aria-haspopup="menu" aria-expanded={open} onClick={toggle}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" />
-                </svg>
-            </button>
-            {open && pos && createPortal(
-                <div className="ord-menu" role="menu" ref={menuRef} style={{ top: pos.top, left: pos.left }}>
-                    {items.map((it, i) => (
-                        <button key={i} type="button" role="menuitem"
-                            className={`ord-menu-item${it.tone === 'danger' ? ' danger' : ''}`}
-                            onClick={() => { setOpen(false); it.onClick(); }}>
-                            <span className="ord-menu-ic">{it.icon}</span>{it.label}
-                        </button>
-                    ))}
-                </div>, document.body)}
-        </>
-    );
+
+    useLayoutEffect(() => {
+        if (!open || !menu.current) return;
+        const place = () => {
+            const anchor = trigger.current.getBoundingClientRect();
+            const viewport = window.visualViewport;
+            const topEdge = (viewport?.offsetTop || 0) + 8;
+            const bottomEdge = (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight) - 8;
+            const leftEdge = (viewport?.offsetLeft || 0) + 8;
+            const rightEdge = (viewport?.offsetLeft || 0) + (viewport?.width || document.documentElement.clientWidth) - 8;
+            const width = Math.min(220, rightEdge - leftEdge);
+            const below = Math.max(0, bottomEdge - anchor.bottom - 6);
+            const above = Math.max(0, anchor.top - topEdge - 6);
+            // Measure at the final width so wrapped labels are included.
+            menu.current.style.width = `${width}px`;
+            const height = menu.current.scrollHeight + 2;
+            const upward = height > below && above > below;
+            const maxHeight = Math.max(1, upward ? above : below);
+            setPosition({
+                width,
+                maxHeight,
+                left: Math.max(leftEdge, Math.min(anchor.right - width, rightEdge - width)),
+                top: upward ? Math.max(topEdge, anchor.top - Math.min(height, maxHeight) - 6) : Math.min(anchor.bottom + 6, bottomEdge - Math.min(height, maxHeight)),
+            });
+        };
+        place();
+        const outside = event => {
+            if (!trigger.current?.contains(event.target) && !menu.current?.contains(event.target)) close();
+        };
+        const scroll = event => {
+            // Scrolling the action list must not dismiss a constrained menu.
+            if (!menu.current?.contains(event.target)) close();
+        };
+        document.addEventListener('pointerdown', outside);
+        window.addEventListener('scroll', scroll, true);
+        window.addEventListener('resize', place);
+        viewportListener('addEventListener', place);
+        return () => {
+            document.removeEventListener('pointerdown', outside);
+            window.removeEventListener('scroll', scroll, true);
+            window.removeEventListener('resize', place);
+            viewportListener('removeEventListener', place);
+        };
+    }, [open, items.length]);
+
+    const positioned = Boolean(position);
+    useLayoutEffect(() => {
+        if (!open || !positioned || !menu.current) return;
+        const buttons = menu.current.querySelectorAll('button:not(:disabled)');
+        buttons[focusLast.current ? buttons.length - 1 : 0]?.focus({ preventScroll: true });
+    }, [open, positioned]);
+
+    const viewportListener = (method, listener) => {
+        window.visualViewport?.[method]('resize', listener);
+    };
+    const onMenuKey = event => {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(true); return; }
+        if (event.key === 'Tab') { close(true); return; }
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = [...menu.current.querySelectorAll('button:not(:disabled)')];
+        const current = buttons.indexOf(document.activeElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+    };
+
+    if (!items.length) return null;
+    return <>
+        <button ref={trigger} type="button" className="order-action-btn" title="More actions" aria-label="More actions"
+            aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
+            onClick={event => { event.stopPropagation(); focusLast.current = false; if (open) close(); else setOpen(true); }}
+            onKeyDown={event => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault(); focusLast.current = event.key === 'ArrowUp'; setOpen(true);
+                }
+            }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        </button>
+        {open && createPortal(<div id={menuId} className="ord-menu" role="menu" aria-label="Order actions" ref={menu}
+            style={{ ...position, visibility: position ? 'visible' : 'hidden' }} onKeyDown={onMenuKey} onClick={event => event.stopPropagation()}>
+            {items.map((item, index) => <button key={index} type="button" role="menuitem" tabIndex={-1} disabled={item.disabled}
+                className={`ord-menu-item${item.tone === 'danger' ? ' danger' : ''}`}
+                onClick={() => { close(true); item.onClick(); }}>
+                <span className="ord-menu-ic">{item.icon}</span>{item.label}
+            </button>)}
+        </div>, document.body)}
+    </>;
 }
 
 const Orders = ({ initialTab } = {}) => {

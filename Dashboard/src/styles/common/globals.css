@@ -382,7 +382,10 @@ body:has(.pdt-sticky.visible) .back-to-top {
 .ord-menu {
   position: fixed;
   z-index: 3000;
-  min-width: 200px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--ds-color-surface);
   border: 1px solid var(--ds-color-border);
   border-radius: 10px;
@@ -407,7 +410,9 @@ body:has(.pdt-sticky.visible) .back-to-top {
   border-radius: 7px;
   cursor: pointer;
 }
-.ord-menu-item:hover { background: var(--ds-color-surface-soft); }
+.ord-menu-item { flex-shrink: 0; }
+.ord-menu-item:hover,.ord-menu-item:focus-visible { background: var(--ds-color-surface-soft); }
+.ord-menu-item:focus-visible { outline: 2px solid var(--ds-color-primary, #222); outline-offset: -2px; }
 .ord-menu-item.danger { color: var(--ds-color-danger); }
 .ord-menu-ic { display: inline-flex; align-items: center; color: var(--ds-color-text-muted); flex-shrink: 0; }
 .ord-menu-item.danger .ord-menu-ic { color: var(--ds-color-danger); }
