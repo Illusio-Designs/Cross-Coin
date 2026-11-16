@@ -209,7 +209,9 @@ adminApi.interceptors.response.use(
 
     if (error.code === "ECONNABORTED") {
       const userMessage = handleTimeoutError(error);
-      return Promise.reject(new Error(userMessage));
+      // Preserve Axios metadata so bounded read retries can recognize timeouts.
+      error.message = userMessage;
+      return Promise.reject(error);
     }
     if (error.response?.status === 401) {
       localStorage.removeItem("token");

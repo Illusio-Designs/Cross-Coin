@@ -11,6 +11,7 @@ import {
   WhatsappIcon, FlashIcon,
 } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
+import { loadChatMessages } from '../../utils/loadChatMessages';
 import { Modal, Select, Skeleton, SkeletonList, SkeletonText } from '../ui';
 import Dropdown from '../ui/Dropdown';
 import { useAuth } from '../../context/AuthContext';
@@ -218,8 +219,12 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   const msgAbortRef = useRef(null);
   const msgRefreshRef = useRef(new Map());
   const liveListRef = useRef({ busy: false, again: false });
+  const listAbortRef = useRef(null);
+  const lastListLoadedRef = useRef(0);
+  const lastReceiptCheckRef = useRef(0);
   const cacheRef = useRef(new Map());
-  const prefetchingRef = useRef(new Set());
+  const openingRef = useRef(null);
+  const ctxAbortRef = useRef(null);
   const messagesBoxRef = useRef(null);
   const nearBottomRef = useRef(true);
 
@@ -274,28 +279,32 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
 
   const fetchConversations = async ({ silent = false } = {}) => {
     if (silent && liveListRef.current.busy) { liveListRef.current.again = true; return; }
-    if (silent) liveListRef.current.busy = true;
+    liveListRef.current.busy = true;
+    listAbortRef.current?.abort();
+    const controller = new AbortController();
+    listAbortRef.current = controller;
     const req = ++convReqRef.current;
     if (!silent) { setConvLoading(true); setConvError(null); pageRef.current = 1; }
     try {
       // A silent (live) refresh re-reads everything already on screen so rows
       // paged in with "Load more" don't disappear.
       const limit = silent ? Math.min(100, Math.max(PAGE_SIZE, conversationsRef.current.length)) : PAGE_SIZE;
-      const { data } = await adminApi.get(`${W}/conversations`, { params: listParams(1, limit) });
+      const { data } = await adminApi.get(`${W}/conversations`, { params: listParams(1, limit), signal: controller.signal });
       if (req !== convReqRef.current) return;
       if (!data?.success) throw new Error(data?.message || 'Could not load chats');
       const openId = activeRef.current?.id;
       const rows = (data.conversations || []).map((c) => (c.id === openId ? { ...c, unread_count: 0 } : c));
       setConversations(rows);
+      lastListLoadedRef.current = Date.now();
       setTotal(Number(data.total) || rows.length);
       setCounts(data.counts || null);
       setConvError(null);
     } catch (e) {
-      if (req !== convReqRef.current) return;
+      if (isCancel(e) || req !== convReqRef.current) return;
       if (!silent) { setConversations([]); setTotal(0); setConvError(errMsg(e, 'Could not load chats')); }
     } finally {
-      if (req === convReqRef.current) setConvLoading(false);
-      if (silent) {
+      if (req === convReqRef.current) {
+        setConvLoading(false);
         liveListRef.current.busy = false;
         if (liveListRef.current.again) { liveListRef.current.again = false; fetchRef.current({ silent: true }); }
       }
@@ -345,18 +354,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     if (el) nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
-  const prefetch = (conv) => {
-    if (!conv || cacheRef.current.has(conv.id) || prefetchingRef.current.has(conv.id)) return;
-    if (prefetchingRef.current.size >= 2) return;
-    prefetchingRef.current.add(conv.id);
-    adminApi.get(`${W}/conversations/${conv.id}/messages`)
-      .then(({ data }) => { if (data?.success) touchCache(conv.id, data.messages || []); })
-      .catch(() => {})
-      .finally(() => prefetchingRef.current.delete(conv.id));
-  };
-
   const openChat = async (conv) => {
     if (!conv?.id) return;
+    const request = { id: conv.id, pending: true, refreshAgain: false };
+    openingRef.current = request;
     openReqRef.current = conv.id;
     if (msgAbortRef.current) { try { msgAbortRef.current.abort(); } catch { /* ignore */ } }
     const ac = new AbortController();
@@ -368,17 +369,19 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     setNote(base.agent_notes || '');
     setTplPick(null); setTplValues([]);
     setMsgError(null);
+    setHasMoreMsgs(false);
     // Mark read locally (the server clears it when the messages are fetched).
     if (listed?.unread_count > 0) {
       setConversations((prev) => prev.map((c) => (c.id === conv.id ? { ...c, unread_count: 0 } : c)));
       setCounts((prev) => (prev && prev.unread != null ? { ...prev, unread: Math.max(0, Number(prev.unread) - 1) } : prev));
     }
     const cached = cacheRef.current.get(conv.id);
+    setHasMoreMsgs((cached?.length || 0) >= 40);
     nearBottomRef.current = true;
     if (cached) { setMessages(cached); setMsgLoading(false); } else { setMessages([]); setMsgLoading(true); }
     try {
-      const { data } = await adminApi.get(`${W}/conversations/${conv.id}/messages`, { signal: ac.signal });
-      if (openReqRef.current !== conv.id) return;
+      const { data } = await loadChatMessages(adminApi, `${W}/conversations/${conv.id}/messages`, { signal: ac.signal });
+      if (openReqRef.current !== conv.id || openingRef.current !== request) return;
       if (!data?.success) throw new Error(data?.message || 'Could not load messages');
       const msgs = data.messages || [];
       touchCache(conv.id, msgs);
@@ -390,13 +393,24 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
         if (!listed) setNote(data.conversation.agent_notes || '');
       }
     } catch (e) {
-      if (isCancel(e) || openReqRef.current !== conv.id) return;
-      if (!cached) { setMessages([]); setHasMoreMsgs(false); setMsgError(errMsg(e, 'Could not load messages')); }
+      if (isCancel(e) || openReqRef.current !== conv.id || openingRef.current !== request) return;
+      // A live response may already have filled this chat while opening it.
+      if (!cached && !cacheRef.current.get(conv.id)?.length) { setMessages([]); setHasMoreMsgs(false); setMsgError(errMsg(e, 'Could not load messages')); }
     }
-    if (openReqRef.current === conv.id) setMsgLoading(false);
+    finally {
+      request.pending = false;
+      if (openReqRef.current === conv.id && openingRef.current === request) {
+        setMsgLoading(false);
+        if (request.refreshAgain) refreshActiveMessages(conv.id);
+        if (request.refreshList) fetchRef.current({ silent: true });
+      }
+    }
   };
 
   const closeChat = () => {
+    msgAbortRef.current?.abort();
+    ctxAbortRef.current?.abort();
+    openingRef.current = null;
     openReqRef.current = null;
     setActiveConv(null); setMessages([]); setShowInfo(false);
     setReply(''); setReplyTo(null); setShowEmoji(false); setSlash(null);
@@ -428,6 +442,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   };
 
   const refreshActiveMessages = (convId) => {
+    if (openingRef.current?.id === convId && openingRef.current.pending) {
+      openingRef.current.refreshAgain = true;
+      return;
+    }
     const running = msgRefreshRef.current.get(convId);
     if (running) { running.again = true; return running.promise; }
     const state = { again: false, promise: null };
@@ -437,6 +455,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
         try {
           const { data } = await adminApi.get(`${W}/conversations/${convId}/messages`);
           if (data?.success && openReqRef.current === convId) {
+            setMsgError(null);
             setMessages((prev) => {
               const merged = mergeMessages(prev, data.messages || []);
               touchCache(convId, merged);
@@ -459,17 +478,27 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   // ════ Live changes: cheap signal, one list refresh, active-chat receipts ═══
   const lastLiveListRef = useRef(0);
   const onLive = (change) => {
-    if (change.kind === 'initial' || change.kind === 'message' || change.kind === 'conversation' || Date.now() - lastLiveListRef.current >= 20000) {
-      lastLiveListRef.current = Date.now();
-      fetchRef.current({ silent: true });
+    const time = Date.now();
+    // Avoid repeating the initial list's heavy counts and order lookups.
+    const initialAlreadyLoading = change.kind === 'initial' && (liveListRef.current.busy || time - lastListLoadedRef.current < 5000);
+    if (initialAlreadyLoading) lastLiveListRef.current = time;
+    if (!initialAlreadyLoading && (['initial', 'message', 'conversation'].includes(change.kind) || time - lastLiveListRef.current >= 20000)) {
+      lastLiveListRef.current = time;
+      if (openingRef.current?.pending) openingRef.current.refreshList = true;
+      else fetchRef.current({ silent: true });
     }
     const open = activeRef.current;
-    if (open && (change.changed || hasUnconfirmed(messagesRef.current))) refreshActiveMessages(open.id);
+    // Explicit changes refresh immediately; idle receipt checks are bounded.
+    if (open && (change.changed || (hasUnconfirmed(messagesRef.current) && time - lastReceiptCheckRef.current >= 10000))) {
+      lastReceiptCheckRef.current = time;
+      refreshActiveMessages(open.id);
+    }
   };
   const onLiveRef = useRef(onLive);
   onLiveRef.current = onLive;
 
   useEffect(() => {
+    const listRefreshState = liveListRef.current;
     let alive = true, controller = null, timer = null, after = null, legacySince = null, failures = 0, resumeRefresh = true;
     const loop = async () => {
       if (!alive || document.hidden) return;
@@ -510,7 +539,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     loop();
     return () => {
       alive = false; clearTimeout(timer); controller?.abort();
-      liveListRef.current.again = false;
+      listRefreshState.again = false;
       document.removeEventListener('visibilitychange', resume);
       window.removeEventListener('focus', resume);
     };
@@ -518,15 +547,18 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
 
   // ════ Context (orders + reply window) ════════════════════════════════════
   const loadCtx = async (id) => {
+    ctxAbortRef.current?.abort();
+    const ac = new AbortController();
+    ctxAbortRef.current = ac;
     setCtxState((s) => (s === 'ready' && activeRef.current?.id === id ? s : 'loading'));
     try {
-      const { data } = await adminApi.get(`${W}/conversations/${id}/context`);
-      if (activeRef.current?.id !== id) return;
+      const { data } = await adminApi.get(`${W}/conversations/${id}/context`, { signal: ac.signal });
+      if (ac.signal.aborted || activeRef.current?.id !== id) return;
       if (!data?.success) throw new Error(data?.message);
       setChatCtx(data);
       setCtxState('ready');
-    } catch {
-      if (activeRef.current?.id !== id) return;
+    } catch (error) {
+      if (isCancel(error) || ac.signal.aborted || activeRef.current?.id !== id) return;
       setChatCtx(null);
       setCtxState('error');
     }
@@ -535,9 +567,16 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     setChatCtx(null);
     setCtxState('idle');
     setShowInfo(false);
-    if (activeId) loadCtx(activeId);
+    ctxAbortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
+  useEffect(() => {
+    // Message history has priority over the heavier customer/order lookup.
+    if (activeId && !msgLoading && !msgError) loadCtx(activeId);
+    return () => ctxAbortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, msgLoading, msgError]);
+  useEffect(() => () => { msgAbortRef.current?.abort(); ctxAbortRef.current?.abort(); listAbortRef.current?.abort(); }, []);
   // The customer wrote again → the window may have re-opened.
   const lastInboundId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) if (messages[i].direction === 'inbound') return messages[i].id;
@@ -992,7 +1031,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                 return (
                   <li key={c.id}>
                     <button type="button" className={`wib-row${on ? ' is-on' : ''}${c.unread_count > 0 ? ' is-unread' : ''}`}
-                      onClick={() => openChat(c)} onMouseEnter={() => prefetch(c)} onFocus={() => prefetch(c)}
+                      onClick={() => openChat(c)}
                       aria-current={on ? 'true' : undefined}>
                       <span className="wib-av" aria-hidden="true">{initials(c.customer_name || c.customer_phone)}</span>
                       <span className="wib-row-main">
@@ -1076,7 +1115,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
               )}
             </header>
 
-            {!convPending && <AiChatBar convId={activeConv.id} refreshKey={messages.length ? messages[messages.length - 1].id : 0} />}
+            {!convPending && !msgLoading && !msgError && <AiChatBar convId={activeConv.id} refreshKey={messages.length ? messages[messages.length - 1].id : 0} />}
 
             <div className="wib-msgs" ref={messagesBoxRef} onScroll={onMessagesScroll}>
               {!msgLoading && hasMoreMsgs && (loadingOlder ? (

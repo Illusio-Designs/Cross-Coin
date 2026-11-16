@@ -72,7 +72,7 @@ function LoadingAccess() {
   return <SkeletonPage kpis={4} rows={7} cols={5} label="Loading your dashboard…" />;
 }
 
-function Dashboard() {
+export default function Dashboard() {
   const { canAccessView, loading } = useAuth();
   const [currentView, setCurrentView] = useState('main');
   // Bumped on every menu click so picking the page you're already on opens it
@@ -258,5 +258,3 @@ function Dashboard() {
     </ProtectedRoute>
   );
 }
-
-export default Dashboard;
