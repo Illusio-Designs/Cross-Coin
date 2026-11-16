@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import Icon from '@/components/Icon';
+import ReviewPhotos from '@/components/ui/ReviewPhotos';
 import ReviewRow from '@/components/ui/ReviewRow';
 import WriteReviewButton from '@/components/product/WriteReviewButton';
 
@@ -43,7 +44,7 @@ export default function Reviews({
       </span>
       {r.title && <h3 className="sx-review-title">{r.title}</h3>}
       <p className="sx-review-text">{r.text}</p>
-      {r.images?.length > 0 && <div className="review-customer-photos">{r.images.map((src, index) => <a key={`${src}-${index}`} href={src} target="_blank" rel="noopener noreferrer" aria-label={`Open review photo ${index + 1}`}><img src={src} alt={`Photo shared by ${r.author}`} width="72" height="72" loading="lazy" /></a>)}</div>}
+      <ReviewPhotos images={r.images} author={r.author} />
       <div className="sx-review-by">
         <span className="sx-review-av">{(r.author || '?').charAt(0)}</span>
         <span><b>{r.author}</b>{r.date && <em>{r.date}</em>}</span>

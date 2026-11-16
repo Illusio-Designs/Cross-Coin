@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import ReviewPhotos from '@/components/ui/ReviewPhotos';
 import Icon from '@/components/Icon';
 import { submitReview } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -148,6 +149,7 @@ export default function ProductReviews({ productId, initialReviews = [], fallbac
               </div>
               {r.title && <b className="review-title">{r.title}</b>}
               <p>{r.text}</p>
+              <ReviewPhotos images={r.images} author={r.author} />
             </div>
           ))}
         </div>
