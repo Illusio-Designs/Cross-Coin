@@ -434,7 +434,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
                 <label className="exc-field">Deliver again on
                   <input type="date" value={date} min={tomorrow()} onChange={(e) => setDate(e.target.value)} />
                 </label>
-                <p className="exc-hint">A new address is added to the order — the customer’s saved address and their other orders aren’t changed. iThink’s API can’t edit the address, so also paste it in the iThink panel.</p>
+                <p className="exc-hint">The address is saved on this order and sent to iThink with the reattempt request. The customer’s saved address and other orders stay unchanged.</p>
                 {(() => {
                   const useSaved = item.addresses.applied && addr.trim() === fromCustomer.trim();
                   const ok = useSaved || addr.trim().length >= 15;

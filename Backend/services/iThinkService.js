@@ -1000,26 +1000,31 @@ class IThinkService {
 
   // ── NDR (Non-Delivery Report) ───────────────────────────────────────────
 
-  // iThink "NDR – Add Reattempt/RTO". NOTE: the exact field names are not
-  // verified against iThink's current API docs (their docs site is not
-  // reachable from our build environment). If iThink rejects a call, the case
-  // stays open in Dashboard → Failed Deliveries for staff to do it in the
-  // iThink panel. extra.reattempt_date: 'YYYY-MM-DD'.
+  // Contract: https://docs.ithinklogistics.com/doc-reattempt-rto/3
   async ndrAction(awbNumber, action = 'reattempt', extra = {}) {
+    const awb = String(awbNumber || '').trim();
+    if (!awb) throw new Error('An AWB is required for a courier instruction.');
+    if (!['reattempt', 'rto'].includes(action)) throw new Error('Unsupported courier instruction.');
+    const shipment = { awb_numbers: awb, ndr_action: action === 'rto' ? '2' : '1' };
+    if (action === 'rto') {
+      shipment.rto_remark = String(extra.rto_remark || '').trim().slice(0, 500);
+      if (!shipment.rto_remark) throw new Error('A reason is required to request RTO.');
+    } else {
+      const date = String(extra.reattempt_date || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+        throw new Error('A valid reattempt date is required (YYYY-MM-DD).');
+      }
+      shipment.reattempt_date = date;
+      if (extra.reattempt_time) shipment.reattempt_time = extra.reattempt_time;
+      if (extra.reattempt_mobile_number) shipment.reattempt_mobile_number = this.formatPhoneNumber(extra.reattempt_mobile_number);
+      if (extra.reattempt_address) shipment.reattempt_address = String(extra.reattempt_address).trim().slice(0, 1000);
+      if (['1', '2'].includes(String(extra.reattempt_address_type))) shipment.reattempt_address_type = String(extra.reattempt_address_type);
+    }
     await this.initialize();
     try {
-      logger.debug('=== iThink NDR Action ===');
-      const payload = {
-        data: {
-          ...this._authData(),
-          awb_number: awbNumber,
-          action: action, // 'reattempt' or 'rto'
-          ...(extra.reattempt_date ? { reattempt_date: extra.reattempt_date } : {}),
-        },
-      };
-
-      const response = await this.axiosInstance.post('/api_v3/ndr/action.json', payload);
-      logger.debug('NDR action response:', response.data);
+      const response = await this.axiosInstance.post('/api_v3/ndr/add-reattempt-rto.json', {
+        data: { ...this._authData(), shipments: [shipment] },
+      });
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'NDR Action');

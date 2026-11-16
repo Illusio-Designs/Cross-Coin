@@ -175,3 +175,6 @@
   .exc-tab { padding: 0 11px; font-size: 12.5px; }
   .exc-links .exc-btn { flex: 1 1 auto; }
 }
+
+/* Destructive actions remain readable when selected or primary. */
+.exc-btn--pri.exc-btn--warn,.exc-btn--pri.exc-btn--warn:hover:not(:disabled) { background: var(--ds-color-danger-bg); color: var(--ds-color-danger); border-color: var(--ds-color-danger-bd); }

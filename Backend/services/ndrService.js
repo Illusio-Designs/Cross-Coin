@@ -1,6 +1,7 @@
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
 const { logger } = require('../config/logging.js');
+const { ndrResult } = require('./ndrResponse.js');
 
 /**
  * Failed deliveries (courier NDR = non-delivery report).
@@ -104,6 +105,7 @@ function tomorrowIST() {
 // Push a reattempt / RTO instruction to the courier (iThink NDR API). The case
 // stays open until the courier's next status update (see onStatus).
 async function sendToCourier(caseRow, action, extra = {}, actorId = null) {
+  if (!['rto', 'reattempt'].includes(action)) throw new Error('Unsupported courier instruction.');
   await ex().ensureSchema();
   const factory = require('./shippingProviderFactory.js');
   const provider = await factory.getShippingProvider(caseRow.brand_id || 1);
@@ -113,16 +115,19 @@ async function sendToCourier(caseRow, action, extra = {}, actorId = null) {
   if (!caseRow.awb) throw new Error('No AWB on this order.');
   let resp;
   try {
+    extra = action === 'rto'
+      ? { ...extra, rto_remark: extra.rto_remark || caseRow.reason || 'Return to origin requested by merchant' }
+      : { ...extra, reattempt_date: extra.reattempt_date || caseRow.reattempt_date || tomorrowIST() };
     resp = await provider.ndrAction(caseRow.awb, action, extra);
   } catch (e) {
     await noteRefusal(caseRow, e.message, actorId);
     throw e;
   }
-  const ok = resp && (String(resp.status).toLowerCase() === 'success' || Number(resp.status_code) === 200);
+  const result = ndrResult(resp, caseRow.awb);
   const text = JSON.stringify(resp || {}).slice(0, 1000);
-  if (!ok) {
-    await noteRefusal(caseRow, text, actorId);
-    throw new Error(`Courier did not accept it: ${text}`);
+  if (!result.accepted) {
+    await noteRefusal(caseRow, result.message, actorId);
+    throw new Error(result.message);
   }
   await sequelize.query(
     `UPDATE ndr_cases SET status = ?, courier_response = ?, sent_to_courier_at = NOW(),

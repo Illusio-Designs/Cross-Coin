@@ -25,7 +25,8 @@ const validDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v
 
 // Ask the courier to reattempt delivery or return the parcel (RTO).
 router.post('/:id/courier', isAuthenticated, isOrderManager, async (req, res) => {
-  const action = req.body.action === 'rto' ? 'rto' : 'reattempt';
+  const action = req.body.action;
+  if (!['rto', 'reattempt'].includes(action)) return res.status(400).json({ success: false, message: 'Choose a valid courier action: reattempt or RTO.' });
   try {
     const c = await ndrService.getCase(req.params.id);
     if (!c) return res.status(404).json({ success: false, message: 'Case not found' });
@@ -41,7 +42,7 @@ router.post('/:id/courier', isAuthenticated, isOrderManager, async (req, res) =>
   } catch (e) {
     res.status(400).json({
       success: false,
-      message: `iThink did not accept it automatically: ${e.message}. Do it in the iThink panel (NDR section), then press Mark done.`,
+      message: `The courier request was not confirmed: ${e.message} No courier action has been confirmed here. Check the shipment in iThink before retrying. Use Mark done only after completing it in the courier panel.`,
     });
   }
 });
@@ -65,17 +66,17 @@ router.post('/:id/address', isAuthenticated, isOrderManager, async (req, res) =>
     if (req.body.reattempt) {
       const date = validDate(req.body.date);
       try {
-        await ndrService.sendToCourier(await ndrService.getCase(c.id), 'reattempt', date ? { reattempt_date: date } : {}, req.user.id);
+        await ndrService.sendToCourier(await ndrService.getCase(c.id), 'reattempt', { ...(date ? { reattempt_date: date } : {}), reattempt_address: text || c.new_address || '' }, req.user.id);
       } catch (e) {
         return res.status(400).json({
           success: false,
           addressSaved: true,
-          message: `Address saved on the order, but iThink did not accept the reattempt: ${e.message}. Do it in the iThink panel, then press Mark done.${note}`,
+          message: `Address saved on the order, but the courier reattempt was not confirmed: ${e.message} Check the shipment in iThink before retrying.${note}`,
         });
       }
       return res.json({
         success: true,
-        message: `Reattempt requested. Also update the address in the iThink panel (NDR → edit address) — their API can’t change it.${note}`,
+        message: `The courier accepted the new address and reattempt request. Waiting for the next delivery update.${note}`,
       });
     }
     res.json({ success: true, message: `New address saved on the order.${note}` });
