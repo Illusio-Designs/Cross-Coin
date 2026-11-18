@@ -986,6 +986,8 @@ const Orders = ({ initialTab } = {}) => {
             />
             <ConfirmModal
                 message={deletePrompt ? `Permanently DELETE order ${deletePrompt.orderNumber}? This removes the order and all its data and cannot be undone.` : null}
+                title="Delete order?"
+                confirmLabel="Delete order"
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeletePrompt(null)}
             />

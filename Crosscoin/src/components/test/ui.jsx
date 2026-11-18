@@ -1,5 +1,6 @@
 // Shared bits for the /test preview: icons, the product card, and a tiny toast.
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
@@ -78,6 +79,41 @@ export function SkBusy({ label = 'Loading…', className, style, as: Tag = 'div'
       <span className="sr-only">{label}</span>
       {children}
     </Tag>
+  );
+}
+
+export function ProductPageSkeleton() {
+  return (
+    <div className="wrap">
+      <div className="crumbs" style={{ paddingTop: 20 }}>
+        <Link href={R.home}>Home</Link> / <Link href={R.shop}>Shop</Link> / …
+      </div>
+      <SkBusy className="pd" label="Loading product…">
+        <div className="gallery" aria-hidden="true">
+          <div className="gmain"><Sk className="sk-fill" /></div>
+          <div className="gthumbs">{[0, 1, 2, 3].map((i) => <span key={i} className="gthumb sk-frame" style={{ overflow: 'hidden', position: 'relative' }}><Sk className="sk-fill" /></span>)}</div>
+        </div>
+        <div className="buy" aria-hidden="true">
+          <Sk w="32%" h={12} />
+          <Sk w="90%" h="clamp(26px, 4vw, 40px)" style={{ margin: '12px 0 8px' }} />
+          <Sk w="62%" h="clamp(26px, 4vw, 40px)" style={{ marginBottom: 12 }} />
+          <Sk w={110} h={22} />
+          <div className="sk-row" style={{ margin: '16px 0 8px' }}><Sk w={110} h={28} /><Sk w={70} h={18} /><Sk w={64} h={22} /></div>
+          <Sk w={150} h={11} />
+          <div className="sk-row" style={{ marginTop: 14 }}><Sk w={80} h={14} /><Sk w={190} h={14} /></div>
+          <Sk w={60} h={11} style={{ margin: '24px 0 12px' }} />
+          <div className="sk-row" style={{ gap: 8 }}>{[0, 1, 2, 3].map((i) => <Sk key={i} w={56} h={44} />)}</div>
+          <Sk w={130} h={11} style={{ margin: '24px 0 12px' }} />
+          <div className="sk-stack" style={{ gap: 10 }}><Sk h={64} /><Sk h={64} /><Sk h={64} /></div>
+          <div className="sk-row" style={{ margin: '22px 0 14px', flexWrap: 'nowrap' }}><Sk w={120} h={52} style={{ flex: '0 0 auto' }} /><Sk h={54} style={{ flex: 1 }} /></div>
+          <Sk h={58} style={{ marginTop: 12 }} />
+        </div>
+      </SkBusy>
+      <section className="block">
+        <div className="sechead"><div><span className="eyebrow">Reviews</span><h2>What buyers say</h2></div></div>
+        <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
+      </section>
+    </div>
   );
 }
 

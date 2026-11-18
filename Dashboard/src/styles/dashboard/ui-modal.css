@@ -156,6 +156,17 @@
 .modal-footer .btn-secondary:hover:not(:disabled) { background: var(--ds-color-bg); border-color: var(--ds-color-text); }
 .modal-footer .btn-primary { background: var(--ds-color-brand); color: var(--ds-color-bg); border: none; }
 .modal-footer .btn-primary:hover:not(:disabled) { background: var(--ds-color-brand-strong); }
+.modal-footer .btn-danger,
+.modal-footer .btn-danger:hover:not(:disabled) {
+  background: var(--ds-color-danger);
+  border-color: var(--ds-color-danger);
+  color: var(--ds-color-surface);
+}
+.modal-footer .btn-danger:hover:not(:disabled) { filter: brightness(.94); }
+.modal-footer .btn-danger .btn-loader {
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+}
 
 /* ── Pinned footers for aside panels ─────────────────────────────────────
    The Modal component wraps children in .modal-body, so panels that render a

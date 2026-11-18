@@ -10,7 +10,7 @@ import localFont from 'next/font/local';
 import { MINT_CSS } from './mintCss';
 import { useCart, cartCount, cartSubtotal, changeQty, removeItem, removePack, clearCart, setLinePack, setPackTier, addItem, cartGroups, getCart, restoreCart } from './store';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart } from '../../utils/cartRecovery';
-import { I, Thumb, Sk, SkBusy } from './ui';
+import { I, Thumb, Sk, SkBusy, ProductPageSkeleton } from './ui';
 import { inr } from './data';
 import { R } from './routes';
 import { validateCouponReal, fetchBundleTiers, fetchCoupons, fetchProducts, fetchShippingFees, fetchSearch, colorToCss, submitPhoneLead, captureCart } from './real';
@@ -528,6 +528,7 @@ export default function TestLayout({ children }) {
   const [drawer, setDrawer] = useState(false);
   const [mnav, setMnav] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [productPending, setProductPending] = useState(false);
   // In-drawer checkout (Morbix-style): 'cart' → 'checkout' → 'done'.
   const [step, setStep] = useState('cart');
   const [coupon, setCoupon] = useState(null);
@@ -559,7 +560,36 @@ export default function TestLayout({ children }) {
   const [buyNowTick, setBuyNowTick] = useState(0);
   const viewCartSent = useRef(false);
 
-  // Inject the Mint design system CSS only while a /test page is mounted.
+  useEffect(() => {
+    let timer;
+    let pendingUrl;
+    const onStart = (url, { shallow } = {}) => {
+      clearTimeout(timer);
+      setProductPending(false);
+      pendingUrl = url;
+      if (shallow || !/^\/products\/[^/?#]+\/?(?:[?#]|$)/.test(url)) return;
+      timer = setTimeout(() => {
+        window.scrollTo(0, 0);
+        setProductPending(true);
+      }, 150);
+    };
+    const onDone = (url) => {
+      if (url !== pendingUrl) return;
+      clearTimeout(timer);
+      setProductPending(false);
+    };
+    const onError = (_error, url) => onDone(url);
+    router.events.on('routeChangeStart', onStart);
+    router.events.on('routeChangeComplete', onDone);
+    router.events.on('routeChangeError', onError);
+    return () => {
+      clearTimeout(timer);
+      router.events.off('routeChangeStart', onStart);
+      router.events.off('routeChangeComplete', onDone);
+      router.events.off('routeChangeError', onError);
+    };
+  }, [router.events]);
+
   useEffect(() => {
     const onToast = (e) => { setToastMsg(e.detail || ''); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
     // "Buy it now" (PDP) opens the real drawer straight to checkout; the plain
@@ -576,6 +606,7 @@ export default function TestLayout({ children }) {
     return () => {
       window.removeEventListener('cc-test-toast', onToast);
       window.removeEventListener('cc-test-opencart', onOpen);
+      clearTimeout(tt.current);
     };
   }, []);
 
@@ -681,6 +712,7 @@ export default function TestLayout({ children }) {
   }, []);
 
   const go = (href) => { setMnav(false); setDrawer(false); router.push(href); };
+
 
   const showToast = (m) => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
 
@@ -963,7 +995,8 @@ export default function TestLayout({ children }) {
         </div>
       </div>
 
-      {children}
+      {productPending && <ProductPageSkeleton />}
+      <div style={{ display: productPending ? 'none' : 'contents' }}>{children}</div>
 
       <footer className="site">
         <div className="wrap foot">

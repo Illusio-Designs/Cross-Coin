@@ -19,6 +19,8 @@
 .cust .cust-btn--sm { min-height: 32px; padding: 0 12px; border-radius: 9px; font-size: 12.5px; font-weight: 600; }
 .cust .cust-btn--icon { padding: 0 9px; color: var(--ds-color-text-muted); }
 .cust .cust-btn--icon:hover:not(:disabled) { color: var(--ds-color-danger); border-color: var(--ds-color-danger-bd); }
+.cust .cust-btn--danger,
+.cust .cust-btn--danger:hover:not(:disabled) { color: var(--ds-color-danger-text); border-color: var(--ds-color-danger-bd); background: var(--ds-color-danger-bg); }
 
 /* Segment tiles */
 .cust .cust-segs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }

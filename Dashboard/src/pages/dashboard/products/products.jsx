@@ -8,6 +8,7 @@ import ProductEditor from '../../../components/products/ProductEditor';
 import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
 import { Skeleton, SkeletonTableRows } from '../../../components/ui/Skeleton';
 import Dropdown from '../../../components/ui/Dropdown';
+import { ConfirmModal } from '../../../components/common/AlertModal';
 
 /*
  * Products — stock first. Tiles filter the list (same thresholds as Home's
@@ -91,6 +92,7 @@ export default function ProductsPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [seoGaps, setSeoGaps] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [deleteIds, setDeleteIds] = useState([]);
   const [deletingSelected, setDeletingSelected] = useState(false);
 
   // Route + Home hand-off (read once, then cleared so a refresh shows all).
@@ -191,9 +193,8 @@ export default function ProductsPage() {
     return next;
   });
   const deleteSelected = async () => {
-    const ids = [...selectedIds];
+    const ids = deleteIds;
     if (!ids.length || deletingSelected) return;
-    if (!window.confirm(`Delete ${ids.length} selected product${ids.length === 1 ? '' : 's'}? Products in past orders will be archived to preserve order history.`)) return;
     setDeletingSelected(true);
     let deleted = 0;
     let archived = 0;
@@ -214,6 +215,7 @@ export default function ProductsPage() {
     });
     await Promise.all(workers);
     setSelectedIds(new Set(failed.map((x) => x.id)));
+    setDeleteIds([]);
     setDeletingSelected(false);
     setReloadKey((k) => k + 1);
     if (deleted + archived) showSuccess('productsDeleted', `${deleted} deleted${archived ? ` · ${archived} archived to keep order history` : ''}`);
@@ -271,6 +273,13 @@ export default function ProductsPage() {
 
   return (
     <div className="dashboard-page pst">
+      <ConfirmModal
+        title={`Delete ${plural(deleteIds.length, 'product')}?`}
+        message={deleteIds.length ? 'This removes the selected products from every store that sells them. Products with past orders are archived to preserve order history. All others are permanently deleted.' : null}
+        confirmLabel={`Delete ${plural(deleteIds.length, 'product')}`}
+        onConfirm={deleteSelected}
+        onCancel={() => setDeleteIds([])}
+      />
       <header className="pst-head">
         <div>
           <h1 className="pst-title">Products</h1>
@@ -306,7 +315,7 @@ export default function ProductsPage() {
       {selectedIds.size > 0 && (
         <div className="pst-bulkbar" role="status">
           <span><b>{selectedIds.size}</b> product{selectedIds.size === 1 ? '' : 's'} selected</span>
-          <button type="button" className="pst-btn pst-btn--danger" disabled={deletingSelected} onClick={deleteSelected}>
+          <button type="button" className="pst-btn pst-btn--danger" disabled={deletingSelected} onClick={() => setDeleteIds([...selectedIds])}>
             <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />
             {deletingSelected ? 'Deleting…' : `Delete selected (${selectedIds.size})`}
           </button>

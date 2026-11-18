@@ -20,7 +20,10 @@
  */
 
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import TestProduct, { MAIN_WIDTHS, MAIN_SIZES, openingImage } from '../test/product';
+import TestLayout from '../../components/test/TestLayout';
+import { ProductPageSkeleton } from '../../components/test/ui';
 import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -28,7 +31,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.crosscoin.in';
 
 async function fetchJson(url, { required = false } = {}) {
   try {
-    const r = await fetch(url, { headers: { 'X-Brand-Name': 'crosscoin' }, cache: 'no-store' });
+    const r = await fetch(url, {
+      headers: { 'X-Brand-Name': 'crosscoin' },
+      cache: 'no-store',
+      signal: required ? undefined : AbortSignal.timeout(2000),
+    });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error(`Product API request failed (${r.status})`);
     return await r.json();
@@ -40,20 +47,18 @@ async function fetchJson(url, { required = false } = {}) {
   }
 }
 
-// No product is built ahead at deploy; each is built on its first visit
-// (that visit waits for it, like before; the next ones get the cached copy).
+// First-time browser visits can show the skeleton while Next builds the page.
+// Next serves the full product HTML to crawlers and caches the generated page.
 export async function getStaticPaths() {
-  return { paths: [], fallback: 'blocking' };
+  return { paths: [], fallback: true };
 }
 
 export async function getStaticProps({ params }) {
   const slug = params?.slug;
   if (!slug) return { notFound: true };
 
-  const [productResp, faqResp] = await Promise.all([
-    fetchJson(`${API_URL}/api/products/by-slug/${encodeURIComponent(slug)}`, { required: true }),
-    fetchJson(`${API_URL}/api/public/faqs?type=global`),
-  ]);
+  const globalFaqRequest = fetchJson(`${API_URL}/api/public/faqs?type=global`);
+  const productResp = await fetchJson(`${API_URL}/api/products/by-slug/${encodeURIComponent(slug)}`, { required: true });
 
   if (productResp === null) return { notFound: true, revalidate: 60 };
   if (!productResp?.success || !productResp?.data?.id) {
@@ -72,15 +77,16 @@ export async function getStaticProps({ params }) {
 
   // Fetch product-specific FAQs too (separate call so we can cache them
   // independently). Global FAQs are merged below the product ones.
-  const productFaqResp = await fetchJson(
-    `${API_URL}/api/public/faqs?type=product&id=${productResp.data.id}`
-  );
+  const [productFaqResp, faqResp] = await Promise.all([
+    fetchJson(`${API_URL}/api/public/faqs?type=product&id=${productResp.data.id}`),
+    globalFaqRequest,
+  ]);
 
   return {
     props: {
       slug,
       initialProduct: productResp.data,
-      productFaqs: productFaqResp?.faqs || [],
+      productFaqs: productFaqResp?.faqs || null,
       globalFaqs: faqResp?.faqs || [],
     },
     // Rebuilt in the background at most once a minute after a visit.
@@ -99,6 +105,9 @@ function truncate(s, n) {
 }
 
 export default function ProductSlugPage({ slug, initialProduct, productFaqs, globalFaqs }) {
+  const { isFallback } = useRouter();
+  if (isFallback) return <TestLayout><ProductPageSkeleton /></TestLayout>;
+
   const seo = initialProduct?.seo || {};
   const canonical = seo.canonicalUrl || seo.canonical_url || `${SITE_URL}/products/${slug}`;
   const title = seo.metaTitle || seo.meta_title || `${initialProduct?.name || 'Product'} | CrossCoin`;
@@ -202,7 +211,7 @@ export default function ProductSlugPage({ slug, initialProduct, productFaqs, glo
       {/* Mint product UI. The Head above (server-rendered) is the SEO source
           of truth — meta, canonical, Product/Breadcrumb/FAQ JSON-LD. The Mint
           page starts from the product fetched here (see initialProduct). */}
-      <TestProduct preview={false} initialProduct={initialProduct} />
+      <TestProduct key={slug} preview={false} initialProduct={initialProduct} initialFaqs={productFaqs} />
     </>
   );
 }

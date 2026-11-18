@@ -299,7 +299,7 @@ export default function Consumers() {
                         <button type="button" className="cust-btn cust-btn--sm" disabled={!r.open}
                           onClick={(e) => { e.stopPropagation(); openProfile(r); }}>Profile</button>
                         {isAdmin && r.kind === "registered" && r.userId && (
-                          <button type="button" className="cust-btn cust-btn--sm cust-btn--icon" title="Delete account"
+                          <button type="button" className="cust-btn cust-btn--sm cust-btn--icon cust-btn--danger" title="Delete account"
                             aria-label={`Delete ${r.name || "customer"}'s account`}
                             onClick={(e) => { e.stopPropagation(); confirmDelete(r); }}>{IC.del}</button>
                         )}

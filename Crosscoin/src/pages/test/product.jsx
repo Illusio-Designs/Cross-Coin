@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
-import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons } from '../../components/test/ui';
+import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons, ProductPageSkeleton } from '../../components/test/ui';
 import { inr } from '../../components/test/data';
 import { R } from '../../components/test/routes';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, submitProductReview, normalizeProduct } from '../../components/test/real';
@@ -64,7 +64,7 @@ export function openingImage(raw) {
   try { return raw ? openingState(normalizeProduct(raw)).img || '' : ''; } catch (_) { return ''; }
 }
 
-export default function TestProduct({ preview = true, initialProduct = null }) {
+export default function TestProduct({ preview = true, initialProduct = null, initialFaqs = null }) {
   const router = useRouter();
   // /products/<slug> passes the product it fetched on the server, so the
   // gallery, price and buy panel are in the first HTML: the main photo starts
@@ -74,7 +74,8 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
     const prod = initialProduct ? normalizeProduct(initialProduct) : null;
     return prod ? { prod, ...openingState(prod) } : null;
   });
-  const seedUsed = useRef(false);
+  const requestedSlug = seed?.prod.slug || router.query.slug;
+  const canLoadProduct = !!seed || router.isReady;
   // Browser-only bits (the saved-to-wishlist heart, the sanitised rich
   // description) switch on after hydration, so the first client render matches
   // the server's HTML exactly.
@@ -83,12 +84,14 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
   const [p, setP] = useState(seed?.prod || null);
   const [loading, setLoading] = useState(!seed);
   const [also, setAlso] = useState([]);
+  const relatedRef = useRef(null);
   const [variant, setVariant] = useState(seed?.v0 || null); // selected variant (single pair or pack)
   const [size, setSize] = useState(seed?.size || '');
   const [qty, setQty] = useState(1);
   const [mainImg, setMainImg] = useState(seed?.img || '');
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
-  const [prodFaqs, setProdFaqs] = useState([]);
+  const [prodFaqs, setProdFaqs] = useState(() => (initialFaqs || [])
+    .map(({ question, answer }) => [question, answer]).filter(([q, a]) => q && a));
   // Secondary fetches that fill parts of the page after the product itself.
   const [revLoading, setRevLoading] = useState(true);
   const [tiersLoading, setTiersLoading] = useState(true);
@@ -107,17 +110,17 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on !== false); }); return () => { live = false; }; }, []);
 
   useEffect(() => {
+    if (!canLoadProduct) return;
     let off = false;
-    // The server's product is used once, for the page it was rendered for.
-    const fromServer = !seedUsed.current && seed?.prod ? seed.prod : null;
-    seedUsed.current = true;
+    const fromServer = seed?.prod;
     if (!fromServer) setLoading(true);
+    setAlso([]);
+    setAlsoLoading(true);
     (async () => {
       try {
-        let slug = router.query.slug ? String(router.query.slug) : '';
+        let slug = requestedSlug ? String(requestedSlug) : '';
         if (!slug && !fromServer) { const list = await fetchProducts({ limit: 1 }); slug = list[0]?.slug || ''; }
         const prod = fromServer || (slug ? await fetchProduct(slug) : null);
-        if (fromServer && !slug) slug = prod.slug || '';
         if (off) return;
         setP(prod);
         if (prod) {
@@ -133,20 +136,43 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
               value: Number(v0?.price || prod.now || 0), currency: 'INR',
             });
           } catch (_) { /* analytics never blocks the page */ }
-          setProdReviews({ items: [], avg: null, count: 0 }); setProdFaqs([]); setFaqOpen(0);
+          setProdReviews({ items: [], avg: null, count: 0 }); setFaqOpen(0);
           setPackTiers([]); setPackSel(1);
           setRevLoading(true); setTiersLoading(true);
           fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
-          fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
+          if (!initialFaqs) {
+            setProdFaqs([]);
+            fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
+          }
           fetchBundleTiers(prod.id).then((t) => { if (!off) setPackTiers(t); }).catch(() => {}).finally(() => { if (!off) setTiersLoading(false); });
         }
-        setAlsoLoading(true);
-        fetchProducts({ limit: 12 }).then((l) => { if (!off) setAlso(l.filter((x) => x.slug !== slug).slice(0, 6)); }).catch(() => {}).finally(() => { if (!off) setAlsoLoading(false); });
       } catch (_) { if (!off) setP(null); }
       finally { if (!off) setLoading(false); }
     })();
     return () => { off = true; };
-  }, [router.query.slug]);
+  }, [canLoadProduct, requestedSlug, seed, initialFaqs]);
+
+  const productSlug = p?.slug;
+  useEffect(() => {
+    const section = relatedRef.current;
+    if (loading || !p || !section) return;
+    let active = true;
+    const loadRelated = () => {
+      fetchProducts({ limit: 12 })
+        .then((list) => { if (active) setAlso(list.filter((item) => item.slug !== productSlug).slice(0, 6)); })
+        .catch(() => {})
+        .finally(() => { if (active) setAlsoLoading(false); });
+    };
+    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      loadRelated();
+    }, { rootMargin: '400px' });
+
+    if (observer) observer.observe(section);
+    else loadRelated();
+    return () => { active = false; observer?.disconnect(); };
+  }, [loading, p, productSlug]);
 
   // Sticky buy bar appears once the main buy panel has scrolled out of view.
   useEffect(() => {
@@ -170,36 +196,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
   if (loading) return (
     <TestLayout>
       {preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}
-      <div className="wrap">
-        <div className="crumbs" style={{ paddingTop: 20 }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.home)}>Home</span> / <span style={{ cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Shop</span> / …
-        </div>
-        <SkBusy className="pd" label="Loading product…">
-          <div className="gallery" aria-hidden="true">
-            <div className="gmain"><Sk className="sk-fill" /></div>
-            <div className="gthumbs">{[0, 1, 2, 3].map((i) => <span key={i} className="gthumb sk-frame" style={{ overflow: 'hidden', position: 'relative' }}><Sk className="sk-fill" /></span>)}</div>
-          </div>
-          <div className="buy" aria-hidden="true">
-            <Sk w="32%" h={12} />
-            <Sk w="90%" h="clamp(26px, 4vw, 40px)" style={{ margin: '12px 0 8px' }} />
-            <Sk w="62%" h="clamp(26px, 4vw, 40px)" style={{ marginBottom: 12 }} />
-            <Sk w={110} h={22} />
-            <div className="sk-row" style={{ margin: '16px 0 8px' }}><Sk w={110} h={28} /><Sk w={70} h={18} /><Sk w={64} h={22} /></div>
-            <Sk w={150} h={11} />
-            <div className="sk-row" style={{ marginTop: 14 }}><Sk w={80} h={14} /><Sk w={190} h={14} /></div>
-            <Sk w={60} h={11} style={{ margin: '24px 0 12px' }} />
-            <div className="sk-row" style={{ gap: 8 }}>{[0, 1, 2, 3].map((i) => <Sk key={i} w={56} h={44} />)}</div>
-            <Sk w={130} h={11} style={{ margin: '24px 0 12px' }} />
-            <div className="sk-stack" style={{ gap: 10 }}><Sk h={64} /><Sk h={64} /><Sk h={64} /></div>
-            <div className="sk-row" style={{ margin: '22px 0 14px', flexWrap: 'nowrap' }}><Sk w={120} h={52} style={{ flex: '0 0 auto' }} /><Sk h={54} style={{ flex: 1 }} /></div>
-            <Sk h={58} style={{ marginTop: 12 }} />
-          </div>
-        </SkBusy>
-        <section className="block">
-          <div className="sechead"><div><span className="eyebrow">Reviews</span><h2>What buyers say</h2></div></div>
-          <SkBusy className="revgrid" label="Loading reviews…"><ReviewCardSkeletons n={3} /></SkBusy>
-        </section>
-      </div>
+      <ProductPageSkeleton />
     </TestLayout>
   );
   if (!p) return <TestLayout>{preview && <Head><meta name="robots" content="noindex, nofollow" /></Head>}<div className="wrap"><p className="mono" style={{ padding: '60px 0', fontSize: 13 }}>Product not found. <a style={{ color: 'var(--crimson-text)', cursor: 'pointer' }} onClick={() => router.push(R.shop)}>Back to shop</a></p></div></TestLayout>;
@@ -525,7 +522,7 @@ export default function TestProduct({ preview = true, initialProduct = null }) {
         )}
 
         {(also.length > 0 || alsoLoading) && (
-          <section className="block" style={{ paddingTop: 20 }}>
+          <section ref={relatedRef} className="block pdlater" style={{ paddingTop: 20 }}>
             <div className="sechead"><div><span className="eyebrow">Also minted</span><h2>You may also like</h2></div></div>
             {also.length === 0
               ? <SkBusy className="prail" label="Loading related products…"><SkeletonCards n={4} /></SkBusy>

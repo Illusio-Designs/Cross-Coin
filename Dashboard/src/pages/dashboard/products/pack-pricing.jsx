@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { bundleService, brandService, productService } from '../../../services';
 import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PageHeader, Panel, FilterBar, ResponsiveTable } from '../../../components/Dashboard/primitives';
-import { Badge, Select, Input, Switch } from '../../../components/ui';
+import { Badge, Button, Select, Input, Switch } from '../../../components/ui';
 import { Skeleton } from '../../../components/ui/Skeleton';
+import { ConfirmModal } from '../../../components/common/AlertModal';
 
 const emptyForm = { id: null, pairs: 2, price: '', label: '', badge: '', display_order: 0, is_active: true };
 
@@ -20,6 +21,7 @@ export default function PackPricingManager() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [deletePack, setDeletePack] = useState(null);
 
   useEffect(() => {
     brandService.getAllBrands(true)
@@ -120,8 +122,7 @@ export default function PackPricingManager() {
   };
 
   const remove = async (id) => {
-    if (!window.confirm('Delete this pack?')) return;
-    try { await bundleService.remove(id); showSuccess('deleted', 'Pack deleted'); reload(); }
+    try { await bundleService.remove(id); setDeletePack(null); showSuccess('deleted', 'Pack deleted'); await reload(); }
     catch (err) { showError('deleteFailed', typeof err === 'string' ? err : err.message); }
   };
 
@@ -148,7 +149,7 @@ export default function PackPricingManager() {
       render: (t) => (
         <span style={dim(t)}>
           <button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}
-          <button onClick={() => remove(t.id)} style={btnDanger}>Delete</button>
+          <Button variant="danger" size="sm" onClick={() => setDeletePack(t)}>Delete</Button>
         </span>
       ),
     },
@@ -156,6 +157,9 @@ export default function PackPricingManager() {
 
   return (
     <div className="dashboard-sections">
+      <ConfirmModal title="Delete pack?" confirmLabel="Delete pack"
+        message={deletePack ? `“${deletePack.label || `${deletePack.pairs} pairs`}” will be removed from this product’s pack options.` : null}
+        onConfirm={() => remove(deletePack.id)} onCancel={() => setDeletePack(null)} />
       <PageHeader
         title="Pack pricing"
         subtitle="Set buy-more-save-more packs for each product. 1 pair stays the product's own price; you set the exact total price for 2-pair, 3-pair packs, etc. A product shows the pack picker on the storefront only when it has an active pack."
@@ -273,6 +277,7 @@ function BuildYourPackPanel({ brandId }) {
   const [form, setForm] = useState(emptyMix);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleteTier, setDeleteTier] = useState(null);
 
   const reload = async () => {
     setLoading(true);
@@ -312,8 +317,7 @@ function BuildYourPackPanel({ brandId }) {
   };
 
   const remove = async (id) => {
-    if (!window.confirm('Delete this pack tier?')) return;
-    try { await bundleService.remove(id); showSuccess('deleted', 'Pack tier deleted'); reload(); }
+    try { await bundleService.remove(id); setDeleteTier(null); showSuccess('deleted', 'Pack tier deleted'); await reload(); }
     catch (err) { showError('deleteFailed', typeof err === 'string' ? err : err.message); }
   };
 
@@ -326,11 +330,14 @@ function BuildYourPackPanel({ brandId }) {
     { key: 'badge', label: 'Badge', render: (t) => <span style={dim(t)}>{t.badge || '—'}</span> },
     { key: 'active', label: 'Active', render: (t) => <Badge variant={t.is_active ? 'success' : 'default'}>{t.is_active ? 'Yes' : 'No'}</Badge> },
     { key: 'actions', label: '', headerStyle: { textAlign: 'right' }, cellStyle: { textAlign: 'right', whiteSpace: 'nowrap' },
-      render: (t) => (<span style={dim(t)}><button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}<button onClick={() => remove(t.id)} style={btnDanger}>Delete</button></span>) },
+      render: (t) => (<span style={dim(t)}><button onClick={() => openEdit(t)} style={btnSecondary}>Edit</button>{' '}<Button variant="danger" size="sm" onClick={() => setDeleteTier(t)}>Delete</Button></span>) },
   ];
 
   return (
     <div style={{ marginBottom: 'var(--ds-space-5)' }}>
+      <ConfirmModal title="Delete pack tier?" confirmLabel="Delete tier"
+        message={deleteTier ? `“${deleteTier.label || `Any ${deleteTier.pairs}`}” will be removed from this store’s Build Your Pack discounts.` : null}
+        onConfirm={() => remove(deleteTier.id)} onCancel={() => setDeleteTier(null)} />
       <form onSubmit={save} className="ds-card" style={{ padding: 'var(--ds-space-4)', marginBottom: 'var(--ds-space-3)', maxWidth: 880 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ds-color-brand)', marginBottom: 4 }}>Build Your Pack — store-wide tiers</div>
         <div style={{ fontSize: 12.5, color: 'var(--ds-color-text-muted)', marginBottom: 12 }}>Mix-and-match ANY products: the whole pack gets a % off once it reaches the item count. Highest matching tier wins (5 items uses your 4-item tier). Leave empty to disable the feature.</div>
@@ -375,4 +382,3 @@ const Field = ({ label, children, style }) => (
 );
 const pad = { padding: 24, textAlign: 'center', color: 'var(--ds-color-text-muted)' };
 const btnSecondary = { padding: '6px 10px', border: '1px solid var(--ds-color-border)', background: 'var(--ds-color-surface)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-text-muted)' };
-const btnDanger = { padding: '6px 10px', border: '1px solid var(--ds-color-danger-border, #fecaca)', background: 'var(--ds-color-danger-bg, #fef2f2)', borderRadius: 6, cursor: 'pointer', fontSize: 12, color: 'var(--ds-color-danger, #991b1b)' };
