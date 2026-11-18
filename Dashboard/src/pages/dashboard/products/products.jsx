@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { productService, brandService, seoAdminService } from '../../../services';
 import { useAuth } from '../../../context/AuthContext';
-import { showSuccess } from '../../../utils/toastNotification';
+import { showSuccess, showError } from '../../../utils/toastNotification';
 import ProductEditor from '../../../components/products/ProductEditor';
 import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
 import { Skeleton, SkeletonTableRows } from '../../../components/ui/Skeleton';
@@ -90,6 +90,8 @@ export default function ProductsPage() {
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [seoGaps, setSeoGaps] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [deletingSelected, setDeletingSelected] = useState(false);
 
   // Route + Home hand-off (read once, then cleared so a refresh shows all).
   useEffect(() => {
@@ -136,7 +138,12 @@ export default function ProductsPage() {
     setLoading(true);
     setError('');
     productService.getStockList(params, ctrl.signal)
-      .then((res) => { if (id === reqId.current) setData(res); })
+      .then((res) => {
+        if (id !== reqId.current) return;
+        setData(res);
+        const lastPage = Math.max(1, res.pages || 1);
+        if (params.page > lastPage) setPage(lastPage);
+      })
       .catch((e) => { if (id === reqId.current && e?.name !== 'CanceledError') setError(e?.response?.data?.message || 'Couldn’t load products. Check your connection and try again.'); })
       .finally(() => { if (id === reqId.current) setLoading(false); });
     return () => ctrl.abort();
@@ -168,6 +175,50 @@ export default function ProductsPage() {
   const patchRow = useCallback((productId, fn) => {
     setData((d) => (d ? { ...d, items: d.items.map((it) => (it.id === productId ? { ...it, ...fn(it) } : it)) } : d));
   }, []);
+
+  const visibleItems = data?.items || [];
+  const selectedOnPage = visibleItems.filter((p) => selectedIds.has(String(p.id))).length;
+  const allOnPageSelected = visibleItems.length > 0 && selectedOnPage === visibleItems.length;
+  const toggleProduct = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(String(id))) next.delete(String(id)); else next.add(String(id));
+    return next;
+  });
+  const togglePage = () => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (allOnPageSelected) visibleItems.forEach((p) => next.delete(String(p.id)));
+    else visibleItems.forEach((p) => next.add(String(p.id)));
+    return next;
+  });
+  const deleteSelected = async () => {
+    const ids = [...selectedIds];
+    if (!ids.length || deletingSelected) return;
+    if (!window.confirm(`Delete ${ids.length} selected product${ids.length === 1 ? '' : 's'}? Products in past orders will be archived to preserve order history.`)) return;
+    setDeletingSelected(true);
+    let deleted = 0;
+    let archived = 0;
+    const failed = [];
+    const queue = [...ids];
+    const workers = Array.from({ length: Math.min(4, ids.length) }, async () => {
+      while (queue.length) {
+        const id = queue.shift();
+        try {
+          const result = await productService.deleteProduct(id);
+          if (result?.success === false) throw new Error(result.message || 'Delete failed');
+          if (result?.archived) archived++;
+          else deleted++;
+        } catch (err) {
+          failed.push({ id, name: data?.items?.find((p) => String(p.id) === id)?.name });
+        }
+      }
+    });
+    await Promise.all(workers);
+    setSelectedIds(new Set(failed.map((x) => x.id)));
+    setDeletingSelected(false);
+    setReloadKey((k) => k + 1);
+    if (deleted + archived) showSuccess('productsDeleted', `${deleted} deleted${archived ? ` · ${archived} archived to keep order history` : ''}`);
+    if (failed.length) showError('productsDeleteFailed', `Couldn’t delete ${failed.length} product${failed.length === 1 ? '' : 's'}${failed[0].name ? ` (for example: ${failed[0].name})` : ''}. They remain selected so you can retry.`);
+  };
 
   const backToList = () => { pushMode(''); setReloadKey((k) => k + 1); };
 
@@ -204,6 +255,7 @@ export default function ProductsPage() {
   const thead = (
     <thead>
       <tr>
+        <th className="pst-select-col"><input type="checkbox" checked={allOnPageSelected} onChange={togglePage} disabled={deletingSelected || !visibleItems.length} aria-label="Select all products on this page" /></th>
         <th className="pst-col-prod">Product</th>
         <th>Brand</th>
         <th className="r">Price</th>
@@ -212,7 +264,7 @@ export default function ProductsPage() {
         <th className="r">Lasts</th>
         <th>Badge</th>
         <th>Shows on site</th>
-        <th />
+        <th className="pst-acts" scope="col"><span className="ds-sr-only">Actions</span></th>
       </tr>
     </thead>
   );
@@ -251,6 +303,16 @@ export default function ProductsPage() {
         </label>
         <Dropdown value={sort} onChange={setSort} options={SORTS} className="pst-sort" />
       </div>
+      {selectedIds.size > 0 && (
+        <div className="pst-bulkbar" role="status">
+          <span><b>{selectedIds.size}</b> product{selectedIds.size === 1 ? '' : 's'} selected</span>
+          <button type="button" className="pst-btn pst-btn--danger" disabled={deletingSelected} onClick={deleteSelected}>
+            <HugeiconsIcon icon={Delete02Icon} size={15} strokeWidth={2} />
+            {deletingSelected ? 'Deleting…' : `Delete selected (${selectedIds.size})`}
+          </button>
+          <button type="button" className="pst-btn pst-btn--ghost" disabled={deletingSelected} onClick={() => setSelectedIds(new Set())}>Clear selection</button>
+        </div>
+      )}
       {brands.length > 1 && (
         <div className="pst-chips" role="group" aria-label="Brand">
           <button type="button" className={`pst-chip${brandId === '' ? ' is-on' : ''}`} onClick={() => setBrandId('')}>All brands</button>
@@ -273,7 +335,7 @@ export default function ProductsPage() {
             <span className="ds-sr-only">Loading products…</span>
             <table className="pst-table" aria-hidden="true">
               {thead}
-              <tbody><SkeletonTableRows rows={8} cols={9} /></tbody>
+              <tbody><SkeletonTableRows rows={8} cols={10} /></tbody>
             </table>
           </div>
         ) : !data?.items?.length ? (
@@ -286,7 +348,7 @@ export default function ProductsPage() {
               {thead}
               <tbody>
                 {data.items.map((p) => (
-                  <ProductRow key={p.id} p={p} onPatch={patchRow} onSaved={refreshCounts} onOpen={() => pushMode(`edit=${p.id}`)} />
+                  <ProductRow key={p.id} p={p} selected={selectedIds.has(String(p.id))} selectDisabled={deletingSelected} onSelect={() => toggleProduct(p.id)} onPatch={patchRow} onSaved={refreshCounts} onOpen={() => pushMode(`edit=${p.id}`)} />
                 ))}
               </tbody>
             </table>
@@ -320,7 +382,7 @@ export default function ProductsPage() {
 }
 
 // ── One product + its sizes ─────────────────────────────────────────────────
-function ProductRow({ p, onPatch, onSaved, onOpen }) {
+function ProductRow({ p, selected, selectDisabled, onSelect, onPatch, onSaved, onOpen }) {
   const [open, setOpen] = useState(false);
   const [vars, setVars] = useState(null);
   const [varsError, setVarsError] = useState('');
@@ -371,9 +433,10 @@ function ProductRow({ p, onPatch, onSaved, onOpen }) {
   return (
     <>
       <tr className={open ? 'is-open' : ''}>
+        <td className="pst-select-col"><input type="checkbox" checked={selected} onChange={onSelect} disabled={selectDisabled} aria-label={`Select ${p.name}`} /></td>
         <td className="pst-col-prod">
           <div className="pst-prod">
-            {p.thumb ? <img className="pst-thumb" src={p.thumb} alt="" loading="lazy" /> : <span className="pst-thumb pst-thumb--ph" aria-hidden="true">{(p.name || '?').slice(0, 1).toUpperCase()}</span>}
+            <ProductThumbnail key={JSON.stringify(p.thumbnails || p.thumb)} product={p} />
             <div className="pst-prod-text">
               <button type="button" className="pst-name" onClick={onOpen} title="Edit details">{p.name}</button>
               <div className="pst-meta">{meta}</div>
@@ -405,6 +468,7 @@ function ProductRow({ p, onPatch, onSaved, onOpen }) {
         // Size rows load: shimmer rows shaped like the size rows below.
         Array.from({ length: Math.min(Math.max(p.variationCount || 0, 1), 4) }, (_, i) => (
           <tr key={`sk${i}`} className="pst-sub" aria-busy="true">
+            <td />
             <td className="pst-col-prod pst-var">
               {i === 0 && <span className="ds-sr-only" role="status">Loading sizes…</span>}
               <Skeleton w={`${45 + (i % 3) * 10}%`} h={12} />
@@ -418,12 +482,25 @@ function ProductRow({ p, onPatch, onSaved, onOpen }) {
           </tr>
         ))
       ) : varsError ? (
-        <tr className="pst-sub"><td colSpan={9} className="pst-sub-msg">{varsError} <button type="button" className="pst-link" onClick={loadVars}>Try again</button></td></tr>
+        <tr className="pst-sub"><td colSpan={10} className="pst-sub-msg">{varsError} <button type="button" className="pst-link" onClick={loadVars}>Try again</button></td></tr>
       ) : (vars || []).map((v) => (
         <VariationRow key={v.id} v={v} waiting={p.waiting} productOut={p.totalStock <= 0} onApply={applyStock} onSaved={onSaved} />
       )))}
     </>
   );
+}
+
+function ProductThumbnail({ product }) {
+  const [index, setIndex] = useState(0);
+  const sources = product.thumbnails || (product.thumb ? [product.thumb] : []);
+  const src = sources[index];
+
+  if (!src) {
+    return <span className="pst-thumb pst-thumb--ph" aria-hidden="true">{(product.name || '?').slice(0, 1).toUpperCase()}</span>;
+  }
+
+  return <img key={src} className="pst-thumb" src={src} alt="" loading="lazy" decoding="async"
+    onError={() => setIndex((current) => current === index ? current + 1 : current)} />;
 }
 
 function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
@@ -492,6 +569,7 @@ function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
   const dTone = lastsTone(v.daysLeft);
   return (
     <tr className="pst-sub">
+      <td />
       <td className="pst-col-prod pst-var">
         {v.label} <span className="pst-sku">{v.sku}</span>
       </td>

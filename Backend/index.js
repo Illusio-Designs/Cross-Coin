@@ -1048,6 +1048,26 @@ const startServer = async () => {
             logger.error('whatsapp_messages.type ENUM migration failed: ' + err.message);
         }
 
+        // Staff replies are persisted before the Meta request so the composer
+        // can return immediately. Keep that in-flight state explicit until
+        // Meta accepts the message or the background send fails.
+        try {
+            const [mc] = await sequelize.query(
+                `SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME = 'status'`
+            );
+            const colType = mc?.[0]?.COLUMN_TYPE || '';
+            if (colType && !colType.includes("'sending'")) {
+                await sequelize.query(
+                    `ALTER TABLE whatsapp_messages MODIFY COLUMN status
+                     ENUM('sent','delivered','read','failed','received','sending') DEFAULT 'sent'`
+                );
+                logger.info('✓ whatsapp_messages.status ENUM updated with sending');
+            }
+        } catch (err) {
+            logger.error('whatsapp_messages.status ENUM migration failed: ' + err.message);
+        }
+
         // ── Idempotent migration: whatsapp_conversations.status ENUM (+resolved) ─
         // The "Resolve" button sets status='resolved'; if the column was created
         // before that value existed, MySQL silently rejects/truncates the update

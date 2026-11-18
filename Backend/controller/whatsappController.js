@@ -703,7 +703,7 @@ exports.sendReply = async (req, res) => {
       type:              'text',
       body:              text,
       quoted_message_id: quotedMsgDbId,
-      status:            'sent',
+      status:            'sending',
       sent_at:           new Date(),
       sent_by:           req.user?.id || null,
     });
@@ -720,7 +720,12 @@ exports.sendReply = async (req, res) => {
         }
         // Store Meta's message id so sent/delivered/read status webhooks match this row.
         const waId = result?.messages?.[0]?.id || null;
-        if (waId) await saved.update({ wa_message_id: waId }).catch(() => {});
+        // Only move a still-pending row to sent. A fast status webhook may
+        // already have advanced it to delivered/read while this callback runs.
+        await WhatsappMessage.update(
+          { ...(waId ? { wa_message_id: waId } : {}), status: 'sent' },
+          { where: { id: saved.id, status: 'sending' } }
+        ).catch(() => {});
 
         // Conversation metadata + SLA first-response stamp (genuine agent reply).
         await conv.update(staffReplyUpdate(conv, text)).catch(() => {});

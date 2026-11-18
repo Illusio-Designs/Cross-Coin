@@ -78,7 +78,7 @@ const WhatsappMessage = sequelize.define('WhatsappMessage', {
   type: { type: DataTypes.ENUM('text', 'template', 'image', 'document', 'audio', 'video', 'sticker', 'location', 'contacts', 'reaction', 'button'), defaultValue: 'text' },
   body: { type: DataTypes.TEXT, allowNull: true },
   quoted_message_id: { type: DataTypes.INTEGER, allowNull: true, comment: 'ID of the message being replied to' },
-  status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received'), defaultValue: 'sent' },
+  status: { type: DataTypes.ENUM('sent', 'delivered', 'read', 'failed', 'received', 'sending'), defaultValue: 'sent' },
   sent_at: { type: DataTypes.DATE, allowNull: true },
   // Which automatic message produced this outbound row (e.g. 'order_shipped',
   // 'abandoned_cart', 'broadcast:12'). NULL = typed by staff / inbound.

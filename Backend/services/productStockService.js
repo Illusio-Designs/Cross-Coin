@@ -105,9 +105,45 @@ const daysLeft = (stock, sold30) => {
   return Math.floor(stock / (sold30 / SOLD_WINDOW_DAYS));
 };
 
-function thumbUrl(path) {
-  if (!path) return null;
-  try { return require('./imagekitService.js').getOptimizedUrl(path, 'thumbnail'); } catch { return path; }
+function thumbnailSources(paths) {
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'https://api.crosscoin.in').replace(/\/+$/, '');
+  const imageKit = require('./imagekitService.js');
+  const own = new Set();
+  const fallback = new Set();
+
+  for (const path of paths) {
+    const stored = path?.trim();
+    if (!stored) continue;
+    const local = /^(https?:\/\/[^/]+)?\/(?:api\/)?uploads\/(products\/[^?#]+)(\?[^#]*)?$/i.exec(stored);
+    if (local) {
+      const url = parseThumbnailUrl(`${local[1] || apiBase}/api/uploads/${local[2]}${local[3] || ''}`);
+      if (url) {
+        url.searchParams.set('tr', 'w-128,q-78,f-auto');
+        own.add(url.href);
+      }
+      // Legacy relative upload paths were also used for ImageKit records.
+      if (!local[1] && !stored.startsWith('/api/')) {
+        fallback.add(imageKit.getOptimizedUrl(`/${local[2]}${local[3] || ''}`, 'thumbnail'));
+      }
+      continue;
+    }
+
+    if (/^https?:\/\//i.test(stored) || stored.startsWith('/products/')) {
+      const optimized = imageKit.getOptimizedUrl(stored, 'thumbnail');
+      if (/^https?:\/\//i.test(optimized)) fallback.add(optimized);
+    } else if (/^[^/]+\.[a-z0-9]+(?:\?.*)?$/i.test(stored)) {
+      own.add(`${apiBase}/api/uploads/products/${stored.split('?')[0]}?tr=w-128,q-78,f-auto`);
+      const optimized = imageKit.getOptimizedUrl(`/products/${stored}`, 'thumbnail');
+      if (/^https?:\/\//i.test(optimized)) fallback.add(optimized);
+    }
+  }
+
+  const remote = [...fallback].filter((url) => /^https?:\/\//i.test(url));
+  return [...new Set([...Array.from(own).slice(0, remote.length ? 3 : 4), ...remote])].slice(0, 4);
+}
+
+function parseThumbnailUrl(value) {
+  try { return new URL(value); } catch { return null; }
 }
 
 // ── List ────────────────────────────────────────────────────────────────────
@@ -231,7 +267,11 @@ async function listStock({ search = '', brandId = null, stock = 'all', sort = 'a
     brandsBy.get(k).push({ id: num(b.id), name: b.display_name || b.name, slug: b.slug, live: b.status !== 'inactive' });
   }
   const imgBy = new Map();
-  for (const im of imgRows) { const k = num(im.product_id); if (!imgBy.has(k)) imgBy.set(k, im.image_url); }
+  for (const im of imgRows) {
+    const id = num(im.product_id);
+    if (!imgBy.has(id)) imgBy.set(id, []);
+    imgBy.get(id).push(im.image_url);
+  }
 
   const items = rows.map((r) => {
     const id = num(r.id);
@@ -242,9 +282,11 @@ async function listStock({ search = '', brandId = null, stock = 'all', sort = 'a
     let visibility = 'live';
     if (r.status !== 'active') visibility = r.status === 'draft' ? 'draft' : 'off';
     else if (!num(r.visible)) visibility = brands.length ? 'brand_off' : 'no_brand';
+    const thumbnails = thumbnailSources(imgBy.get(id) || []);
     return {
       id, name: r.name, slug: r.slug, status: r.status, category: r.category || null,
-      thumb: thumbUrl(imgBy.get(id)),
+      thumb: thumbnails[0] || null,
+      thumbnails,
       brands,
       variationCount: num(r.var_n), outSizes: num(r.out_n), lowSizes: num(r.low_n),
       totalStock, minPrice: r.min_price != null ? Number(r.min_price) : null, maxPrice: r.max_price != null ? Number(r.max_price) : null,
