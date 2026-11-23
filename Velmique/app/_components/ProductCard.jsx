@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from './SkImg';
 import BrandIcon from '@/components/ui/BrandIcon';
+import NotePhoto from '@/components/product/NotePhoto';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
@@ -19,13 +20,11 @@ export default function ProductCard({ product, priority = false }) {
 
   const img = product.images?.[0] || '';
   const href = `/product/${product.slug}`;
-  // Fragrance notes (from the default variation) as the subtitle.
+  // Use the same default variation as the product details page.
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
-  const noteNames = (defVar?.noteItems?.length
-    ? defVar.noteItems.map((n) => n.name)
-    : (product.notes || []).map((n) => (typeof n === 'string' ? n : n?.name))
-  ).filter(Boolean);
-  const noteLine = noteNames.slice(0, 3).join(' · ');
+  const notes = (defVar?.noteItems?.length ? defVar.noteItems : product.notes || [])
+    .map((note) => typeof note === 'string' ? { name: note } : note)
+    .filter((note) => note?.name);
 
   const wished = isWishlisted(product.id);
   const rating = Number(product.rating || 0);
@@ -79,7 +78,16 @@ export default function ProductCard({ product, priority = false }) {
           <Link className="m-card__name" href={href}>{product.name}</Link>
           <span className="m-card__price"><b>{inr(product.price)}</b>{orig ? <s>{inr(orig)}</s> : null}</span>
         </div>
-        {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
+        {notes.length > 0 && (
+          <ul className="m-card__notes" aria-label="Fragrance notes" role="list">
+            {notes.map(({ name, image }) => (
+              <li key={name} className="m-card__note">
+                {image && <NotePhoto image={image} width={64} />}
+                <span>{name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
         <button className="m-card__addbody" disabled={soldOut} aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`} onClick={add}><Bag />{soldOut ? 'Sold out' : 'Add to Bag'}</button>
       </div>

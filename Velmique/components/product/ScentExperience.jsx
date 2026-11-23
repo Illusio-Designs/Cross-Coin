@@ -1,25 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { ik } from '@/lib/imagekit';
+import NotePhoto from './NotePhoto';
 
 const PHASES = [
   { key: 'Top', label: 'Opening', time: '0–15 min' },
   { key: 'Heart', label: 'Heart', time: '15 min–4 hr' },
   { key: 'Base', label: 'Dry Down', time: '4 hr+' },
 ];
-
-function NotePhoto({ image, width, alt = '' }) {
-  let src = ik(image, width);
-  if (/^https?:\/\/[^/]+\/api\/uploads\//i.test(src)) {
-    const url = new URL(src);
-    url.searchParams.set('tr', `w-${width},q-75,f-auto`);
-    src = url.href;
-  }
-  const [failedSrc, setFailedSrc] = useState('');
-  if (!src || failedSrc === src) return null;
-  return <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} />;
-}
 
 export default function ScentExperience({ name, tiers = [], notes = [], accords = [], spec = [] }) {
   const [active, setActive] = useState('Top');

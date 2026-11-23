@@ -16,7 +16,9 @@ html[data-maison]{--bg:#faf5f0;--ink:#241b1b;--ink-soft:#675753;--border:#e5d8d1
 .m-card__top{align-items:flex-start;gap:8px}
 .m-card__name{font-size:21px;font-weight:500;line-height:1.2}
 .m-card__price{gap:8px}.m-card__price b{font-size:17px;font-weight:650}.m-card__price s{font-size:12px}
-.m-card__notes{font-size:11px;letter-spacing:.04em;text-transform:none;margin:0;line-height:1.5;color:#76625e}
+.m-card__notes{display:flex;flex-wrap:wrap;gap:5px;list-style:none;padding:0;margin:0;letter-spacing:0;text-transform:none;color:var(--m-ink-soft)}
+.m-card__note{display:inline-flex;align-items:center;max-width:100%;gap:5px;padding:3px 7px;border-radius:6px;background:var(--m-bg-tint);overflow-wrap:anywhere}
+.m-card__note img{width:18px;height:18px;flex:none;border-radius:50%;object-fit:cover}
 .m-card__rc{font-size:11px;margin:0;color:#76625e}
 .m-card__addbody{display:flex;min-height:44px;margin-top:8px;border:1px solid #4c162b;border-radius:7px;background:#4c162b;color:#fff8f3;font-size:12px;font-weight:600;letter-spacing:.02em;text-transform:none;box-shadow:none;transition:background .2s}
 .m-card__addbody:hover{background:#71273f;border-color:#71273f}.m-card__addbody:disabled{background:#eee4de;color:#887771;border-color:#dfd0c8;cursor:not-allowed}
