@@ -3486,3 +3486,26 @@
 /* Orders table refresh (page / tab / filter change): keep the current rows on
    screen, dimmed, until the new page lands — no skeleton flash. */
 .ord-table-busy { opacity: .6; transition: opacity .15s; }
+
+/* Manual order entry */
+.manual-order { display: grid; gap: 16px; color: var(--ds-color-text); }
+.manual-order p, .manual-order h3 { margin: 0; }
+.manual-order__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.manual-order__list { display: grid; gap: 8px; padding: 0; margin: 12px 0; list-style: none; }
+.manual-order__list li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1px solid var(--ds-color-border); border-radius: 8px;
+}
+.manual-order__list li > span { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.manual-order__list li small { display: block; color: var(--ds-color-text-muted); }
+.manual-order__list .input-container { width: 74px; margin: 0; }
+.manual-order__picker { display: grid; gap: 8px; margin-top: 12px; }
+.manual-order__picker > button { justify-content: flex-start; white-space: normal; height: auto; padding-block: 6px; text-align: start; }
+.manual-order__pick-head { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.manual-order__totals { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--ds-color-surface-soft); }
+.manual-order__totals div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.manual-order__totals div:last-child { font-weight: 700; }
+.manual-order__totals dd { margin: 0; text-align: right; }
+.manual-order__muted { color: var(--ds-color-text-muted); font-size: 13px; }
+.manual-order__error { color: var(--ds-color-danger-text); font-size: 13px; }
+@media (max-width: 520px) { .manual-order__grid { grid-template-columns: 1fr; } }

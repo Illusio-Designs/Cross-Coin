@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { orderService, brandService, trafficReportService, exceptionsService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import PickupScheduleModal from "../../../components/orders/PickupScheduleModal";
+import ManualOrderModal from "../../../components/orders/ManualOrderModal";
 import Tooltip from "../../../components/ui/Tooltip";
 import OrderStatusBadge from "../../../components/ui/OrderStatusBadge";
 import ShipmentStatusBadge from "../../../components/ui/ShipmentStatusBadge";
@@ -23,7 +24,7 @@ import {
     ViewIcon, Tick02Icon, RefreshIcon, Location01Icon, File01Icon,
     Cancel01Icon, Delete02Icon, Search01Icon, FilterIcon, Download04Icon, Calendar03Icon,
     Package01Icon, UserIcon, PencilEdit02Icon, Calendar01Icon,
-    DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon, WhatsappIcon
+    DeliveryTruck01Icon, Alert02Icon, LinkSquare02Icon, WhatsappIcon, Add01Icon
 } from '@hugeicons/core-free-icons';
 
 // Compact row overflow menu ("⋯ more"). Rendered through a portal so it isn't
@@ -194,6 +195,7 @@ const Orders = ({ initialTab } = {}) => {
     const [allOrdersStats, setAllOrdersStats] = useState(undefined);
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [pickupOpen, setPickupOpen] = useState(false);
+    const [manualOrderOpen, setManualOrderOpen] = useState(false);
     const [isAwbModalOpen, setIsAwbModalOpen] = useState(false);
     const [awbOrderId, setAwbOrderId] = useState(null);
     const [awbNumber, setAwbNumber] = useState('');
@@ -244,6 +246,20 @@ const Orders = ({ initialTab } = {}) => {
 
     // Debounced search value — auto-cancels previous timer on every keystroke
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const onManualOrderCreated = (order) => {
+        setManualOrderOpen(false);
+        setStatusFilter('to_confirm');
+        setBrandFilter(String(order.brand_id));
+        setPaymentTypeFilter('all');
+        setPaymentStatusFilter('all');
+        setRefundDueFilter(false);
+        setStatsStartDate('');
+        setStatsEndDate('');
+        setCurrentPage(1);
+        setFilterValue(order.order_number);
+        setDebouncedSearch(order.order_number);
+        showSuccess('orderCreated', `Order #${order.order_number} created`);
+    };
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(filterValue.trim()), 400);
         return () => clearTimeout(t);
@@ -1024,11 +1040,17 @@ const Orders = ({ initialTab } = {}) => {
                         subtitle={loading && orders.length === 0 ? <Skeleton w={110} h={12} style={{ display: 'inline-block' }} /> : `${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`}
                         actions={
                             <>
+                                <Button icon={<HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />}
+                                    onClick={() => setManualOrderOpen(true)}>New order</Button>
+                                <Button variant="secondary" onClick={() => {
+                                    window.history.pushState({}, '', '/dashboard/payments');
+                                    window.dispatchEvent(new PopStateEvent('popstate'));
+                                }}>Check Razorpay payment</Button>
                                 <div className="sl-search-wrap">
                                     <span className="sl-search-icon">
                                         <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
                                     </span>
-                                    <input type="text" className="sl-search-input" placeholder="Search orders, customers, AWB…"
+                                    <input type="text" className="sl-search-input" placeholder="Order, customer, AWB or payment ID"
                                         value={filterValue} onChange={handleSearchChange} />
                                 </div>
                                 <button className="order-sync-main-btn" type="button"
@@ -1051,6 +1073,8 @@ const Orders = ({ initialTab } = {}) => {
                     />
 
                     <PickupScheduleModal open={pickupOpen} onClose={() => setPickupOpen(false)} />
+                    <ManualOrderModal open={manualOrderOpen} brands={brands} initialBrandId={brandFilter}
+                        onClose={() => setManualOrderOpen(false)} onCreated={onManualOrderCreated} />
 
                     {/* ── KPI Strip — one clean row (prototype style) ── */}
                     <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}

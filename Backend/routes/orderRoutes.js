@@ -1,7 +1,7 @@
 const express = require('express');
 const {
     getAllOrders, getUserOrders, getOrder,
-    createOrder, createGuestOrder,
+    createOrder, createGuestOrder, quoteManualOrder, createManualOrder,
     trackOrderByAWB, trackOrderByOrderNumber,
     cancelOrder, adminCancelOrder, adminRefundOrder, adminDeleteOrder, confirmOrder,
     updateAwbNumber, initiateReturn,
@@ -48,6 +48,29 @@ const updateAwbSchema = z.object({
   courier_name: z.string().trim().max(100).optional(),
 });
 
+const manualOrderSchema = z.object({
+  customer: z.object({
+    full_name: z.string().trim().min(2).max(100),
+    email: z.string().trim().email().max(255).transform((email) => email.toLowerCase()),
+    phone: z.string().trim().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number.'),
+  }),
+  address: z.object({
+    address: z.string().trim().min(5).max(500),
+    landmark: z.string().trim().max(255).optional(),
+    city: z.string().trim().min(2).max(100),
+    state: z.string().trim().min(2).max(100),
+    pincode: zSchemas.indianPincode,
+  }),
+  items: z.array(z.object({
+    product_id: z.number().int().positive(),
+    variation_id: z.number().int().positive(),
+    quantity: z.number().int().min(1).max(100),
+  })).min(1).max(25).refine((items) => new Set(items.map((item) => item.variation_id)).size === items.length, {
+    message: 'Use one line per product variation.',
+  }),
+  notes: z.string().trim().max(500).optional(),
+});
+
 // Accept the AWB under either query name — the storefront sends `awb_number`,
 // while the docs/curl use `awb`. Require at least one.
 const trackByAwbSchema = z.object({
@@ -57,6 +80,11 @@ const trackByAwbSchema = z.object({
 
 // ── Admin / Order Manager ─────────────────────────────────────────────────
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
+router.post('/manual/quote',             isAuthenticated, isOrderManager, zValidateBody(manualOrderSchema), quoteManualOrder);
+router.post('/manual',                   isAuthenticated, isOrderManager, zValidateBody(manualOrderSchema.extend({
+  request_id: z.string().uuid(),
+  expected_total: z.number().int().nonnegative(),
+})), createManualOrder);
 router.get('/desk/counts',               isAuthenticated, isOrderManager, require('../controller/orderController.js').getDeskCounts);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);

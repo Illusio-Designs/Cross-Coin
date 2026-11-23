@@ -133,3 +133,11 @@
   border: 1px solid var(--ds-color-border); border-radius: 10px; background: var(--ds-color-bg); font-size: 13px;
 }
 .pl-picked > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.pl-rzp { display: grid; gap: 10px; padding: 14px 16px; }
+.pl-rzp h2 { font-size: 16px; }
+.pl-rzp h2, .pl-rzp p { margin: 0; }
+.pl-rzp__form { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(180px, 2fr) auto; align-items: end; gap: 10px; max-width: 720px; }
+.pl-rzp__result { display: grid; justify-items: start; gap: 6px; border-top: 1px solid var(--ds-color-border-soft); padding-top: 10px; overflow-wrap: anywhere; }
+.pl-rzp__error { color: var(--ds-color-danger-text); }
+@media (max-width: 620px) { .pl-rzp__form { grid-template-columns: 1fr; } }

@@ -6,7 +6,7 @@ import { ik } from '@/lib/imagekit';
 import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
 import { getProductReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
-import { getBundleTiers } from '@/lib/api/bundles';
+import { getBundleTiers, getPackTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
 import DescriptionHtml from '@/components/product/DescriptionHtml';
@@ -63,13 +63,14 @@ export default async function MaisonProduct({ params }) {
     );
   }
 
-  const [reviewsRes, bestsellers, productFaqs, globalFaqs, productPacks, catalog] = await Promise.all([
+  const [reviewsRes, bestsellers, productFaqs, globalFaqs, productPacks, catalog, packTiers] = await Promise.all([
     getProductReviews(product.id, { limit: 30 }),
     getBestsellers(5),
     getFaqs('product', product.id),
     getFaqs('global'),
     getBundleTiers(product.id),
     getPublicProducts({ limit: 48 }),
+    getPackTiers(),
   ]);
 
   // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
@@ -234,7 +235,7 @@ export default async function MaisonProduct({ params }) {
               <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
             </div>
 
-            <PdpBuy product={product} packs={productPacks} />
+            <PdpBuy product={product} packs={productPacks} mixTiers={packTiers} scents={catalog.products} />
 
 
             <DeliveryCheck />

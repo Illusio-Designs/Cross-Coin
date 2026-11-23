@@ -160,11 +160,43 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 .v-note-items li{display:flex;align-items:center;gap:10px;font-size:12px;color:#675753}
 .v-phase-content>img{flex-shrink:0}
 
+/* Shared type sizes for storefront copy, controls and secondary labels. */
+.m-root {
+  --v-text-body: 1rem;
+  --v-text-label: .875rem;
+  --v-text-meta: .8125rem;
+}
+.m-root :is(.v-announcement, .m-lnk, .m-card__notes, .m-card__rc, .m-card__price s, .m-foot h4, .m-eyebrow) {
+  font-size: var(--v-text-meta);
+  line-height: 1.45;
+}
+.m-root :is(.m-lnk, .m-foot h4, .m-eyebrow) { letter-spacing: .05em; }
+.m-root :is(.m-btn, .v-filter-chip, .m-card__addbody, .m-foot :where(a), .v-trust :where(b), .v-mood :where(p), .v-studio__card :where(p), .v-pack :where(p)) {
+  font-size: var(--v-text-label);
+  line-height: 1.45;
+}
+.m-root :is(.v-hero p, .v-center p, .v-heading p, .m-faq__a, .m-faq__a p) {
+  font-size: var(--v-text-body);
+  line-height: 1.6;
+}
+.m-root :is(.v-trust small, .v-heading > a, .m-mnav a.m-mnav__sub) { font-size: var(--v-text-meta); }
+.m-root .m-card__addbody { padding-inline: 8px; }
+.m-root .m-card__name { overflow-wrap: anywhere; }
+.m-root .m-card__price { flex-wrap: wrap; }
+
+@media (max-width: 740px) {
+  .m-root .v-announcement { padding-inline: 12px; }
+  .m-root .v-announcement span { padding-inline: 6px; }
+  .m-root .v-studio__card { padding-inline: 12px; }
+  .m-root .v-studio__card b { font-size: var(--v-text-label); }
+  .m-root .v-studio__card p { font-size: var(--v-text-meta); }
+}
+
 /* Product details typography */
 .v-pdp-page {
-  --v-detail-body: 1rem;
-  --v-detail-label: .875rem;
-  --v-detail-small: .8125rem;
+  --v-detail-body: var(--v-text-body);
+  --v-detail-label: var(--v-text-label);
+  --v-detail-small: var(--v-text-meta);
   --v-detail-heading: clamp(1.625rem, 1.375rem + 1vw, 2.125rem);
 }
 .v-pdp-page .m-pdp__title {
@@ -216,6 +248,24 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 .v-pdp-page .v-phase-tabs button { min-width: 0; padding-inline: 6px; }
 .v-pdp-page .v-phase-tabs small { font-size: var(--v-detail-small); }
 .v-pdp-page :is(.v-note-card, .v-note-items li, .v-phase-content h3) { overflow-wrap: anywhere; }
+
+.v-pdp-pack {
+  padding: 16px;
+  border: 1px solid var(--m-line);
+  border-radius: var(--m-radius);
+  background: var(--m-surface);
+}
+.v-pdp-pack .m-byph { flex-wrap: wrap; }
+.v-pdp-pack .m-byph__all { font-size: var(--v-text-meta); }
+.v-pdp-pack__offers { color: var(--m-ink-soft); font-size: var(--v-text-label); }
+.v-pdp-pack__modes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.v-pdp-pack__modes .m-btn { min-height: 44px; padding: 8px 14px; }
+.v-pdp-pack__modes .m-btn[aria-pressed="true"] {
+  border-color: var(--m-accent);
+  background: var(--m-accent);
+  color: var(--m-on-band);
+}
+.v-pdp-pack__builder { margin-top: 12px; }
 
 @media (max-width: 400px) {
   .v-pdp-page .m-packsel { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 22px; }

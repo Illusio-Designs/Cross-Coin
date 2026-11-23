@@ -424,6 +424,7 @@ async function runCheck(brandId) {
       customer: o.customer || null, brand: o.brand_name || null,
       amount: res.remote?.amount ?? r2(o.final_amount),
       methodLabel: METHOD_LABEL[normMethod(res.remote?.method)] || 'Online',
+      razorpayPaymentId: res.remote?.id || null, razorpayOrderId: res.remote?.orderId || null,
       capturedAt: res.remote?.at || null,
       here: res.from,
       note: cancelled ? 'The order was auto-cancelled meanwhile — confirming puts it back if the items are still in stock.' : null,
@@ -457,8 +458,9 @@ async function runCheck(brandId) {
   const orphans = await q(
     `SELECT p.id, p.amount_paid, p.created_at, u.username AS customer, b.name AS brand_name
        FROM payments p LEFT JOIN users u ON u.id = p.user_id LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE p.order_id IS NULL AND p.reservation_id IS NOT NULL AND p.razorpay_order_id IS NOT NULL
-        AND p.status IN ('pending','failed') AND p.amount_paid > 0
+      WHERE p.order_id IS NULL AND p.razorpay_order_id IS NOT NULL
+        AND p.status IN ('pending','failed','successful','completed') AND p.payment_type <> 'cod' AND p.amount_paid > 0
+        AND (p.payment_gateway IS NULL OR p.payment_gateway <> 'CustomCheckout')
         AND p.created_at >= :since AND p.created_at <= :quiet ${brandId ? 'AND p.brand_id = :brandId' : ''}
       ORDER BY p.id DESC LIMIT 30`, { since, quiet: new Date(Date.now() - 20 * 60000), brandId });
   for (const o of orphans) {
@@ -470,10 +472,11 @@ async function runCheck(brandId) {
         key: `p${o.id}`, orderId: null, paymentId: o.id, orderNumber: null, customer: o.customer || null, brand: o.brand_name || null,
         amount: res.remote?.amount ?? r2(num(o.amount_paid) / 100),
         methodLabel: METHOD_LABEL[normMethod(res.remote?.method)] || 'Online',
+        razorpayPaymentId: res.remote?.id || null, razorpayOrderId: res.remote?.orderId || null,
         capturedAt: res.remote?.at || null, here: 'no_order', canCreate: !!res.canCreate,
         note: res.canCreate
           ? 'Charged, but no order was made — the checkout timed out before the payment came through.'
-          : 'Charged, but no order was made and the checkout details weren’t saved — refund the customer.',
+          : res.reason || 'Charged, but no order was made. Review before refunding.',
       });
     } catch (e) { errors.push(e.message); }
   }
@@ -504,6 +507,7 @@ async function mismatches({ brandId: rawBrand, refresh } = {}) {
 }
 
 const dropFromCache = (pred) => { for (const v of cache.values()) v.data.items = v.data.items.filter((x) => !pred(x)); };
+const clearRecoveredMismatch = (id) => dropFromCache((item) => item.paymentId === id);
 
 /**
  * Fix one "doesn't match Razorpay" item. Idempotent; returns a plain-English message.
@@ -521,8 +525,8 @@ async function fixOrphan(id, action, actor) {
   if (!id) return { ok: false, status: 400, message: 'Which payment? The payment id is missing.' };
   if (!['create', 'refund'].includes(action)) return { ok: false, status: 400, message: 'Choose “Create the order” or “Refund”.' };
   const res = action === 'refund' ? await refundOrphanPayment(id, actor) : await reconcileOrphanPayment(id, { actor });
-  dropFromCache((x) => x.paymentId === id);
   if (!res.success) return { ok: false, status: res.needsRefund ? 409 : 502, message: `Couldn’t ${action === 'refund' ? 'refund' : 'create the order'}: ${String(res.error || '').replace(/^Razorpay lookup failed:\s*/, '')}.` };
+  clearRecoveredMismatch(id);
   if (res.skipped) return { ok: true, changed: false, message: `Nothing to do — ${res.reason}.` };
   if (res.refunded) return { ok: true, changed: true, message: `Refund of ${inr(res.amount)} sent to the customer’s original payment method.` };
   return { ok: true, changed: true, message: res.orderAction === 'created' ? `Order ${res.order.order_number} created and confirmed.` : `Order ${res.order.order_number} already existed — the payment is now linked.` };
@@ -553,4 +557,4 @@ async function fixOrder(orderId, actor) {
   return { ok: true, changed: true, message: `${n} is marked paid.` };
 }
 
-module.exports = { ensureSchema, listPayments, summary, mismatches, fixMismatch, failureReason };
+module.exports = { ensureSchema, listPayments, summary, mismatches, fixMismatch, failureReason, clearRecoveredMismatch };

@@ -119,6 +119,7 @@ const formatProductResponse = (product) => {
         comparePrice: variation.comparePrice,
         cost_price: variation.cost_price,
         stock: variation.stock,
+        status: variation.status,
         sku: variation.sku,
         attributes: variation.attributes,
       };

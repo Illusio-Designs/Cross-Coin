@@ -40,6 +40,55 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
+async function checkRazorpayReference(req, res, recover = false) {
+    const { paymentRef } = req.params;
+    if (!req.brand?.id) return res.status(400).json({ message: 'Choose an active store.' });
+    if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentRef)) return res.status(400).json({ message: 'Enter a valid Razorpay payment ID starting with pay_.' });
+    try {
+        const { lookupRazorpayPayment, reconcileOrphanPayment } = require('../services/paymentReconciliationService.js');
+        const result = await lookupRazorpayPayment(paymentRef, req.brand.id);
+        if (result.error) return res.status(result.status).json({ message: result.error });
+        if (!recover) {
+            const { localPaymentId, ...lookup } = result;
+            return res.json({ success: true, ...lookup });
+        }
+        if (result.canLink) {
+            const [changed] = await Payment.update({ transaction_id: paymentRef }, {
+                where: {
+                    id: result.localPaymentId, order_id: result.order.id, brand_id: req.brand.id,
+                    razorpay_order_id: result.remote.orderId,
+                    status: { [Op.in]: ['successful', 'completed'] },
+                    [Op.or]: [{ transaction_id: null }, { transaction_id: '' }],
+                },
+            });
+            if (!changed) return res.status(409).json({ message: 'The payment record changed. Check it again before saving.' });
+            await require('../services/orderService.js').auditLog(result.order.id, 'payment_reference_linked', req.user.id, 'admin', {
+                razorpay_payment_id: paymentRef, razorpay_order_id: result.remote.orderId,
+            }).catch((error) => logger.warn(`Payment reference audit failed: ${error.message}`));
+            return res.json({ success: true, order: { ...result.order, payment_id: paymentRef }, message: 'Razorpay payment ID saved on the order.' });
+        }
+        if (result.order) return res.json({ success: true, order: result.order, message: result.reason || 'The order already exists.' });
+        if (!result.canCreate) return res.status(409).json({ message: result.reason || 'The payment cannot be recovered.' });
+        const recovered = await reconcileOrphanPayment(result.localPaymentId, {
+            actor: { id: req.user.id, role: 'admin' }, expectedPaymentRef: paymentRef,
+        });
+        if (!recovered.success || !recovered.order) {
+            return res.status(409).json({ message: recovered.error || recovered.reason || 'Couldn’t recover the order. Check the payment again.' });
+        }
+        paymentsAdmin.clearRecoveredMismatch(result.localPaymentId);
+        const { id, order_number } = recovered.order;
+        return res.json({
+            success: true, order: { id, order_number },
+            message: recovered.orderAction === 'created' ? `Order ${order_number} recovered.` : `Order ${order_number} already exists.`,
+        });
+    } catch (error) {
+        return adminFail(res, error, recover ? 'the Razorpay recovery' : 'the Razorpay payment');
+    }
+}
+
+module.exports.adminLookupRazorpayPayment = (req, res) => checkRazorpayReference(req, res);
+module.exports.adminRecoverRazorpayPayment = (req, res) => checkRazorpayReference(req, res, true);
+
 module.exports.adminFixPaymentMismatch = async (req, res) => {
     try {
         const r = await paymentsAdmin.fixMismatch(req.body || {}, { id: req.user.id, role: 'admin' });

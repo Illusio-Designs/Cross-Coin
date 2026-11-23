@@ -24,6 +24,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
   const { OrderStatusHistory } = require("../model/orderStatusHistoryModel.js");
   const { Product } = require("../model/productModel.js");
   const { ProductVariation } = require("../model/productVariationModel.js");
+  const { ProductBrand } = require("../model/productBrandModel.js");
   const { ShippingAddress } = require("../model/shippingAddressModel.js");
   const { ShippingFee } = require("../model/shippingFeeModel.js");
   const { Payment } = require("../model/paymentModel.js");
@@ -173,10 +174,23 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
   // compatibility — any existing `require('./orderController').checkAddressQuality`
   // still works.
 
-  // Create a new order
-  module.exports.createOrder = async (req, res) => {
+  module.exports.createOrder = (req, res) => createCodOrder(req, res);
+  module.exports.quoteManualOrder = (req, res) => createCodOrder(req, res, { quote: true });
+  module.exports.createManualOrder = (req, res) => createCodOrder(req, res, { quote: false });
+
+  async function createCodOrder(req, res, manual = null) {
     logger.debug("createOrder: Starting order creation...");
     let transaction = null;
+    const brandId = req.brand?.id || 1;
+    const actorId = req.user.id;
+    const idempotencyKey = manual
+      ? manual.quote ? null : `manual:${actorId}:${req.body.request_id}`
+      : req.headers['x-idempotency-key'] || req.body.idempotency_key;
+
+    if (manual && !req.brand) return res.status(400).json({ message: 'Choose an active store.' });
+    if (!manual && typeof idempotencyKey === 'string' && idempotencyKey.startsWith('manual:')) {
+      return res.status(400).json({ message: 'Invalid checkout retry key.' });
+    }
 
     try {
       // Start transaction with READ_COMMITTED isolation level
@@ -185,15 +199,10 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       });
       logger.debug("✅ Transaction started for order creation");
 
-      const {
-        shipping_address_id,
-        items,
-        payment_type,
-        notes,
-        coupon_id,
-        discount_amount,
-      } = req.body;
-      const userId = req.user.id;
+      const { items, notes, coupon_id, discount_amount } = req.body;
+      const payment_type = manual ? 'cod' : req.body.payment_type;
+      let shipping_address_id = req.body.shipping_address_id;
+      let userId = manual ? null : actorId;
       logger.debug("createOrder: Request data:", {
         shipping_address_id,
         items,
@@ -204,7 +213,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       });
       logger.debug("createOrder: User ID:", userId);
 
-      if (!shipping_address_id || !items || !payment_type) {
+      if ((!manual && !shipping_address_id) || !items || !payment_type) {
         await transaction.rollback();
         logger.debug("❌ Validation failed: Missing required fields");
         return res.status(400).json({
@@ -221,11 +230,37 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       }
 
       logger.debug("createOrder: Validating shipping address...");
-      // Validate shipping address belongs to user
-      const shippingAddress = await ShippingAddress.findOne({
-        where: { id: shipping_address_id, user_id: userId },
-        transaction
-      });
+      // Resolve a manual retry before creating a customer or checking stock.
+      if (manual && idempotencyKey) {
+        const existingOrder = await Order.findOne({ where: { idempotency_key: idempotencyKey }, transaction });
+        if (existingOrder) {
+          await transaction.rollback();
+          if (Number(existingOrder.brand_id) !== Number(brandId)) return res.status(409).json({ message: 'This request was already used for another store.' });
+          return res.json({ message: 'Order already created', order: existingOrder });
+        }
+      }
+
+      let shippingAddress;
+      if (manual) {
+        const { customer, address } = req.body;
+        const matches = await User.findAll({
+          where: { source_brand_id: brandId, [Op.or]: [{ email: customer.email }, { phone: customer.phone }] },
+          transaction,
+        });
+        if (matches.length > 1 || matches.some((user) =>
+          user.role !== 'consumer' || user.roles?.length || user.deleted_at ||
+          user.email.toLowerCase() !== customer.email || (user.phone && user.phone !== customer.phone))) {
+          await transaction.rollback();
+          return res.status(409).json({ message: 'The email and phone do not match a single customer in this store. Check the customer details.' });
+        }
+        userId = matches[0]?.id || null;
+        shippingAddress = { ...address, full_name: customer.full_name, phone: customer.phone, country: 'India' };
+      } else {
+        shippingAddress = await ShippingAddress.findOne({
+          where: { id: shipping_address_id, user_id: userId },
+          transaction,
+        });
+      }
 
       if (!shippingAddress) {
         await transaction.rollback();
@@ -255,7 +290,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       }
 
       // Validate pincode serviceability before proceeding
-      if (shippingAddress.pincode) {
+      if (shippingAddress.pincode && !manual?.quote) {
         try {
           const provider = await shippingProviderFactory.getShippingProvider(1); // always iThink
           const warehousePincode = await settingsHelper.getSetting(1, 'ITHINK_WAREHOUSE_PINCODE',
@@ -273,8 +308,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       }
 
       // ── Idempotency key dedup — DB-based (survives Redis downtime) ────────
-      const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
-      if (idempotencyKey) {
+      if (idempotencyKey && !manual) {
         const existingOrder = await Order.findOne({
           where: { idempotency_key: idempotencyKey },
           transaction,
@@ -307,11 +341,30 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
 
       // Fetch all products and variations in parallel (2 queries instead of N+1)
       logger.debug("createOrder: Batch fetching", productIds.length, "products and", variationIds.length, "variations...");
-      const [productMap, variationMap, variationsByProductMap] = await Promise.all([
-        batchFetchProducts(productIds),
-        batchFetchVariations(variationIds),
-        batchFetchVariationsByProductIds(productIds),
-      ]);
+      let productMap, variationMap, variationsByProductMap;
+      if (manual) {
+        const assignments = await ProductBrand.findAll({
+          attributes: ['product_id'],
+          where: { brand_id: brandId, product_id: productIds, status: 'active' },
+          transaction,
+        });
+        const availableIds = assignments.map((row) => row.product_id);
+        const products = await Product.findAll({ where: { id: availableIds, status: 'active' }, transaction });
+        productMap = new Map(products.map((product) => [product.id, product]));
+        const variations = await ProductVariation.findAll({
+          where: { id: variationIds, productId: availableIds, status: 'active' },
+          order: [['id', 'ASC']],
+          transaction,
+          ...(manual.quote ? {} : { lock: transaction.LOCK.UPDATE }),
+        });
+        variationMap = new Map(variations.map((variation) => [variation.id, variation]));
+      } else {
+        [productMap, variationMap, variationsByProductMap] = await Promise.all([
+          batchFetchProducts(productIds),
+          batchFetchVariations(variationIds),
+          batchFetchVariationsByProductIds(productIds),
+        ]);
+      }
       logger.debug("✅ createOrder: Batch fetch complete - reduced N+1 queries");
 
       // Pack-aware bundle pricing: a mixed-colour pack is sent as several lines
@@ -523,7 +576,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         // Upsert the freshly-computed score so future address-quality
         // lookups (and the delivery_success/failure counters updated
         // downstream in orderShippingController) have a row to work on.
-        await AddressQualityScore.upsert({
+        if (!manual?.quote) await AddressQualityScore.upsert({
           address_hash: hash,
           pincode: shippingAddress.pincode,
           quality_score: addressQuality.score,
@@ -563,6 +616,34 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
           }
         }
       }
+      if (manual?.quote) {
+        await transaction.rollback();
+        return res.json({
+          quote: {
+            subtotal: subTotal, shipping_fee: shippingFee, total: finalAmount,
+            items: validatedItems.map(({ product_id, variation_id, quantity, price, subtotal }) =>
+              ({ product_id, variation_id, quantity, price, subtotal })),
+          },
+        });
+      }
+      if (manual) {
+        if (req.body.expected_total !== finalAmount) {
+          await transaction.rollback();
+          return res.status(409).json({ message: 'The order total changed. Review the updated quote before creating it.', code: 'TOTAL_CHANGED' });
+        }
+        if (!userId) {
+          const { customer } = req.body;
+          const user = await User.create({
+            username: customer.full_name, email: customer.email, phone: customer.phone,
+            role: 'consumer', source_brand_id: brandId,
+          }, { transaction });
+          userId = user.id;
+        }
+        const address = await ShippingAddress.create({
+          ...shippingAddress, user_id: userId, is_default: false,
+        }, { transaction });
+        shipping_address_id = address.id;
+      }
       // Handle UTM tracking
       const UTMTracking = require("../model/utmModel.js");
       let utmTrackingId = null;
@@ -571,7 +652,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       logger.debug('📦 createOrder - Request body utm_session_id:', req.body.utm_session_id);
 
       // Try to get session_id from request body first, then cookies
-      const sessionId = req.body.utm_session_id || req.cookies?.session_id;
+      const sessionId = manual ? null : req.body.utm_session_id || req.cookies?.session_id;
       logger.debug('🔑 createOrder - Session ID (body or cookie):', sessionId);
 
       if (sessionId) {
@@ -627,7 +708,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       // payment type). The auditLog helper lives in services/orderService.js.
       try {
         const { auditLog } = require('../services/orderService.js');
-        await auditLog(order.id, 'create', userId || null, userId ? 'user' : 'guest', {
+        await auditLog(order.id, 'create', manual ? actorId : userId || null, manual ? 'admin' : userId ? 'user' : 'guest', {
+          ...(manual ? { source: 'manual', customer_id: userId } : {}),
           payment_type,
           final_amount: finalAmount,
           rto_risk_score: rtoRiskScore,
@@ -673,8 +755,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       await OrderStatusHistory.create(
         {
           order_id: order.id,
-          status: "pending",
-          updated_by: userId,
+          status: manual ? "awaiting_confirmation" : "pending",
+          updated_by: manual ? actorId : userId,
         },
         { transaction }
       );
@@ -708,7 +790,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
 
       // Fetch the created order with its items
       logger.debug("createOrder: Fetching created order with details...");
-      const createdOrder = await Order.findByPk(order.id, {
+      const createdOrder = manual ? order : await Order.findByPk(order.id, {
         include: [
           {
             model: OrderItem,
@@ -745,6 +827,9 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         order: createdOrder,
       });
       logger.debug("createOrder: Response sent successfully");
+      // Staff review and confirm the order from the desk. A manual order
+      // doesn't send the storefront address-confirmation or purchase events.
+      if (manual) return;
 
       // Send WhatsApp order confirmation (fire-and-forget)
       setImmediate(async () => {
@@ -860,12 +945,17 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         }
       }
 
+      if (manual && error.name === 'SequelizeUniqueConstraintError') {
+        const existingOrder = idempotencyKey && await Order.findOne({ where: { idempotency_key: idempotencyKey, brand_id: brandId } }).catch(() => null);
+        if (existingOrder) return res.json({ message: 'Order already created', order: existingOrder });
+        return res.status(409).json({ message: 'Customer details changed while the order was being saved. Check the details and retry.' });
+      }
       logger.error("Error creating order:", error);
       res
         .status(500)
         .json({ message: "Failed to create order", error: error.message });
     }
-  };
+  }
 
   // Create order — auto-creates a consumer account if not authenticated
   // Replaces the old guest checkout flow. Guest info (phone, email, name) is used
@@ -1435,6 +1525,15 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       const searchConditions = [];
       if (search && search.trim()) {
         const searchTerm = search.trim();
+        if (/^(?:pay|order)_[a-zA-Z0-9]{6,64}$/.test(searchTerm)) {
+          const linkedPayments = await Payment.findAll({
+            attributes: ['order_id'],
+            where: { order_id: { [Op.ne]: null }, [Op.or]: [
+              { transaction_id: searchTerm }, { razorpay_order_id: searchTerm },
+            ] },
+          });
+          if (linkedPayments.length) searchConditions.push({ id: { [Op.in]: linkedPayments.map((payment) => payment.order_id) } });
+        }
 
         // Search in order fields
         searchConditions.push(

@@ -116,7 +116,8 @@ export default function OrderStory({ orderId }) {
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <Pill tone={paymentTone(p)}>{p.is_refund ? "Refund" : label(p.status)}</Pill>
                   <span style={muted}>{when(p.createdAt || p.created_at)}</span>
-                  {p.transaction_id && <code style={{ fontSize: ".75rem" }}>{p.transaction_id}</code>}
+                  {p.transaction_id && <span style={muted}>Payment ID <code>{p.transaction_id}</code></span>}
+                  {p.razorpay_order_id && <span style={muted}>Razorpay order <code>{p.razorpay_order_id}</code></span>}
                 </span>
                 <strong style={{ color: p.is_refund ? "var(--ds-color-info)" : "var(--ds-color-text)" }}>{p.is_refund ? `− ${money(-p.amount)}` : money(p.amount)}</strong>
               </div>

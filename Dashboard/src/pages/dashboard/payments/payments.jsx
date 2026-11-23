@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Button, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, ConfirmBar, EmptyState, ErrorState,
-  Skeleton, SkeletonKpis, SkeletonTableRows,
+  Skeleton, SkeletonKpis, SkeletonTableRows, Input,
 } from "../../../components/ui";
 import Dropdown from "../../../components/ui/Dropdown";
 import { paymentService, brandService } from "../../../services";
@@ -85,6 +85,79 @@ const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWid
 
 // ── Tiles ────────────────────────────────────────────────────────
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
+
+function RazorpayLookup({ brands, selectedBrandId, isAdmin }) {
+  const qc = useQueryClient();
+  const [brand, setBrand] = useState("");
+  const [reference, setReference] = useState("");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+  const [confirm, setConfirm] = useState(false);
+  const availableBrands = brands.filter((item) => item.status === "active" && item.slug);
+  const selectedBrand = brand || availableBrands.find((item) => String(item.id) === String(selectedBrandId))?.slug || "";
+
+  const resetResult = () => { setResult(null); setError(""); setConfirm(false); };
+  const check = async (event) => {
+    event.preventDefault();
+    if (!selectedBrand || !/^pay_[a-zA-Z0-9]{6,64}$/.test(reference.trim()) || busy) return;
+    resetResult();
+    setBusy("check");
+    try {
+      const payment = await paymentService.checkRazorpayPayment(selectedBrand, reference.trim());
+      setResult({ ...payment, brand: selectedBrand });
+    } catch (e) { setError(e.message); }
+    finally { setBusy(null); }
+  };
+  const recover = async () => {
+    if (!(result?.canCreate || result?.canLink) || !isAdmin || busy) return;
+    setBusy("recover");
+    setError("");
+    try {
+      const recovered = await paymentService.recoverRazorpayPayment(result.brand, result.remote.id);
+      setResult({ ...result, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
+      showSuccess(null, recovered.message);
+      qc.invalidateQueries({ queryKey: ["payments"] });
+    } catch (e) { setError(e.message); }
+    finally { setBusy(null); setConfirm(false); }
+  };
+
+  return (
+    <section className="pl-card pl-rzp" id="razorpay-check" aria-labelledby="pl-rzp-title">
+      <h2 id="pl-rzp-title">Check a Razorpay payment</h2>
+      <p className="pl-faint pl-small">Look up a payment ID to see whether Razorpay captured it and whether it has an order.</p>
+      <form className="pl-rzp__form" onSubmit={check}>
+        <Input label="Store" name="rzp-lookup-store" type="select" value={selectedBrand} disabled={!!busy}
+          options={availableBrands.map((item) => ({ value: item.slug, label: item.display_name || item.name }))}
+          onChange={(event) => { setBrand(event.target.value); resetResult(); }} />
+        <Input label="Payment ID" name="rzp-lookup-reference" value={reference} placeholder="pay_…" maxLength={68}
+          autoComplete="off" spellCheck={false} disabled={!!busy} required pattern="pay_[a-zA-Z0-9]{6,64}"
+          onChange={(event) => { setReference(event.target.value); resetResult(); }} />
+        <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!selectedBrand || !reference.trim() || !!busy}>Check payment</Button>
+      </form>
+      {error && <p role="alert" className="pl-rzp__error">{error}</p>}
+      {result && (
+        <div className="pl-rzp__result">
+          <strong>{result.order ? `Order #${result.order.order_number}` : "No order found"}</strong>
+          <div>Razorpay: {result.remote.status} · {result.remote.currency === "INR"
+            ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(result.remote.amount)
+            : `${result.remote.amount ?? "—"} ${result.remote.currency || ""}`}</div>
+          <span>Payment ID <code>{result.remote.id}</code></span>
+          {result.remote.orderId && <span>Razorpay order <code>{result.remote.orderId}</code></span>}
+          {result.order?.payment_status && <span>Order payment: {result.order.payment_status}</span>}
+          {result.reason && <p>{result.reason}</p>}
+          {result.order && <Button size="sm" variant="secondary" onClick={() => openOrder(result.order.order_number)}>Open order</Button>}
+          {(result.canCreate || result.canLink) && !isAdmin && <p>Ask an admin to {result.canLink ? "save the payment ID" : "recover this order"}.</p>}
+          {(result.canCreate || result.canLink) && isAdmin && (!confirm
+            ? <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => setConfirm(true)}>{result.canLink ? "Save payment ID" : "Recover order"}</Button>
+            : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel={result.canLink ? "Save payment ID" : "Recover order"}
+              message={result.canLink ? "Save the verified Razorpay payment ID on this paid order?" : "Create the paid order from the saved checkout and continue with fulfillment?"}
+              onConfirm={recover} onCancel={() => setConfirm(false)} />)}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function Tiles({ s, error, onRetry, retrying, stale }) {
   if (error && !s) return <ErrorState message={`Couldn’t load the payment totals — ${error.message}`} onRetry={onRetry} retrying={retrying} />;
@@ -222,6 +295,7 @@ function Mismatches({ brandId, isAdmin }) {
                 <td>
                   <b>{it.orderNumber || "No order"}</b>{it.customer ? ` · ${it.customer}` : ""}
                   {it.brand && <div className="pl-faint pl-small">{it.brand}</div>}
+                  {it.razorpayPaymentId && <code className="pl-small">{it.razorpayPaymentId}</code>}
                 </td>
                 <td className="pl-nowrap">{inr(it.amount)} · {it.methodLabel}</td>
                 <td className="pl-why">
@@ -333,6 +407,7 @@ export default function Payments() {
 
       <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
+      <RazorpayLookup brands={brands} selectedBrandId={brandId} isAdmin={!!isAdmin} />
       <Mismatches brandId={brandId} isAdmin={!!isAdmin} />
 
       <div className="pl-toolbar">

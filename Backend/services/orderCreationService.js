@@ -130,6 +130,15 @@ async function createOrderFromSession({
   return sequelize.transaction({
     isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
   }, async (t) => {
+    // The webhook, checkout callback and admin recovery can reach the same
+    // reservation together. Lock its first payment before checking for an order.
+    await Payment.findOne({
+      where: { reservation_id: session.reservation_id },
+      attributes: ['id'],
+      order: [['id', 'ASC']],
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     // ── Idempotency: check if order already created for this reservation ──
     if (session.idempotency_key) {
       const existing = await Order.findOne({

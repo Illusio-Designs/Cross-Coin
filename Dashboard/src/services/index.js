@@ -548,6 +548,31 @@ export const pickupScheduleService = {
 };
 
 export const orderService = {
+  searchManualOrderProducts: async (brand, search, signal) => {
+    const { data } = await adminApi.get('/api/products/catalog', {
+      params: { search, inStock: true, limit: 12 },
+      headers: { 'X-Brand-Name': brand },
+      signal,
+    });
+    return data.data.products;
+  },
+
+  quoteManualOrder: async (brand, order) => {
+    const { data } = await adminApi.post('/api/orders/manual/quote', order, {
+      headers: { 'X-Brand-Name': brand },
+    });
+    return data.quote;
+  },
+
+  createManualOrder: async (brand, order) => {
+    const { data } = await adminApi.post('/api/orders/manual', order, {
+      headers: { 'X-Brand-Name': brand },
+      timeout: 45000,
+    });
+    invalidateCache('/api/orders');
+    return data.order;
+  },
+
   // Order Desk: live counts per work queue (tabs).
   getDeskCounts: async (brandId) => {
     try {
@@ -1101,6 +1126,20 @@ export const exceptionsService = {
 // Dashboard → Payments (Backend services/paymentsAdminService.js).
 const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
+  checkRazorpayPayment: async (brand, paymentRef) => {
+    try {
+      return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`, {
+        headers: { 'X-Brand-Name': brand },
+      })).data;
+    } catch (error) { throw payErr(error); }
+  },
+  recoverRazorpayPayment: async (brand, paymentRef) => {
+    try {
+      return (await adminApi.post(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}/recover`, {}, {
+        headers: { 'X-Brand-Name': brand }, timeout: 45000,
+      })).data;
+    } catch (error) { throw payErr(error); }
+  },
   // { period: 1|7|30, tab, q, brandId, page, limit } → { rows, total, pages, … }
   list: async (params = {}) => {
     try { return (await adminApi.get('/api/payments/admin/list', { params })).data; } catch (error) { throw payErr(error); }
