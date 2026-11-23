@@ -1,10 +1,9 @@
 import ScentExperience from '@/components/product/ScentExperience';
-import CompareScents from '@/components/product/CompareScents';
 import Link from 'next/link';
 import { richHtml } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
 import { ik } from '@/lib/imagekit';
-import { getProductBySlug, getBestsellers } from '@/lib/api/products';
+import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
 import { getProductReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
 import { getBundleTiers } from '@/lib/api/bundles';
@@ -64,12 +63,13 @@ export default async function MaisonProduct({ params }) {
     );
   }
 
-  const [reviewsRes, bestsellers, productFaqs, globalFaqs, productPacks] = await Promise.all([
+  const [reviewsRes, bestsellers, productFaqs, globalFaqs, productPacks, catalog] = await Promise.all([
     getProductReviews(product.id, { limit: 30 }),
     getBestsellers(5),
     getFaqs('product', product.id),
     getFaqs('global'),
     getBundleTiers(product.id),
+    getPublicProducts({ limit: 48 }),
   ]);
 
   // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
@@ -82,11 +82,24 @@ export default async function MaisonProduct({ params }) {
   const inStock = product.inStock !== false && (stock == null || stock > 0);
 
   const accords = tokens(attrs['main accords'] || attrs['accords']);
-  // Fragrance notes, image-aware. Prefer the per-VARIATION notes (name + optional
-  // image from attributes._images.notes); fall back to product-level notes
-  // ({name,image}) for older products, then to plain variation note names.
-  const notesWithImg = defVar?.noteItems?.length ? defVar.noteItems : (product.notes || []);
-  const noteNames = notesWithImg.length ? [] : tokens(attrs['notes']);
+  const notePhotos = new Map();
+  const rememberPhotos = (notes = []) => {
+    for (const { name, image } of notes) {
+      const key = noteKey(name);
+      if (image && !notePhotos.has(key)) notePhotos.set(key, image);
+    }
+  };
+  rememberPhotos(defVar?.noteItems);
+  rememberPhotos(product.notes);
+  product.variations.forEach((variation) => rememberPhotos(variation.noteItems));
+  // Reuse the same ingredient photo from the Velmique catalog when this
+  // product has none attached. Only match the full note name.
+  catalog.products.filter((item) => item.id !== product.id).forEach((item) => {
+    rememberPhotos(item.notes);
+    item.variations.forEach((variation) => rememberPhotos(variation.noteItems));
+  });
+  const withPhoto = (item) => ({ ...item, image: item.image || notePhotos.get(noteKey(item.name)) || '' });
+  const notes = (defVar?.noteItems?.length ? defVar.noteItems : product.notes).map(withPhoto);
 
   const spec = [
     ['Longevity', tokens(attrs['longevity (hrs)'] || attrs['longevity']).map((h) => `${h} hrs`).join(', ')],
@@ -104,29 +117,16 @@ export default async function MaisonProduct({ params }) {
   // (each with its uploaded image when one exists). Keys already shown in
   // their own sections are excluded.
   const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration',
-    'top notes', 'top note', 'top', 'heart notes', 'middle notes', 'heart', 'middle', 'base notes', 'base']);
+    'top notes', 'top note', 'top', 'heart notes', 'heart note', 'middle notes', 'middle note', 'heart', 'middle', 'base notes', 'base note', 'base']);
   const attrImgs = defVar?.attrImages || {};
 
-  // Tiered notes (reference style): Top / Heart / Base attribute keys, each a
-  // comma list with optional per-value images. When any tier exists, the
-  // Fragrance Notes card renders grouped; otherwise the flat list shows.
-  const tierItems = (...keys) => {
-    for (const k of Object.keys(attrs)) {
-      if (!keys.includes(String(k).toLowerCase())) continue;
-      const imgMap = attrImgs[k] || attrImgs[String(k).toLowerCase()] || {};
-      const items = (attrs[k] || []).flatMap((s) => String(s).split(',')).map((s) => s.trim()).filter(Boolean)
-        .map((name) => ({ name, image: imgMap[name] || '' }));
-      if (items.length) return items;
-    }
-    return [];
-  };
-  const noteTiers = [
-    { label: 'Top', items: tierItems('top notes', 'top note', 'top') },
-    { label: 'Heart', items: tierItems('heart notes', 'middle notes', 'heart', 'middle') },
-    { label: 'Base', items: tierItems('base notes', 'base') },
-  ].filter((t) => t.items.length);
+  const noteTiers = ['Top', 'Heart', 'Base'].map((label) => {
+    const tier = defVar?.noteTiers?.find((group) => group.label === label)
+      || product.noteTiers.find((group) => group.label === label);
+    return { label, items: (tier?.items || []).map(withPhoto) };
+  }).filter(({ items }) => items.length);
   const editorial = Object.entries(attrs)
-    .filter(([k, v]) => !KNOWN_ATTRS.has(String(k).toLowerCase()) && Array.isArray(v) && v.length)
+    .filter(([k, v]) => !KNOWN_ATTRS.has(noteKey(k.replace(/[_-]+/g, ' '))) && Array.isArray(v) && v.length)
     .map(([k, v]) => {
       const imgMap = attrImgs[k] || attrImgs[String(k).toLowerCase()] || {};
       const raw = v.map((s) => String(s).trim()).filter(Boolean);
@@ -196,7 +196,7 @@ export default async function MaisonProduct({ params }) {
   ];
 
   return (
-    <>
+    <div className="v-pdp-page">
       {jsonLd.map((obj, i) => (
         <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
       ))}
@@ -244,18 +244,17 @@ export default async function MaisonProduct({ params }) {
         </div>
       </div></div>
 
-      <div className="m-wrap v-product-story"><ScentExperience name={product.name} tiers={noteTiers} notes={notesWithImg.length ? notesWithImg : noteNames} accords={accords} spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
+      <div className="m-wrap v-product-story"><ScentExperience name={product.name} tiers={noteTiers} notes={notes} accords={accords} spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
         {editorial.map(sec=><section className="v-detail-section" key={sec.key}><h2>{sec.key}</h2>{sec.prose ? <p className="v-detail-caption">{sec.prose}</p> : <p className="v-detail-caption">{sec.items.map(it=>it.name).join(' · ')}</p>}</section>)}
         <details className="v-description"><summary>About this fragrance</summary>{product.descriptionHtml ? <DescriptionHtml className="m-desc-rich" html={richHtml(product.descriptionHtml).dangerouslySetInnerHTML.__html} /> : <p>{product.description || 'Explore the notes and composition of this fragrance above.'}</p>}</details>
       </div>
-      <CompareScents product={product} alternatives={related} />
 
       {/* Reviews — the wall when there are any, and always a way to write one
           (also opened by the WhatsApp review-request link, ?review=open). */}
       {reviews.length ? (
         <section className="m-section m-later" id="reviews"><div className="m-wrap">
           <div className="m-revhead">
-            <div><span className="m-eyebrow">Customer reviews</span><h2 style={{ fontSize: 'clamp(28px,4vw,42px)', marginTop: 8 }}>Real Reviews</h2></div>
+            <div><span className="m-eyebrow">Customer reviews</span><h2>Real Reviews</h2></div>
             <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars" aria-label={`${Number(rating).toFixed(1)} out of 5`}>{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
             <WriteReview productId={product.id} productName={product.name} />
           </div>
@@ -275,8 +274,8 @@ export default async function MaisonProduct({ params }) {
 
       {/* FAQ — admin-managed, from the backend */}
       {faqs.length ? (
-        <section className="m-section m-later" style={{ paddingTop: 0 }}><div className="m-wrap">
-          <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
+        <section className="m-section m-later v-pdp-faq"><div className="m-wrap">
+          <div className="m-shead"><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
           <div className="m-faq">
             {faqs.map((f) => (
               <details key={f.id}>
@@ -295,6 +294,6 @@ export default async function MaisonProduct({ params }) {
           <div className="m-pgrid">{related.map((p) => <ProductCard key={p.id} product={p} />)}</div>
         </div></section>
       ) : null}
-    </>
+    </div>
   );
 }

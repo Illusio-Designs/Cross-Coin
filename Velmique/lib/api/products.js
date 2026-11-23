@@ -16,6 +16,8 @@ import { colorForAttrKey, TAG_BLOCK_KEYS } from '@/lib/attributeColors';
 
 const API_URL    = process.env.NEXT_PUBLIC_API_URL    ?? 'https://api.crosscoin.in';
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
+const IMAGEKIT = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+  || process.env.NEXT_PUBLIC_IMAGEKIT_URL || 'https://ik.imagekit.io/wp2oatzmf';
 
 // Some uploaded image URLs come back doubled (https://...https://...).
 // Trim to the last real https:// occurrence.
@@ -51,6 +53,34 @@ const BADGE_MAP = {
 
 function safeJson(s) { try { return JSON.parse(s || '{}'); } catch { return {}; } }
 
+const NOTE_TIERS = [
+  ['Top', 'top notes', 'top note', 'top'],
+  ['Heart', 'heart notes', 'heart note', 'middle notes', 'middle note', 'heart', 'middle'],
+  ['Base', 'base notes', 'base note', 'base'],
+];
+
+export const noteKey = (name) => String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const attributeKey = (name) => noteKey(String(name).replace(/[_-]+/g, ' '));
+
+function noteImageUrl(value) {
+  const url = cleanUrl(typeof value === 'string' ? value.trim() : '');
+  if (/^https?:\/\//i.test(url)) return url.replace(/^(https?:\/\/[^/]+)\/uploads\//i, '$1/api/uploads/');
+  if (/^\/(?:api\/)?uploads\//i.test(url)) return `${API_URL.replace(/\/$/, '')}${url.startsWith('/api/') ? url : `/api${url}`}`;
+  if (url.startsWith('/products/')) return `${IMAGEKIT.replace(/\/$/, '')}${url}`;
+  return url.startsWith('/') && !url.startsWith('//') ? url : '';
+}
+
+function mergeNotes(items) {
+  const notes = new Map();
+  for (const item of items) {
+    const key = noteKey(item.name);
+    const existing = notes.get(key);
+    if (!existing) notes.set(key, item);
+    else if (!existing.image && item.image) notes.set(key, { ...existing, image: item.image });
+  }
+  return [...notes.values()];
+}
+
 function pickImage(i) {
   return cleanUrl(i?.large || i?.image_url || i?.medium || i?.url || i?.thumbnail || '');
 }
@@ -82,15 +112,21 @@ function mapVariation(v) {
   // split values (the backend stores "Musk, Peach" as one string) paired with
   // their uploaded image from `_images` when one exists. Absent images → ''.
   const itemsFor = (...keys) => {
-    const key = keys.find((k) => norm[k]?.length);
-    if (!key) return [];
-    const imgMap = attrImages[key] || attrImages[String(key).toLowerCase()] || {};
-    return (norm[key] || [])
-      .flatMap((s) => String(s).split(','))
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((name) => ({ name, image: cleanUrl(imgMap[name] || '') }));
+    const attr = Object.keys(norm).find((key) => keys.includes(attributeKey(key)) && norm[key].length);
+    if (!attr) return [];
+    const imagesKey = Object.keys(attrImages).find((key) => attributeKey(key) === attributeKey(attr));
+    const images = new Map(Object.entries(attrImages[imagesKey] || {}).map(([name, image]) => [noteKey(name), image]));
+    return norm[attr].flatMap((value) => {
+      const names = String(value).split(',').map((name) => name.trim()).filter(Boolean);
+      const groupImage = images.get(noteKey(value));
+      return names.map((name, index) => ({
+        name,
+        image: noteImageUrl(images.get(noteKey(name)) || (index === 0 ? groupImage : '')),
+      }));
+    });
   };
+  const noteTiers = NOTE_TIERS.map(([label, ...keys]) => ({ label, items: mergeNotes(itemsFor(...keys)) }))
+    .filter(({ items }) => items.length);
   const images = (v.images || v.ProductImages || []).map(i => ({
     id: i.id,
     url: pickImage(i),
@@ -111,15 +147,8 @@ function mapVariation(v) {
     // [{name, image}] fragrance notes: the flat `notes` attribute merged with
     // the tiered Top/Heart/Base note attributes (deduped by name), so cards,
     // the home notes section and the shop note filter see every note.
-    noteItems:     (() => {
-      const seen = new Set();
-      return [
-        ...itemsFor('notes'),
-        ...itemsFor('top notes', 'top note', 'top'),
-        ...itemsFor('heart notes', 'middle notes', 'heart', 'middle'),
-        ...itemsFor('base notes', 'base'),
-      ].filter((n) => { const k = n.name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-    })(),
+    noteItems:     mergeNotes([...noteTiers.flatMap(({ items }) => items), ...itemsFor('notes')]),
+    noteTiers,
     accordItems:   itemsFor('main accords', 'accords'), // [{name, image}] accords (image optional)
     size:          norm.size?.[0] || '',
     sizes:         norm.size || [],
@@ -198,11 +227,14 @@ export function mapProduct(p) {
   // Fragrance notes (name + image) — these carry imagery, which the attribute
   // system can't hold, so they live in the product `attributes.notes` JSON.
   const pAttrs = typeof p.attributes === 'string' ? safeJson(p.attributes) : (p.attributes || {});
-  const notes = Array.isArray(pAttrs.notes)
-    ? pAttrs.notes
-        .filter(n => n && n.name)
-        .map(n => ({ name: String(n.name), image: cleanUrl(n.image || '') }))
-    : [];
+  const readNotes = (items) => Array.isArray(items) ? items
+    .map((item) => ({ name: String(item?.name ?? item ?? '').trim(), image: noteImageUrl(item?.image) }))
+    .filter(({ name }) => name) : [];
+  const noteTiers = NOTE_TIERS.map(([label, ...keys]) => {
+    const key = Object.keys(pAttrs || {}).find((name) => keys.includes(attributeKey(name)));
+    return { label, items: mergeNotes(readNotes(pAttrs?.[key])) };
+  }).filter(({ items }) => items.length);
+  const notes = mergeNotes([...noteTiers.flatMap(({ items }) => items), ...readNotes(pAttrs?.notes)]);
 
   // In-stock if ANY variation has stock, or product-level fallback.
   const inStock = variations.length
@@ -248,6 +280,7 @@ export function mapProduct(p) {
     details,
     tags: tagsCapped,                 // chips derived from variation attributes
     notes,                            // fragrance notes (name + image)
+    noteTiers,
     variations,                       // full per-variation data for the detail page
     defaultVariationId: defaultVariation?.id || null,
     raw: p,
