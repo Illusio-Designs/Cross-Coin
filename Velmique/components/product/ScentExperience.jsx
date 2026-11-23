@@ -1,74 +1,88 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import BrandIcon from '@/components/ui/BrandIcon';
 import NotePhoto from './NotePhoto';
 
-const PHASES = [
-  { key: 'Top', label: 'Opening', time: '0–15 min' },
-  { key: 'Heart', label: 'Heart', time: '15 min–4 hr' },
-  { key: 'Base', label: 'Dry Down', time: '4 hr+' },
-];
+export default function ScentExperience({ name, phases = [], fragranceNotes = [], accords = [], spec = [] }) {
+  const id = useId();
+  const [selected, setSelected] = useState(null);
+  const cards = useRef(null);
+  const active = selected || phases[0]?.key;
+  const hasPhases = phases.length > 0;
+  const hasNotes = fragranceNotes.length > 0;
 
-export default function ScentExperience({ name, tiers = [], notes = [], accords = [], spec = [] }) {
-  const [active, setActive] = useState('Top');
-  const phases = PHASES.flatMap((phase) => {
-    const tier = tiers.find(({ label }) => label === phase.key);
-    return tier ? [{ ...phase, items: tier.items }] : [];
-  });
-  const phase = phases.find(({ key }) => key === active) || phases[0];
-  const picture = (phase?.items || notes).find(({ image }) => image);
-  const groupedNames = new Set(tiers.flatMap(({ items }) => items.map(({ name }) => name.toLowerCase())));
-  const ungrouped = notes.filter(({ name }) => !groupedNames.has(name.toLowerCase()));
+  const selectPhase = (key, moveToCard = false) => {
+    setSelected(key);
+    const card = cards.current?.querySelector('#' + CSS.escape(`${id}-${key}`));
+    if (!card) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (moveToCard && window.matchMedia('(max-width: 700px)').matches) {
+      card.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'instant' : 'smooth' });
+    }
+    const image = card.querySelector('.v-scent__image img');
+    if (!reduceMotion && image?.animate) {
+      image.getAnimations().forEach((animation) => animation.cancel());
+      image.animate([
+        { transform: 'perspective(900px) rotateY(0deg)' },
+        { transform: 'perspective(900px) rotateY(360deg)' },
+      ], { duration: 550, easing: 'ease-in-out' });
+    }
+  };
 
   return (
     <div className="v-scent-story">
-      <section className="v-detail-section">
-        <h2>The Scent Experience</h2>
-        <p className="v-detail-caption">
-          {phase ? `Discover how ${name} unfolds over time.` : `Discover the character of ${name}.`}
-        </p>
-        {phase && (
-          <div className="v-phase-tabs" aria-label="Fragrance development">
-            {phases.map(({ key, label, time }) => (
-              <button type="button" aria-pressed={phase.key === key} key={key} onClick={() => setActive(key)}>
-                {label}<small>({time})</small>
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="v-phase-content" aria-live="polite">
-          {picture && <NotePhoto image={picture.image} alt={picture.name} width={500} />}
-          <div>
-            <h3>{phase ? phase.items.map((note) => note.name).join(' · ') : accords.slice(0, 3).join(' · ') || name}</h3>
-            <p>{phase ? `${phase.label} notes` : 'Explore the fragrance notes below.'}</p>
-          </div>
-        </div>
-      </section>
-
-      {(tiers.length > 0 || notes.length > 0) && (
-        <section className="v-detail-section">
-          <h2>Fragrance Notes</h2>
-          <div className="v-note-cards">
-            {tiers.map(({ label, items }) => (
-              <div className="v-note-card v-note-card--tier" key={label}>
-                <b>{label} Notes</b>
-                <ul className="v-note-items">
-                  {items.map((note) => (
-                    <li key={note.name}>
-                      <NotePhoto image={note.image} width={128} />
-                      <span>{note.name}</span>
-                    </li>
-                  ))}
-                </ul>
+      {(hasPhases || hasNotes || accords.length > 0) && (
+        <section className="v-scent" aria-labelledby={`${id}-heading`}>
+          <h2 id={`${id}-heading`}>{hasPhases || !hasNotes ? 'The Scent Experience' : 'Fragrance Notes'}</h2>
+          {hasPhases && <p className="v-scent__intro">Discover how {name} unfolds over time.</p>}
+          {!hasPhases && accords.length > 0 && <p className="v-scent__intro">{accords.join(' · ')}</p>}
+          {hasPhases && (
+            <>
+              <div className="v-scent__phases" role="group" aria-label="Fragrance phases">
+                {phases.map(({ key, label, time, icon }) => (
+                  <button type="button" key={key} aria-pressed={active === key} aria-controls={`${id}-${key}`}
+                    onClick={() => selectPhase(key, true)}>
+                    <BrandIcon name={icon} size={24} />
+                    <span><b>{label}</b><small>({time})</small></span>
+                  </button>
+                ))}
               </div>
-            ))}
-            {ungrouped.map((note) => (
-              <div className="v-note-card" key={`note-${note.name}`}>
-                <NotePhoto image={note.image} width={128} />
-                <b>{note.name}</b>
+              <div className="v-scent__cards" ref={cards}>
+                {phases.map(({ key, label, title, description, image }) => (
+                  <article className="v-scent__card" id={`${id}-${key}`} key={key} data-active={active === key}>
+                    {image && (
+                      <button type="button" className="v-scent__image" aria-label={`Rotate ${label} image`}
+                        onClick={() => selectPhase(key)}>
+                        <NotePhoto image={image} alt="" width={600} />
+                        <span aria-hidden="true">↻</span>
+                      </button>
+                    )}
+                    <div className="v-scent__body">
+                      <h3>{title}</h3>
+                      {description && <p>{description}</p>}
+                    </div>
+                  </article>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+          {hasNotes && (
+            <div className="v-scent__gallery">
+              {hasPhases && <h3 id={`${id}-notes`}>Fragrance Notes</h3>}
+              <ul className="v-scent__notes" role="list" aria-labelledby={`${id}-${hasPhases ? 'notes' : 'heading'}`}>
+                {fragranceNotes.map(({ name, image }) => (
+                  <li key={name}>
+                    <span className="v-scent__note-photo" aria-hidden="true">
+                      <BrandIcon name="leaf" size={24} />
+                      {image && <NotePhoto image={image} width={480} />}
+                    </span>
+                    <span className="v-scent__note-name">{name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 

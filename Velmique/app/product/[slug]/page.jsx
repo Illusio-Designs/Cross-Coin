@@ -4,6 +4,7 @@ import { richHtml } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
 import { ik } from '@/lib/imagekit';
 import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
+import { buildScentExperience, isScentExperienceAttribute } from '@/lib/scentExperience';
 import { getProductReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
 import { getBundleTiers, getPackTiers } from '@/lib/api/bundles';
@@ -82,7 +83,6 @@ export default async function MaisonProduct({ params }) {
   const stock = defVar?.stock;
   const inStock = product.inStock !== false && (stock == null || stock > 0);
 
-  const accords = tokens(attrs['main accords'] || attrs['accords']);
   const notePhotos = new Map();
   const rememberPhotos = (notes = []) => {
     for (const { name, image } of notes) {
@@ -126,8 +126,11 @@ export default async function MaisonProduct({ params }) {
       || product.noteTiers.find((group) => group.label === label);
     return { label, items: (tier?.items || []).map(withPhoto) };
   }).filter(({ items }) => items.length);
+  const scentExperience = buildScentExperience({
+    slug: product.slug, tiers: noteTiers, notes, attrImages: attrImgs,
+  });
   const editorial = Object.entries(attrs)
-    .filter(([k, v]) => !KNOWN_ATTRS.has(noteKey(k.replace(/[_-]+/g, ' '))) && Array.isArray(v) && v.length)
+    .filter(([k, v]) => !isScentExperienceAttribute(k) && !KNOWN_ATTRS.has(noteKey(k.replace(/[_-]+/g, ' '))) && Array.isArray(v) && v.length)
     .map(([k, v]) => {
       const imgMap = attrImgs[k] || attrImgs[String(k).toLowerCase()] || {};
       const raw = v.map((s) => String(s).trim()).filter(Boolean);
@@ -245,7 +248,9 @@ export default async function MaisonProduct({ params }) {
         </div>
       </div></div>
 
-      <div className="m-wrap v-product-story"><ScentExperience name={product.name} tiers={noteTiers} notes={notes} accords={accords} spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
+      <div className="m-wrap v-product-story"><ScentExperience name={product.name} {...scentExperience}
+        accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
+        spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
         {editorial.map(sec=><section className="v-detail-section" key={sec.key}><h2>{sec.key}</h2>{sec.prose ? <p className="v-detail-caption">{sec.prose}</p> : <p className="v-detail-caption">{sec.items.map(it=>it.name).join(' · ')}</p>}</section>)}
         <details className="v-description"><summary>About this fragrance</summary>{product.descriptionHtml ? <DescriptionHtml className="m-desc-rich" html={richHtml(product.descriptionHtml).dangerouslySetInnerHTML.__html} /> : <p>{product.description || 'Explore the notes and composition of this fragrance above.'}</p>}</details>
       </div>
