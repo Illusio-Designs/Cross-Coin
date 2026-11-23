@@ -17,7 +17,7 @@ const check = (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
 );
 
-export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [] }) {
+export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [], notes }) {
   const { addToCart, openCheckout } = useStore();
 
   // Build selectable options from real variations. Each variation has a size +
@@ -150,15 +150,28 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     return () => { alive = false; };
   }, []);
 
-  // Sticky buy-now bar: appears once the main buy area scrolls out of view.
+  // Keep the sticky add button in sync even when a jump skips past the buy area.
   const buyRef = useRef(null);
   const [barOn, setBarOn] = useState(false);
   useEffect(() => {
     const el = buyRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver(([e]) => setBarOn(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
-    io.observe(el);
-    return () => io.disconnect();
+    if (!el) return undefined;
+    let frame;
+    const update = () => {
+      if (frame != null) return;
+      frame = requestAnimationFrame(() => {
+        frame = undefined;
+        setBarOn(el.getBoundingClientRect().bottom < 0);
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
   }, []);
   // Buy now: add, then open the bag straight on delivery & payment.
   const buy = () => { if (add()) openCheckout(); };
@@ -211,6 +224,8 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           </div>
         </div>
       )}
+
+      {notes}
 
       {packChoices.length > 1 && (
         <div className="m-opt">

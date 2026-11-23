@@ -51,8 +51,8 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#faf5f0',
-  colorScheme: 'light',
+  themeColor: '#2b0d1b',
+  colorScheme: 'dark',
 };
 
 // The store's tracking IDs (GA4, Meta pixel, Clarity, GTM), read on the
@@ -76,8 +76,7 @@ async function trackingConfig() {
 export default async function RootLayout({ children }) {
   const tracking = await trackingConfig();
   return (
-    // data-maison switches the shared design tokens in globals.css to the onyx &
-    // gold palette, so shared components (cart drawer, toasts…) match the shell.
+    // The theme applies to both the storefront and its overlays.
     <html lang="en" data-maison="" suppressHydrationWarning>
       <head>
         {/* Moving strips start on the shopper's first touch, click, key or

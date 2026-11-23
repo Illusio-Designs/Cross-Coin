@@ -34,6 +34,7 @@ import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecove
 import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, loadShiprocketSdk, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import PackBagCard from './PackBagCard';
 
 const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
@@ -422,6 +423,7 @@ export default function CartDrawer() {
     return { off: Math.round(off), pctByGroup };
   }, [items, packTiers]);
   const packOff = packCalc.off;
+  const packCount = items.reduce((count, item) => count + (item.packGroup ? Number(item.quantity) || 1 : 0), 0);
 
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal       = cartTotal;
@@ -434,7 +436,6 @@ export default function CartDrawer() {
   const isPrepaid      = selectedFee?.orderType === 'prepaid';
   // Free shipping: qualifies once the subtotal reaches the API threshold.
   const freeShipQualifies = freeShipThreshold > 0 && netSub >= freeShipThreshold;
-  const freeShipRemaining = Math.max(0, freeShipThreshold - netSub);
   // Waive the COD fee in the displayed total once the order qualifies for free
   // shipping (prepaid is already 0). Checkout enforces the same server-side.
   const shippingFee  = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
@@ -1007,7 +1008,7 @@ export default function CartDrawer() {
         role="dialog"
         aria-modal="true"
         aria-label="Shopping bag"
-        className={`v-cart-drawer fixed right-0 top-0 h-full w-full max-w-md z-[90] bg-[#FAF5F0] border-l border-[#E3D6CE] transition-transform duration-400 ease-out flex flex-col ${cartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        className={`v-cart-drawer fixed right-0 top-0 h-full w-full max-w-md z-[90] bg-[var(--m-bg)] border-l border-[var(--m-line)] transition-transform duration-400 ease-out flex flex-col ${cartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
 
         {/* Address validation popup — lists EVERY problem at once (not just the
             first) plus advisory tips. Shown on a failed save / checkout. */}
@@ -1037,7 +1038,7 @@ export default function CartDrawer() {
                 ))}
               </ul>
               <button type="button" onClick={() => setAddrIssues(null)}
-                style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: '#57182d', color: '#fff', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
+                style={{ alignSelf: 'stretch', textAlign: 'center', border: 'none', background: 'var(--m-accent)', color: 'var(--m-on-band)', fontWeight: 650, fontSize: 13.5, padding: '10px 16px', borderRadius: 9, cursor: 'pointer' }}>
                 Fix my address
               </button>
             </div>
@@ -1045,31 +1046,31 @@ export default function CartDrawer() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E3D6CE] bg-[#FFFAF6]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--m-line)] bg-[var(--m-surface)]">
           <div className="flex items-center gap-3">
             {!orderSuccess && items.length > 0 && coStep === 2 ? (
-              <button type="button" onClick={() => setCoStep(1)} aria-label="Back to bag" className="vq-cart-back text-[#57182D]">
+              <button type="button" onClick={() => setCoStep(1)} aria-label="Back to bag" className="vq-cart-back text-[color:var(--m-accent-soft)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
             ) : (
-              <ShoppingBag size={18} className="text-[#57182D]" />
+              <ShoppingBag size={18} className="text-[color:var(--m-accent-soft)]" />
             )}
-            <span className="font-serif italic text-lg text-[#241B1B]">
+            <span className="font-serif italic text-lg text-[color:var(--m-ink)]">
               {orderSuccess ? 'Order Confirmed' : coStep === 2 ? 'Checkout' : 'Your Bag'}
             </span>
             {!orderSuccess && (
               coStep === 2 ? (
-                <span className="text-[#675753] text-[10px] font-body tracking-wider uppercase">
+                <span className="text-[color:var(--m-ink-soft)] text-[10px] font-body tracking-wider uppercase">
                   Step 2 of 2 · delivery &amp; payment
                 </span>
               ) : cartCount > 0 ? (
-                <span className="bg-[#8B415B]/20 text-[#57182D] text-[10px] font-body px-2 py-0.5  tracking-wider uppercase">
+                <span className="bg-[var(--m-raised)] text-[color:var(--m-accent-soft)] text-[10px] font-body px-2 py-0.5  tracking-wider uppercase">
                   {cartCount} {cartCount === 1 ? 'item' : 'items'}
                 </span>
               ) : null
             )}
           </div>
-          <button onClick={() => setCartOpen(false)} className="text-[#241B1B]/60 hover:text-[#57182D] transition-colors" aria-label="Close">
+          <button onClick={() => setCartOpen(false)} className="text-[color:var(--m-ink-soft)] hover:text-[color:var(--m-accent-soft)] transition-colors" aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -1080,13 +1081,13 @@ export default function CartDrawer() {
           {/* ── Order success state ───────────────────────────────────── */}
           {orderSuccess ? (
             <div className="px-6 py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#8B415B]/15 border border-[#8B415B]/40 flex items-center justify-center mx-auto mb-5">
-                <CheckCircle2 size={28} className="text-[#57182D]" />
+              <div className="w-16 h-16 rounded-full bg-[var(--m-accent)]/15 border border-[#8B415B]/40 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 size={28} className="text-[color:var(--m-accent-soft)]" />
               </div>
-              <h3 className="font-display text-2xl uppercase tracking-tight text-[#241B1B] mb-2">Order placed</h3>
-              <p className="text-sm font-body text-[#4C3943] mb-1">Thank you for your order.</p>
-              <p className="text-xs font-body text-[#675753] mb-6">
-                Order Number: <span className="text-[#241B1B] font-medium">{orderSuccess.orderNumber || '—'}</span>
+              <h3 className="font-display text-2xl uppercase tracking-tight text-[color:var(--m-ink)] mb-2">Order placed</h3>
+              <p className="text-sm font-body text-[color:var(--m-ink-soft)] mb-1">Thank you for your order.</p>
+              <p className="text-xs font-body text-[color:var(--m-ink-soft)] mb-6">
+                Order Number: <span className="text-[color:var(--m-ink)] font-medium">{orderSuccess.orderNumber || '—'}</span>
               </p>
               <button
                 onClick={() => {
@@ -1102,9 +1103,9 @@ export default function CartDrawer() {
           ) : items.length === 0 ? (
             // ── Empty cart ──────────────────────────────────────────────
             <div className="flex flex-col items-center justify-center h-full text-center gap-4 px-6 py-20">
-              <ShoppingBag size={48} className="text-[#241B1B]/15" />
-              <p className="font-serif italic text-2xl text-[#241B1B]/50">Your bag is empty</p>
-              <p className="text-[#4C3943] text-sm font-body">Discover our maison&apos;s collections.</p>
+              <ShoppingBag size={48} className="text-[color:var(--m-ink-faint)]" />
+              <p className="font-serif italic text-2xl text-[color:var(--m-ink-faint)]">Your bag is empty</p>
+              <p className="text-[color:var(--m-ink-soft)] text-sm font-body">Discover our maison&apos;s collections.</p>
               <Link href="/shop" onClick={() => setCartOpen(false)} className="pill-cta mt-2">
                 Explore the Shop <ArrowRight size={13} />
               </Link>
@@ -1118,13 +1119,8 @@ export default function CartDrawer() {
                 <div role="status" aria-busy="true">
                   <span className="sr-only">Loading your bag…</span>
                   <div aria-hidden="true">
-                    {/* free-shipping row */}
-                    <div className="px-5 py-3 border-b border-[#E3D6CE]">
-                      <div className="sk h-3 w-3/4 mx-auto mb-2" />
-                      <div className="sk h-1.5 w-full" />
-                    </div>
                     {/* item rows — one per line in the bag, same 80×96 thumb */}
-                    <div className="px-5 py-4 space-y-4 border-b border-[#E3D6CE]">
+                    <div className="px-5 py-4 space-y-4 border-b border-[var(--m-line)]">
                       {items.slice(0, 4).map((it, n) => (
                         <div key={`${it.id}-${n}`} className="flex gap-3">
                           <div className="sk sk--flat w-20 h-24 shrink-0" />
@@ -1137,90 +1133,72 @@ export default function CartDrawer() {
                       ))}
                     </div>
                     {/* chips (coupon + offer) */}
-                    <div className="px-5 py-4 border-b border-[#E3D6CE] space-y-2">
+                    <div className="px-5 py-4 border-b border-[var(--m-line)] space-y-2">
                       <div className="sk h-10 w-full" />
                       <div className="sk h-14 w-full" />
                     </div>
                   </div>
                 </div>
               )}
-              {/* ── Step 1: review bag (free shipping, items, coupon, cross-sell) ── */}
+              {/* Bag items, pack and coupon controls. */}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
-              {/* ── Free-shipping progress ─────────────────────────────── */}
-              {freeShipThreshold > 0 && (
-                <div className="px-5 py-3 border-b border-[#E3D6CE]">
-                  <p className="text-center text-[11px] font-body text-[#4C3943] mb-2">
-                    {freeShipQualifies
-                      ? '🎉 You\'ve unlocked FREE shipping!'
-                      : <>Add <span className="font-medium text-[#57182D]">{fmt(freeShipRemaining)}</span> for FREE shipping</>}
-                  </p>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#8B415B]/20">
-                    <div
-                      className="h-full rounded-full bg-[#57182D] transition-all duration-300"
-                      style={{ width: `${freeShipQualifies ? 100 : Math.min(100, (netSub / freeShipThreshold) * 100)}%` }}
-                      role="progressbar"
-                      aria-valuenow={freeShipQualifies ? 100 : Math.min(100, Math.round((netSub / freeShipThreshold) * 100))}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label="Free shipping progress"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* ── Items ──────────────────────────────────────────────── */}
-              <div className="px-5 py-4 space-y-4 border-b border-[#E3D6CE]">
+              <div className="px-5 py-4 space-y-4 border-b border-[var(--m-line)]">
                 {items.map((item, i) => (
-                  <div key={`${item.id}-${i}`} className="flex gap-3 pb-4 border-b border-[#E3D6CE] last:border-0 last:pb-0">
+                  <div key={`${item.id}-${i}`} className="flex gap-3 pb-4 border-b border-[var(--m-line)] last:border-0 last:pb-0">
                     <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} className="shrink-0">
                       <SkImg frameClassName="w-20 h-24" src={ik(item.image, 200)} alt={item.name} loading="lazy" />
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)}>
-                        <h4 className="font-serif text-sm md:text-base text-[#241B1B] hover:text-[#57182D] transition-colors line-clamp-2">{item.name}</h4>
+                        <h4 className="font-serif text-sm md:text-base text-[color:var(--m-ink)] hover:text-[color:var(--m-accent-soft)] transition-colors line-clamp-2">{item.name}</h4>
                       </Link>
                       {(item.size || item.color) && (
-                        <p className="text-[#675753] text-[10px] tracking-[0.2em] uppercase font-body mt-1">
+                        <p className="text-[color:var(--m-ink-soft)] text-[10px] tracking-[0.2em] uppercase font-body mt-1">
                           {[item.size, item.color].filter(Boolean).join(' · ')}
                         </p>
                       )}
                       <div className="flex items-center justify-between mt-2.5">
-                        <div className="flex items-center border border-[#E3D6CE]  bg-[#FFFAF6]">
+                        <div className="flex items-center border border-[var(--m-line)]  bg-[var(--m-surface)]">
                           <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
-                            className="px-2.5 py-1 text-[#4C3943] hover:text-[#57182D]"><Minus size={12} /></button>
-                          <span className="px-2 text-[#241B1B] text-sm font-body">{item.quantity}</span>
+                            className="px-2.5 py-1 text-[color:var(--m-ink-soft)] hover:text-[color:var(--m-accent-soft)]"><Minus size={12} /></button>
+                          <span className="px-2 text-[color:var(--m-ink)] text-sm font-body">{item.quantity}</span>
                           <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
-                            className="px-2.5 py-1 text-[#4C3943] hover:text-[#57182D]"><Plus size={12} /></button>
+                            className="px-2.5 py-1 text-[color:var(--m-ink-soft)] hover:text-[color:var(--m-accent-soft)]"><Plus size={12} /></button>
                         </div>
-                        <span className="font-serif italic text-[#241B1B] text-sm">
+                        <span className="font-serif italic text-[color:var(--m-ink)] text-sm">
                           {(() => {
                             const pct = item.packGroup ? (packCalc.pctByGroup[String(item.packGroup)] || 0) : 0;
                             const full = item.price * item.quantity;
                             if (!pct) return fmt(full);
-                            return (<><s className="not-italic font-body text-[#675753] text-xs mr-1.5">{fmt(full)}</s>{fmt(Math.round(full * (1 - pct / 100)))}</>);
+                            return (<><s className="not-italic font-body text-[color:var(--m-ink-soft)] text-xs mr-1.5">{fmt(full)}</s>{fmt(Math.round(full * (1 - pct / 100)))}</>);
                           })()}
                         </span>
                       </div>
                     </div>
                     <button onClick={() => removeFromCart(item.id, item.size)}
-                      className="text-[#241B1B]/30 hover:text-red-500 transition-colors self-start mt-1" aria-label="Remove">
+                      className="text-[color:var(--m-ink-faint)] hover:text-red-500 transition-colors self-start mt-1" aria-label="Remove">
                       <Trash2 size={14} />
                     </button>
                   </div>
                 ))}
               </div>
 
+              <div className="px-5 py-4">
+                <PackBagCard count={packCount} savings={packOff} onOpen={() => setCartOpen(false)} />
+              </div>
+
               {/* ── Coupon (not with Shiprocket: it applies its own) ─────── */}
               {!useShiprocket && (
-              <div className="px-5 py-4 border-b border-[#E3D6CE] space-y-2">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#675753] font-body">Promo Code</p>
+              <div className="px-5 py-4 border-b border-[var(--m-line)] space-y-2">
+                <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body">Promo Code</p>
                 {appliedCoupon ? (
-                  <div className="flex items-center gap-2 bg-[#8B415B]/10 border border-[#8B415B]/40 px-3 py-2.5">
-                    <Tag size={13} className="text-[#57182D]" />
-                    <span className="text-sm font-body text-[#241B1B] flex-1">
+                  <div className="flex items-center gap-2 bg-[var(--m-bg-tint)] border border-[#8B415B]/40 px-3 py-2.5">
+                    <Tag size={13} className="text-[color:var(--m-accent-soft)]" />
+                    <span className="text-sm font-body text-[color:var(--m-ink)] flex-1">
                       <span className="font-serif italic">{appliedCoupon.code}</span> · {fmt(appliedCoupon.discountAmount)} off
                     </span>
-                    <button onClick={onRemoveCoupon} className="text-[#675753] hover:text-red-500" aria-label="Remove coupon">
+                    <button onClick={onRemoveCoupon} className="text-[color:var(--m-ink-soft)] hover:text-red-500" aria-label="Remove coupon">
                       <X size={14} />
                     </button>
                   </div>
@@ -1230,7 +1208,7 @@ export default function CartDrawer() {
                       placeholder="Enter code"
                       className="flex-1 input-gold px-3 py-2.5 text-sm font-body" />
                     <button onClick={() => onApplyCoupon()} disabled={couponLoading || !couponCode.trim()}
-                      className={`px-4 py-2.5 bg-[#57182D] text-[#FFF5ED] text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[#762A42] transition-colors ${couponLoading || !couponCode.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      className={`px-4 py-2.5 bg-[var(--m-accent)] text-[color:var(--m-on-band)] text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[var(--m-accent-deep)] transition-colors ${couponLoading || !couponCode.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       {couponLoading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
                     </button>
                   </div>
@@ -1243,27 +1221,27 @@ export default function CartDrawer() {
                     coupon is applied. */}
                 {!appliedCoupon && bestOffer && (
                   <div className="relative" ref={offersRef}>
-                    <div className="flex items-center gap-3 bg-[#8B415B]/10 border border-[#8B415B]/40 px-3 py-2.5">
-                      <span className="shrink-0 w-9 h-9 rounded-full bg-[#57182D] text-white flex items-center justify-center" aria-hidden="true">
+                    <div className="flex items-center gap-3 bg-[var(--m-bg-tint)] border border-[#8B415B]/40 px-3 py-2.5">
+                      <span className="shrink-0 w-9 h-9 rounded-full bg-[var(--m-accent)] text-white flex items-center justify-center" aria-hidden="true">
                         <Sparkles size={15} />
                       </span>
                       <div className="flex-1 min-w-0">
                         {bestOffer.locked ? (
                           <>
-                            <p className="text-sm font-body text-[#241B1B] font-medium leading-snug">
+                            <p className="text-sm font-body text-[color:var(--m-ink)] font-medium leading-snug">
                               Add {fmt(bestOffer.need)} more to use <span className="font-serif italic">{bestOffer.coupon.code}</span>
                             </p>
-                            <p className="text-[10px] font-body text-[#675753] mt-0.5 truncate">{offerDesc(bestOffer.coupon)}</p>
+                            <p className="text-[10px] font-body text-[color:var(--m-ink-soft)] mt-0.5 truncate">{offerDesc(bestOffer.coupon)}</p>
                           </>
                         ) : (
                           <>
-                            <p className="text-sm font-body text-[#241B1B] font-medium leading-snug">
+                            <p className="text-sm font-body text-[color:var(--m-ink)] font-medium leading-snug">
                               Apply <span className="font-serif italic">{bestOffer.coupon.code}</span>
                               {bestOffer.hasAmount && bestOffer.discount > 0 && (
-                                <> — save <span className="text-[#57182D] font-semibold">{fmt(bestOffer.discount)}</span></>
+                                <> — save <span className="text-[color:var(--m-accent-soft)] font-semibold">{fmt(bestOffer.discount)}</span></>
                               )}
                             </p>
-                            <p className="text-[10px] font-body text-[#675753] mt-0.5 truncate">
+                            <p className="text-[10px] font-body text-[color:var(--m-ink-soft)] mt-0.5 truncate">
                               {bestOffer.hasAmount && bestOffer.discount > 0 ? 'Best offer for your cart' : offerDesc(bestOffer.coupon)}
                             </p>
                           </>
@@ -1274,7 +1252,7 @@ export default function CartDrawer() {
                           onClick={() => onApplyCoupon(bestOffer.coupon.code)}
                           disabled={couponLoading}
                           aria-label={`Apply coupon ${bestOffer.coupon.code}`}
-                          className={`shrink-0 px-4 py-2 bg-[#57182D] text-[#FFF5ED] text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[#762A42] transition-colors ${couponLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          className={`shrink-0 px-4 py-2 bg-[var(--m-accent)] text-[color:var(--m-on-band)] text-[10px] tracking-[0.3em] uppercase font-body hover:bg-[var(--m-accent-deep)] transition-colors ${couponLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                           {couponLoading ? '…' : 'Apply'}
                         </button>
                       )}
@@ -1286,23 +1264,23 @@ export default function CartDrawer() {
                           onClick={() => setOffersOpen(o => !o)}
                           disabled={couponLoading}
                           aria-haspopup="listbox" aria-expanded={offersOpen}
-                          className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] tracking-[0.25em] uppercase text-[#57182D] hover:text-[#241B1B] font-body py-1 disabled:opacity-50">
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] tracking-[0.25em] uppercase text-[color:var(--m-accent-soft)] hover:text-[color:var(--m-ink)] font-body py-1 disabled:opacity-50">
                           See all {bestOffer.rest.length} offer{bestOffer.rest.length > 1 ? 's' : ''}
                           <ChevronDown size={14} className={`transition-transform ${offersOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                         </button>
                         {offersOpen && (
-                          <div className="absolute left-0 right-0 top-full z-20 bg-[#FFFAF6] border border-[#E3D6CE] shadow-lg max-h-56 overflow-y-auto" role="listbox" aria-label="More offers">
+                          <div className="absolute left-0 right-0 top-full z-20 bg-[var(--m-surface)] border border-[var(--m-line)] shadow-lg max-h-56 overflow-y-auto" role="listbox" aria-label="More offers">
                             {bestOffer.rest.map(c => (
                               <button type="button" key={c.id ?? c.code} role="option" aria-selected={false}
                                 onClick={() => { onApplyCoupon(c.code); setOffersOpen(false); }}
                                 disabled={couponLoading}
                                 aria-label={`Apply coupon ${c.code}`}
-                                className="w-full flex items-center gap-2 text-left px-3 py-2.5 border-b border-[#F4E9E4] last:border-0 hover:bg-[#F4E9E4] transition-colors">
+                                className="w-full flex items-center gap-2 text-left px-3 py-2.5 border-b border-[var(--m-line)] last:border-0 hover:bg-[var(--m-bg-tint)] transition-colors">
                                 <span className="flex-1 min-w-0">
-                                  <span className="block font-serif italic text-[#241B1B] text-sm">{c.code}</span>
-                                  <span className="block text-[#675753] text-[10px] font-body truncate">{offerDesc(c)}</span>
+                                  <span className="block font-serif italic text-[color:var(--m-ink)] text-sm">{c.code}</span>
+                                  <span className="block text-[color:var(--m-ink-soft)] text-[10px] font-body truncate">{offerDesc(c)}</span>
                                 </span>
-                                <span className="shrink-0 text-[10px] tracking-[0.25em] uppercase text-[#57182D] font-body">{couponLoading ? '…' : 'Apply'}</span>
+                                <span className="shrink-0 text-[10px] tracking-[0.25em] uppercase text-[color:var(--m-accent-soft)] font-body">{couponLoading ? '…' : 'Apply'}</span>
                               </button>
                             ))}
                           </div>
@@ -1324,19 +1302,19 @@ export default function CartDrawer() {
 
               {/* ── Summary — visible on both steps so pricing is always clear ─ */}
               <div className="px-5 py-4 space-y-2">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#675753] font-body mb-2">Order Summary</p>
+                <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body mb-2">Order Summary</p>
                 <Row label="Subtotal" value={fmt(subtotal)} />
                 {packOff > 0 && <Row label="Pack Discount" value={`- ${fmt(packOff)}`} highlight />}
                 <Row label="Shipping" value={shippingFee > 0 ? fmt(shippingFee) : 'Free'} />
                 {couponOff > 0  && <Row label="Coupon Discount"   value={`- ${fmt(couponOff)}`}  highlight />}
                 {prepaidDisc > 0 && <Row label="Prepaid Discount"  value={`- ${fmt(prepaidDisc)}`} highlight />}
-                <div className="h-px bg-[#E3D6CE] my-2" />
+                <div className="h-px bg-[var(--m-line)] my-2" />
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[#241B1B] font-body uppercase tracking-[0.2em] text-xs">Total</span>
-                  <span className="font-serif italic text-[#241B1B] text-2xl">{fmt(finalPayable)}</span>
+                  <span className="text-[color:var(--m-ink)] font-body uppercase tracking-[0.2em] text-xs">Total</span>
+                  <span className="font-serif italic text-[color:var(--m-ink)] text-2xl">{fmt(finalPayable)}</span>
                 </div>
                 {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && !useShiprocket && (
-                  <p className="text-[10px] font-body text-[#57182D] mt-1">
+                  <p className="text-[10px] font-body text-[color:var(--m-accent-soft)] mt-1">
                     {fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant discount applied automatically when you pay online.
                   </p>
                 )}
@@ -1345,28 +1323,28 @@ export default function CartDrawer() {
               {/* ── Step 2: delivery + payment ──────────────────────────── */}
               {coStep === 2 && (<>
               {/* ── Address section ─────────────────────────────────────── */}
-              <div className="px-5 py-4 border-b border-[#E3D6CE] space-y-3">
+              <div className="px-5 py-4 border-b border-[var(--m-line)] space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#675753] font-body">Deliver To</p>
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body">Deliver To</p>
                   {isAuthenticated && addresses.length > 1 && !showAddrForm && (
                     <div className="relative" ref={dropdownRef}>
                       <button
                         onClick={() => setShowAddrDropdown(s => !s)}
-                        className="text-[10px] tracking-[0.25em] uppercase text-[#57182D] hover:text-[#241B1B] font-body"
+                        className="text-[10px] tracking-[0.25em] uppercase text-[color:var(--m-accent-soft)] hover:text-[color:var(--m-ink)] font-body"
                       >
                         Change
                       </button>
                       {showAddrDropdown && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-[#FFFAF6] border border-[#E3D6CE] shadow-lg z-10 max-h-64 overflow-y-auto">
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--m-surface)] border border-[var(--m-line)] shadow-lg z-10 max-h-64 overflow-y-auto">
                           {addresses.map(a => (
                             <button key={a.id} onClick={() => { setSelectedAddress(a); setShowAddrDropdown(false); }}
-                              className={`w-full text-left px-3 py-2.5 text-xs font-body border-b border-[#F4E9E4] last:border-0 hover:bg-[#F4E9E4] ${selectedAddress?.id === a.id ? 'bg-[#F4E9E4]' : ''}`}>
-                              <p className="font-medium text-[#241B1B]">{a.full_name || a.fullName}</p>
-                              <p className="text-[#675753] truncate">{a.address}, {a.city}, {a.state} - {a.postal_code || a.postalCode}</p>
+                              className={`w-full text-left px-3 py-2.5 text-xs font-body border-b border-[var(--m-line)] last:border-0 hover:bg-[var(--m-bg-tint)] ${selectedAddress?.id === a.id ? 'bg-[var(--m-bg-tint)]' : ''}`}>
+                              <p className="font-medium text-[color:var(--m-ink)]">{a.full_name || a.fullName}</p>
+                              <p className="text-[color:var(--m-ink-soft)] truncate">{a.address}, {a.city}, {a.state} - {a.postal_code || a.postalCode}</p>
                             </button>
                           ))}
                           <button onClick={() => { setShowAddrDropdown(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); setShowAddrForm(true); }}
-                            className="w-full text-left px-3 py-2.5 text-xs font-body text-[#57182D] hover:bg-[#F4E9E4] flex items-center gap-1.5">
+                            className="w-full text-left px-3 py-2.5 text-xs font-body text-[color:var(--m-accent-soft)] hover:bg-[var(--m-bg-tint)] flex items-center gap-1.5">
                             <Plus size={12} /> Add new address
                           </button>
                         </div>
@@ -1376,19 +1354,19 @@ export default function CartDrawer() {
                 </div>
 
                 {selectedAddress && !showAddrForm && (
-                  <div className="bg-[#FFFAF6] border border-[#E3D6CE] p-3.5 flex items-start gap-2.5">
-                    <MapPin size={14} className="text-[#57182D] mt-1 shrink-0" />
+                  <div className="bg-[var(--m-surface)] border border-[var(--m-line)] p-3.5 flex items-start gap-2.5">
+                    <MapPin size={14} className="text-[color:var(--m-accent-soft)] mt-1 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-serif italic text-[#241B1B] text-sm">{selectedAddress.full_name || selectedAddress.fullName}</p>
-                      <p className="text-[#4C3943] text-xs font-body mt-0.5 leading-relaxed">
+                      <p className="font-serif italic text-[color:var(--m-ink)] text-sm">{selectedAddress.full_name || selectedAddress.fullName}</p>
+                      <p className="text-[color:var(--m-ink-soft)] text-xs font-body mt-0.5 leading-relaxed">
                         {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.postal_code || selectedAddress.postalCode}
                       </p>
-                      <p className="text-[#675753] text-[10px] font-body mt-1">{selectedAddress.phone_number || selectedAddress.phoneNumber}</p>
+                      <p className="text-[color:var(--m-ink-soft)] text-[10px] font-body mt-1">{selectedAddress.phone_number || selectedAddress.phoneNumber}</p>
                       {pincodeInfo && pincodeInfo.serviceable === false && (
                         <p className="text-red-600 text-[10px] font-body mt-1">Not serviceable in this PIN.</p>
                       )}
                     </div>
-                    <button onClick={() => onEditAddress(selectedAddress)} className="text-[#57182D] hover:text-[#241B1B]" aria-label="Edit address">
+                    <button onClick={() => onEditAddress(selectedAddress)} className="text-[color:var(--m-accent-soft)] hover:text-[color:var(--m-ink)]" aria-label="Edit address">
                       <Edit3 size={13} />
                     </button>
                   </div>
@@ -1427,12 +1405,12 @@ export default function CartDrawer() {
                         placeholder="State" className="input-gold px-3 py-2.5 text-sm font-body" />
                     </div>
                     <div className="flex items-center gap-2 pt-1">
-                      <p className="text-xs text-neutral-500 flex-1">
+                      <p className="text-xs text-[color:var(--m-ink-soft)] flex-1">
                         {addrSaving ? 'Saving your address…' : 'Your address saves automatically once all details are filled.'}
                       </p>
                       {selectedAddress && (
                         <button type="button" onClick={() => { setShowAddrForm(false); setEditingAddrId(null); setAddrForm(EMPTY_ADDR); }}
-                          className="text-[#675753] text-[10px] tracking-[0.3em] uppercase font-body hover:text-[#241B1B]">
+                          className="text-[color:var(--m-ink-soft)] text-[10px] tracking-[0.3em] uppercase font-body hover:text-[color:var(--m-ink)]">
                           Cancel
                         </button>
                       )}
@@ -1442,8 +1420,8 @@ export default function CartDrawer() {
               </div>
 
               {/* ── Delivery method ─────────────────────────────────────── */}
-              <div className="px-5 py-4 border-b border-[#E3D6CE] space-y-3">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#675753] font-body">Delivery Method</p>
+              <div className="px-5 py-4 border-b border-[var(--m-line)] space-y-3">
+                <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body">Delivery Method</p>
                 <div className="space-y-2">
                   {sortedFees.map(f => {
                     const disabled = f.orderType === 'cod' && codBlocked;
@@ -1452,24 +1430,24 @@ export default function CartDrawer() {
                       <button key={f.id} onClick={() => !disabled && setSelectedFee(f)}
                         disabled={disabled}
                         className={`w-full flex items-center gap-3 p-3 border text-left transition-all ${
-                          active ? 'border-[#8B415B] bg-[#8B415B]/10' : 'border-[#E3D6CE] bg-[#FFFAF6] hover:border-[#8B415B]'
+                          active ? 'border-[var(--m-control-line)] bg-[var(--m-bg-tint)]' : 'border-[var(--m-line)] bg-[var(--m-surface)] hover:border-[var(--m-control-line)]'
                         } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                       >
                         {f.orderType === 'cod'
-                          ? <Wallet size={16} className="text-[#57182D]" />
-                          : <CreditCard size={16} className="text-[#57182D]" />
+                          ? <Wallet size={16} className="text-[color:var(--m-accent-soft)]" />
+                          : <CreditCard size={16} className="text-[color:var(--m-accent-soft)]" />
                         }
                         <div className="flex-1 min-w-0">
-                          <p className="font-body text-sm text-[#241B1B] font-medium">
+                          <p className="font-body text-sm text-[color:var(--m-ink)] font-medium">
                             {f.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card / Net Banking'}
                           </p>
-                          <p className="text-[#675753] text-[10px] font-body mt-0.5">
+                          <p className="text-[color:var(--m-ink-soft)] text-[10px] font-body mt-0.5">
                             {f.orderType === 'cod'
                               ? (disabled ? 'Not available for this PIN' : 'Pay when your order arrives')
                               : `Razorpay${PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon ? ` · ${fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant off` : ''}`}
                           </p>
                         </div>
-                        <span className="text-[10px] font-body text-[#57182D]">
+                        <span className="text-[10px] font-body text-[color:var(--m-accent-soft)]">
                           {parseFloat(f.fee || 0) > 0 ? `+ ${fmt(f.fee)}` : 'Free'}
                         </span>
                       </button>
@@ -1484,7 +1462,7 @@ export default function CartDrawer() {
 
         {/* Footer — step 1: proceed to checkout · step 2: place order */}
         {!orderSuccess && items.length > 0 && (
-          <div className="border-t border-[#E3D6CE] px-5 py-4 bg-[#FFFAF6] space-y-2">
+          <div className="border-t border-[var(--m-line)] px-5 py-4 bg-[var(--m-surface)] space-y-2">
             {coStep === 1 ? (
               <>
                 {errorMsg && (
@@ -1500,7 +1478,7 @@ export default function CartDrawer() {
                   Proceed to checkout · {fmt(baseTotal)} <ArrowRight size={13} />
                 </button>
                 )}
-                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#675753]">
+                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[color:var(--m-ink-soft)]">
                   Secure checkout · 7-day returns
                 </p>
               </>
@@ -1518,7 +1496,7 @@ export default function CartDrawer() {
                     : <>{isCod ? 'Place COD Order' : 'Pay & Place Order'} · {fmt(finalPayable)} <ArrowRight size={13} /></>
                   }
                 </button>
-                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[#675753]">
+                <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[color:var(--m-ink-soft)]">
                   Secure checkout · 7-day returns
                 </p>
               </>
@@ -1533,8 +1511,8 @@ export default function CartDrawer() {
 function Row({ label, value, highlight }) {
   return (
     <div className="flex items-center justify-between text-sm font-body">
-      <span className="text-[#4C3943]">{label}</span>
-      <span className={highlight ? 'text-[#57182D] font-medium' : 'text-[#241B1B]'}>{value}</span>
+      <span className="text-[color:var(--m-ink-soft)]">{label}</span>
+      <span className={highlight ? 'text-[color:var(--m-accent-soft)] font-medium' : 'text-[color:var(--m-ink)]'}>{value}</span>
     </div>
   );
 }

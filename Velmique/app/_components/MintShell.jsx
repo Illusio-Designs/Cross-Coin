@@ -13,7 +13,6 @@ const NAV = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
   { label: 'Build a Pack', href: '/pack' },
-  { label: 'Scent Studio', href: '/#scent-studio' },
   { label: 'Gifting', href: '/pack' },
 ];
 // Extra destinations in the mobile slide-nav (desktop reaches them via icons).
@@ -25,20 +24,23 @@ const MNAV_EXTRA = [
 ];
 
 const ANNO = [
-  { t: 'Free shipping on all orders', d: 'M3 7h11v8H3zM14 10h4l3 3v2h-7z' },
+  { t: 'Discover your everyday signature' },
   { t: 'Crafted in India', d: 'M12 3c-3 3-6 3-6 3v6c0 5 6 9 6 9s6-4 6-9V6s-3 0-6-3Z' },
   { t: 'Easy 7-day returns', d: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4' },
   { t: '100% genuine fragrances', d: 'M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z' },
   { t: 'Cash on delivery available', d: 'M2.5 6h19v12h-19zM2.5 10h19' },
 ];
-function AnnoSeq({ hidden = false }) {
+function AnnouncementBar() {
   return (
-    <div className="m-anno__seq" aria-hidden={hidden}>
-      {ANNO.map((a, i) => (
-        <span className="m-anno__i" key={i}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={a.d} /></svg>{a.t}
-        </span>
-      ))}
+    <div className="v-announcement" role="region" aria-label="Store announcements" tabIndex={0}>
+      <div className="v-announcement__items">
+        {ANNO.map(({ t, d }) => (
+          <span className="m-anno__i" key={t}>
+            {d && <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>}
+            {t}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -46,8 +48,7 @@ function AnnoSeq({ hidden = false }) {
 function Brand({ className = '' }) {
   return (
     <Link href="/" className={`m-logo-link ${className}`} aria-label="Velmique">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.webp" alt="Velmique" width="714" height="176" className="m-logo" />
+      <span className="m-logo" aria-hidden="true" />
     </Link>
   );
 }
@@ -72,7 +73,7 @@ export default function MintShell({ children }) {
 
   return (
     <>
-      <div className="v-announcement">Discover your everyday signature <span> | </span> Free shipping on all orders</div>
+      <AnnouncementBar />
 
       <header className="m-header">
         <div className="m-wrap m-nav">

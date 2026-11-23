@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import ScentExperience from '@/components/product/ScentExperience';
+import NotePhoto from '@/components/product/NotePhoto';
+import BrandIcon from '@/components/ui/BrandIcon';
 import Link from 'next/link';
 import { richHtml } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
@@ -11,7 +13,6 @@ import { getBundleTiers, getPackTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
 import PdpGallery from '../../_components/PdpGallery';
-import DeliveryCheck from '../../_components/DeliveryCheck';
 import WriteReview from '../../_components/WriteReview';
 import TrackEvent from '../../_components/TrackEvent';
 import { Sk, SkRegion } from '../../_components/Skeleton';
@@ -73,6 +74,7 @@ export default async function MaisonProduct({ params }) {
   const buyingOptions = Promise.all([getBundleTiers(product.id), getPackTiers(), catalogRequest]);
 
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
+  const scentRequest = catalogRequest.then((catalog) => getPdpScent(product, defVar, catalog));
   const stock = defVar?.stock;
   const inStock = product.inStock !== false && (stock == null || stock > 0);
 
@@ -114,7 +116,6 @@ export default async function MaisonProduct({ params }) {
               {inStock
                 ? <span className="m-stockbadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>{stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
                 : <span className="m-stockbadge out"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Out of stock</span>}
-              <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
             </div>
 
             <Suspense fallback={
@@ -123,18 +124,14 @@ export default async function MaisonProduct({ params }) {
                 <Sk h={52} r={8} style={{ marginTop: 10 }} />
               </SkRegion>
             }>
-              <PdpPurchase product={product} request={buyingOptions} />
+              <PdpPurchase product={product} request={buyingOptions} scentRequest={scentRequest} />
             </Suspense>
-
-
-            <DeliveryCheck />
-
 
           </div>
         </div>
       </div></div>
 
-      <Suspense fallback={null}><PdpScentStory product={product} defVar={defVar} catalogRequest={catalogRequest} /></Suspense>
+      <Suspense fallback={null}><PdpScentStory product={product} defVar={defVar} scentRequest={scentRequest} /></Suspense>
       <Suspense fallback={null}><PdpReviews product={product} request={reviewsRequest} /></Suspense>
       <Suspense fallback={null}><PdpFaq productId={product.id} /></Suspense>
       <Suspense fallback={null}><PdpRelated productId={product.id} /></Suspense>
@@ -142,8 +139,8 @@ export default async function MaisonProduct({ params }) {
   );
 }
 
-async function PdpPurchase({ product, request }) {
-  const [packs, mixTiers, catalog] = await request;
+async function PdpPurchase({ product, request, scentRequest }) {
+  const [[packs, mixTiers, catalog], { fragranceNotes }] = await Promise.all([request, scentRequest]);
   const { id, name, slug, defaultVariationId, inStock, price, sizes, images } = product;
   const variations = product.variations.map((variation) => ({
     id: variation.id, size: variation.size, sku: variation.sku, price: variation.price,
@@ -157,7 +154,10 @@ async function PdpPurchase({ product, request }) {
       id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
       price: scent.price, sizes: scent.sizes.slice(0, 1), images: scent.images.slice(0, 1),
     }));
-  return <PdpBuy product={purchaseProduct} packs={packs} mixTiers={mixTiers} scents={scents} />;
+  return (
+    <PdpBuy product={purchaseProduct} packs={packs} mixTiers={mixTiers} scents={scents}
+      notes={<PdpFragranceNotes notes={fragranceNotes} />} />
+  );
 }
 
 function summarizeReviews(product, reviewsRes) {
@@ -218,9 +218,8 @@ async function PdpStructuredData({ product, defVar, inStock, reviewsRequest }) {
   ));
 }
 
-async function PdpScentStory({ product, defVar, catalogRequest }) {
-  const catalog = await catalogRequest;
-  const attrs = defVar?.attributes || {};
+function getPdpScent(product, defVar, catalog) {
+  const attrImgs = defVar?.attrImages || {};
   const notePhotos = new Map();
   const rememberPhotos = (notes = []) => {
     for (const { name, image } of notes) {
@@ -240,6 +239,38 @@ async function PdpScentStory({ product, defVar, catalogRequest }) {
   const withPhoto = (item) => ({ ...item, image: item.image || notePhotos.get(noteKey(item.name)) || '' });
   const notes = (defVar?.noteItems?.length ? defVar.noteItems : product.notes).map(withPhoto);
 
+  const noteTiers = ['Top', 'Heart', 'Base'].map((label) => {
+    const tier = defVar?.noteTiers?.find((group) => group.label === label)
+      || product.noteTiers.find((group) => group.label === label);
+    return { label, items: (tier?.items || []).map(withPhoto) };
+  }).filter(({ items }) => items.length);
+  return buildScentExperience({ slug: product.slug, tiers: noteTiers, notes, attrImages: attrImgs });
+}
+
+function PdpFragranceNotes({ notes }) {
+  if (!notes.length) return null;
+  return (
+    <section className="v-scent__gallery" aria-labelledby="pdp-fragrance-notes">
+      <h2 id="pdp-fragrance-notes">Fragrance Notes</h2>
+      <ul className="v-scent__notes" role="list" aria-labelledby="pdp-fragrance-notes" tabIndex={0}>
+        {notes.map(({ name, image }) => (
+          <li key={name}>
+            <span className="v-scent__note-photo" aria-hidden="true">
+              <BrandIcon name="leaf" size={24} />
+              {image && <NotePhoto image={image} width={216} />}
+            </span>
+            <span className="v-scent__note-name">{name}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+async function PdpScentStory({ product, defVar, scentRequest }) {
+  const { phases } = await scentRequest;
+  const attrs = defVar?.attributes || {};
+  const attrImgs = defVar?.attrImages || {};
   const spec = [
     ['Longevity', tokens(attrs['longevity (hrs)'] || attrs['longevity']).map((h) => `${h} hrs`).join(', ')],
     ['Sillage', tokens(attrs['sillage']).join(', ')],
@@ -257,16 +288,7 @@ async function PdpScentStory({ product, defVar, catalogRequest }) {
   // their own sections are excluded.
   const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration',
     'top notes', 'top note', 'top', 'heart notes', 'heart note', 'middle notes', 'middle note', 'heart', 'middle', 'base notes', 'base note', 'base']);
-  const attrImgs = defVar?.attrImages || {};
 
-  const noteTiers = ['Top', 'Heart', 'Base'].map((label) => {
-    const tier = defVar?.noteTiers?.find((group) => group.label === label)
-      || product.noteTiers.find((group) => group.label === label);
-    return { label, items: (tier?.items || []).map(withPhoto) };
-  }).filter(({ items }) => items.length);
-  const scentExperience = buildScentExperience({
-    slug: product.slug, tiers: noteTiers, notes, attrImages: attrImgs,
-  });
   const editorial = Object.entries(attrs)
     .filter(([k, v]) => !isScentExperienceAttribute(k) && !KNOWN_ATTRS.has(noteKey(k.replace(/[_-]+/g, ' '))) && Array.isArray(v) && v.length)
     .map(([k, v]) => {
@@ -283,13 +305,29 @@ async function PdpScentStory({ product, defVar, catalogRequest }) {
 
   return (
     <div className="m-wrap v-product-story">
-      <ScentExperience name={product.name} {...scentExperience}
+      <ScentExperience name={product.name} phases={phases}
         accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
         spec={spec.filter(([key]) => ['Best for', 'Season', 'Sillage', 'Longevity'].includes(key))} />
       {editorial.map((section) => (
         <section className="v-detail-section" key={section.key}>
           <h2>{section.key}</h2>
-          <p className="v-detail-caption">{section.prose || section.items.map(({ name }) => name).join(' · ')}</p>
+          {section.prose ? (
+            <div className={section.image ? 'v-detail-feature' : undefined}>
+              {section.image && <NotePhoto image={section.image} width={640} />}
+              <p className="v-detail-caption">{section.prose}</p>
+            </div>
+          ) : section.items.some(({ image }) => image) ? (
+            <div className="v-detail-media">
+              {section.items.map(({ name, image }) => (
+                <figure key={name}>
+                  {image && <NotePhoto image={image} width={300} />}
+                  <figcaption>{name}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : (
+            <p className="v-detail-caption">{section.items.map(({ name }) => name).join(' · ')}</p>
+          )}
         </section>
       ))}
     </div>

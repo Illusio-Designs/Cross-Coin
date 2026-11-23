@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ArrowUp, X, Cookie } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 
 export default function ScrollToTop() {
   const [visible, setVisible] = useState(false);
@@ -13,8 +13,9 @@ export default function ScrollToTop() {
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Back to top"
       data-scrolltop="true"
-      className="fixed bottom-[96px] right-[32px] z-[1071] w-10 h-10 bg-[#B89A63] text-black  flex items-center justify-center shadow-lg hover:bg-[#FFD700] transition-all hover:shadow-[0_0_20px_rgba(201,168,76,0.5)]"
+      className="fixed bottom-[96px] right-[32px] z-[1071] w-10 h-10 rounded-full bg-[var(--m-accent)] text-[color:var(--m-on-band)] flex items-center justify-center shadow-lg hover:bg-[var(--m-accent-deep)] transition-colors"
     >
       <ArrowUp size={16} />
     </button>

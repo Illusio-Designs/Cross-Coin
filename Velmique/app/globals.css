@@ -121,47 +121,82 @@
   --text-muted: var(--ink-muted);
 }
 
-/* Onyx & Gold — <html data-maison> (app/layout.jsx) re-tints the shared
-   tokens so Tailwind-styled shared components (notably the CartDrawer) match
-   the Mint shell without needing their own markup. */
-:root[data-maison]{
-  color-scheme:dark;
-  --bg:#0d0d0f; --surface:#17171a; --surface-2:#1f1f24; --paper:#17171a;
-  --ink:#f3ead6; --ink-soft:#c7c0b2; --ink-muted:#938d82;
-  --gold:#d9a43b; --gold-deep:#e8c877; --gold-light:#ffe78f; --champagne:#ffe78f; --olive:#c9a24a;
-  --border:rgba(255,255,255,.12); --dark:#000; --dark-soft:#17141a;
+/* Velmique surfaces, controls and text share one burgundy palette. */
+:root[data-maison] {
+  color-scheme: dark;
+  --m-bg: #2b0d1b;
+  --m-bg-tint: #391225;
+  --m-surface: #48192f;
+  --m-raised: #5a233d;
+  --m-ink: #fff4ed;
+  --m-ink-soft: #efd2db;
+  --m-ink-faint: #d5aeba;
+  --m-line: #895268;
+  --m-line-soft: #6c384f;
+  --m-control-line: #bb829b;
+  --m-accent: #853653;
+  --m-accent-deep: #9b3d62;
+  --m-accent-soft: #f2aec9;
+  --m-band: #210914;
+  --m-band-2: #391225;
+  --m-on-band: #fff4ed;
+  --m-on-band-soft: #e5bcca;
+  --m-band-line: #895268;
+  --m-photo-bg: #fff;
+  --m-rose: #f4a6a3;
+  --m-ok: #abd099;
+  --m-shadow: 0 16px 40px -20px #17040db3;
+
+  --bg: var(--m-bg);
+  --surface: var(--m-bg-tint);
+  --surface-2: var(--m-raised);
+  --paper: var(--m-surface);
+  --ink: var(--m-ink);
+  --ink-soft: var(--m-ink-soft);
+  --ink-muted: var(--m-ink-faint);
+  --gold: var(--m-accent);
+  --gold-deep: var(--m-accent-soft);
+  --gold-light: var(--m-accent-soft);
+  --champagne: var(--m-accent-soft);
+  --olive: var(--m-raised);
+  --border: var(--m-line);
+  --dark: var(--m-band);
+  --dark-soft: var(--m-bg-tint);
+  background: var(--m-bg);
+  color: var(--m-ink);
 }
 
-/* The CartDrawer hardcodes the original light palette as Tailwind
-   arbitrary-value classes, so each hex is remapped to its onyx counterpart
-   via class-substring selectors. Order matters: a solid
-   color rule first, then its /opacity tint variants re-override after. */
-[data-maison] [class*="bg-[#F7F4EF]"]{background-color:#121214!important}
-[data-maison] .bg-white{background-color:#1d1d21!important}
-[data-maison] [class*="bg-[#EFEAE2]"]{background-color:#1a1a1e!important}
-[data-maison] [class*="bg-[#D8D3C9]"]{background-color:rgba(255,255,255,.14)!important}
-[data-maison] [class*="border-[#D8D3C9]"]{border-color:rgba(255,255,255,.14)!important}
-[data-maison] [class*="border-[#EFEAE2]"]{border-color:rgba(255,255,255,.1)!important}
-[data-maison] [class*="text-[#11100E]"]{color:#f3ead6!important}
-[data-maison] [class*="text-[#49423A]"]{color:#c7c0b2!important}
-[data-maison] [class*="text-[#777168]"]{color:#938d82!important}
-[data-maison] [class*="text-[#8F7548]"]{color:#e8c877!important}
-[data-maison] [class*="bg-[#8F7548]"]{background-color:#d9a43b!important;color:#17120a!important}
-[data-maison] [class*="bg-[#B89A63]"]{background-color:#d9a43b!important;color:#17120a!important}
-[data-maison] [class*="bg-[#B89A63]/10"]{background-color:rgba(217,164,59,.14)!important;color:inherit!important}
-[data-maison] [class*="bg-[#B89A63]/20"]{background-color:rgba(217,164,59,.2)!important;color:inherit!important}
-[data-maison] [class*="border-[#B89A63]"]{border-color:#d9a43b!important}
-[data-maison] [class*="bg-[#11100E]"]{background-color:#d9a43b!important}
-[data-maison] [class*="bg-[#11100E]"], [data-maison] [class*="bg-[#11100E]"] *{color:#17120a!important}
-[data-maison] .bg-white input, [data-maison] input.bg-white, [data-maison] [class*="bg-[#F7F4EF]"] input, [data-maison] [class*="bg-[#F7F4EF]"] select, [data-maison] [class*="bg-[#F7F4EF]"] textarea{background:#1d1d21;color:#f3ead6}
-[data-maison] [class*="bg-[#F7F4EF]"] input::placeholder, [data-maison] [class*="bg-[#F7F4EF]"] textarea::placeholder{color:#8b857a}
-/* Pill CTAs build on var(--ink) as a dark fill; with --ink remapped to
-   champagne they'd render cream-on-cream, so they become the gold primary
-   button with dark labels. */
-[data-maison] .pill-cta{background:var(--gold);border-color:var(--gold);color:#17120a;border-radius:8px}
-[data-maison] .pill-cta:hover{background:var(--gold-deep);border-color:var(--gold-deep);color:#17120a}
-[data-maison] .pill-cta-dark{background:var(--gold);color:#17120a;border-color:var(--gold)}
-[data-maison] .pill-cta-dark:hover{background:var(--gold-deep);color:#17120a;border-color:var(--gold-deep)}
+/* Legacy templates still use explicit Tailwind colors. Map them to the same theme. */
+[data-maison] [class*="bg-[#F7F4EF]"]{background-color:var(--m-bg)!important}
+[data-maison] .bg-white{background-color:var(--m-surface)!important}
+[data-maison] [class*="bg-[#EFEAE2]"]{background-color:var(--m-bg-tint)!important}
+[data-maison] [class*="bg-[#D8D3C9]"]{background-color:var(--m-line)!important}
+[data-maison] [class*="border-[#D8D3C9]"]{border-color:var(--m-line)!important}
+[data-maison] [class*="border-[#EFEAE2]"]{border-color:var(--m-line-soft)!important}
+[data-maison] [class*="text-[#11100E]"]{color:var(--m-ink)!important}
+[data-maison] [class*="text-[#49423A]"]{color:var(--m-ink-soft)!important}
+[data-maison] [class*="text-[#777168]"]{color:var(--m-ink-faint)!important}
+[data-maison] [class*="text-[#8F7548]"]{color:var(--m-accent-soft)!important}
+[data-maison] [class*="bg-[#8F7548]"]{background-color:var(--m-accent)!important;color:var(--m-on-band)!important}
+[data-maison] [class*="bg-[#B89A63]"]{background-color:var(--m-accent)!important;color:var(--m-on-band)!important}
+[data-maison] [class*="bg-[#B89A63]/10"]{background-color:var(--m-bg-tint)!important;color:inherit!important}
+[data-maison] [class*="bg-[#B89A63]/20"]{background-color:var(--m-raised)!important;color:inherit!important}
+[data-maison] [class*="border-[#B89A63]"]{border-color:var(--m-accent)!important}
+[data-maison] [class*="bg-[#11100E]"]{background-color:var(--m-accent)!important}
+[data-maison] [class*="bg-[#11100E]"], [data-maison] [class*="bg-[#11100E]"] *{color:var(--m-on-band)!important}
+[data-maison] .bg-white input, [data-maison] input.bg-white, [data-maison] [class*="bg-[#F7F4EF]"] input, [data-maison] [class*="bg-[#F7F4EF]"] select, [data-maison] [class*="bg-[#F7F4EF]"] textarea{background:var(--m-surface);color:var(--m-ink)}
+[data-maison] [class*="bg-[#F7F4EF]"] input::placeholder, [data-maison] [class*="bg-[#F7F4EF]"] textarea::placeholder{color:var(--m-ink-faint)}
+[data-maison] .pill-cta {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: var(--m-on-band);
+  border-radius: 8px;
+}
+[data-maison] .pill-cta:hover:not(:disabled) {
+  background: var(--m-accent-deep);
+  border-color: var(--m-accent-deep);
+  color: var(--m-on-band);
+}
 
 * {
   box-sizing: border-box;
@@ -373,12 +408,10 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   input, select, textarea { font-size: 16px !important; }
 }
 
-/* Lift floating widgets above the sticky mobile buy bar so they never cover Add to Bag / Buy Now */
-@media (max-width: 767px) {
-  body:has([data-sticky-atc]) .gzwa-fab { bottom: 96px; }
-  body:has([data-sticky-atc]) .gzwa-greet { bottom: 164px; }
-  body:has([data-sticky-atc]) [data-scrolltop] { bottom: 164px; right: 16px; }
-}
+/* Keep floating widgets above the sticky purchase bar. */
+body:has([data-sticky-atc]) .gzwa-fab { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+body:has([data-sticky-atc]) .gzwa-greet { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
+body:has([data-sticky-atc]) [data-scrolltop] { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
 
 /* Floating chat / back-to-top sit above page content but must not cover the
    bag drawer's checkout button or an open dialog. */
@@ -389,25 +422,23 @@ body:has(.m-modal) .gzwa-fab,
 body:has(.m-modal) .gzwa-greet,
 body:has(.m-modal) [data-scrolltop] { display: none !important; }
 
-/* Match Velmique's primary buttons. The bag drawer uses the fallback colors
-   because it sits outside .m-root. The doubled class keeps these styles above
-   the Shiprocket stylesheet, which can load after the storefront. */
+/* The doubled class keeps Velmique's colors above Shiprocket's stylesheet. */
 button.sr-headless-checkout.sr-headless-checkout {
   width: 100% !important; min-height: 52px !important; height: auto !important; margin: 0 !important;
   display: inline-flex !important; align-items: center !important; justify-content: center !important;
   padding: 9px 26px 7px !important;
-  border: 1.5px solid var(--m-accent, #57182d) !important;
+  border: 1.5px solid var(--m-accent) !important;
   border-radius: 8px !important;
-  background: var(--m-accent, #57182d) !important;
-  color: var(--m-on-band, #fff5ed) !important;
+  background: var(--m-accent) !important;
+  color: var(--m-on-band) !important;
   box-shadow: none !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   font-size: 12px !important; font-weight: 700 !important; letter-spacing: .16em !important; line-height: 1.6 !important;
   text-transform: uppercase !important; cursor: pointer; transition: .25s;
 }
 button.sr-headless-checkout.sr-headless-checkout:hover:enabled {
-  background: var(--m-accent-deep, #762a42) !important;
-  border-color: var(--m-accent-deep, #762a42) !important;
+  background: var(--m-accent-deep) !important;
+  border-color: var(--m-accent-deep) !important;
 }
 button.sr-headless-checkout.sr-headless-checkout:disabled { opacity: .5; cursor: not-allowed; }
 button.sr-headless-checkout.sr-headless-checkout[aria-busy="true"] { opacity: .7; cursor: progress; }
@@ -422,7 +453,7 @@ button.sr-headless-checkout.sr-headless-checkout[aria-busy="true"] { opacity: .7
   width: auto !important;
   padding: 1px 4px !important;
   border-radius: 4px;
-  background: var(--m-surface, #fffaf6);
+  background: var(--m-photo-bg);
 }
 .sr-headless-checkout.sr-headless-checkout img.sr-checkout-visible1 { height: 13px !important; width: auto !important; filter: brightness(0) invert(1); opacity: .9; transition: transform .25s; }
 button.sr-headless-checkout.sr-headless-checkout:hover img.sr-checkout-visible1 { transform: translateX(4px); }

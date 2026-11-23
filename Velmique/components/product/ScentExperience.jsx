@@ -4,11 +4,10 @@ import { useId, useState } from 'react';
 import BrandIcon from '@/components/ui/BrandIcon';
 import NotePhoto from './NotePhoto';
 
-export default function ScentExperience({ name, phases = [], fragranceNotes = [], accords = [], spec = [] }) {
+export default function ScentExperience({ name, phases = [], accords = [], spec = [] }) {
   const id = useId();
   const [selected, setSelected] = useState(null);
   const activePhase = phases.find(({ key }) => key === selected) || phases[0];
-  const hasNotes = fragranceNotes.length > 0;
 
   const handleTabKeyDown = (event, index) => {
     const count = phases.length;
@@ -37,9 +36,9 @@ export default function ScentExperience({ name, phases = [], fragranceNotes = []
 
   return (
     <div className="v-scent-story">
-      {(activePhase || hasNotes || accords.length > 0) && (
+      {(activePhase || accords.length > 0) && (
         <section className="v-scent" aria-labelledby={`${id}-heading`}>
-          <h2 id={`${id}-heading`}>{activePhase || !hasNotes ? 'The Scent Experience' : 'Fragrance Notes'}</h2>
+          <h2 id={`${id}-heading`}>The Scent Experience</h2>
           {activePhase && <p className="v-scent__intro">Discover how {name} unfolds over time.</p>}
           {!activePhase && accords.length > 0 && <p className="v-scent__intro">{accords.join(' · ')}</p>}
           {activePhase && (
@@ -70,22 +69,6 @@ export default function ScentExperience({ name, phases = [], fragranceNotes = []
                 </div>
               </div>
             </>
-          )}
-          {hasNotes && (
-            <div className="v-scent__gallery">
-              {activePhase && <h3 id={`${id}-notes`}>Fragrance Notes</h3>}
-              <ul className="v-scent__notes" role="list" aria-labelledby={`${id}-${activePhase ? 'notes' : 'heading'}`}>
-                {fragranceNotes.map(({ name, image }) => (
-                  <li key={name}>
-                    <span className="v-scent__note-photo" aria-hidden="true">
-                      <BrandIcon name="leaf" size={24} />
-                      {image && <NotePhoto image={image} width={480} />}
-                    </span>
-                    <span className="v-scent__note-name">{name}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
           )}
         </section>
       )}

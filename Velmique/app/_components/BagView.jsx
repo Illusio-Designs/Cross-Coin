@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import PackBagCard from '@/components/cart/PackBagCard';
 import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
@@ -127,6 +128,7 @@ export default function BagView({ autoCheckout = false }) {
                 </button>
               )}
               <Link className="m-btn m-btn--ghost" href="/shop" style={{ justifyContent: 'center', width: '100%', marginTop: 10 }}>Continue shopping</Link>
+              <PackBagCard count={packLines} />
             </aside>
           </div>
         )}
