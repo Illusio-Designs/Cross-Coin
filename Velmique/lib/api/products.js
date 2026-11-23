@@ -33,14 +33,16 @@ async function brandFetch(path, { fresh = false } = {}) {
   // Next 14 caches fetch() with force-cache by default, which froze the product
   // payload at build/first-request time — so admin edits (new description or
   // attribute images, price, stock) never appeared. List pages revalidate every
-  // 60s; the single-product detail uses `fresh` → no-store so a just-edited
-  // product (new description / attribute images) always renders immediately,
-  // regardless of any stale cache entry carried over a deploy.
+  // 60s. Callers that need immediate edits can opt out with `fresh`.
   const res = await fetch(`${API_URL}${path}`, {
     headers: { 'X-Brand-Name': BRAND_NAME },
     ...(fresh ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
   });
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+  if (!res.ok) {
+    const error = new Error(`Failed to fetch ${path}`);
+    error.status = res.status;
+    throw error;
+  }
   return res.json();
 }
 
@@ -379,12 +381,16 @@ export async function getProductsByCategory(categoryId, { page = 1, limit = 50 }
 }
 
 /* ── Single product (detail page) ───────────────────────────────── */
-export async function getProductBySlug(slug) {
+export async function getProductBySlug(slug, { fresh = true } = {}) {
   if (!slug) return null;
   try {
-    const data = await brandFetch(`/api/products/by-slug/${encodeURIComponent(slug)}`, { fresh: true });
-    return mapProduct(data?.data || data);
-  } catch {
+    const data = await brandFetch(`/api/products/by-slug/${encodeURIComponent(slug)}`, { fresh });
+    const product = data?.data || data;
+    if (!fresh && !product?.id) throw new Error('Product API returned an invalid product response');
+    return mapProduct(product);
+  } catch (error) {
+    // A transient failure should retain the last successful ISR page.
+    if (!fresh && error.status !== 404) throw error;
     return null;
   }
 }

@@ -199,31 +199,6 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     });
   }
 
-  // Preload the ACTIVE colour's gallery (not every colour's images), and only
-  // when the browser is idle — so thumbnail swaps still feel instant without a
-  // burst of full-size downloads on PDP load competing with the LCP image.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const perColorImgs = product.colorImages?.[color];
-    const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
-    if (!urls.length) return;
-    // Same sized copies the main photo uses (srcset/sizes), so a swap finds
-    // them cached; the original URLs would be other (bigger) files.
-    const warm = () => urls.forEach((u) => {
-      const im = new Image();
-      im.sizes = MAIN_SIZES;
-      im.srcset = ikSrcSet(u, MAIN_WIDTHS) || '';
-      im.src = ikSrc(u, 1200);
-    });
-    if (window.requestIdleCallback) {
-      const id = window.requestIdleCallback(warm, { timeout: 1500 });
-      return () => window.cancelIdleCallback?.(id);
-    }
-    const t = setTimeout(warm, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [color, product?.id]);
-
   // Close the zoom lightbox on Escape.
   useEffect(() => {
     if (!lightbox) return;

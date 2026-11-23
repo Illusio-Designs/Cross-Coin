@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getPublicCoupons } from '@/lib/api/orders';
-import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
+import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
@@ -99,7 +100,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     id: isPackLine ? `${product.id}:${opt.id}:pk${pack.pairs}` : `${product.id}:${opt.id}`,
     ...(isPackLine ? { packPrice: true } : {}),
     productId: product.id,
-    variationId: opt.id,
+    variationId: product.variations?.length ? opt.id : product.defaultVariationId,
     name: product.name,
     price: Math.round(unitPrice * 100) / 100,
     size: opt.label,
@@ -170,30 +171,27 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && !isPackLine && !isMix;
-
-  // The selection as checkout lines (a simple product without variations
-  // has no variant id, so it can't go to Shiprocket).
-  const buyNowLine = () => {
-    const vid = (product.variations || []).length ? opt.id : (product.defaultVariationId ?? null);
-    return { productId: product.id, variationId: vid, quantity: lineQty, price: unitPrice, name: product.name };
-  };
+  const checkoutLine = line();
+  const eligible = !isMix && shiprocketTakes([checkoutLine]);
+  const useShiprocket = srOn && eligible;
 
   const onBuyNow = async (e) => {
-    if (soldOut || srBusy) return;
-    const l = useShiprocket ? buyNowLine() : null;
-    if (!l || l.variationId == null) { buy(); return; }
-    fbTrack('InitiateCheckout', {
-      content_ids: [String(l.productId)], content_type: 'product', content_name: l.name || undefined,
-      contents: [{ id: String(l.productId), quantity: l.quantity }],
-      num_items: l.quantity, value: l.price * l.quantity, currency: 'INR',
-    });
+    if (!canAdd || srBusy) return;
+    if (!eligible) { buy(); return; }
     setSrBusy(true);
     try {
-      await openShiprocketCheckout(e, [l], 'buy-now');
+      const enabled = await shiprocketEnabled();
+      setSrOn(enabled);
+      if (enabled === false) { buy(); return; }
+      if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
+      fbTrack('InitiateCheckout', {
+        content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
+        contents: [{ id: String(product.id), quantity: lineQty }],
+        num_items: lineQty, value: unitPrice * lineQty, currency: 'INR',
+      });
+      await openShiprocketCheckout(e, [checkoutLine], 'buy-now');
     } catch {
-      // Shiprocket couldn't start: fall back to our own checkout.
-      buy();
+      showError(SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
     } finally {
       setSrBusy(false);
     }
@@ -321,7 +319,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={!canAdd} />
         </div>
       ) : (
-        <button type="button" className="m-btn m-buynow" onClick={buy} disabled={!canAdd}>Buy now</button>
+        <button type="button" className="m-btn m-buynow" onClick={onBuyNow} disabled={!canAdd || srBusy}>{srBusy ? 'Opening…' : 'Buy now'}</button>
       )}
 
       {barOn && (

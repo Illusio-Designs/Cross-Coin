@@ -21,7 +21,7 @@
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import TestProduct, { MAIN_WIDTHS, MAIN_SIZES, openingImage } from '../test/product';
+import TestProduct, { MAIN_WIDTHS, MAIN_SIZES, MAIN_MOBILE_MEDIA, MAIN_MOBILE_WIDTHS, openingImage } from '../test/product';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductPageSkeleton } from '../../components/test/ui';
 import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
@@ -164,13 +164,21 @@ export default function ProductSlugPage({ slug, initialProduct, productFaqs, glo
   // same srcset/sizes the gallery uses, so it downloads before the page's
   // scripts and styles are processed.
   const mainImg = openingImage(initialProduct);
+  const mainSrcSet = ikSrcSet(mainImg, MAIN_WIDTHS);
+  const mobileSrcSet = ikSrcSet(mainImg, MAIN_MOBILE_WIDTHS);
 
   return (
     <>
       <Head>
+        {mobileSrcSet && (
+          <link rel="preload" as="image" fetchPriority="high" media={MAIN_MOBILE_MEDIA}
+            imageSrcSet={mobileSrcSet} imageSizes={MAIN_SIZES} key="lcp-img-mobile" />
+        )}
         {mainImg && (
-          <link rel="preload" as="image" fetchPriority="high" href={ikTransform(mainImg, 1200)}
-            imageSrcSet={ikSrcSet(mainImg, MAIN_WIDTHS)} imageSizes={MAIN_SIZES} key="lcp-img" />
+          <link rel="preload" as="image" fetchPriority="high"
+            media={mobileSrcSet ? `not all and ${MAIN_MOBILE_MEDIA}` : undefined}
+            href={mainSrcSet ? undefined : ikTransform(mainImg, 1200)}
+            imageSrcSet={mainSrcSet} imageSizes={mainSrcSet ? MAIN_SIZES : undefined} key="lcp-img" />
         )}
         <title>{title}</title>
         <meta name="description" content={description} />

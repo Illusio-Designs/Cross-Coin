@@ -16,18 +16,22 @@ const SDK_CSS = 'https://checkout-ui.shiprocket.com/assets/styles/shopify.css';
 // Remembers, for the thank-you page, whether the checkout was the bag (so the
 // bag is emptied after the order) or a single Buy now (bag untouched).
 export const SR_SOURCE_KEY = 'vlq-sr-source';
+export const SHIPROCKET_RETRY_MESSAGE = 'Checkout couldn’t open. Please check your connection and try again.';
 
 let enabledPromise = null;
 let sdkPromise = null;
 
-// Whether Shiprocket checkout is set up for this store. Asked once per visit;
-// any failure means "no", so the store's own checkout is used.
+// Cache a confirmed status. A failed request can be retried on the next click.
 export function shiprocketEnabled() {
   if (!enabledPromise) {
     enabledPromise = fetch(`${API_URL}/api/custom-checkout/status`, { headers: { 'X-Brand-Name': BRAND } })
-      .then((r) => r.json())
-      .then((d) => !!d?.enabled)
-      .catch(() => false);
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => typeof d?.enabled === 'boolean' ? d.enabled : null)
+      .catch(() => null)
+      .then((enabled) => {
+        if (enabled === null) enabledPromise = null;
+        return enabled;
+      });
   }
   return enabledPromise;
 }
@@ -39,8 +43,8 @@ export function shiprocketTakes(lines) {
   return lines.length > 0 && lines.every((l) => l.variationId != null && !l.packGroup && !l.packPrice);
 }
 
-// Shiprocket's stylesheet (their checkout window + their Buy now button).
-export function loadShiprocketCss() {
+// Shiprocket's stylesheet for the hosted checkout window.
+function loadShiprocketCss() {
   if (typeof document === 'undefined' || document.querySelector(`link[href="${SDK_CSS}"]`)) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
@@ -95,11 +99,9 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   return runCheckoutOpening(BRAND, async () => {
-    lines = normalizeCheckoutLines(lines);
-    const items = lines
-      .filter((l) => l.variationId != null)
-      .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
-    if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
+    if (!shiprocketTakes(lines)) throw new Error('Some items cannot be checked out here');
+    const items = normalizeCheckoutLines(lines)
+      .map(({ variationId, quantity }) => ({ variant_id: variationId, quantity }));
 
     const ids = trackingIds();
     const custom_attributes = {};
@@ -123,5 +125,5 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
     // If Shiprocket can't open its checkout it sends the shopper back here.
     await sdk.addToCart(event, token, { fallbackUrl: cleanCheckoutFallbackUrl(window.location.href) });
 
-});
+  });
 }

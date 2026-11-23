@@ -5,17 +5,22 @@
    other hosts) are returned untouched. */
 const Q = 72;
 
-export function ik(src, w) {
+function supportsResize(src, { uploads = false } = {}) {
+  return typeof src === 'string' && (
+    src.includes('ik.imagekit.io') || (uploads && /^https?:\/\/[^/]+\/api\/uploads\//i.test(src))
+  );
+}
+
+export function ik(src, w, options) {
   if (!src || typeof src !== 'string') return src || '';
-  if (!src.includes('ik.imagekit.io') || !w) return src;
+  if (!supportsResize(src, options) || !w) return src;
   const [base, query = ''] = src.split('?');
   const keep = query.split('&').filter((p) => p && !/^tr=/.test(p));
   return `${base}?${[`tr=w-${Math.round(w)},q-${Q},f-auto`, ...keep].join('&')}`;
 }
 
-/* `srcSet` for an ImageKit URL at the given widths; undefined otherwise, so
-   callers can pass it straight through. */
-export function ikSrcSet(src, widths) {
-  if (!src || typeof src !== 'string' || !src.includes('ik.imagekit.io')) return undefined;
-  return widths.map((w) => `${ik(src, w)} ${w}w`).join(', ');
+/* The product gallery also opts into sizing our own API uploads. */
+export function ikSrcSet(src, widths, options) {
+  if (!supportsResize(src, options)) return undefined;
+  return widths.map((w) => `${ik(src, w, options)} ${w}w`).join(', ');
 }

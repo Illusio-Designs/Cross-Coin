@@ -6,6 +6,10 @@ import SkImg from './SkImg';
 import BrandIcon from '@/components/ui/BrandIcon';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
+const GALLERY_RESIZE = { uploads: true };
+const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MAIN_SIZES = '(max-width: 740px) calc(100vw - 40px), 560px';
+
 /* Thumbnail gallery with a
    click-to-zoom lightbox: tap any image for a fullscreen view, swipe through
    with the arrows or ←/→, close with × / Esc / backdrop tap. */
@@ -33,14 +37,22 @@ export default function PdpGallery({ images = [], name = '' }) {
 
   if (!images.length) return null;
 
+  const mainImage = images[selected];
   return (
     <>
       <div className="v-gallery">
         <div className="v-gallery__thumbs" aria-label="Product images">
-          {images.map((src,i)=><button key={src+i} type="button" aria-label={`View ${name} image ${i+1}`} aria-pressed={selected===i} className={selected===i?'on':''} onClick={()=>setSelected(i)}><img src={ik(src,160)} alt="" loading={i?'lazy':'eager'}/></button>)}
+          {images.map((src, i) => (
+            <button key={src + i} type="button" aria-label={`View ${name} image ${i + 1}`}
+              aria-pressed={selected === i} className={selected === i ? 'on' : ''} onClick={() => setSelected(i)}>
+              <img src={ik(src, 144, GALLERY_RESIZE)} alt="" loading="lazy" decoding="async" fetchPriority="low" />
+            </button>
+          ))}
         </div>
         <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${selected+1}`} onClick={()=>setOpen(selected)}>
-          <SkImg key={images[selected]} src={ik(images[selected],1200)} srcSet={ikSrcSet(images[selected],[600,900,1200])} sizes="(max-width:740px) 90vw, 560px" alt={`${name} — view ${selected+1}`} loading="eager" fetchPriority="high" />
+          <SkImg key={mainImage} src={ik(mainImage, 1200, GALLERY_RESIZE)}
+            srcSet={ikSrcSet(mainImage, MAIN_WIDTHS, GALLERY_RESIZE)} sizes={MAIN_SIZES}
+            alt={`${name} — view ${selected + 1}`} loading="eager" fetchPriority="high" />
           <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18}/></span>
         </button>
       </div>
@@ -54,7 +66,7 @@ export default function PdpGallery({ images = [], name = '' }) {
             <button type="button" className="m-lbx__nav prev" aria-label="Previous image" onClick={(e) => { e.stopPropagation(); step(-1); }}>‹</button>
           )}
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
-          <img src={ik(images[open], 1600)} alt={`${name} — zoomed view ${open + 1}`} onClick={(e) => e.stopPropagation()} />
+          <img src={ik(images[open], 1600, GALLERY_RESIZE)} alt={`${name} — zoomed view ${open + 1}`} onClick={(e) => e.stopPropagation()} />
           {images.length > 1 && (
             <button type="button" className="m-lbx__nav next" aria-label="Next image" onClick={(e) => { e.stopPropagation(); step(1); }}>›</button>
           )}

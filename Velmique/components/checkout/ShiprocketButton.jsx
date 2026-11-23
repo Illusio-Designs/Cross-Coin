@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { loadShiprocketCss, preloadShiprocket } from '@/lib/api/shiprocketCheckout';
+import { preloadShiprocket } from '@/lib/api/shiprocketCheckout';
 
-// Shiprocket's own checkout button: their markup and images, styled by their
-// stylesheet (loaded here), the way their Shopify app renders it. The click
-// runs our handler, which opens Shiprocket Checkout for the chosen items.
+// Shiprocket's markup and images use local storefront styles.
+// The provider stylesheet loads with the checkout SDK.
 /* eslint-disable @next/next/no-img-element -- Shiprocket's button images, as Shiprocket serves them */
 export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = false, disabled = false }) {
-  useEffect(() => { loadShiprocketCss(); preloadShiprocket(); }, []);
+  useEffect(() => { preloadShiprocket(); }, []);
   return (
     <button type="button" className="sr-headless-checkout" name="sr-headless-button" onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}>
       <div className="sr-d-flex flex-center">

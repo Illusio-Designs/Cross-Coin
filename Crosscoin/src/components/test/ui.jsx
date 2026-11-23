@@ -236,7 +236,7 @@ export function TextSkeleton({ paras = 3, lines = 4, heading = true }) {
 // ImageKit URLs are requested at the width they are shown (`w`, plus an
 // optional `widths` srcSet with `sizes`), WebP/AVIF via f-auto. Other URLs are
 // used as-is. `priority` = the LCP image (eager + high fetch priority).
-export function Thumb({ src, color, className, style, alt = '', w, widths, sizes, priority = false }) {
+export function Thumb({ src, color, className, style, alt = '', w, widths, sizes, mobileSource, priority = false }) {
   const ref = useRef(null);
   const [shown, setShown] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -258,7 +258,7 @@ export function Thumb({ src, color, className, style, alt = '', w, widths, sizes
   };
 
   if (url && !failed) {
-    return (
+    const image = (
       <img
         ref={ref}
         // The LCP image (`priority`) is visible from the first paint: it is
@@ -276,6 +276,13 @@ export function Thumb({ src, color, className, style, alt = '', w, widths, sizes
         onError={() => setFailed(true)}
         style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }}
       />
+    );
+    if (!mobileSource?.srcSet) return image;
+    return (
+      <picture>
+        <source media={mobileSource.media} srcSet={mobileSource.srcSet} sizes={sizes} />
+        {image}
+      </picture>
     );
   }
   const bg = color ? colorToCss(color) : 'var(--paper-2)';

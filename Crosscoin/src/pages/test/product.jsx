@@ -9,6 +9,7 @@ import { inr } from '../../components/test/data';
 import { R } from '../../components/test/routes';
 import { fetchProduct, fetchProducts, fetchProductReviews, fetchProductFaqs, fetchBundleTiers, submitProductReview, normalizeProduct } from '../../components/test/real';
 import { addItem } from '../../components/test/store';
+import { ikSrcSet } from '../../utils/imageUtils';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
@@ -47,6 +48,9 @@ function specLabel(key) {
 // panel on desktop. Shared with the <link rel=preload> in pages/products/[slug].
 export const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
 export const MAIN_SIZES = '(max-width: 860px) calc(100vw - 32px), 600px';
+// On phones, cap the gallery rendition and keep the full-size zoom on demand.
+export const MAIN_MOBILE_MEDIA = '(max-width: 480px)';
+export const MAIN_MOBILE_WIDTHS = [480, 640];
 
 // The variant, size and photo a product opens on (a single pair by default).
 function openingState(prod) {
@@ -312,7 +316,12 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
 
         <div className="pd">
           <div className="gallery">
-            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}><Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200} widths={MAIN_WIDTHS} sizes={MAIN_SIZES} priority />{thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}</div>
+            <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}>
+              <Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200}
+                widths={MAIN_WIDTHS} sizes={MAIN_SIZES}
+                mobileSource={{ media: MAIN_MOBILE_MEDIA, srcSet: ikSrcSet(mainImg, MAIN_MOBILE_WIDTHS) }} priority />
+              {thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}
+            </div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (

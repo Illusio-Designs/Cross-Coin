@@ -1,8 +1,8 @@
+import { Suspense } from 'react';
 import ScentExperience from '@/components/product/ScentExperience';
 import Link from 'next/link';
 import { richHtml } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
-import { ik } from '@/lib/imagekit';
 import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
 import { buildScentExperience, isScentExperienceAttribute } from '@/lib/scentExperience';
 import { getProductReviews } from '@/lib/api/reviews';
@@ -14,6 +14,14 @@ import PdpGallery from '../../_components/PdpGallery';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import WriteReview from '../../_components/WriteReview';
 import TrackEvent from '../../_components/TrackEvent';
+import { Sk, SkRegion } from '../../_components/Skeleton';
+
+// Regenerate storefront edits in the background, as on Morbix and Soxbae.
+export const revalidate = 60;
+
+export function generateStaticParams() {
+  return [];
+}
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
@@ -29,7 +37,7 @@ function tokens(val) {
 }
 
 export async function generateMetadata({ params }) {
-  const product = await getProductBySlug(params.slug);
+  const product = await getProductBySlug(params.slug, { fresh: false });
   if (!product) return { title: 'Fragrance not found — Velmique', robots: { index: false, follow: true } };
   // Per-product SEO from the dashboard wins; the product copy is the fallback.
   const seo = product.raw?.seo || product.raw?.ProductSEO || {};
@@ -47,11 +55,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function MaisonProduct({ params }) {
-  const product = await getProductBySlug(params.slug);
+  const product = await getProductBySlug(params.slug, { fresh: false });
 
-  // Soft not-found (noindex via generateMetadata) rather than notFound(): the
-  // detail fetch is uncached, so a transient API failure must not get a 404
-  // cached against a real product URL.
   if (!product) {
     return (
       <section className="m-section"><div className="m-wrap" style={{ textAlign: 'center' }}>
@@ -63,25 +68,159 @@ export default async function MaisonProduct({ params }) {
     );
   }
 
-  const [reviewsRes, bestsellers, productFaqs, globalFaqs, productPacks, catalog, packTiers] = await Promise.all([
-    getProductReviews(product.id, { limit: 30 }),
-    getBestsellers(5),
-    getFaqs('product', product.id),
-    getFaqs('global'),
-    getBundleTiers(product.id),
-    getPublicProducts({ limit: 48 }),
-    getPackTiers(),
-  ]);
-
-  // Admin-managed FAQs from the backend: prefer this product's own (+ brand-wide
-  // "all products") FAQs, fall back to the site-wide global set.
-  const faqs = productFaqs.length ? productFaqs : globalFaqs;
+  const reviewsRequest = getProductReviews(product.id, { limit: 6 });
+  const catalogRequest = getPublicProducts({ limit: 48 });
+  const buyingOptions = Promise.all([getBundleTiers(product.id), getPackTiers(), catalogRequest]);
 
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
-  const attrs = defVar?.attributes || {};
   const stock = defVar?.stock;
   const inStock = product.inStock !== false && (stock == null || stock > 0);
 
+  const savePct = product.originalPrice && product.originalPrice > product.price
+    ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
+
+  return (
+    <div className="v-pdp-page">
+      <Suspense fallback={null}>
+        <PdpStructuredData product={product} defVar={defVar} inStock={inStock} reviewsRequest={reviewsRequest} />
+      </Suspense>
+      <TrackEvent
+        event="ViewContent"
+        eventKey={product.id}
+        params={{
+          content_ids: [String(product.id)],
+          content_type: 'product',
+          content_name: product.name,
+          value: Number(product.price || 0),
+          currency: 'INR',
+          contents: [{ id: String(product.id), quantity: 1 }],
+        }}
+      />
+      <div className="m-pdpwrap"><div className="m-wrap">
+        <nav className="m-crumb" aria-label="Breadcrumb"><Link href="/">Home</Link> / <Link href="/shop">Shop</Link> / <span aria-current="page">{product.name}</span></nav>
+        <div className="m-pdp">
+          <PdpGallery images={(product.images || []).slice(0, 6)} name={product.name} />
+          <div>
+            {product.badge ? <span className="m-eyebrow">{product.badge}</span> : null}
+            <h1 className="m-pdp__title">{product.name}<span>Eau de Parfum{defVar?.size ? ` · ${defVar.size}` : ''}</span></h1>
+            <Suspense fallback={<RatingLine rating={product.rating || 0} reviewCount={product.reviews || 0} />}>
+              <PdpRating product={product} request={reviewsRequest} />
+            </Suspense>
+            <div className="m-pdp__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}{savePct ? <span className="m-save">SAVE {savePct}%</span> : null}</div>
+            {product.description ? <p className="v-product-intro">{product.description.replace(/<[^>]*>/g, '').slice(0, 220)}</p> : null}
+            <p className="m-tax">Inclusive of all taxes</p>
+
+            <div className="m-ship">
+              {inStock
+                ? <span className="m-stockbadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>{stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
+                : <span className="m-stockbadge out"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Out of stock</span>}
+              <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
+            </div>
+
+            <Suspense fallback={
+              <SkRegion label="Loading purchase options…" style={{ marginTop: 16 }}>
+                <Sk h={42} r={8} />
+                <Sk h={52} r={8} style={{ marginTop: 10 }} />
+              </SkRegion>
+            }>
+              <PdpPurchase product={product} request={buyingOptions} />
+            </Suspense>
+
+
+            <DeliveryCheck />
+
+
+          </div>
+        </div>
+      </div></div>
+
+      <Suspense fallback={null}><PdpScentStory product={product} defVar={defVar} catalogRequest={catalogRequest} /></Suspense>
+      <Suspense fallback={null}><PdpReviews product={product} request={reviewsRequest} /></Suspense>
+      <Suspense fallback={null}><PdpFaq productId={product.id} /></Suspense>
+      <Suspense fallback={null}><PdpRelated productId={product.id} /></Suspense>
+    </div>
+  );
+}
+
+async function PdpPurchase({ product, request }) {
+  const [packs, mixTiers, catalog] = await request;
+  const { id, name, slug, defaultVariationId, inStock, price, sizes, images } = product;
+  const variations = product.variations.map((variation) => ({
+    id: variation.id, size: variation.size, sku: variation.sku, price: variation.price,
+    images: variation.images?.slice(0, 1), inStock: variation.inStock, stock: variation.stock,
+  }));
+  const purchaseProduct = { id, name, slug, defaultVariationId, inStock, price, sizes, images: images.slice(0, 1), variations };
+  const scents = packs.length || !mixTiers.length ? [] : catalog.products
+    .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false)
+    .slice(0, 8)
+    .map((scent) => ({
+      id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
+      price: scent.price, sizes: scent.sizes.slice(0, 1), images: scent.images.slice(0, 1),
+    }));
+  return <PdpBuy product={purchaseProduct} packs={packs} mixTiers={mixTiers} scents={scents} />;
+}
+
+function summarizeReviews(product, reviewsRes) {
+  const reviews = reviewsRes?.reviews || [];
+  const reviewCount = reviewsRes?.pagination?.total || product.reviews || reviews.length;
+  const rating = product.rating || reviewsRes?.stats?.average || 0;
+  return { reviews, reviewCount, rating };
+}
+
+function RatingLine({ rating, reviewCount }) {
+  return (
+    <div className="m-pdp__rate"><span className="m-stars">{stars(rating)}</span> <b>{Number(rating).toFixed(1)}</b> <span>{reviewCount.toLocaleString('en-IN')} reviews</span></div>
+  );
+}
+
+async function PdpRating({ product, request }) {
+  const { rating, reviewCount } = summarizeReviews(product, await request);
+  return <RatingLine rating={rating} reviewCount={reviewCount} />;
+}
+
+async function PdpStructuredData({ product, defVar, inStock, reviewsRequest }) {
+  const { rating, reviewCount } = summarizeReviews(product, await reviewsRequest);
+  const url = absUrl(`/product/${product.slug}`);
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: (product.description || '').slice(0, 500),
+      image: (product.images || []).slice(0, 6),
+      sku: defVar?.sku || String(product.id),
+      brand: { '@type': 'Brand', name: 'Velmique' },
+      ...(product.category ? { category: product.category } : {}),
+      ...(rating > 0 && reviewCount > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(rating).toFixed(1), reviewCount } } : {}),
+      offers: (product.variations?.length ? product.variations : [{ id: product.id, price: product.price, inStock }]).map((v) => ({
+        '@type': 'Offer',
+        url,
+        sku: v.sku || String(v.id),
+        priceCurrency: 'INR',
+        price: Number(v.price || product.price || 0),
+        availability: v.inStock === false ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
+        itemCondition: 'https://schema.org/NewCondition',
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+        { '@type': 'ListItem', position: 2, name: 'Shop', item: absUrl('/shop') },
+        { '@type': 'ListItem', position: 3, name: product.name, item: url },
+      ],
+    },
+  ];
+
+  return jsonLd.map((obj, i) => (
+    <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
+  ));
+}
+
+async function PdpScentStory({ product, defVar, catalogRequest }) {
+  const catalog = await catalogRequest;
+  const attrs = defVar?.attributes || {};
   const notePhotos = new Map();
   const rememberPhotos = (notes = []) => {
     for (const { name, image } of notes) {
@@ -142,14 +281,23 @@ export default async function MaisonProduct({ params }) {
     })
     .filter(Boolean);
 
-  const reviews = reviewsRes?.reviews || [];
-  const reviewCount = reviewsRes?.pagination?.total || product.reviews || reviews.length;
-  const rating = product.rating || reviewsRes?.stats?.average || 0;
-  const savePct = product.originalPrice && product.originalPrice > product.price
-    ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
+  return (
+    <div className="m-wrap v-product-story">
+      <ScentExperience name={product.name} {...scentExperience}
+        accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
+        spec={spec.filter(([key]) => ['Best for', 'Season', 'Sillage', 'Longevity'].includes(key))} />
+      {editorial.map((section) => (
+        <section className="v-detail-section" key={section.key}>
+          <h2>{section.key}</h2>
+          <p className="v-detail-caption">{section.prose || section.items.map(({ name }) => name).join(' · ')}</p>
+        </section>
+      ))}
+    </div>
+  );
+}
 
-  const related = (bestsellers || []).filter((p) => String(p.id) !== String(product.id)).slice(0, 4);
-
+async function PdpReviews({ product, request }) {
+  const { reviews, reviewCount, rating } = summarizeReviews(product, await request);
   const renderReview = (v, i) => {
     const name = v.reviewerName || v.guestName || v.name || 'Customer';
     return (
@@ -164,140 +312,53 @@ export default async function MaisonProduct({ params }) {
     );
   };
 
-
-  const url = absUrl(`/product/${product.slug}`);
-  const jsonLd = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: product.name,
-      description: (product.description || '').slice(0, 500),
-      image: (product.images || []).slice(0, 6),
-      sku: defVar?.sku || String(product.id),
-      brand: { '@type': 'Brand', name: 'Velmique' },
-      ...(product.category ? { category: product.category } : {}),
-      ...(rating > 0 && reviewCount > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(rating).toFixed(1), reviewCount } } : {}),
-      offers: (product.variations?.length ? product.variations : [{ id: product.id, price: product.price, inStock }]).map((v) => ({
-        '@type': 'Offer',
-        url,
-        sku: v.sku || String(v.id),
-        priceCurrency: 'INR',
-        price: Number(v.price || product.price || 0),
-        availability: v.inStock === false ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
-        itemCondition: 'https://schema.org/NewCondition',
-      })),
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-        { '@type': 'ListItem', position: 2, name: 'Shop', item: absUrl('/shop') },
-        { '@type': 'ListItem', position: 3, name: product.name, item: url },
-      ],
-    },
-  ];
-
-  return (
-    <div className="v-pdp-page">
-      {jsonLd.map((obj, i) => (
-        <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
-      ))}
-      <TrackEvent
-        event="ViewContent"
-        eventKey={product.id}
-        params={{
-          content_ids: [String(product.id)],
-          content_type: 'product',
-          content_name: product.name,
-          value: Number(product.price || 0),
-          currency: 'INR',
-          contents: [{ id: String(product.id), quantity: 1 }],
-        }}
-      />
-      <div className="m-pdpwrap"><div className="m-wrap">
-        <nav className="m-crumb" aria-label="Breadcrumb"><Link href="/">Home</Link> / <Link href="/shop">Shop</Link> / <span aria-current="page">{product.name}</span></nav>
-        <div className="m-pdp">
-          {/* Stacked scroll gallery: each image pins at the top of the column,
-              and the next one slides up OVER it as the right content scrolls.
-              Falls back to a horizontal swipe strip on small screens. */}
-          <PdpGallery images={(product.images || []).slice(0, 6)} name={product.name} />
-          <div>
-            {product.badge ? <span className="m-eyebrow">{product.badge}</span> : null}
-            <h1 className="m-pdp__title">{product.name}<span>Eau de Parfum{defVar?.size ? ` · ${defVar.size}` : ''}</span></h1>
-            <div className="m-pdp__rate"><span className="m-stars">{stars(rating)}</span> <b>{Number(rating).toFixed(1)}</b> <span>{reviewCount.toLocaleString('en-IN')} reviews</span></div>
-            <div className="m-pdp__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}{savePct ? <span className="m-save">SAVE {savePct}%</span> : null}</div>
-            {product.description ? <p className="v-product-intro">{product.description.replace(/<[^>]*>/g, '').slice(0, 220)}</p> : null}
-            <p className="m-tax">Inclusive of all taxes</p>
-
-            <div className="m-ship">
-              {inStock
-                ? <span className="m-stockbadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>{stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
-                : <span className="m-stockbadge out"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Out of stock</span>}
-              <span className="m-shipfree"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/></svg><strong>Free shipping</strong> on all orders</span>
-            </div>
-
-            <PdpBuy product={product} packs={productPacks} mixTiers={packTiers} scents={catalog.products} />
-
-
-            <DeliveryCheck />
-
-
-          </div>
-        </div>
-      </div></div>
-
-      <div className="m-wrap v-product-story"><ScentExperience name={product.name} {...scentExperience}
-        accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
-        spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
-        {editorial.map(sec=><section className="v-detail-section" key={sec.key}><h2>{sec.key}</h2>{sec.prose ? <p className="v-detail-caption">{sec.prose}</p> : <p className="v-detail-caption">{sec.items.map(it=>it.name).join(' · ')}</p>}</section>)}
+  return reviews.length ? (
+    <section className="m-section m-later" id="reviews"><div className="m-wrap">
+      <div className="m-revhead">
+        <div><span className="m-eyebrow">Customer reviews</span><h2>Real Reviews</h2></div>
+        <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars" aria-label={`${Number(rating).toFixed(1)} out of 5`}>{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
+        <WriteReview productId={product.id} productName={product.name} />
       </div>
-
-      {/* Reviews — the wall when there are any, and always a way to write one
-          (also opened by the WhatsApp review-request link, ?review=open). */}
-      {reviews.length ? (
-        <section className="m-section m-later" id="reviews"><div className="m-wrap">
-          <div className="m-revhead">
-            <div><span className="m-eyebrow">Customer reviews</span><h2>Real Reviews</h2></div>
-            <div className="m-revscore"><b>{Number(rating).toFixed(1)}</b><span><span className="m-stars" aria-label={`${Number(rating).toFixed(1)} out of 5`}>{stars(rating)}</span><br /><small>Based on {reviewCount.toLocaleString('en-IN')} reviews</small></span></div>
-            <WriteReview productId={product.id} productName={product.name} />
-          </div>
-          <div className="v-detail-reviews">
-            {reviews.slice(0,6).map(renderReview)}
-          </div>
-        </div></section>
-      ) : (
-        <section className="m-section m-later" id="reviews" style={{ paddingBottom: 0 }}><div className="m-wrap">
-          <div className="m-empty">
-            <h3>No reviews yet</h3>
-            <p style={{ marginBottom: 20 }}>Tried {product.name}? Be the first to tell others how it wears.</p>
-            <WriteReview productId={product.id} productName={product.name} label="Write the first review" />
-          </div>
-        </div></section>
-      )}
-
-      {/* FAQ — admin-managed, from the backend */}
-      {faqs.length ? (
-        <section className="m-section m-later v-pdp-faq"><div className="m-wrap">
-          <div className="m-shead"><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
-          <div className="m-faq">
-            {faqs.map((f) => (
-              <details key={f.id}>
-                <summary>{f.question}</summary>
-                <div className="m-faq__a" {...richHtml(f.answer)} />
-              </details>
-            ))}
-          </div>
-        </div></section>
-      ) : null}
-
-      {/* You may also like */}
-      {related.length ? (
-        <section className="m-section m-later" style={{ paddingTop: 0 }}><div className="m-wrap">
-          <div className="m-shead"><span className="m-eyebrow">You may also like</span><h2>Complete Your Collection.</h2></div>
-          <div className="m-pgrid">{related.map((p) => <ProductCard key={p.id} product={p} />)}</div>
-        </div></section>
-      ) : null}
-    </div>
+      <div className="v-detail-reviews">
+        {reviews.map(renderReview)}
+      </div>
+    </div></section>
+  ) : (
+    <section className="m-section m-later" id="reviews" style={{ paddingBottom: 0 }}><div className="m-wrap">
+      <div className="m-empty">
+        <h3>No reviews yet</h3>
+        <p style={{ marginBottom: 20 }}>Tried {product.name}? Be the first to tell others how it wears.</p>
+        <WriteReview productId={product.id} productName={product.name} label="Write the first review" />
+      </div>
+    </div></section>
   );
+}
+
+async function PdpFaq({ productId }) {
+  const [productFaqs, globalFaqs] = await Promise.all([getFaqs('product', productId), getFaqs('global')]);
+  const faqs = productFaqs.length ? productFaqs : globalFaqs;
+  return faqs.length ? (
+    <section className="m-section m-later v-pdp-faq"><div className="m-wrap">
+      <div className="m-shead"><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
+      <div className="m-faq">
+        {faqs.map((f) => (
+          <details key={f.id}>
+            <summary>{f.question}</summary>
+            <div className="m-faq__a" {...richHtml(f.answer)} />
+          </details>
+        ))}
+      </div>
+    </div></section>
+  ) : null;
+}
+
+async function PdpRelated({ productId }) {
+  const bestsellers = await getBestsellers(5);
+  const related = bestsellers.filter((product) => String(product.id) !== String(productId)).slice(0, 4);
+  return related.length ? (
+    <section className="m-section m-later" style={{ paddingTop: 0 }}><div className="m-wrap">
+      <div className="m-shead"><span className="m-eyebrow">You may also like</span><h2>Complete Your Collection.</h2></div>
+      <div className="m-pgrid">{related.map((p) => <ProductCard key={p.id} product={p} />)}</div>
+    </div></section>
+  ) : null;
 }
