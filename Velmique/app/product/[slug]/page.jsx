@@ -10,7 +10,6 @@ import { getFaqs } from '@/lib/api/faqs';
 import { getBundleTiers, getPackTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
-import DescriptionHtml from '@/components/product/DescriptionHtml';
 import PdpGallery from '../../_components/PdpGallery';
 import DeliveryCheck from '../../_components/DeliveryCheck';
 import WriteReview from '../../_components/WriteReview';
@@ -252,7 +251,6 @@ export default async function MaisonProduct({ params }) {
         accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
         spec={spec.filter(([key]) => ['Best for','Season','Sillage','Longevity'].includes(key))} />
         {editorial.map(sec=><section className="v-detail-section" key={sec.key}><h2>{sec.key}</h2>{sec.prose ? <p className="v-detail-caption">{sec.prose}</p> : <p className="v-detail-caption">{sec.items.map(it=>it.name).join(' · ')}</p>}</section>)}
-        <details className="v-description"><summary>About this fragrance</summary>{product.descriptionHtml ? <DescriptionHtml className="m-desc-rich" html={richHtml(product.descriptionHtml).dangerouslySetInnerHTML.__html} /> : <p>{product.description || 'Explore the notes and composition of this fragrance above.'}</p>}</details>
       </div>
 
       {/* Reviews — the wall when there are any, and always a way to write one
