@@ -289,7 +289,7 @@ export default function CartDrawer() {
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
 
-  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null && !i.packId);
+  const useShiprocket = srOn && items.length > 0 && items.every((i) => i.variationId != null);
   // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
   const effectiveCouponDiscount = useShiprocket ? 0 : couponDiscount;
 
@@ -357,7 +357,7 @@ export default function CartDrawer() {
     if (useShiprocket) {
       setSrBusy(true);
       try {
-        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1, packId: i.packId })), 'cart');
         return;
       } catch {
         // Shiprocket couldn't start: carry on with our own checkout.

@@ -15,6 +15,7 @@ const { assertCatalogPushAccepted } = require('../utils/checkoutCatalog.js');
  * Push is silently skipped for brands that haven't configured them.
  */
 const { validOverride, createBrandPriceResolver } = require('../utils/brandPrice.js');
+const { PACK_QUOTE_ATTRIBUTE, signPackQuote, readPackQuote } = require('../utils/shiprocketPackPricing.js');
 const crypto = require('crypto');
 const { phoneHash } = require('../utils/encryption.js');
 const axios = require('axios');
@@ -391,11 +392,14 @@ async function pushCollection(categoryId, brandId = 1) {
 // Create a checkout access token for the shopper's cart. The storefront calls
 // our endpoint (the HMAC secret never reaches the browser); we sign and
 // forward to the provider and hand its response back.
-async function createCheckoutToken(brandId, cartData, redirectUrl) {
+async function createCheckoutToken(brandId, cartData, redirectUrl, { pack = false } = {}) {
   const cfg = await getPushConfig(brandId);
   if (!cfg) { const e = new Error('Custom checkout is not configured for this store'); e.status = 400; throw e; }
   const payload = {
-    cart_data: cartData,
+    cart_data: pack ? {
+      ...cartData,
+      custom_attributes: { ...cartData.custom_attributes, [PACK_QUOTE_ATTRIBUTE]: signPackQuote(cartData.items, brandId, cfg.secret) },
+    } : cartData,
     redirect_url: redirectUrl,
     timestamp: new Date().toISOString(),
   };
@@ -556,6 +560,15 @@ async function ingestCheckoutOrder(brandId, p) {
   // A successful SDK return is not proof that a prepaid payment completed.
   if (!isCod && !paid) return { skipped: 'awaiting_payment' };
 
+  const rawPackQuote = parseAttrs(p.cart_data?.custom_attributes)[PACK_QUOTE_ATTRIBUTE]
+    ?? parseAttrs(p.custom_attributes)[PACK_QUOTE_ATTRIBUTE];
+  let packQuote;
+  if (rawPackQuote != null) {
+    const cfg = await getPushConfig(brandId);
+    if (!cfg) throw Object.assign(new Error('Could not verify the pack quote for this store.'), { status: 422 });
+    packQuote = readPackQuote(rawPackQuote, items, brandId, cfg.secret);
+  }
+
   const { generateUniqueOrderNumber } = require('./orderCreationService.js');
   const { toSmallestUnit } = require('../utils/amountConverter.js');
   const ship = p.shipping_address || {};
@@ -594,7 +607,7 @@ async function ingestCheckoutOrder(brandId, p) {
       const v = await ProductVariation.findByPk(it.variant_id, { transaction: t });
       if (!v) { const e = new Error(`Unknown variant_id ${it.variant_id}`); e.status = 400; throw e; }
       const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
-      const price = await sitePrice(v.productId, v.price);
+      const price = packQuote ? packQuote.get(String(it.variant_id)).paise / 100 : await sitePrice(v.productId, v.price);
       lines.push({ product_id: v.productId, variation_id: v.id, quantity: qty, price, discount: 0, subtotal: price * qty });
     }
 
@@ -604,9 +617,12 @@ async function ingestCheckoutOrder(brandId, p) {
     const subtotal = linesTotal;
     const discount = Math.max(0, Number(p.total_discount) || 0);
     const shippingFee = Math.max(0, Number(p.shipping_charges) || 0);
-    const expected = Math.max(0, subtotal - discount + shippingFee);
+    const expected = Math.max(0, Math.round((subtotal - discount + shippingFee) * 100) / 100);
     const claimed = Number(p.total_amount_payable);
-    if (Number.isFinite(claimed) && Math.abs(claimed - expected) > 2) {
+    const mismatched = packQuote
+      ? p.total_amount_payable == null || p.total_amount_payable === '' || !Number.isFinite(claimed) || Math.round(claimed * 100) !== Math.round(expected * 100)
+      : Number.isFinite(claimed) && Math.abs(claimed - expected) > 2;
+    if (mismatched) {
       const e = new Error(`Amount mismatch for ${platformId}: provider says ₹${claimed}, items come to ₹${expected}`);
       e.status = 422; throw e;
     }

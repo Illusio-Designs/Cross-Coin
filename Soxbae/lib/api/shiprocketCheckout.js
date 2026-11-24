@@ -1,4 +1,4 @@
-import { runCheckoutOpening, confirmVerifiedOrder, normalizeCheckoutLines } from '../buyingFlow';
+import { runCheckoutOpening, confirmVerifiedOrder, shiprocketCheckoutItems } from '../buyingFlow';
 import { startCheckoutDiagnostic, checkoutDiagnosticStep, checkoutFallbackUrl } from '../checkoutDiagnostics';
 /* Soxbae — Shiprocket Checkout (their hosted checkout opens over the store).
 
@@ -94,22 +94,11 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   return runCheckoutOpening(BRAND, async () => {
-    lines = normalizeCheckoutLines(lines);
     if (openingPromise) return openingPromise;
     const open = async () => {
       startCheckoutDiagnostic(source, { preserveTap: true });
       checkoutDiagnosticStep('opening_started');
-      const byVariant = new Map();
-      for (const line of lines || []) {
-        const id = String(line.variationId ?? '');
-        const quantity = Number(line.quantity ?? 1);
-        if (!/^\d+$/.test(id) || Number(id) <= 0 || !Number.isSafeInteger(quantity) || quantity <= 0) {
-          throw new Error('Some items cannot be checked out here');
-        }
-        byVariant.set(id, (byVariant.get(id) || 0) + quantity);
-      }
-      const items = [...byVariant].map(([variant_id, quantity]) => ({ variant_id, quantity }));
-      if (!items.length) throw new Error('Some items cannot be checked out here');
+      const { items, pack } = shiprocketCheckoutItems(lines);
 
       const ids = trackingIds();
       const custom_attributes = {};
@@ -118,7 +107,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
       checkoutDiagnosticStep('token_requested', { itemCount: items.reduce((sum, item) => sum + item.quantity, 0), variantIds: items.map((item) => item.variant_id), secureContext: window.isSecureContext === true, cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled === true : false });
       const [sdk, res] = await Promise.all([
         loadShiprocketSdk().then((sdk) => { checkoutDiagnosticStep('sdk_ready'); return sdk; }),
-        fetch(`${API_URL}/api/custom-checkout/token`, {
+        fetch(`${API_URL}/api/custom-checkout/${pack ? 'pack-token' : 'token'}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
           body: JSON.stringify({ items, custom_attributes, redirect_url: `${window.location.origin}/order-confirmation` }),

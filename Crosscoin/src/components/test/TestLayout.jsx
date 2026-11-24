@@ -786,7 +786,10 @@ export default function TestLayout({ children }) {
     try {
       if ((await shiprocketEnabled()) === false) { setSrOn(false); showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
       setSrOn(true);
-      await openShiprocketCheckout(e, cart.map((i) => ({ variationId: i.vid, quantity: i.qty })), 'cart');
+      await openShiprocketCheckout(e, cart.map((i) => ({
+        variationId: i.vid, quantity: i.qty, packId: i.packId,
+        packPrice: tiersMap[i.id]?.some((tier) => Number(tier.pairs) === i.qty) || (i.packq > 1 && i.qty === i.packq && i.unit < i.base),
+      })), 'cart');
     } catch (_) {
       showToast('Checkout couldn’t open. Please check your connection and try again.');
     } finally {

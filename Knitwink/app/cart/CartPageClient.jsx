@@ -86,7 +86,7 @@ export function CartPageClient({ upsellProducts }) {
     });
     setSrBusy(true);
     try {
-      await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1 })), 'cart');
+      await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1, packId: i.packId })), 'cart');
     } catch {
       openDrawer();
     } finally {

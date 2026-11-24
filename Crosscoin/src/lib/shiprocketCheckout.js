@@ -1,4 +1,4 @@
-import { runCheckoutOpening, confirmVerifiedOrder, normalizeCheckoutLines, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from './buyingFlow';
+import { runCheckoutOpening, confirmVerifiedOrder, shiprocketCheckoutItems, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from './buyingFlow';
 // CrossCoin — Shiprocket Checkout (their hosted checkout opens over the store).
 //
 // Our backend signs a checkout token for the chosen lines (the secret never
@@ -89,11 +89,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   return runCheckoutOpening(BRAND, async () => {
-    lines = normalizeCheckoutLines(lines);
-    const items = lines
-      .filter((l) => l.variationId != null)
-      .map((l) => ({ variant_id: String(l.variationId), quantity: Math.max(1, Number(l.quantity) || 1) }));
-    if (!items.length || items.length !== lines.length) throw new Error('Some items cannot be checked out here');
+    const { items, pack } = shiprocketCheckoutItems(lines);
 
     const ids = trackingIds();
     const custom_attributes = {};
@@ -101,7 +97,7 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now') {
 
     const [sdk, res] = await Promise.all([
       loadShiprocketSdk(),
-      fetch(`${API_URL}/api/custom-checkout/token`, {
+      fetch(`${API_URL}/api/custom-checkout/${pack ? 'pack-token' : 'token'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
         body: JSON.stringify({ items, custom_attributes, redirect_url: `${window.location.origin}/order-confirmation` }),

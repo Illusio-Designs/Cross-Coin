@@ -1,4 +1,4 @@
-import { runCheckoutOpening, normalizeCheckoutLines, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from '../buyingFlow';
+import { runCheckoutOpening, shiprocketCheckoutItems, readCheckoutTokenResponse, cleanCheckoutFallbackUrl } from '../buyingFlow';
 /* Velmique — Shiprocket Checkout (their hosted checkout opens over the store).
 
    Flow: our backend signs a checkout token for the bag (the secret never
@@ -8,7 +8,6 @@ import { runCheckoutOpening, normalizeCheckoutLines, readCheckoutTokenResponse, 
    and fires the Purchase. */
 
 import { fbTrack, trackingIds } from '@/utils/pixel';
-import { packDiscountPercent } from '@/lib/packPricing';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.crosscoin.in';
 const BRAND   = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'velmique';
@@ -38,51 +37,14 @@ export function shiprocketEnabled() {
   return enabledPromise;
 }
 
-export function shiprocketPackEnabled() {
-  return fetch(`${API_URL}/api/custom-checkout/status?pack=1`, { headers: { 'X-Brand-Name': BRAND } })
-    .then((response) => response.ok ? response.json() : null)
-    .then((data) => typeof data?.enabled === 'boolean' ? data.enabled && data.packEnabled === true : null)
-    .catch(() => null);
-}
-
-// Can these lines go to Shiprocket? Each needs a variant. Build-your-pack
-// lines (pack_group) and admin-pack lines (packPrice) stay on our own
-// checkout, which applies the pack price; Shiprocket only knows unit prices.
 export function shiprocketTakes(lines) {
-  return lines.length > 0 && lines.every((l) => l.variationId != null && !l.packGroup && !l.packPrice);
+  return lines.length > 0 && lines.every((line) => line.variationId != null);
 }
 
 export async function openShiprocketCartCheckout(event, lines) {
-  const normalized = normalizeCheckoutLines(lines);
-  const hasPack = lines.some((line) => line.packGroup);
-  if (lines.some((line) => line.packPrice)) {
-    throw new Error('This fixed-price pack cannot be checked out in the bag. Use Buy Now on its product page.');
-  }
-  let packDiscount;
-  if (hasPack) {
-    const enabled = await shiprocketPackEnabled();
-    if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-    if (!enabled) throw new Error('Pack pricing is unavailable in Shiprocket Checkout. Your selections are still in your bag.');
-    const response = await fetch('/api/pack-tiers');
-    if (!response.ok) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-    const tiers = await response.json();
-    if (!Array.isArray(tiers) || !tiers.length) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-
-    const count = normalized.reduce((sum, line) => sum + line.quantity, 0);
-    const combinedRate = packDiscountPercent(tiers, count);
-    const counts = new Map();
-    for (const line of lines) {
-      if (line.packGroup) counts.set(line.packGroup, (counts.get(line.packGroup) || 0) + Number(line.quantity ?? 1));
-    }
-    if (lines.some((line) => packDiscountPercent(tiers, counts.get(line.packGroup) || 0) !== combinedRate)) {
-      throw new Error('Shiprocket can’t apply these pack prices together. Check out the packs and single fragrances separately.');
-    }
-    if (combinedRate > 0) packDiscount = combinedRate;
-  } else {
-    const enabled = await shiprocketEnabled();
-    if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-    if (!enabled) throw new Error('Shiprocket Checkout is currently unavailable. Your selections are still in your bag.');
-  }
+  const enabled = await shiprocketEnabled();
+  if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
+  if (!enabled) throw new Error('Shiprocket Checkout is currently unavailable. Your selections are still in your bag.');
 
   const contents = lines.map((line) => ({ id: String(line.productId ?? line.id), quantity: Number(line.quantity ?? 1) }));
   fbTrack('InitiateCheckout', {
@@ -93,11 +55,7 @@ export async function openShiprocketCartCheckout(event, lines) {
     value: lines.reduce((sum, line) => sum + Number(line.price || 0) * Number(line.quantity ?? 1), 0),
     currency: 'INR',
   });
-  try {
-    return await openShiprocketCheckout(event, normalized, 'cart', { packDiscount });
-  } catch {
-    throw new Error(SHIPROCKET_RETRY_MESSAGE);
-  }
+  return openShiprocketCheckout(event, lines, 'cart');
 }
 
 // Shiprocket's stylesheet for the hosted checkout window.
@@ -152,16 +110,11 @@ export function loadShiprocketSdk() {
 // `source` is 'cart' (the bag) or 'buy-now' (one product page selection).
 // The shopper's browser ids + cookie choice ride along in custom_attributes,
 // so the order's Meta Purchase can match them even if the tab is closed.
-export function openShiprocketCheckout(event, lines, source = 'buy-now', { packDiscount } = {}) {
+export function openShiprocketCheckout(event, lines, source = 'buy-now') {
   event?.preventDefault?.();
   event?.stopPropagation?.();
   return runCheckoutOpening(BRAND, async () => {
-    const isPack = packDiscount != null;
-    if (isPack ? !(packDiscount > 0) : !shiprocketTakes(lines)) {
-      throw new Error('Some items cannot be checked out here');
-    }
-    const items = normalizeCheckoutLines(lines)
-      .map(({ variationId, quantity }) => ({ variant_id: variationId, quantity }));
+    const { items, pack } = shiprocketCheckoutItems(lines);
 
     const ids = trackingIds();
     const custom_attributes = {};
@@ -169,17 +122,16 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now', { packD
 
     const [sdk, res] = await Promise.all([
       loadShiprocketSdk(),
-      fetch(`${API_URL}/api/custom-checkout/${isPack ? 'pack-token' : 'token'}`, {
+      fetch(`${API_URL}/api/custom-checkout/${pack ? 'pack-token' : 'token'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Brand-Name': BRAND },
         body: JSON.stringify({
           items,
-          ...(isPack ? { discount_percent: packDiscount } : {}),
           custom_attributes,
           redirect_url: `${window.location.origin}/order-confirmation`,
         }),
       }).then(async (response) => {
-        if (isPack && response.status === 409) {
+        if (pack && response.status === 409) {
           const data = await response.clone().json().catch(() => null);
           if (data?.code === PACK_DISCOUNT_UNAVAILABLE) {
             const error = new Error(data.message);

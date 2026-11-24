@@ -10,7 +10,7 @@ import { openShiprocketCheckout, PACK_DISCOUNT_UNAVAILABLE, SHIPROCKET_RETRY_MES
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
 
-const inr = (amount) => '₹' + Math.round(amount).toLocaleString('en-IN');
+const inr = (amount) => '₹' + Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 export default function PdpMixPack({ current, scents, tiers }) {
   const { addToCart } = useStore();
@@ -99,11 +99,11 @@ export default function PdpMixPack({ current, scents, tiers }) {
         value: total,
         currency: 'INR',
       });
-      const lines = selection.map((product) => ({ variationId: product.defaultVariationId, quantity: 1 }));
-      await openShiprocketCheckout(event, lines, 'buy-now', { packDiscount: off });
+      const lines = selection.map((product) => ({ variationId: product.defaultVariationId, quantity: 1, packGroup: 'selected' }));
+      await openShiprocketCheckout(event, lines, 'buy-now');
     } catch (error) {
       setCheckoutError(error.code === PACK_DISCOUNT_UNAVAILABLE
-        ? 'Pack pricing is unavailable in Shiprocket Checkout. Your selections are still here.'
+        ? error.message
         : SHIPROCKET_RETRY_MESSAGE);
     } finally {
       openingRef.current = false;

@@ -371,7 +371,7 @@ export function CartDrawer() {
     if (useShiprocket) {
       setSrBusy(true);
       try {
-        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1 })), 'cart');
+        await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.quantity || 1, packId: i.packId })), 'cart');
         return;
       } catch {
         // Shiprocket couldn't start: carry on with our own checkout.

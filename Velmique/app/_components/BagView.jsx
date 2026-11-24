@@ -10,7 +10,7 @@ import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
 import { BagSkeleton, Sk } from './Skeleton';
 
-const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 // A shopper can start Shiprocket Checkout from either /cart or /checkout.
 export default function BagView({ checkoutPage = false }) {

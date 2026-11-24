@@ -681,8 +681,7 @@ html:not(.mx-go) .m-anno__track,html:not(.mx-go) .m-herocard,html:not(.mx-go) .m
 .m-packbar__price b{font-family:var(--m-d);font-size:24px;font-weight:600;color:var(--m-on-band)}
 .m-packbar__price s{color:var(--m-on-band-soft);font-size:13px;margin-left:8px}
 .m-packbar__save{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;background:rgba(242,174,201,.16);color:var(--m-accent-soft);border:1px solid var(--m-band-line);border-radius:var(--m-radius);padding:3px 9px;margin-left:8px}
-.m-packbar__cta{flex:0 0 auto}
-.m-packbar__cta:disabled{opacity:.4;cursor:not-allowed}
+.m-packbar__cta{flex:0 0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 @media (max-width:620px){.m-packbar__price{text-align:left}.m-packbar__cta{flex:1 1 100%}}
 
 /* ── Reviews auto-scroll wall (Morbix pattern): 3 rows, seamless sideways loop

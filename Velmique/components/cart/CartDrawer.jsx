@@ -1281,7 +1281,7 @@ export default function CartDrawer() {
                 <div className="h-px bg-[var(--m-line)] my-2" />
                 <div className="flex items-baseline justify-between">
                   <span className="text-[color:var(--m-ink)] font-body uppercase tracking-[0.2em] text-xs">{coStep === 1 ? 'Estimated subtotal' : 'Total'}</span>
-                  <span className="font-serif italic text-[color:var(--m-ink)] text-2xl">{fmt(coStep === 1 ? Math.round(netSub) : finalPayable)}</span>
+                  <span className="font-serif italic text-[color:var(--m-ink)] text-2xl">{fmt(coStep === 1 ? netSub : finalPayable)}</span>
                 </div>
                 {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && coStep === 2 && (
                   <p className="text-[10px] font-body text-[color:var(--m-accent-soft)] mt-1">

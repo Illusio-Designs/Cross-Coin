@@ -276,11 +276,11 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
     else { toast('Added to cart ✓'); window.dispatchEvent(new CustomEvent('cc-test-opencart')); }
   };
 
-  // Packs use Shiprocket too; matching bundle offers live in Shiprocket.
+  // Pack selections carry the bundle flag so the server can price them.
   const useShiprocket = srOn;
   const onBuyNow = async (e) => {
     if (srBusy) return;
-    const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty };
+    const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty, packPrice: hasPacks && selOpt?.pairs > 1 };
     if (line.variationId == null) { toast('Please select an available product option before checking out.'); return; }
     try {
       fbqTrack('InitiateCheckout', {

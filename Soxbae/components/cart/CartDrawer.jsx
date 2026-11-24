@@ -582,7 +582,7 @@ export default function CartDrawer() {
             setError(`Please remove ${old.map((i) => i.name).join(', ')} from the cart and add ${old.length > 1 ? 'them' : 'it'} again, then check out.`);
             return;
           }
-          await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1 })), 'cart');
+          await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1, packId: i.packId })), 'cart');
           return;
         }
       } catch {

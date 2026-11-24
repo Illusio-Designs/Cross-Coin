@@ -42,6 +42,15 @@ test('duplicate cart lines for the same variation become one provider line', asy
   await c.open({}, [{ variationId: 12, quantity: 2 }, { variationId: '12', quantity: 1 }], 'cart');
   assert.deepEqual(JSON.parse(c.requests[0].options.body).items, [{ variant_id: '12', quantity: 3 }]);
 });
+test('bundles keep their grouping and use the pack token endpoint', async () => {
+  const c = setup();
+  await c.open({}, [{ variationId: 12, quantity: 2, packId: 'two' }, { variationId: 12, quantity: 1 }], 'cart');
+  assert.match(c.requests[0].url, /\/pack-token$/);
+  assert.deepEqual(JSON.parse(c.requests[0].options.body).items, [
+    { variant_id: '12', quantity: 2, pack_id: 'two' },
+    { variant_id: '12', quantity: 1 },
+  ]);
+});
 test('rapid taps share one opening and remain pending until SDK settles', async () => {
   let finish;
   const c = setup({ sdk: () => new Promise((resolve) => { finish = resolve; }) });

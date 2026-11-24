@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
 import { packDiscountPercent, packUnitPrice } from '@/lib/packPricing';
+import { openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import ProductCard from './ProductCard';
 import SkImg from './SkImg';
 
-const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 export default function PackBuilder({ products = [], tiers = [] }) {
   const { addToCart } = useStore();
@@ -15,6 +17,8 @@ export default function PackBuilder({ products = [], tiers = [] }) {
   // more than once via the card's − / + stepper.
   const [qty, setQty] = useState({});
   const [added, setAdded] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   const nextTier = (c) => tiers.find((t) => c < t.pairs);
   const maxThreshold = tiers.length ? tiers[tiers.length - 1].pairs : 0;
@@ -26,6 +30,27 @@ export default function PackBuilder({ products = [], tiers = [] }) {
     sum + packUnitPrice(Number(product.price) || 0, off) * (qty[String(product.id)] || 0)
   ), 0);
   const saved = subtotal - total;
+
+  async function buyPack(event) {
+    if (!off || opening) return;
+    const lines = products.flatMap((product) => {
+      const quantity = qty[String(product.id)];
+      return quantity > 0 ? [{ variationId: product.defaultVariationId, quantity, packGroup: 'selected' }] : [];
+    });
+    if (lines.some((line) => !line.variationId)) {
+      setCheckoutError('One fragrance is unavailable. Update your selection.');
+      return;
+    }
+    setOpening(true);
+    setCheckoutError('');
+    try {
+      await openShiprocketCheckout(event, lines);
+    } catch (error) {
+      setCheckoutError(error.code === 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE' ? error.message : SHIPROCKET_RETRY_MESSAGE);
+    } finally {
+      setOpening(false);
+    }
+  }
 
   const bump = (id, d) => setQty((prev) => {
     const k = String(id);
@@ -154,15 +179,18 @@ export default function PackBuilder({ products = [], tiers = [] }) {
       <div className="m-packbar">
         {maxThreshold > 0 && <div className="m-packtrack"><i style={{ width: `${Math.min(100, (count / maxThreshold) * 100)}%` }} /></div>}
         <div className="m-wrap m-packbar__in">
-          <div className="m-packbar__hint">{hint}</div>
+          <div className="m-packbar__hint">{hint}{checkoutError && <div role="alert">{checkoutError}</div>}</div>
           <div className="m-packbar__price">
             <b>{inr(total)}</b>
             {off ? <s>{inr(subtotal)}</s> : null}
             {off ? <span className="m-packbar__save">Save {off}% · {inr(saved)}</span> : null}
           </div>
-          <button type="button" className="m-btn m-btn--fill m-packbar__cta" onClick={addPack} disabled={!count}>
-            {added ? 'Pack added ✓' : `Add pack · ${count} item${count === 1 ? '' : 's'}${count ? ` · ${inr(total)}` : ''}`}
-          </button>
+          <div className="m-packbar__cta">
+            <button type="button" className="m-btn" onClick={addPack} disabled={!count || opening}>
+              {added ? 'Pack added ✓' : 'Add Pack to Bag'}
+            </button>
+            <ShiprocketButton label="BUY PACK NOW" onClick={buyPack} busy={opening} disabled={!off} />
+          </div>
         </div>
       </div>
     </>

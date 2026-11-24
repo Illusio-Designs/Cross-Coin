@@ -12,7 +12,7 @@ import PdpMixPack from './PdpMixPack';
 import SkImg from './SkImg';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
-const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
 export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [], notes }) {
   const { addToCart, openCheckout } = useStore();
@@ -48,9 +48,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const lineQty = pack ? pack.pairs : qty;
   const lineTotal = pack && pack.pairs > 1 ? pack.total : unitPrice * lineQty;
 
-  // An admin pack (2+ bottles at the pack price) is its own bag line, marked
-  // packPrice: Shiprocket would charge each bottle at the catalogue price, so a
-  // bag holding one stays on our own checkout.
+  // Fixed-price packs are repriced from their saved tier at checkout.
   const isPackLine = !!(pack && pack.pairs > 1);
   const line = () => ({
     id: isPackLine ? `${product.id}:${opt.id}:pk${pack.pairs}` : `${product.id}:${opt.id}`,
@@ -110,11 +108,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   // Buy now: add, then open the bag straight on delivery & payment.
   const buy = () => { if (add()) openCheckout(); };
 
-  // Shiprocket Checkout (when it is set up for the store): Buy now opens it
-  // straight away with just this selection, leaving the bag alone. Packs
-  // (an admin pack) keep using our own checkout, because
-  // Shiprocket prices each bottle from the catalog and wouldn't apply the
-  // pack price.
+  // Direct checkout leaves the bag alone.
   const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
@@ -137,8 +131,8 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         num_items: lineQty, value: unitPrice * lineQty, currency: 'INR',
       });
       await openShiprocketCheckout(e, [checkoutLine], 'buy-now');
-    } catch {
-      showError(SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
+    } catch (error) {
+      showError(error.code === 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE' ? error.message : SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
     } finally {
       setSrBusy(false);
     }

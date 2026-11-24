@@ -80,7 +80,7 @@ const FIELDS = [
   F('FREE_SHIPPING_THRESHOLD', 'shipping', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Delivery rules', hint: '0 = off. Same value as on Shipping & courier.' }),
   // Shiprocket Checkout — per store (each brand has its own Shiprocket keys).
   F('SHIPROCKET_CHECKOUT_ENABLED', 'payments', 'Use Shiprocket Checkout on the store', { brandOnly: true, type: 'toggle', default: 'false', category: 'payment', group: 'Shiprocket Checkout', hint: 'On = “Proceed to checkout” opens Shiprocket Checkout (needs both keys below). Off = the store’s own checkout.' }),
-  F('SHIPROCKET_CHECKOUT_PACK_TIERS', 'payments', 'Verified Shiprocket pack tiers', { brandOnly: true, rule: 'checkoutPackTiers', category: 'payment', group: 'Shiprocket Checkout', hint: 'Enter the automatic quantity tiers confirmed in Shiprocket as quantity:percent, for example 2:20,3:30. Leave blank to use the store checkout for packs.' }),
+  F('SHIPROCKET_CHECKOUT_PACK_TIERS', 'payments', 'Legacy Shiprocket pack tiers', { brandOnly: true, rule: 'checkoutPackTiers', category: 'payment', group: 'Shiprocket Checkout', hint: 'Pack prices now come from the active bundles and pack offers in CrossCoin.' }),
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Shiprocket Checkout API key', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Shiprocket Checkout API secret', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
 

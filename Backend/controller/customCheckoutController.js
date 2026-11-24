@@ -7,7 +7,7 @@ const { ensureCheckoutCatalog } = require('../utils/checkoutCatalog.js');
  */
 const { Product, Category, Brand } = require('../model/associations.js');
 const { BundleTier } = require('../model/bundleTierModel.js');
-const { matchingCheckoutPackTiers } = require('../utils/checkoutPackTiers.js');
+const { PACK_QUOTE_ATTRIBUTE, packGroupId, pricingError, pricePackItems } = require('../utils/shiprocketPackPricing.js');
 const settingsHelper = require('../services/settingsHelper.js');
 const svc = require('../services/customCheckoutService.js');
 const { logger } = require('../config/logging.js');
@@ -103,14 +103,35 @@ async function isCheckoutEnabled(brandId) {
   return String(enabled).toLowerCase() === 'true' && await svc.isConfigured(brandId);
 }
 
-async function getCheckoutPackTiers(brandId) {
-  const checked = await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_PACK_TIERS', '', { brandOnly: true });
-  if (!checked) return [];
-  const active = await BundleTier.findAll({
-    where: { brand_id: brandId, product_id: null, is_active: true },
-    attributes: ['pairs', 'discount_percent'],
+async function buildPackItems(brandId, rawItems, legacyPercent) {
+  const { bundlePerUnit, packDiscountPercent } = require('./bundleController.js');
+  const lines = rawItems.map((line) => {
+    const pack_id = packGroupId(line.pack_id);
+    const pack_group = packGroupId(line.pack_group);
+    if ((line.pack_id && !pack_id) || (line.pack_group && !pack_group) || (pack_id && pack_group)) {
+      throw pricingError('Invalid pack selection. Rebuild your pack and try again.');
+    }
+    return { variant_id: String(line.variant_id ?? line.variationId), quantity: Number(line.quantity), pack_id, pack_group };
   });
-  return matchingCheckoutPackTiers(checked, active);
+  if (!lines.some((line) => line.pack_id || line.pack_group)) {
+    const discount = await packDiscountPercent(brandId, lines.reduce((total, line) => total + line.quantity, 0));
+    if (!discount || discount !== Number(legacyPercent)) throw pricingError('Pack pricing changed. Rebuild your pack and try again.');
+    for (const line of lines) line.pack_group = 'legacy';
+  }
+  const ids = [...new Set(lines.map((line) => line.variant_id))];
+  const { ProductVariation } = require('../model/associations.js');
+  const resolved = await ProductVariation.findAll({ where: { id: ids, status: 'active' }, attributes: ['id', 'productId'] });
+  const products = await Product.findAll({ where: { id: [...new Set(resolved.map((row) => row.productId))], status: 'active' }, include: svc.productIncludes(brandId) });
+  const activeIds = new Set(resolved.map((row) => String(row.id)));
+  const variants = new Map();
+  for (const product of products) {
+    const listing = svc.mapProduct(product);
+    for (const variant of listing.variants) {
+      if (!activeIds.has(String(variant.id))) continue;
+      variants.set(String(variant.id), { productId: product.id, name: listing.title, price: Number(variant.price), stock: variant.quantity, image: variant.image?.src || listing.image?.src });
+    }
+  }
+  return pricePackItems(lines, variants, (id, quantity) => bundlePerUnit(brandId, id, quantity), (quantity) => packDiscountPercent(brandId, quantity));
 }
 
 exports.status = async (req, res) => {
@@ -118,7 +139,7 @@ exports.status = async (req, res) => {
     const brandId = req.brandId || 1;
     const enabled = await isCheckoutEnabled(brandId);
     const response = { success: true, enabled, shiprocketCalls: svc.providerCallsFor(brandId) };
-    if (req.query.pack === '1') response.packEnabled = enabled && (await getCheckoutPackTiers(brandId)).length > 0;
+    if (req.query.pack === '1') response.packEnabled = enabled && !!(await BundleTier.findOne({ where: { brand_id: brandId, is_active: true }, attributes: ['id'] }));
     res.json(response);
   } catch (err) {
     res.json({ success: true, enabled: false });
@@ -143,19 +164,11 @@ async function createToken(req, res, pack = false) {
       if (!Number.isSafeInteger(total)) return res.status(400).json({ success: false, code: 'CHECKOUT_INVALID_ITEMS', message: 'Quantity is too large' });
       quantities.set(id, total);
     }
-    const items = [...quantities].map(([variant_id, quantity]) => ({ variant_id, quantity }));
+    let items = [...quantities].map(([variant_id, quantity]) => ({ variant_id, quantity }));
     if (!items.length) return res.status(400).json({ success: false, message: 'items are required' });
     if (pack) {
-      const count = items.reduce((sum, { quantity }) => sum + quantity, 0);
-      const tiers = await isCheckoutEnabled(brandId) ? await getCheckoutPackTiers(brandId) : [];
-      const tier = tiers.filter(([minimum]) => minimum <= count).at(-1);
-      if (!tier || tier[1] !== Number(req.body.discount_percent)) {
-        return res.status(409).json({
-          success: false,
-          code: 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE',
-          message: 'Pack pricing is unavailable in Shiprocket Checkout.',
-        });
-      }
+      if (!(await isCheckoutEnabled(brandId))) throw pricingError('Shiprocket Checkout is unavailable for this store.');
+      items = await buildPackItems(brandId, rawItems, req.body.discount_percent);
     }
     // The shopper's own IP + browser, captured here (the request comes from
     // their browser) and carried through the checkout, so the server Purchase
@@ -163,6 +176,7 @@ async function createToken(req, res, pack = false) {
     // from the provider's server, which can't tell us these.
     const custom = (req.body.custom_attributes && typeof req.body.custom_attributes === 'object') ? { ...req.body.custom_attributes } : {};
     delete custom[PACK_PREVIEW_ATTRIBUTE];
+    delete custom[PACK_QUOTE_ATTRIBUTE];
     if (req.ip) custom.client_ip = String(req.ip).slice(0, 64);
     if (req.headers['user-agent']) custom.user_agent = String(req.headers['user-agent']).slice(0, 400);
     // The store, stamped by us (not the browser): the order is saved under it
@@ -177,7 +191,9 @@ async function createToken(req, res, pack = false) {
     if (!redirectUrl) return res.status(400).json({ success: false, message: 'redirect_url is required' });
     // Shiprocket must know these products before its checkout can show them.
     const catalogPush = await ensureCheckoutCatalog(() => svc.ensureProductsPushed(brandId, items.map((i) => i.variant_id)));
-    const data = await svc.createCheckoutToken(brandId, cartData, redirectUrl);
+    const data = pack
+      ? await svc.createCheckoutToken(brandId, cartData, redirectUrl, { pack: true })
+      : await svc.createCheckoutToken(brandId, cartData, redirectUrl);
     res.json({ success: true, ...data, catalogPush });
   } catch (err) {
     logger.error('[custom-checkout] createToken failed: ' + (err?.response?.status || '') + ' ' + err.message);

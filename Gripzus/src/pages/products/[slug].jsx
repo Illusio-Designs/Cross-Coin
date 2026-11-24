@@ -443,11 +443,8 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
     setTimeout(() => setAdded(false), 1800);
   };
 
-  // Shiprocket Checkout (when switched on for Gripzus): Buy now opens it
-  // straight away with just this selection. Discounted packs keep using our
-  // own checkout, because Shiprocket prices each pair from the catalog and
-  // wouldn't apply the pack price.
-  const useShiprocket = srOn && product.inStock !== false && !(hasPacks && packHasDiscount);
+  // Open the current selection with the store’s configured checkout.
+  const useShiprocket = srOn && product.inStock !== false;
 
   // The selection as Shiprocket lines [{ variationId, quantity }]; per-pair
   // colours of the same variation are merged into one line.
@@ -458,10 +455,10 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
         const vid = resolvePairVariant(name).variationId;
         byVar.set(vid, (byVar.get(vid) || 0) + 1);
       }
-      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity }));
+      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity, packId: 'selected' }));
     }
     const line = buildCartLine();
-    return [{ variationId: line.variationId ?? null, quantity: line.qty }];
+    return [{ variationId: line.variationId ?? null, quantity: line.qty, packPrice: hasPacks && packPairs > 1 }];
   };
 
   // Otherwise Buy Now mirrors Morbix: run the SAME pack-aware builder (packs +

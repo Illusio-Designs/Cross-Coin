@@ -258,10 +258,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     setTimeout(() => setAdded(false), 1600);
   };
 
-  // Soxbae checks out only through Shiprocket Checkout: Buy now opens it
-  // straight away with just this selection, packs included (their price comes
-  // from the offers set up in Shiprocket). Only a clear "switched off" for the
-  // store brings back our own checkout.
+  // Shiprocket uses the server-priced pack for the selected variants.
   const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
@@ -275,9 +272,9 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
         const vid = resolvePairVariant(ci).variationId;
         byVar.set(vid, (byVar.get(vid) || 0) + 1);
       }
-      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity }));
+      return [...byVar].map(([variationId, quantity]) => ({ variationId, quantity, packId: 'selected' }));
     }
-    return [{ variationId: activeVariant?.id ?? null, quantity: hasPacks ? packPairs : qty }];
+    return [{ variationId: activeVariant?.id ?? null, quantity: hasPacks ? packPairs : qty, packPrice: hasPacks && packPairs > 1 }];
   };
 
   // Otherwise Soxbae's cart drawer is the checkout, so Buy now adds the

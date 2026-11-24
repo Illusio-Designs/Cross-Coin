@@ -1,5 +1,5 @@
 jest.mock('../../utils/encryption.js', () => ({ phoneHash: jest.fn(() => 'fixture-phone-hash') }));
-jest.mock('axios', () => ({}), { virtual: true });
+jest.mock('axios', () => ({ post: jest.fn() }), { virtual: true });
 jest.mock('sequelize', () => ({ QueryTypes: {} }), { virtual: true });
 jest.mock('../../config/db.js', () => ({ sequelize: { transaction: jest.fn(async (fn) => fn({})) } }));
 jest.mock('../../model/associations.js', () => ({
@@ -9,7 +9,7 @@ jest.mock('../../model/associations.js', () => ({
   GuestUser: { findOne: jest.fn(), create: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn() },
 }));
 jest.mock('../../model/productBrandModel.js', () => ({ ProductBrand: { findOne: jest.fn() } }));
-jest.mock('../../services/settingsHelper.js', () => ({}));
+jest.mock('../../services/settingsHelper.js', () => ({ getSetting: async () => 'fixture-secret' }));
 jest.mock('../../config/logging.js', () => ({ logger: { info: jest.fn(), warn: jest.fn() } }));
 jest.mock('../../services/orderCreationService.js', () => ({ generateUniqueOrderNumber: jest.fn().mockResolvedValue('CC-TEST-1') }));
 jest.mock('../../services/orderEvents.js', () => ({ emit: jest.fn() }));
@@ -17,7 +17,9 @@ jest.mock('../../integration/facebookPixel.js', () => ({ sendFacebookEvent: jest
 jest.mock('../../integration/googleAnalytics.js', () => ({ sendGAEvent: jest.fn() }));
 const models = require('../../model/associations');
 const { ProductBrand } = require('../../model/productBrandModel');
-const { ingestCheckoutOrder } = require('../../services/customCheckoutService');
+const { ingestCheckoutOrder, createCheckoutToken } = require('../../services/customCheckoutService');
+const { signPackQuote, readPackQuote } = require('../../utils/shiprocketPackPricing');
+const axios = require('axios');
 const { sendFacebookEvent } = require('../../integration/facebookPixel');
 const { sendGAEvent } = require('../../integration/googleAnalytics');
 let scheduled, immediate;
@@ -49,6 +51,27 @@ test('without a site override the variation price still applies', async () => {
   ProductBrand.findOne.mockResolvedValue(null);
   await ingestCheckoutOrder(2, provider({ total_amount_payable: 899 }));
   expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({ brand_id: 2, final_amount: 899 }), expect.anything());
+});
+test('signed pack prices are used for import and matched to the exact charged amount', async () => {
+  const items = [{ variant_id: 12, quantity: 2, catalog_data: { price: 640.25 } }];
+  const cart_data = { items, custom_attributes: { cc_pack_quote: signPackQuote(items, 1, 'fixture-secret') } };
+  const body = { cart_data, shipping_charges: 50, total_discount: 20, total_amount_payable: 1310.5 };
+  await expect(ingestCheckoutOrder(1, provider({ ...body, total_amount_payable: 1310.51 }))).rejects.toThrow('Amount mismatch');
+  expect(models.Order.create).not.toHaveBeenCalled();
+  await ingestCheckoutOrder(1, provider(body));
+  expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({ final_amount: 1310.5, total_amount: 1280.5 }), expect.anything());
+  expect(models.OrderItem.bulkCreate).toHaveBeenCalledWith([expect.objectContaining({ price: 640.25, subtotal: 1280.5 })], expect.anything());
+});
+test('pack token signs the authoritative quote and sends the same price to Shiprocket', async () => {
+  axios.post.mockResolvedValue({ data: { token: 'fixture-pack' } });
+  const items = [{ variant_id: '12', quantity: 2, catalog_data: { price: 640.25 } }];
+  await createCheckoutToken(1, { items, custom_attributes: { store: 'crosscoin' } }, 'https://crosscoin.in/order-confirmation', { pack: true });
+  const [url, raw, options] = axios.post.mock.calls[0];
+  const payload = JSON.parse(raw).cart_data;
+  expect(url).toMatch(/\/access-token\/checkout$/);
+  expect(options.headers['X-Api-HMAC-SHA256']).toBeTruthy();
+  expect(payload.items).toEqual(items);
+  expect(readPackQuote(payload.custom_attributes.cc_pack_quote, items, 1, 'fixture-secret').get('12').paise).toBe(64025);
 });
 test('incorrect provider total is rejected and never saved or tracked', async () => {
   await expect(ingestCheckoutOrder(1, provider({ total_amount_payable: 499 }))).rejects.toThrow('Amount mismatch');

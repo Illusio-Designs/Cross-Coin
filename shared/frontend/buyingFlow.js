@@ -47,6 +47,21 @@ export function normalizeCheckoutLines(lines) {
   return [...quantities].map(([variationId, quantity]) => ({ variationId, quantity }));
 }
 
+export function shiprocketCheckoutItems(lines) {
+  const normalized = normalizeCheckoutLines(lines);
+  const pack = lines.some((line) => line.packId || line.packGroup || line.packPrice);
+  if (!pack) return { pack, items: normalized.map(({ variationId, quantity }) => ({ variant_id: variationId, quantity })) };
+  return {
+    pack,
+    items: lines.map((line, index) => ({
+      variant_id: String(line.variationId),
+      quantity: Number(line.quantity ?? 1),
+      ...(line.packGroup ? { pack_group: line.packGroup }
+        : line.packId || line.packPrice ? { pack_id: line.packId || `fixed-${index}` } : {}),
+    })),
+  };
+}
+
 export async function readCheckoutTokenResponse(response) {
   const data = await response.json().catch(() => ({}));
   const token = data?.result?.token || data?.token;
