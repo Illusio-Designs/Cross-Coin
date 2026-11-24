@@ -13,7 +13,7 @@ import { Skeleton, SkeletonTableRows } from '../ui';
             rows:[{ id, name, phone_masked, brand, items_label, value, left_at,
                     wa, wa_send_at, result, conversation_id, order_number }],
             rules:{ waitHours, quietStart, quietEnd, coupon, minValue },
-            counts?:{ all, wait, sent, won, none } }
+            counts?:{ all, wait, sent, failed, won, none } }
    POST /api/whatsapp/carts/:id/send-now   (admin)
    PUT  /api/whatsapp/carts/rules          (admin)
    ────────────────────────────────────────────────────────────── */
@@ -25,12 +25,14 @@ const TABS = [
   { key: 'all', label: 'All', wa: null },
   { key: 'wait', label: 'Waiting to send', wa: ['wait'] },
   { key: 'sent', label: 'Messaged', wa: ['sent', 'clicked'] },
+  { key: 'failed', label: 'Failed', wa: ['failed'] },
   { key: 'won', label: 'Recovered', wa: ['won'] },
   { key: 'none', label: 'Can’t message', wa: ['none', 'stop'] },
 ];
 const WA = {
   wait: { label: 'Waiting', tone: 'neutral' },
-  sent: { label: 'Sent', tone: 'info' },
+  sent: { label: 'Submitted', tone: 'info' },
+  failed: { label: 'Delivery failed', tone: 'danger' },
   clicked: { label: 'Opened cart', tone: 'accent' },
   won: { label: 'Ordered', tone: 'success' },
   none: { label: 'No number', tone: 'muted' },
@@ -164,7 +166,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
     try {
       const { data: res } = await adminApi.post(`${API}/${row.id}/send-now`);
       if (res && res.success === false) throw new Error(res.message || 'Not sent');
-      showSuccess('messageSent', `Reminder sent to ${row.name || 'the shopper'}`);
+      showSuccess('messageSent', 'Reminder submitted to WhatsApp');
       load();
     } catch (e) {
       showError('sendFailed', errText(e, 'Could not send the reminder.'));
@@ -225,7 +227,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
     if (r.wa === 'won' && r.order_number) {
       return <button type="button" className="wpb-btn wpb-btn--ghost wpb-btn--sm" onClick={() => openOrder(r.order_number)}>Open order</button>;
     }
-    if ((r.wa === 'sent' || r.wa === 'clicked' || r.wa === 'won') && r.conversation_id && goTo) {
+    if ((r.wa === 'sent' || r.wa === 'failed' || r.wa === 'clicked' || r.wa === 'won') && r.conversation_id && goTo) {
       return <button type="button" className="wpb-btn wpb-btn--ghost wpb-btn--sm" onClick={() => goTo('inbox', { conversationId: r.conversation_id })}>Open chat</button>;
     }
     return <span className="wpb-faint">—</span>;

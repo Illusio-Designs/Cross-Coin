@@ -14,6 +14,7 @@
 //   whatsapp_messages index on createdAt (every report here windows on it)
 //   abandoned_carts.link_opened_at   first time the recovery link was opened
 //   abandoned_carts.wa_sent_at       when the recovery message went out (7-day no-resend rule)
+//   abandoned_carts.recovery_wa_message_id  the exact reminder to match with Meta receipts
 // The whatsapp_messages columns are also created by index.js (v27); the guards
 // here only matter if this code runs before that migration has.
 //
@@ -61,7 +62,7 @@ async function _ensureSchema() {
     `SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
         AND ((TABLE_NAME = 'whatsapp_messages' AND COLUMN_NAME IN ('sent_by','automation_key','error_reason'))
-          OR (TABLE_NAME = 'abandoned_carts' AND COLUMN_NAME IN ('link_opened_at','wa_sent_at')))`);
+          OR (TABLE_NAME = 'abandoned_carts' AND COLUMN_NAME IN ('link_opened_at','wa_sent_at','recovery_wa_message_id')))`);
   const have = new Set(cols.map((r) => `${r.t}.${r.c}`));
   const msgAdds = [];
   if (!have.has('whatsapp_messages.sent_by')) msgAdds.push('ADD COLUMN sent_by INT NULL');
@@ -71,6 +72,7 @@ async function _ensureSchema() {
   const cartAdds = [];
   if (!have.has('abandoned_carts.link_opened_at')) cartAdds.push('ADD COLUMN link_opened_at DATETIME NULL');
   if (!have.has('abandoned_carts.wa_sent_at')) cartAdds.push('ADD COLUMN wa_sent_at DATETIME NULL');
+  if (!have.has('abandoned_carts.recovery_wa_message_id')) cartAdds.push('ADD COLUMN recovery_wa_message_id VARCHAR(100) NULL');
   if (cartAdds.length) {
     try {
       await exec(`ALTER TABLE abandoned_carts ${cartAdds.join(', ')}`);
@@ -402,7 +404,7 @@ async function waitingNow(brandId) {
 }
 
 // ─── Abandoned carts ──────────────────────────────────────────────────────────
-const CART_TABS = { all: null, wait: ['wait'], sent: ['sent', 'clicked'], won: ['won'], none: ['none', 'stop'] };
+const CART_TABS = { all: null, wait: ['wait'], sent: ['sent', 'clicked'], failed: ['failed'], won: ['won'], none: ['none', 'stop'] };
 
 async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } = {}) {
   await ensureSchema();
@@ -417,7 +419,7 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
 
   const carts = await q(
     `SELECT id, brand_id, user_id, phone, phone_hash, customer_name, cart_summary, item_count, cart_value,
-            status, wa_sent, created_at, updated_at, link_opened_at
+            status, wa_sent, created_at, updated_at, link_opened_at, wa_sent_at, recovery_wa_message_id
        FROM abandoned_carts
       WHERE updated_at >= :from ${brandSql}
       ORDER BY updated_at DESC
@@ -462,18 +464,31 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
     for (const cv of convs) convByP10.set(p10Of(cv.customer_phone), cv);
   }
 
-  // Delivery status of the recovery template (when the sender recorded it in the
-  // chat): earliest outbound template after the cart was left.
-  const convIds = [...convByP10.values()].map((c) => c.id);
+  const sentCarts = carts.filter((c) => Number(c.wa_sent));
+  const messageIds = [...new Set(sentCarts.map((c) => c.recovery_wa_message_id).filter(Boolean))];
+  const tplById = new Map();
+  if (messageIds.length) {
+    const messages = await q(
+      `SELECT wa_message_id, conversation_id AS cid, status, error_reason FROM whatsapp_messages
+        WHERE wa_message_id IN (:messageIds)`, { messageIds });
+    for (const message of messages) tplById.set(message.wa_message_id, message);
+  }
+
+  // Older carts only have a timestamp. Use a nearby recovery reminder if the
+  // match is unambiguous, since the same chat may have several other templates.
+  const legacyCarts = sentCarts.filter((c) => !c.recovery_wa_message_id && c.wa_sent_at && convByP10.has(c.p10));
+  const convIds = [...new Set(legacyCarts.map((c) => convByP10.get(c.p10).id))];
   const tplByConv = new Map();
   if (convIds.length) {
     const tpls = await q(
-      `SELECT conversation_id AS cid, status, createdAt AS at FROM whatsapp_messages
+      `SELECT conversation_id AS cid, status, error_reason, createdAt AS at FROM whatsapp_messages
         WHERE conversation_id IN (:convIds) AND direction = 'outbound' AND type = 'template' AND createdAt >= :start
-        ORDER BY id`, { convIds, start: new Date(from.getTime() - DAY) });
+          AND wa_message_id IS NOT NULL
+          AND (automation_key = 'abandoned_cart' OR template_name REGEXP '^cart_abandoned(_|$)')`,
+      { convIds, start: new Date(Math.min(...legacyCarts.map((c) => toDate(c.wa_sent_at).getTime())) - 60000) });
     for (const t of tpls) {
       if (!tplByConv.has(t.cid)) tplByConv.set(t.cid, []);
-      tplByConv.get(t.cid).push({ status: t.status, at: toDate(t.at) });
+      tplByConv.get(t.cid).push(t);
     }
   }
 
@@ -509,6 +524,13 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
     const value = Math.round(Number(c.cart_value) || 0);
     const conv = c.p10 ? convByP10.get(c.p10) : null;
     const waSent = !!Number(c.wa_sent);
+    let tpl = waSent ? tplById.get(c.recovery_wa_message_id) : null;
+    if (waSent && !c.recovery_wa_message_id && c.wa_sent_at && conv) {
+      const sentAt = toDate(c.wa_sent_at).getTime();
+      const nearby = (tplByConv.get(conv.id) || []).filter((t) => Math.abs(toDate(t.at).getTime() - sentAt) <= 60000);
+      if (nearby.length === 1) [tpl] = nearby;
+    }
+    const failed = tpl?.status === 'failed';
     const opened = c.link_opened_at ? toDate(c.link_opened_at) : null;
     let wa; let result; let waSendAt = null; let order = null; let noNumber = false;
 
@@ -522,23 +544,23 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
 
     if (!c.p10) {
       wa = 'none'; result = 'No phone number'; noNumber = true;
-    } else if (c.status === 'recovered' && waSent) {
+    } else if (c.status === 'recovered' && waSent && (!failed || opened)) {
       wa = 'won';
       result = order ? `Ordered ${order.order_number} · ₹${order.amount.toLocaleString('en-IN')}` : 'Ordered';
     } else if (c.status === 'recovered') {
-      wa = 'none'; result = order ? `Ordered ${order.order_number} before we messaged` : 'Ordered before we messaged';
-    } else if (conv && Number(conv.opted_out)) {
-      wa = 'stop'; result = 'Opted out of WhatsApp offers';
+      wa = failed ? 'failed' : 'none';
+      result = failed ? `Ordered independently · ${cartDeliveryFailure(tpl)}`
+        : order ? `Ordered ${order.order_number} before we messaged` : 'Ordered before we messaged';
     } else if (waSent && opened) {
       wa = 'clicked'; result = `Opened ${istTime(opened)}, didn’t order yet`;
+    } else if (failed) {
+      wa = 'failed'; result = cartDeliveryFailure(tpl);
+    } else if (conv && Number(conv.opted_out)) {
+      wa = 'stop'; result = 'Opted out of WhatsApp offers';
     } else if (waSent) {
       wa = 'sent';
-      const tpl = conv && (tplByConv.get(conv.id) || []).find((t) => t.at >= new Date(leftAt.getTime() - 2 * DAY));
-      result = !tpl ? 'Sent, link not opened yet'
-        : tpl.status === 'read' ? 'Read, no click yet'
-          : tpl.status === 'delivered' ? 'Delivered, not read yet'
-            : tpl.status === 'failed' ? 'Message failed to deliver'
-              : 'Sent, link not opened yet';
+      result = tpl?.status === 'read' ? 'Read, no click yet'
+        : tpl?.status === 'delivered' ? 'Delivered, not read yet' : 'Awaiting delivery confirmation';
     } else if (rules.minValue > 0 && value < rules.minValue) {
       wa = 'none'; result = `Under ₹${rules.minValue.toLocaleString('en-IN')} — skipped`;
     } else {
@@ -567,10 +589,10 @@ async function getCarts({ days: rawDays, status: rawStatus, brandId: rawBrand } 
       wa,
       wa_send_at: waSendAt,
       result,
-      conversation_id: conv ? conv.id : null,
+      conversation_id: tpl?.cid || conv?.id || null,
       order_number: wa === 'won' && order ? order.order_number : null,
       _opened: !!opened,
-      _sent: waSent,
+      _sent: waSent && (!failed || !!opened),
       _noNumber: noNumber,
       _sales: wa === 'won' && order ? order.amount : 0,
     });
@@ -656,8 +678,9 @@ async function sendCartNow(id) {
     const why = result.automation_disabled ? 'The abandoned-cart message is switched off in Automatic messages' : 'This customer has opted out of WhatsApp messages';
     return { status: 409, body: { success: false, code: 'SKIPPED', message: why } };
   }
-  await recovery.markMessaged(row); // keeps updated_at (= when the cart was left)
-  return { status: 200, body: { success: true, wa_message_id: result?.messages?.[0]?.id || null, conversation_id: convs[0]?.id || null } };
+  const waMessageId = result?.messages?.[0]?.id || null;
+  await recovery.markMessaged(row, waMessageId);
+  return { status: 200, body: { success: true, wa_message_id: waMessageId, conversation_id: convs[0]?.id || null } };
 }
 
 async function saveCartRules(input) {
@@ -852,6 +875,13 @@ function describeFailure(code, text) {
   if (c && META_ERRORS[c]) return META_ERRORS[c];
   if (text) return String(text).slice(0, 200);
   return null;
+}
+
+function cartDeliveryFailure(message) {
+  const reason = message.error_reason || '';
+  const match = /\(code (\d+)\)\s*$/.exec(reason);
+  const detail = describeFailure(match?.[1], match ? reason.slice(0, match.index).trim() : reason);
+  return detail ? `${detail}${match ? ` (code ${match[1]})` : ''}` : 'WhatsApp reported a delivery failure without a reason';
 }
 
 // For the status webhook: store WHY a send failed so Settings → Failed sends

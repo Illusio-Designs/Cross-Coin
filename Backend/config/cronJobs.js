@@ -260,7 +260,8 @@ async function abandonedCart() {
       // Recovery token so the "Complete Order" link rebuilds this server
       // cart on any device (the shopper isn't logged in inside WhatsApp's
       // in-app browser). Null on failure → link still opens the store.
-      const recoverToken = await require('../services/cartRecoveryService.js').tokenForServerCart({
+      const recovery = require('../services/cartRecoveryService.js');
+      const capture = await recovery.prepareServerCartRecovery({
         phone: user.phone, name: user.username, brandId, userId: user.id,
         cartItems: cart.CartItems, summary: productName + extra, value: cartTotal,
       });
@@ -270,9 +271,10 @@ async function abandonedCart() {
         total: cartTotal ? cartTotal.toFixed(0) : undefined,
         productImage,
         couponCode: gate.coupon,
-        recoverToken,
+        recoverToken: capture?.token,
       }, brandId);
       if (r && r.skipped) { switchedOff++; continue; } // switched off — leave the cart as is
+      if (capture?.row) await recovery.markMessaged(capture.row, r?.messages?.[0]?.id);
       // Mark the cart abandoned so the hourly cron never re-messages it.
       // (Previously nothing marked it, so the same cart was messaged every
       // hour for up to ~23 hours.) It re-arms to 'active' when the shopper
@@ -337,7 +339,7 @@ async function abandonedCheckout() {
       }, brandId);
       // Switched off on the Automations page → not sent, leave the row.
       if (r && r.skipped) { switchedOff++; continue; }
-      await rec.markMessaged(row);
+      await rec.markMessaged(row, r?.messages?.[0]?.id);
       sent++;
     } catch (e) { failed++; console.warn('Abandoned checkout WA failed:', e.message); }
   }

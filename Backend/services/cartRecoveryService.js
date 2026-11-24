@@ -144,7 +144,7 @@ async function findByToken(token) {
 // for this brand when there is one — so their WhatsApp link can restore the
 // cart on any device. The row is written as already-messaged so the 5-minute
 // capture cron never sends a second message for it.
-async function tokenForServerCart({ phone, name, brandId, userId, cartItems, summary, value }) {
+async function prepareServerCartRecovery({ phone, name, brandId, userId, cartItems, summary, value }) {
   try {
     const { AbandonedCart } = require('../model/abandonedCartModel.js');
     const { phoneHash } = require('../utils/encryption.js');
@@ -166,7 +166,7 @@ async function tokenForServerCart({ phone, name, brandId, userId, cartItems, sum
         const { sequelize } = require('../config/db.js');
         await sequelize.query('UPDATE abandoned_carts SET wa_sent_at = :now, updated_at = updated_at WHERE id = :id', { replacements: { id: row.id, now: new Date() } });
       } catch (_) { /* optional */ }
-      return row.recoverToken;
+      return { row, token: row.recoverToken };
     }
     // Keep a storefront-captured snapshot (richer — it carries the store's own
     // lines) when the row has one; otherwise take the current server cart.
@@ -179,7 +179,7 @@ async function tokenForServerCart({ phone, name, brandId, userId, cartItems, sum
     // mark the capture row messaged too — otherwise the 5-minute capture cron
     // would send the same shopper a second cart message.
     if (row.status === 'pending') await markMessaged(row).catch(() => {});
-    return token;
+    return { row, token };
   } catch (e) {
     logger.warn('[cart-recover] server-cart token failed: ' + e.message);
     return null;
@@ -401,14 +401,19 @@ async function lastMessagedAt(rowOrId) {
 
 // Record a successful recovery send. `silent` keeps updated_at = when the cart
 // was left (the dashboard and the timing rules read it).
-async function markMessaged(row) {
-  await row.update({ status: 'messaged', waSent: true }, { silent: true });
+async function markMessaged(row, waMessageId = null) {
   try {
     await require('./whatsappInsightsService.js').ensureSchema();
     const { sequelize } = require('../config/db.js');
-    await sequelize.query('UPDATE abandoned_carts SET wa_sent_at = :now, updated_at = updated_at WHERE id = :id',
-      { replacements: { id: row.id, now: new Date() } });
-  } catch (e) { logger.warn('[cart-recover] could not stamp wa_sent_at: ' + e.message); }
+    await sequelize.query(`UPDATE abandoned_carts
+      SET status = IF(status = 'recovered', status, 'messaged'), wa_sent = 1,
+          wa_sent_at = :now, recovery_wa_message_id = :waMessageId, updated_at = updated_at
+      WHERE id = :id AND updated_at = :leftAt`,
+    { replacements: { id: row.id, leftAt: row.updatedAt, now: new Date(), waMessageId } });
+  } catch (e) {
+    logger.warn('[cart-recover] could not record delivery tracking: ' + e.message);
+    await row.update({ status: 'messaged', waSent: true }, { silent: true });
+  }
 }
 
 // Has this shopper (same phone, same brand) placed an order after `after`?
@@ -540,6 +545,6 @@ module.exports = {
   itemsFromServerCart,
   ensureToken,
   findByToken,
-  tokenForServerCart,
+  prepareServerCartRecovery,
   buildRestoreLines,
 };
