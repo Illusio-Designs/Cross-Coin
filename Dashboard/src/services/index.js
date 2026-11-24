@@ -2308,11 +2308,6 @@ export const brandSettingsService = {
     }
   },
 
-  createVelmiquePackPreview: async () => {
-    const response = await adminApi.post('/api/custom-checkout/pack-preview?brand=velmique');
-    return response.data;
-  },
-
   // Can the saved Meta token read this store's ad account (for ad spend)?
   testMetaAds: async (brandId) => {
     try {

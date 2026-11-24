@@ -106,7 +106,6 @@ router.post('/abandoned-webhook', providerAuth, ctrl.abandonedWebhook);
 router.post('/confirm', brandRequired, ctrl.confirmReturn);
 
 // ── Admin utilities ────────────────────────────────────────────────────────
-router.post('/pack-preview', authenticate, isAdmin, brandRequired, ctrl.createPackPreview);
 router.get('/orders', authenticate, isAdmin, ctrl.orderList);
 router.get('/orders/:orderId', authenticate, isAdmin, ctrl.orderDetails);
 router.post('/sync/product/:id', authenticate, isAdmin, ctrl.syncProduct);
