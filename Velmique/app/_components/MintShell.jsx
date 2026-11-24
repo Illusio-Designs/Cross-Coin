@@ -13,13 +13,13 @@ const NAV = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
   { label: 'Build a Pack', href: '/pack' },
+  { label: 'Track Order', href: '/track-order' },
 ];
 // Extra destinations in the mobile slide-nav (desktop reaches them via icons).
 const MNAV_EXTRA = [
   { label: 'Search', href: '/search' },
   { label: 'Wishlist', href: '/wishlist' },
   { label: 'My Account', href: '/account' },
-  { label: 'Track Order', href: '/track-order' },
 ];
 
 const ANNO = [
@@ -88,11 +88,18 @@ export default function MintShell({ children }) {
   useEffect(() => { setMenu(false); }, [pathname]);
   useEffect(() => {
     if (!menu) return undefined;
+    const mobileHeader = window.matchMedia('(max-width: 820px)');
+    const closeOnDesktop = (event) => { if (!event.matches) setMenu(false); };
     const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
     document.addEventListener('keydown', onKey);
+    mobileHeader.addEventListener('change', closeOnDesktop);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      mobileHeader.removeEventListener('change', closeOnDesktop);
+      document.body.style.overflow = prev;
+    };
   }, [menu]);
 
   return (

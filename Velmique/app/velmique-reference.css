@@ -5,7 +5,7 @@
 .m-rcompo{background:var(--m-surface);border:1px solid var(--m-line);text-align:left}.m-ntier{color:var(--m-ink-soft);border-color:var(--m-line)}.m-pdp__title span{letter-spacing:.04em;text-transform:none}.m-buynow{background:var(--m-accent);border-color:var(--m-accent);color:var(--m-on-band)}.m-buynow:hover:enabled{background:var(--m-accent-deep);border-color:var(--m-accent-deep);color:var(--m-on-band)}.m-rsec{border-color:var(--m-line)}
 
 /* Finished storefront controls: one clear action, consistent contrast. */
-.m-card{border:1px solid var(--m-line);border-radius:var(--m-radius-panel);overflow:hidden;background:var(--m-surface);box-shadow:none;transition:border-color .2s,box-shadow .2s}
+.m-card{border:1px solid var(--m-line);border-radius:calc(var(--m-radius-panel) + 4px);overflow:hidden;background:var(--m-surface);box-shadow:none;transition:border-color .2s,box-shadow .2s}
 .m-card:hover{transform:none;border-color:var(--m-line);box-shadow:0 10px 28px -18px #5b263840}
 .m-card__fig{aspect-ratio:1/1.07;background:var(--m-photo-bg)}
 .m-card__body{padding:18px;display:flex;flex-direction:column;text-align:left;gap:9px}
@@ -136,8 +136,9 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 
 /* Rounded library icons share one optical size and a centered touch target. */
 .m-nav .m-icons { gap: 8px; align-items: center; }
+.m-nav .m-icons>a,.m-nav .m-icons>button { display: inline-flex; }
 .m-nav .m-icons>a,.m-nav .m-icons>button,.m-nav .m-burger {
-  width: 40px; height: 40px; display: inline-flex; align-items: center;
+  width: 40px; height: 40px; align-items: center;
   justify-content: center; padding: 0; border-radius: 50%; flex: none;
 }
 .m-nav .m-icons>a:hover,.m-nav .m-icons>button:hover { background: var(--m-raised); }
@@ -453,8 +454,13 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 .v-pdp-pack__total .m-bypsum { margin: 0 0 2px; color: var(--m-ink); }
 .v-pdp-pack__actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
   gap: 8px;
+}
+.v-pdp-pack__actions .sr-headless-checkout .full-width { flex-wrap: wrap; }
+.v-pdp-pack__checkout-error {
+  margin-top: 8px;
+  color: var(--m-ink-soft);
+  font-size: var(--v-text-meta);
 }
 .v-pdp-pack__actions .m-btn {
   min-height: 44px;

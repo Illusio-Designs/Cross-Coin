@@ -18,6 +18,7 @@ const SDK_CSS = 'https://checkout-ui.shiprocket.com/assets/styles/shopify.css';
 // bag is emptied after the order) or a single Buy now (bag untouched).
 export const SR_SOURCE_KEY = 'vlq-sr-source';
 export const SHIPROCKET_RETRY_MESSAGE = 'Checkout couldn’t open. Please check your connection and try again.';
+export const PACK_DISCOUNT_UNAVAILABLE = 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE';
 
 let enabledPromise = null;
 let sdkPromise = null;
@@ -177,7 +178,17 @@ export function openShiprocketCheckout(event, lines, source = 'buy-now', { packD
           custom_attributes,
           redirect_url: `${window.location.origin}/order-confirmation`,
         }),
-      }).then(readCheckoutTokenResponse),
+      }).then(async (response) => {
+        if (isPack && response.status === 409) {
+          const data = await response.clone().json().catch(() => null);
+          if (data?.code === PACK_DISCOUNT_UNAVAILABLE) {
+            const error = new Error(data.message);
+            error.code = PACK_DISCOUNT_UNAVAILABLE;
+            throw error;
+          }
+        }
+        return readCheckoutTokenResponse(response);
+      }),
     ]);
     const token = res?.result?.token || res?.token;
     if (!res?.success || !token) throw new Error(res?.message || 'Checkout could not be started');

@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import BrandIcon from '@/components/ui/BrandIcon';
+import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { useStore } from '@/lib/store';
 import { packDiscountPercent, packLineId, packUnitPrice } from '@/lib/packPricing';
-import { openShiprocketCheckout, shiprocketPackEnabled, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
-import { showError } from '@/lib/toast';
+import { openShiprocketCheckout, PACK_DISCOUNT_UNAVAILABLE, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
 
@@ -18,6 +18,7 @@ export default function PdpMixPack({ current, scents, tiers }) {
   const rail = useRef(null);
   const [edges, setEdges] = useState({ start: true, end: true });
   const [opening, setOpening] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
   const openingRef = useRef(false);
   const products = [current, ...scents];
   const availableTiers = tiers.filter(({ pairs }) => pairs <= products.length);
@@ -46,12 +47,15 @@ export default function PdpMixPack({ current, scents, tiers }) {
     };
   }, [products.length, availableTiers.length]);
 
-  const toggle = (id) => setPicked((previous) => {
-    const nextSelection = new Set(previous);
-    if (nextSelection.has(id)) nextSelection.delete(id);
-    else nextSelection.add(id);
-    return nextSelection;
-  });
+  const toggle = (id) => {
+    setCheckoutError('');
+    setPicked((previous) => {
+      const nextSelection = new Set(previous);
+      if (nextSelection.has(id)) nextSelection.delete(id);
+      else nextSelection.add(id);
+      return nextSelection;
+    });
+  };
 
   const move = (direction) => {
     const track = rail.current;
@@ -79,15 +83,14 @@ export default function PdpMixPack({ current, scents, tiers }) {
 
   const buyPack = async (event) => {
     if (!off || openingRef.current) return;
+    setCheckoutError('');
+    if (selection.some((product) => !product.defaultVariationId)) {
+      setCheckoutError('A selected fragrance is unavailable for checkout. Choose another fragrance.');
+      return;
+    }
     openingRef.current = true;
     setOpening(true);
     try {
-      const supported = await shiprocketPackEnabled();
-      if (supported === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-      if (!supported || selection.some((product) => !product.defaultVariationId)) {
-        showError('Pack pricing is unavailable in Shiprocket Checkout. Your selections are still here.', 'shiprocket-checkout');
-        return;
-      }
       fbTrack('InitiateCheckout', {
         content_ids: selection.map((product) => String(product.id)),
         contents: selection.map((product) => ({ id: String(product.id), quantity: 1 })),
@@ -98,8 +101,10 @@ export default function PdpMixPack({ current, scents, tiers }) {
       });
       const lines = selection.map((product) => ({ variationId: product.defaultVariationId, quantity: 1 }));
       await openShiprocketCheckout(event, lines, 'buy-now', { packDiscount: off });
-    } catch {
-      showError(SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
+    } catch (error) {
+      setCheckoutError(error.code === PACK_DISCOUNT_UNAVAILABLE
+        ? 'Pack pricing is unavailable in Shiprocket Checkout. Your selections are still here.'
+        : SHIPROCKET_RETRY_MESSAGE);
     } finally {
       openingRef.current = false;
       setOpening(false);
@@ -158,9 +163,9 @@ export default function PdpMixPack({ current, scents, tiers }) {
       </div>
       <div className="v-pdp-pack__actions">
         <button type="button" className="m-btn" onClick={addPack} disabled={!off || opening}>Add Pack to Bag</button>
-        <button type="button" className="m-btn m-btn--fill" onClick={buyPack} disabled={!off || opening}
-          aria-busy={opening || undefined}>{opening ? 'Opening…' : 'Buy Pack Now'}</button>
+        <ShiprocketButton label="BUY PACK NOW" onClick={buyPack} busy={opening} disabled={!off} />
       </div>
+      {checkoutError && <p className="v-pdp-pack__checkout-error" role="alert">{checkoutError}</p>}
     </section>
   );
 }
