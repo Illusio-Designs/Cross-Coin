@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Pause, Play } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import BrandIcon from '@/components/ui/BrandIcon';
 import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
@@ -25,11 +24,11 @@ const MNAV_EXTRA = [
 ];
 
 const ANNO = [
-  { t: 'Discover your everyday signature' },
-  { t: 'Crafted in India', d: 'M12 3c-3 3-6 3-6 3v6c0 5 6 9 6 9s6-4 6-9V6s-3 0-6-3Z' },
-  { t: 'Easy 7-day returns', d: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4' },
-  { t: '100% genuine fragrances', d: 'M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z' },
-  { t: 'Cash on delivery available', d: 'M2.5 6h19v12h-19zM2.5 10h19' },
+  { text: 'Discover your everyday signature', icon: 'perfume' },
+  { text: 'Crafted in India', icon: 'flag' },
+  { text: 'Easy 7-day returns', icon: 'returns' },
+  { text: '100% genuine fragrances', icon: 'verified' },
+  { text: 'Cash on delivery available', icon: 'cash' },
 ];
 function AnnouncementBar() {
   const [paused, setPaused] = useState(false);
@@ -37,12 +36,12 @@ function AnnouncementBar() {
     <div className="v-announcement" role="region" aria-label="Store announcements" data-paused={paused}>
       <div className="v-announcement__viewport" tabIndex={0}>
         <div className="v-announcement__track">
-          {[false, true].map((duplicate) => (
-            <div className="v-announcement__items" key={String(duplicate)} aria-hidden={duplicate || undefined}>
-              {ANNO.map(({ t, d }) => (
-                <span className="m-anno__i" key={t}>
-                  {d && <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>}
-                  {t}
+          {[0, 1, 2].map((index) => (
+            <div className="v-announcement__items" key={index} aria-hidden={index > 0 || undefined}>
+              {ANNO.map(({ text, icon }) => (
+                <span className="v-announcement__item" key={text}>
+                  <BrandIcon name={icon} size={16} />
+                  {text}
                 </span>
               ))}
             </div>
@@ -50,8 +49,8 @@ function AnnouncementBar() {
         </div>
       </div>
       <button type="button" className="v-announcement__toggle" aria-label={paused ? 'Play announcements' : 'Pause announcements'}
-        onClick={() => setPaused(!paused)}>
-        {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+        onClick={() => setPaused((value) => !value)}>
+        <span><BrandIcon name={paused ? 'play' : 'pause'} size={15} /></span>
       </button>
     </div>
   );

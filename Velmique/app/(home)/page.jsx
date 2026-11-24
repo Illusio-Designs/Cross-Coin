@@ -1,4 +1,4 @@
-import { ShieldCheck, RotateCcw, Gem, Leaf, Hourglass, Heart } from '@/components/ui/BrandIcon';
+import BrandIcon, { Gem, Leaf, Hourglass, Heart } from '@/components/ui/BrandIcon';
 import ScentStudio from '@/components/home/ScentStudio';
 import Link from 'next/link';
 import { getBestsellers } from '@/lib/api/products';
@@ -80,7 +80,18 @@ export default async function MaisonHome() {
         <div className="v-hero__copy"><span className="m-eyebrow">A little luxury. Entirely you.</span><h1>Fragrances for<br /><em>Every Side of You</em></h1><p>Modern, expressive and long-lasting<br />scents crafted for your everyday moods.</p><div className="v-actions"><Link className="m-btn m-btn--fill" href="#scent-studio">Find Your Scent →</Link><Link className="m-btn" href="/shop">Shop Collection</Link></div></div>
         <div className="v-hero__image">{best?.images?.[0] ? <SkImg src={ik(best.images[1] || best.images[0], 1000)} alt={best.name} loading="eager" fetchPriority="high" /> : <img src="/FRAGRANCE.webp" alt="Velmique fragrance collection" />}<span>VELMIQUE<br /><small>YOUR EVERYDAY SIGNATURE</small></span></div>
       </div></section>
-      <div className="v-trust m-wrap">{[[ShieldCheck,'COD','Available'],[RotateCcw,'Easy Returns','7-day policy'],[Gem,'100% Authentic','Original fragrances']].map(([Icon,title,sub])=><div key={title}><Icon size={27} strokeWidth={1.3} aria-hidden="true"/><p><b>{title}</b><small>{sub}</small></p></div>)}</div>
+      <div className="v-trust m-wrap">
+        {[
+          ['cash', 'COD', 'Available'],
+          ['returns', 'Easy Returns', '7-day policy'],
+          ['verified', '100% Authentic', 'Original fragrances'],
+        ].map(([icon, title, subtitle]) => (
+          <div key={title}>
+            <span className="v-trust__icon"><BrandIcon name={icon} size={24} /></span>
+            <p><b>{title}</b><small>{subtitle}</small></p>
+          </div>
+        ))}
+      </div>
       <section className="v-section m-wrap" id="scent-studio"><div className="v-center"><span className="m-eyebrow">The Velmique Scent Studio</span><h2>Let’s Find Your Perfect Fragrance</h2><p>Not sure which perfume suits you? Discover it in a way that feels personal.</p></div><ScentStudio products={featured} /></section>
       <section className="v-section m-wrap" id="shop-by-mood"><div className="v-heading"><div><h2>Shop by Mood</h2><p>Because a fragrance should feel like you.</p></div><Link href="/shop">Explore All Fragrances →</Link></div><div className="v-moods">{[['Fresh & Clean','Light, airy and refreshing','fresh','💧'],['Sweet & Romantic','Fruity, playful and feminine','floral','🌸'],['Bold & Intense','Rich, warm and long-lasting','woody','◈'],['Warm & Elegant','Smooth, musky and sophisticated','musk','✧']].map(([name,desc,q,icon],i)=><Link className={`v-mood v-mood--${i}`} href={`/shop?note=${q}`} key={name}><span className="v-mood__art">{(() => {const match=featured.find(p=>JSON.stringify([p.notes,p.variations?.[0]?.noteItems]).toLowerCase().includes(q)) || featured[i];return match?.images?.[0] ? <img src={ik(match.images[0],400)} alt={`${name} fragrance`} loading="lazy"/> : <Leaf size={48} strokeWidth={1}/>;})()}</span><div><b>{name}</b><p>{desc}</p></div></Link>)}</div></section>
       <section className="v-section m-wrap" id="m-featured"><div className="v-heading"><div><h2>Our Signature Collection</h2><p>A curated range of modern fragrances, crafted to leave a lasting impression.</p></div><Link href="/shop">View All Fragrances →</Link></div>{featured.length ? <div className="m-pgrid">{featured.slice(0,4).map(p=><ProductCard key={p.id} product={p} />)}</div> : <p>Our collection is being bottled. Please check back shortly.</p>}</section>

@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getAddresses, createAddress, updateAddress,
 } from '@/lib/api/addresses';
-import { getPackTiers } from '@/lib/api/bundles';
+import { packDiscountPercent, packUnitPrice } from '@/lib/packPricing';
 import {
   getShippingFees, checkPincodeServiceability, validateCoupon, getPublicCoupons,
   createOrder, createGuestOrder,
@@ -403,24 +403,30 @@ export default function CartDrawer() {
   // they reach applies to those lines. Checkout recomputes this server-side,
   // so these figures are display-only and can't be faked.
   const [packTiers, setPackTiers] = useState([]);
-  useEffect(() => { getPackTiers().then((t) => setPackTiers(t || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/pack-tiers', { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : [])
+      .then((tiers) => { if (Array.isArray(tiers)) setPackTiers(tiers); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const packCalc = useMemo(() => {
     if (!packTiers.length) return { off: 0, pctByGroup: {} };
-    const groups = {};
+    const counts = new Map();
     for (const i of items) {
       if (!i.packGroup) continue;
       const g = String(i.packGroup);
-      groups[g] = groups[g] || { qty: 0, amt: 0 };
-      groups[g].qty += Number(i.quantity) || 1;
-      groups[g].amt += (Number(i.price) || 0) * (Number(i.quantity) || 1);
+      counts.set(g, (counts.get(g) || 0) + (Number(i.quantity) || 1));
     }
-    let off = 0;
-    const pctByGroup = {};
-    for (const [g, v] of Object.entries(groups)) {
-      const pct = packTiers.reduce((a, t) => (v.qty >= t.pairs ? Math.max(a, t.off) : a), 0);
-      if (pct > 0) { pctByGroup[g] = pct; off += (v.amt * pct) / 100; }
-    }
-    return { off: Math.round(off), pctByGroup };
+    const pctByGroup = Object.fromEntries([...counts].map(([group, count]) => [group, packDiscountPercent(packTiers, count)]));
+    const off = items.reduce((sum, item) => {
+      const pct = item.packGroup && pctByGroup[item.packGroup];
+      if (!pct) return sum;
+      const price = Number(item.price) || 0;
+      return sum + (price - packUnitPrice(price, pct)) * (Number(item.quantity) || 1);
+    }, 0);
+    return { off: Math.round(off * 100) / 100, pctByGroup };
   }, [items, packTiers]);
   const packOff = packCalc.off;
   const packCount = items.reduce((count, item) => count + (item.packGroup ? Number(item.quantity) || 1 : 0), 0);
@@ -1171,7 +1177,7 @@ export default function CartDrawer() {
                             const pct = item.packGroup ? (packCalc.pctByGroup[String(item.packGroup)] || 0) : 0;
                             const full = item.price * item.quantity;
                             if (!pct) return fmt(full);
-                            return (<><s className="not-italic font-body text-[color:var(--m-ink-soft)] text-xs mr-1.5">{fmt(full)}</s>{fmt(Math.round(full * (1 - pct / 100)))}</>);
+                            return (<><s className="not-italic font-body text-[color:var(--m-ink-soft)] text-xs mr-1.5">{fmt(full)}</s>{fmt(packUnitPrice(item.price, pct) * item.quantity)}</>);
                           })()}
                         </span>
                       </div>
@@ -1185,7 +1191,7 @@ export default function CartDrawer() {
               </div>
 
               <div className="px-5 py-4">
-                <PackBagCard count={packCount} savings={packOff} onOpen={() => setCartOpen(false)} />
+                <PackBagCard count={packCount} savings={Math.round(packOff)} onOpen={() => setCartOpen(false)} />
               </div>
 
               {/* ── Coupon (not with Shiprocket: it applies its own) ─────── */}

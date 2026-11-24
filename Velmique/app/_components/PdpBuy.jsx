@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getPublicCoupons } from '@/lib/api/orders';
 import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
@@ -9,7 +8,7 @@ import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
-import ProductCard from './ProductCard';
+import PdpMixPack from './PdpMixPack';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
@@ -32,7 +31,6 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
   const [qty, setQty] = useState(1);
   const [packIdx, setPackIdx] = useState(0);
-  const [buildPack, setBuildPack] = useState(false);
   // "Select Pack" choices for products with their own admin packs (exact
   // totals; checkout re-prices a qty-N line via bundlePerUnit server-side).
   const packChoices = useMemo(() => {
@@ -44,38 +42,6 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     ];
   }, [packs, opt.price]);
   const pack = packChoices.length ? (packChoices[packIdx] || packChoices[0]) : null;
-
-  // "Build Your Pack" (store-wide mix tiers): checkbox scent cards — the
-  // checked count drives the tier % the server applies to the shared group.
-  const scentOpts = useMemo(() => {
-    if (packs.length || !mixTiers.length) return [];
-    return [
-      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label, slug: product.slug, card: product },
-      ...scents.filter((s) => String(s.id) !== String(product.id) && s.inStock !== false).slice(0, 8).map((s) => ({
-        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '', slug: s.slug, card: s,
-      })),
-    ];
-  }, [packs.length, mixTiers.length, product, opt, scents]);
-  const availableTiers = mixTiers.filter((tier) => tier.pairs <= scentOpts.length);
-  const canBuildPack = availableTiers.length > 0 && opt.inStock;
-  const isMix = canBuildPack && buildPack;
-  const [picked, setPicked] = useState(() => new Set([0]));
-  const togglePick = (i) => setPicked((prev) => {
-    const n = new Set(prev);
-    n.has(i) ? n.delete(i) : n.add(i);
-    return n;
-  });
-
-  const mixCount = isMix ? picked.size : 0;
-  const packReady = !isMix || mixCount >= availableTiers[0].pairs;
-  const mixOff = isMix ? availableTiers.reduce((a, t) => (mixCount >= t.pairs ? t.off : a), 0) : 0;
-  const mixSub = isMix ? [...picked].reduce((a, i) => a + (scentOpts[i]?.price || 0), 0) : 0;
-  const mixTotal = mixSub * (1 - mixOff / 100);
-  const nextT = isMix ? availableTiers.find((t) => mixCount < t.pairs) : null;
-  const mixHint = nextT ? `Select ${nextT.pairs - mixCount} more to save ${nextT.off}%` : 'Best available tier applied';
-  const nodes = isMix ? [{ pairs: 1, off: 0 }, ...availableTiers] : [];
-  const reachedIdx = nodes.reduce((a, t, i) => (mixCount >= t.pairs ? i : a), -1);
-  const fill = nodes.length > 1 ? (Math.max(0, reachedIdx) / (nodes.length - 1)) * 100 : 0;
 
   const unitPrice = pack ? pack.total / pack.pairs : Number(opt.price) || 0;
   const lineQty = pack ? pack.pairs : qty;
@@ -98,32 +64,10 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
     quantity: lineQty,
   });
 
-  // Mix picks submit FULL unit prices with a shared pack_group — the server
-  // applies the tier % to the group, so pre-discounted prices would double-dip.
-  const addMix = () => {
-    [...picked].forEach((i) => {
-      const o = scentOpts[i];
-      if (!o) return;
-      addToCart({
-        id: mixCount > 1 ? `${o.pid}:${o.vid || 'v'}:pack` : `${o.pid}:${o.vid || 'v'}`,
-        productId: o.pid,
-        variationId: o.vid,
-        name: o.name,
-        price: Math.round(o.price * 100) / 100,
-        size: o.size || '',
-        image: o.image,
-        slug: o.slug,
-        quantity: 1,
-        ...(mixCount > 1 ? { packGroup: 'byp' } : {}),
-      });
-    });
-  };
-  // The selected size must be in stock (a mix pack only needs one ticked scent).
   const soldOut = !opt.inStock;
-  const canAdd = !soldOut && packReady;
   const add = () => {
-    if (!canAdd) return false;
-    if (isMix) addMix(); else addToCart(line());
+    if (soldOut) return false;
+    addToCart(line());
     return true;
   };
 
@@ -167,18 +111,18 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
   // Shiprocket Checkout (when it is set up for the store): Buy now opens it
   // straight away with just this selection, leaving the bag alone. Packs
-  // (an admin pack, or 2+ ticked scents) keep using our own checkout, because
+  // (an admin pack) keep using our own checkout, because
   // Shiprocket prices each bottle from the catalog and wouldn't apply the
   // pack price.
   const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
   useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
   const checkoutLine = line();
-  const eligible = !isMix && shiprocketTakes([checkoutLine]);
+  const eligible = shiprocketTakes([checkoutLine]);
   const useShiprocket = srOn && eligible;
 
   const onBuyNow = async (e) => {
-    if (!canAdd || srBusy) return;
+    if (soldOut || srBusy) return;
     if (!eligible) { buy(); return; }
     setSrBusy(true);
     try {
@@ -231,92 +175,42 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
         </div>
       )}
 
-      {availableTiers.length > 0 && (
-        <section className="m-opt v-pdp-pack" aria-label="Build your pack">
-          <div className="m-opt__h m-byph">Build Your Pack <Link href="/pack" className="m-byph__all">View all scents →</Link></div>
-          <p className="v-pdp-pack__offers">{availableTiers.map(({ pairs, off }) => `${pairs} bottles · ${off}% off`).join('  /  ')}</p>
-          {canBuildPack && (
-            <div className="v-pdp-pack__modes" role="group" aria-label="Purchase option">
-              <button type="button" className="m-btn" aria-pressed={!isMix} onClick={() => setBuildPack(false)}>Single fragrance</button>
-              <button type="button" className="m-btn" aria-pressed={isMix} onClick={() => setBuildPack(true)}>Build a pack</button>
+      <div ref={buyRef}>
+        <div className="m-buybar">
+          {!pack && (
+            <div className="m-qty">
+              <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
+              <span>{qty}</span>
+              <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => q + 1)}>+</button>
             </div>
           )}
-          {isMix && (
-            <div className="v-pdp-pack__builder">
-              <div className="v-pdp-pack__cards" role="region" aria-label="Fragrances for your pack" tabIndex={0}>
-                {scentOpts.map((o, i) => {
-                  const on = picked.has(i);
-                  const toggle = () => togglePick(i);
-                  return (
-                    <ProductCard key={o.pid} product={o.card} selected={on} onImageClick={toggle}
-                      action={<button type="button" className="m-card__addbody" aria-pressed={on} onClick={toggle}>
-                        {on ? 'In Your Pack' : '+ Add to Pack'}
-                      </button>} />
-                  );
-                })}
-              </div>
-
-              <div className="m-bypbox">
-                <div className="m-bypbox__row">
-                  <div className="m-bypcnt"><span><b>{mixCount}</b><em>in pack</em></span></div>
-                  <div className="m-bypinfo">
-                    <div className="m-bypoff">{mixOff > 0 ? <>{mixOff}% OFF <small>applied</small></> : 'Full price'}</div>
-                    <div className="m-bypnext">{mixHint}</div>
-                  </div>
-                </div>
-                <div className="m-ttrack m-ttrack--pdp">
-                  <div className="m-ttrack__line" style={{ left: `${50 / nodes.length}%`, right: `${50 / nodes.length}%` }}>
-                    <i style={{ width: `${fill}%` }} />
-                  </div>
-                  {nodes.map((t, i) => (
-                    <div key={t.pairs} className={`m-tnode ${mixCount >= t.pairs ? 'on' : ''}`} style={{ left: `${((i + 0.5) / nodes.length) * 100}%` }}>
-                      <b>{t.pairs}</b><span>{t.off ? `${t.off}% off` : 'Start'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="m-bypsum">
-                <b>{inr(mixCount ? mixTotal : 0)}</b>
-                {mixOff > 0 ? <s>{inr(mixSub)}</s> : null}
-                {mixOff > 0 ? <span className="m-bypsave">You save {inr(mixSub - mixTotal)}</span> : null}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      <div className="m-buybar" ref={buyRef}>
-        {!pack && !isMix && (
-          <div className="m-qty">
-            <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
-            <span>{qty}</span>
-            <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => q + 1)}>+</button>
-          </div>
-        )}
-        <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add} disabled={!canAdd}>
-          {soldOut ? 'Sold out' : isMix
-            ? (packReady ? `Add pack to cart · ${inr(mixTotal)}` : `Select ${availableTiers[0].pairs - mixCount} more to build a pack`)
-            : `Add to cart · ${inr(lineTotal)}`}
-        </button>
-      </div>
-      {opt.inStock && opt.stock != null && opt.stock > 0 && opt.stock <= 5 ? <p className="m-lowstock">Only {opt.stock} left in {opt.label}</p> : null}
-      {/* Our prepaid offer doesn't apply inside Shiprocket Checkout. */}
-      {prepaidOffer && !useShiprocket ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
-      {useShiprocket ? (
-        <div style={{ marginTop: 12 }}>
-          <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={!canAdd} />
+          <button type="button" className="m-btn m-btn--fill m-addbtn" onClick={add} disabled={soldOut}>
+            {soldOut ? 'Sold out' : `Add to cart · ${inr(lineTotal)}`}
+          </button>
         </div>
-      ) : (
-        <button type="button" className="m-btn m-buynow" onClick={onBuyNow} disabled={!canAdd || srBusy}>{srBusy ? 'Opening…' : 'Buy now'}</button>
-      )}
+        {opt.inStock && opt.stock != null && opt.stock > 0 && opt.stock <= 5 ? <p className="m-lowstock">Only {opt.stock} left in {opt.label}</p> : null}
+        {/* Our prepaid offer doesn't apply inside Shiprocket Checkout. */}
+        {prepaidOffer && !useShiprocket ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
+        {useShiprocket ? (
+          <div style={{ marginTop: 12 }}>
+            <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={soldOut} />
+          </div>
+        ) : (
+          <button type="button" className="m-btn m-buynow" onClick={onBuyNow} disabled={soldOut || srBusy}>{srBusy ? 'Opening…' : 'Buy now'}</button>
+        )}
+
+        {!pack && !soldOut && mixTiers.length > 0 && (
+          <PdpMixPack key={product.id} current={{ ...product, price: Number(opt.price) || 0, sizes: [opt.label] }}
+            scents={scents} tiers={mixTiers} />
+        )}
+      </div>
 
       {barOn && (
         <div className="m-buynowbar" data-sticky-atc="">
           <div className="m-wrap m-buynowbar__in">
             <span className="m-buynowbar__n"><b>{product.name}</b><small>{opt.label}</small></span>
-            <span className="m-buynowbar__p">{inr(isMix ? (mixCount ? mixTotal : Number(opt.price) || 0) : lineTotal)}</span>
-            <button type="button" className="m-btn m-btn--fill m-buynowbar__cta" onClick={add} disabled={!canAdd}>{soldOut ? 'Sold out' : isMix ? 'Add pack' : 'Add to cart'}</button>
+            <span className="m-buynowbar__p">{inr(lineTotal)}</span>
+            <button type="button" className="m-btn m-btn--fill m-buynowbar__cta" onClick={add} disabled={soldOut}>{soldOut ? 'Sold out' : 'Add to cart'}</button>
           </div>
         </div>
       )}

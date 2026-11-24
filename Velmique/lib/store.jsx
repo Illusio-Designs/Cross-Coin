@@ -11,6 +11,7 @@ import {
   toastAddedToWishlist, toastRemovedFromWishlist,
 } from '@/lib/toast';
 import { fbTrack, trackWishlist } from '@/utils/pixel';
+import { packLineId } from '@/lib/packPricing';
 
 /**
  * Velmique global store.
@@ -91,31 +92,38 @@ export function StoreProvider({ children }) {
     return () => { alive = false; };
   }, []);
 
-  const addToCart = useCallback((item) => {
-    const addQty = Math.max(1, Number(item.quantity) || 1);
+  const addToCart = useCallback((itemOrItems, { checkout = false } = {}) => {
+    const items = (Array.isArray(itemOrItems) ? itemOrItems : [itemOrItems])
+      .map((item) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }));
+    if (!items.length) return;
     setCart(prev => {
-      const key = `${item.id}-${item.size}-${item.color}`;
-      const existing = prev.find(c => `${c.id}-${c.size}-${c.color}` === key);
-      if (existing) {
-        return prev.map(c => `${c.id}-${c.size}-${c.color}` === key ? { ...c, quantity: c.quantity + addQty } : c);
+      const next = [...prev];
+      for (const item of items) {
+        const index = next.findIndex((line) => (
+          line.id === item.id && line.size === item.size && line.color === item.color
+        ));
+        if (index < 0) next.push(item);
+        else next[index] = { ...next[index], quantity: Number(next[index].quantity) + item.quantity };
       }
-      return [...prev, { ...item, quantity: addQty }];
+      return next;
     });
+    if (checkout) setCheckoutRequested(true);
     setCartOpen(true);
-    toastAddedToCart(item.name);
+    toastAddedToCart(items.length === 1 ? items[0].name : 'Fragrance pack');
 
     // Meta funnel: AddToCart (browser pixel + server CAPI, deduped by eventID).
     // Cart line ids are composite (`productId:variationId`); the real Meta
     // catalogue id is the product id, so content_ids use item.productId.
-    const unitPrice = Number(item.price ?? 0);
-    fbTrack('AddToCart', {
-      content_ids: [String(item.productId ?? item.id)],
-      content_type: 'product',
-      content_name: item.name || undefined,
-      value: unitPrice * addQty,
-      currency: 'INR',
-      contents: [{ id: String(item.productId ?? item.id), quantity: addQty }],
-    });
+    for (const item of items) {
+      fbTrack('AddToCart', {
+        content_ids: [String(item.productId ?? item.id)],
+        content_type: 'product',
+        content_name: item.name || undefined,
+        value: Number(item.price ?? 0) * item.quantity,
+        currency: 'INR',
+        contents: [{ id: String(item.productId ?? item.id), quantity: item.quantity }],
+      });
+    }
   }, []);
 
   const removeFromCart = useCallback((id, size) => {
@@ -214,7 +222,7 @@ export function StoreProvider({ children }) {
     const list = (Array.isArray(lines) ? lines : []).map((l) => {
       if (l.line && l.line.id != null) return { ...l.line, quantity: l.quantity || 1 };
       return {
-        id: `${l.productId}:${l.variationId ?? 'v'}${l.packGroup ? ':pack' : ''}`,
+        id: l.packGroup ? packLineId(l.productId, l.variationId, l.packGroup) : `${l.productId}:${l.variationId ?? 'v'}`,
         productId: l.productId,
         variationId: l.variationId ?? null,
         name: l.name,

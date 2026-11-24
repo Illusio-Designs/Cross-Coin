@@ -60,7 +60,7 @@ export default function ScentExperience({ name, phases = [], accords = [], spec 
                   <button type="button" className="v-scent__image" aria-label={`Rotate ${activePhase.label} image`}
                     onClick={rotateImage}>
                     <NotePhoto key={activePhase.key} image={activePhase.image} width={600} />
-                    <span aria-hidden="true">↻</span>
+                    <span><BrandIcon name="rotate" size={18} /></span>
                   </button>
                 )}
                 <div className="v-scent__body">

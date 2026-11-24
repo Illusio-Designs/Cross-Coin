@@ -7,6 +7,8 @@ import {
   AiSparklesIcon, BalanceScaleIcon, DeliveryTruck01Icon, Shield01Icon,
   DeliveryReturn01Icon, Diamond01Icon, Leaf01Icon, HourglassIcon,
   ZoomInAreaIcon, StarIcon, InstagramIcon, Facebook01Icon,
+  PerfumeIcon, Flag01Icon, CheckmarkBadge01Icon, Cash01Icon,
+  PauseIcon, PlayIcon, Rotate01Icon, ArrowLeft01Icon, ArrowUp01Icon,
 } from '@hugeicons/core-free-icons';
 
 const icons = {
@@ -17,6 +19,8 @@ const icons = {
   returns: DeliveryReturn01Icon, gem: Diamond01Icon, leaf: Leaf01Icon,
   hourglass: HourglassIcon, zoom: ZoomInAreaIcon, star: StarIcon,
   instagram: InstagramIcon, facebook: Facebook01Icon,
+  perfume: PerfumeIcon, flag: Flag01Icon, verified: CheckmarkBadge01Icon, cash: Cash01Icon,
+  pause: PauseIcon, play: PlayIcon, rotate: Rotate01Icon, previous: ArrowLeft01Icon, up: ArrowUp01Icon,
 };
 
 export default function BrandIcon({ name, size = 20, strokeWidth = 1.6, ...props }) {

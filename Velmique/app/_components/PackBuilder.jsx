@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
+import { packDiscountPercent, packUnitPrice } from '@/lib/packPricing';
 import ProductCard from './ProductCard';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
@@ -14,14 +15,15 @@ export default function PackBuilder({ products = [], tiers = [] }) {
   const [qty, setQty] = useState({});
   const [added, setAdded] = useState(false);
 
-  const discountFor = (c) => tiers.filter((t) => c >= t.pairs).reduce((a, t) => Math.max(a, t.off), 0);
   const nextTier = (c) => tiers.find((t) => c < t.pairs);
   const maxThreshold = tiers.length ? tiers[tiers.length - 1].pairs : 0;
 
   const count = products.reduce((a, p) => a + (qty[String(p.id)] || 0), 0);
   const subtotal = products.reduce((a, p) => a + Number(p.price || 0) * (qty[String(p.id)] || 0), 0);
-  const off = discountFor(count);
-  const total = subtotal * (1 - off / 100);
+  const off = packDiscountPercent(tiers, count);
+  const total = products.reduce((sum, product) => (
+    sum + packUnitPrice(Number(product.price) || 0, off) * (qty[String(product.id)] || 0)
+  ), 0);
   const saved = subtotal - total;
 
   const bump = (id, d) => setQty((prev) => {

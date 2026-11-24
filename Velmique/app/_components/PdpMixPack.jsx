@@ -1,0 +1,130 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import BrandIcon from '@/components/ui/BrandIcon';
+import { useStore } from '@/lib/store';
+import { packDiscountPercent, packLineId, packUnitPrice } from '@/lib/packPricing';
+import ProductCard from './ProductCard';
+
+const inr = (amount) => '₹' + Math.round(amount).toLocaleString('en-IN');
+
+export default function PdpMixPack({ current, scents, tiers }) {
+  const { addToCart } = useStore();
+  const [picked, setPicked] = useState(() => new Set([current.id]));
+  const rail = useRef(null);
+  const [edges, setEdges] = useState({ start: true, end: true });
+  const products = [current, ...scents];
+  const availableTiers = tiers.filter(({ pairs }) => pairs <= products.length);
+  const selection = products.filter(({ id }) => picked.has(id));
+  const count = selection.length;
+  const off = packDiscountPercent(availableTiers, count);
+  const subtotal = selection.reduce((sum, { price }) => sum + price, 0);
+  const total = selection.reduce((sum, { price }) => sum + packUnitPrice(price, off), 0);
+  const next = availableTiers.find(({ pairs }) => pairs > count);
+
+  useEffect(() => {
+    const track = rail.current;
+    if (!track) return undefined;
+    const update = () => {
+      const start = track.scrollLeft <= 1;
+      const end = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+      setEdges((prev) => prev.start === start && prev.end === end ? prev : { start, end });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(track);
+    track.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => {
+      observer.disconnect();
+      track.removeEventListener('scroll', update);
+    };
+  }, [products.length, availableTiers.length]);
+
+  const toggle = (id) => setPicked((previous) => {
+    const nextSelection = new Set(previous);
+    if (nextSelection.has(id)) nextSelection.delete(id);
+    else nextSelection.add(id);
+    return nextSelection;
+  });
+
+  const move = (direction) => {
+    const track = rail.current;
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    track.scrollBy({ left: direction * track.clientWidth * 0.8, behavior });
+  };
+
+  const addPack = (checkout) => {
+    if (!off) return;
+    // Each finished selection reaches its own tier, even with another pack in the bag.
+    const packGroup = `byp-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+    addToCart(selection.map((product) => ({
+      id: packLineId(product.id, product.defaultVariationId, packGroup),
+      productId: product.id,
+      variationId: product.defaultVariationId,
+      name: product.name,
+      price: product.price,
+      size: product.sizes?.[0] || '',
+      image: product.images?.[0] || '',
+      slug: product.slug,
+      quantity: 1,
+      packGroup,
+    })), { checkout });
+  };
+
+  if (!availableTiers.length) return null;
+
+  return (
+    <section className="m-opt v-pdp-pack" aria-label="Build your pack">
+      <div className="m-opt__h m-byph">
+        <h2>Build Your Pack</h2>
+        <Link href="/pack" className="m-byph__all">Full pack builder <BrandIcon name="arrow" size={14} /></Link>
+      </div>
+      <ul className="v-pdp-pack__offers" aria-label="Pack offers">
+        {availableTiers.map(({ pairs, off: percent }) => (
+          <li key={pairs}>{pairs}+ bottles · {percent}% off</li>
+        ))}
+      </ul>
+      <div className="v-pdp-pack__rail-head">
+        <p>Scroll and check the fragrances you want.</p>
+        <div className="v-pdp-pack__arrows">
+          <button type="button" aria-label="Previous fragrances" onClick={() => move(-1)} disabled={edges.start}>
+            <BrandIcon name="previous" size={17} />
+          </button>
+          <button type="button" aria-label="Next fragrances" onClick={() => move(1)} disabled={edges.end}>
+            <BrandIcon name="arrow" size={17} />
+          </button>
+        </div>
+      </div>
+      <div className="v-pdp-pack__cards" ref={rail} role="region" aria-label="Fragrances for your pack"
+        tabIndex={0} data-lenis-prevent>
+        {products.map((product) => {
+          const checked = picked.has(product.id);
+          return (
+            <ProductCard key={product.id} product={product} selected={checked} onImageClick={() => toggle(product.id)}
+              action={(
+                <label className="m-card__addbody v-pdp-pack__check">
+                  <input type="checkbox" checked={checked} onChange={() => toggle(product.id)} aria-label={`Select ${product.name} for your pack`} />
+                  {checked ? 'Selected' : 'Select'}
+                </label>
+              )}
+            />
+          );
+        })}
+      </div>
+      <div className="v-pdp-pack__total" aria-live="polite">
+        <p>{count} {count === 1 ? 'fragrance' : 'fragrances'} selected{off > 0 && ` · ${off}% off applied`}</p>
+        <div className="m-bypsum">
+          <span>{off ? 'Pack total' : 'Selected total'}</span>
+          <b>{inr(total)}</b>
+          {off > 0 && <><s>{inr(subtotal)}</s><span className="m-bypsave">Save {inr(subtotal - total)}</span></>}
+        </div>
+        {next && <p>Choose {next.pairs - count} more to unlock {next.off}% off.</p>}
+      </div>
+      <div className="v-pdp-pack__actions">
+        <button type="button" className="m-btn" onClick={() => addPack(false)} disabled={!off}>Add Pack to Bag</button>
+        <button type="button" className="m-btn m-btn--fill" onClick={() => addPack(true)} disabled={!off}>Buy Pack Now</button>
+      </div>
+    </section>
+  );
+}

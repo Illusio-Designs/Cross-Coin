@@ -1,9 +1,10 @@
 import { Suspense } from 'react';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 import ScentExperience from '@/components/product/ScentExperience';
 import NotePhoto from '@/components/product/NotePhoto';
 import BrandIcon from '@/components/ui/BrandIcon';
 import Link from 'next/link';
-import { richHtml } from '@/lib/sanitizeHtml';
+import { richHtml, sanitizeRich } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
 import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
 import { buildScentExperience, isScentExperienceAttribute } from '@/lib/scentExperience';
@@ -125,8 +126,6 @@ export default async function MaisonProduct({ params }) {
                 {inStock ? (stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock') : 'Out of stock'}
               </span>
             </div>
-            {product.description ? <p className="v-product-intro">{product.description.replace(/<[^>]*>/g, '').slice(0, 220)}</p> : null}
-
             <Suspense fallback={
               <SkRegion label="Loading purchase options…" style={{ marginTop: 16 }}>
                 <Sk h={42} r={8} />
@@ -135,9 +134,9 @@ export default async function MaisonProduct({ params }) {
             }>
               <PdpPurchase product={product} request={buyingOptions} scentRequest={scentRequest} />
             </Suspense>
-
           </div>
         </div>
+        <PdpDescription product={product} />
       </div></div>
 
       <Suspense fallback={null}><PdpScentStory product={product} defVar={defVar} scentRequest={scentRequest} /></Suspense>
@@ -145,6 +144,22 @@ export default async function MaisonProduct({ params }) {
       <Suspense fallback={null}><PdpFaq productId={product.id} /></Suspense>
       <Suspense fallback={null}><PdpRelated productId={product.id} /></Suspense>
     </div>
+  );
+}
+
+function PdpDescription({ product }) {
+  const html = /<[a-z][\s\S]*>/i.test(product.descriptionHtml) ? sanitizeRich(product.descriptionHtml) : '';
+  if (!html && !product.description) return null;
+
+  return (
+    <section className="v-detail-section v-product-description" aria-labelledby="pdp-description">
+      <h2 id="pdp-description">Product description</h2>
+      {html ? (
+        <DescriptionHtml className="m-desc-rich" html={html} />
+      ) : (
+        <p className="m-desc-rich">{product.description}</p>
+      )}
+    </section>
   );
 }
 
@@ -161,14 +176,13 @@ async function PdpPurchase({ product, request, scentRequest }) {
     notes: fragranceNotes,
   };
   const scents = packs.length || !mixTiers.length ? [] : catalog.products
-    .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false)
-    .slice(0, 8)
+    .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false && scent.defaultVariationId)
     .map((scent) => {
       const variation = scent.variations.find((v) => String(v.id) === String(scent.defaultVariationId));
       return {
         ...cardDetails(scent),
         id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
-        price: scent.price, sizes: scent.sizes.slice(0, 1), images: scent.images.slice(0, 1),
+        price: scent.price, sizes: [variation?.size || scent.sizes[0]], images: scent.images.slice(0, 1),
         notes: variation?.noteItems?.length ? variation.noteItems : scent.notes,
       };
     });

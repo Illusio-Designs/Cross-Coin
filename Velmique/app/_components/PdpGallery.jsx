@@ -88,15 +88,15 @@ export default function PdpGallery({ images = [], name = '' }) {
       {open >= 0 && (
         <div ref={lightboxRef} className="m-lbx" role="dialog" aria-modal="true" aria-label={`${name} image zoom`} onClick={close}>
           <button type="button" className="m-lbx__x" aria-label="Close zoom" onClick={close}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            <BrandIcon name="close" />
           </button>
           {images.length > 1 && (
-            <button type="button" className="m-lbx__nav prev" aria-label="Previous image" onClick={(e) => { e.stopPropagation(); step(-1); }}>‹</button>
+            <button type="button" className="m-lbx__nav prev" aria-label="Previous image" onClick={(e) => { e.stopPropagation(); step(-1); }}><BrandIcon name="previous" /></button>
           )}
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
           <img src={ik(images[open], 1600, GALLERY_RESIZE)} alt={`${name} — zoomed view ${open + 1}`} onClick={(e) => e.stopPropagation()} />
           {images.length > 1 && (
-            <button type="button" className="m-lbx__nav next" aria-label="Next image" onClick={(e) => { e.stopPropagation(); step(1); }}>›</button>
+            <button type="button" className="m-lbx__nav next" aria-label="Next image" onClick={(e) => { e.stopPropagation(); step(1); }}><BrandIcon name="arrow" /></button>
           )}
           <span className="m-lbx__count">{open + 1} / {images.length}</span>
         </div>
