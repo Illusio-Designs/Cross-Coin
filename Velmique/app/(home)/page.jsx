@@ -93,7 +93,12 @@ export default async function MaisonHome() {
         <script key={`ld-${i}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(obj).replace(/</g, '\\u003c') }} />
       ))}
       <section className="v-hero"><div className="m-wrap v-hero__inner">
-        <div className="v-hero__copy"><span className="m-eyebrow">A little luxury. Entirely you.</span><h1>Fragrances for<br /><em>Every Side of You</em></h1><p>Modern, expressive and long-lasting<br />scents crafted for your everyday moods.</p><div className="v-actions"><Link className="m-btn m-btn--fill" href="#scent-studio">Find Your Scent →</Link><Link className="m-btn" href="/shop">Shop Collection</Link></div></div>
+        <div className="v-hero__copy">
+          <span className="m-eyebrow">A little luxury. Entirely you.</span>
+          <h1>Fragrances for<br /><em>Every Side of You</em></h1>
+          <p>Modern, expressive and long-lasting<br />scents crafted for your everyday moods.</p>
+          <div className="v-actions"><Link className="m-btn m-btn--fill" href="/shop">Shop Collection</Link></div>
+        </div>
         <div className="v-hero__image">{best?.images?.[0] ? (
           <SkImg src={ik(best.images[1] || best.images[0], 1000)}
             srcSet={ikSrcSet(best.images[1] || best.images[0], [400, 640, 800, 1000, 1200])}
