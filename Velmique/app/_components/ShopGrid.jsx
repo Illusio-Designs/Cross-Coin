@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { getPublicProducts } from '@/lib/api/products';
+import { getPublicProducts, noteKey, productNotes } from '@/lib/api/products';
 import { getPublicCategories } from '@/lib/api/categories';
 import ProductCard from './ProductCard';
 import Pager from './Pager';
@@ -14,12 +14,8 @@ const PAGE_SIZE = 24;
 
 // Does this product carry the given fragrance note (by name)?
 const hasNote = (p, note) => {
-  const t = note.toLowerCase();
-  const names = [
-    ...(p.notes || []).map((n) => (typeof n === 'string' ? n : n?.name)),
-    ...(p.variations || []).flatMap((v) => (v.noteItems || []).map((x) => x?.name)),
-  ].filter(Boolean);
-  return names.some((n) => String(n).toLowerCase().trim() === t);
+  const key = noteKey(note);
+  return productNotes(p).some(({ name }) => noteKey(name) === key);
 };
 
 // Sorting runs client-side on the mapped price (the default variation's), so

@@ -10,23 +10,27 @@ import { openShiprocketCheckout, PACK_DISCOUNT_UNAVAILABLE, SHIPROCKET_RETRY_MES
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
 
-const inr = (amount) => '₹' + Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const inr = (paise) => '₹' + (paise / 100).toLocaleString('en-IN', {
+  minimumFractionDigits: paise % 100 ? 2 : 0,
+  maximumFractionDigits: 2,
+});
 
-export default function PdpMixPack({ current, scents, tiers }) {
+export default function PdpMixPack({ current, scents, tiers, placement = 'product' }) {
+  const home = placement === 'home';
   const { addToCart } = useStore();
-  const [picked, setPicked] = useState(() => new Set([current.id]));
+  const [picked, setPicked] = useState(() => new Set(current ? [current.id] : []));
   const rail = useRef(null);
   const [edges, setEdges] = useState({ start: true, end: true });
   const [opening, setOpening] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const openingRef = useRef(false);
-  const products = [current, ...scents];
+  const products = current ? [current, ...scents] : scents;
   const availableTiers = tiers.filter(({ pairs }) => pairs <= products.length);
   const selection = products.filter(({ id }) => picked.has(id));
   const count = selection.length;
   const off = packDiscountPercent(availableTiers, count);
-  const subtotal = selection.reduce((sum, { price }) => sum + price, 0);
-  const total = selection.reduce((sum, { price }) => sum + packUnitPrice(price, off), 0);
+  const subtotal = selection.reduce((sum, { price }) => sum + Math.round(price * 100), 0);
+  const total = selection.reduce((sum, { price }) => sum + Math.round(packUnitPrice(price, off) * 100), 0);
   const next = availableTiers.find(({ pairs }) => pairs > count);
 
   useEffect(() => {
@@ -96,7 +100,7 @@ export default function PdpMixPack({ current, scents, tiers }) {
         contents: selection.map((product) => ({ id: String(product.id), quantity: 1 })),
         content_type: 'product',
         num_items: count,
-        value: total,
+        value: total / 100,
         currency: 'INR',
       });
       const lines = selection.map((product) => ({ variationId: product.defaultVariationId, quantity: 1, packGroup: 'selected' }));
@@ -113,19 +117,26 @@ export default function PdpMixPack({ current, scents, tiers }) {
 
   if (!availableTiers.length) return null;
 
+  const fullBuilder = <Link href="/pack" className="m-byph__all">Full pack builder <BrandIcon name="arrow" size={14} /></Link>;
+  const offers = (
+    <ul className="v-pdp-pack__offers" aria-label="Pack offers">
+      {availableTiers.map(({ pairs, off: percent }, index) => (
+        <li key={pairs}>
+          {home ? `Any ${pairs}${index === availableTiers.length - 1 ? '+' : ''}` : `${pairs}+ bottles`} · {percent}% off
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
-    <section className="m-opt v-pdp-pack" aria-label="Build your pack">
+    <section className={`m-opt v-pdp-pack${home ? ' v-home-pack' : ''}`} aria-label="Build your pack" data-layout={home ? 'quick-pick' : undefined}>
       <div className="m-opt__h m-byph">
         <h2>Build Your Pack</h2>
-        <Link href="/pack" className="m-byph__all">Full pack builder <BrandIcon name="arrow" size={14} /></Link>
+        {home ? offers : fullBuilder}
       </div>
-      <ul className="v-pdp-pack__offers" aria-label="Pack offers">
-        {availableTiers.map(({ pairs, off: percent }) => (
-          <li key={pairs}>{pairs}+ bottles · {percent}% off</li>
-        ))}
-      </ul>
+      {!home && offers}
       <div className="v-pdp-pack__rail-head">
-        <p>Scroll and check the fragrances you want.</p>
+        {home ? fullBuilder : <p>Scroll and check the fragrances you want.</p>}
         <div className="v-pdp-pack__arrows">
           <button type="button" aria-label="Previous fragrances" onClick={() => move(-1)} disabled={edges.start}>
             <BrandIcon name="previous" size={17} />
@@ -140,10 +151,10 @@ export default function PdpMixPack({ current, scents, tiers }) {
         {products.map((product) => {
           const checked = picked.has(product.id);
           return (
-            <ProductCard key={product.id} product={product} selected={checked} showNotes={false}
-              imageSizes="(max-width: 820px) min(43vw, 180px), 180px"
+            <ProductCard key={product.id} product={product} selected={checked} showNotes={false} packPicker={home}
+              imageSizes={home ? '(max-width: 740px) 42vw, (max-width: 1280px) 30vw, 365px' : '(max-width: 820px) min(43vw, 180px), 180px'}
               onImageClick={() => toggle(product.id)}
-              action={(
+              action={!home && (
                 <label className="m-card__addbody v-pdp-pack__check">
                   <input type="checkbox" checked={checked} onChange={() => toggle(product.id)} aria-label={`Select ${product.name} for your pack`} />
                   {checked ? 'Selected' : 'Select'}
@@ -153,18 +164,20 @@ export default function PdpMixPack({ current, scents, tiers }) {
           );
         })}
       </div>
-      <div className="v-pdp-pack__total" aria-live="polite">
-        <p>{count} {count === 1 ? 'fragrance' : 'fragrances'} selected{off > 0 && ` · ${off}% off applied`}</p>
-        <div className="m-bypsum">
-          <span>{off ? 'Pack total' : 'Selected total'}</span>
-          <b>{inr(total)}</b>
-          {off > 0 && <><s>{inr(subtotal)}</s><span className="m-bypsave">Save {inr(subtotal - total)}</span></>}
+      <div className="v-pdp-pack__footer">
+        <div className="v-pdp-pack__total" aria-live="polite">
+          <p>{count} {count === 1 ? 'fragrance' : 'fragrances'} selected{off > 0 && ` · ${off}% off applied`}</p>
+          <div className="m-bypsum">
+            <span>{off ? 'Pack total' : 'Selected total'}</span>
+            <b>{inr(total)}</b>
+            {off > 0 && <><s>{inr(subtotal)}</s><span className="m-bypsave">Save {inr(subtotal - total)}</span></>}
+          </div>
+          {next && (!home || !off) && <p>Choose {next.pairs - count} more to unlock {next.off}% off.</p>}
         </div>
-        {next && <p>Choose {next.pairs - count} more to unlock {next.off}% off.</p>}
-      </div>
-      <div className="v-pdp-pack__actions">
-        <button type="button" className="m-btn" onClick={addPack} disabled={!off || opening}>Add Pack to Bag</button>
-        <ShiprocketButton label="BUY PACK NOW" onClick={buyPack} busy={opening} disabled={!off} />
+        <div className="v-pdp-pack__actions">
+          <button type="button" className="m-btn" onClick={addPack} disabled={!off || opening}>Add Pack to Bag</button>
+          <ShiprocketButton label="BUY PACK NOW" onClick={buyPack} busy={opening} disabled={!off} />
+        </div>
       </div>
       {checkoutError && <p className="v-pdp-pack__checkout-error" role="alert">{checkoutError}</p>}
     </section>

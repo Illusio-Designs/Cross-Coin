@@ -14,7 +14,7 @@ const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? '
 const Bag = () => <BrandIcon name="bag" size={17} />;
 
 // `priority` — the card is the page's LCP image (home hero bestseller).
-export default function ProductCard({ product, priority = false, action, onImageClick, selected = false, showNotes = true,
+export default function ProductCard({ product, priority = false, action, onImageClick, selected = false, showNotes = true, packPicker = false,
   imageSizes = '(max-width: 980px) calc(50vw - 24px), 290px' }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
@@ -64,13 +64,21 @@ export default function ProductCard({ product, priority = false, action, onImage
       <div className="m-card__fig">
         {onImageClick ? (
           <button type="button" className="m-card__imglink" disabled={soldOut}
-            aria-label={`Choose ${product.name} for your pack`} onClick={onImageClick}>{tile}</button>
+            aria-label={`Choose ${product.name} for your pack`} aria-pressed={packPicker ? selected : undefined}
+            onClick={onImageClick}>
+            {tile}
+            {packPicker && <span className="m-card__pick" aria-hidden="true">
+              {selected ? <BrandIcon name="check" size={18} /> : '+'}
+            </span>}
+          </button>
         ) : (
           <Link className="m-card__imglink" href={href} aria-label={product.name}>{tile}</Link>
         )}
-        {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
-        <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={wished} onClick={wish}><Heart filled={wished} /></button>
-        <ReviewChip rating={product.rating} reviews={product.reviews} />
+        {!packPicker && <>
+          {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
+          <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={wished} onClick={wish}><Heart filled={wished} /></button>
+          <ReviewChip rating={product.rating} reviews={product.reviews} />
+        </>}
 
       </div>
       <div className="m-card__body">
@@ -88,7 +96,7 @@ export default function ProductCard({ product, priority = false, action, onImage
             ))}
           </ul>
         )}
-        {!soldOut && action ? action : (
+        {!soldOut && action ? action : !packPicker && (
           <button type="button" className="m-card__addbody" disabled={soldOut}
             aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`} onClick={add}>
             <Bag />{soldOut ? 'Sold out' : 'Add to Bag'}

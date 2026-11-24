@@ -83,6 +83,13 @@ function mergeNotes(items) {
   return [...notes.values()];
 }
 
+export function productNotes(product) {
+  return mergeNotes([
+    ...(product.notes || []).map((note) => typeof note === 'string' ? { name: note, image: '' } : note),
+    ...(product.variations || []).flatMap((variation) => variation.noteItems || []),
+  ].filter((note) => noteKey(note?.name)));
+}
+
 function pickImage(i) {
   return cleanUrl(i?.large || i?.image_url || i?.medium || i?.url || i?.thumbnail || '');
 }

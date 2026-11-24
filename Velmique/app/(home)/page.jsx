@@ -1,17 +1,19 @@
 import BrandIcon, { Gem, Leaf, Hourglass, Heart } from '@/components/ui/BrandIcon';
 import ScentStudio from '@/components/home/ScentStudio';
+import ShopByNotes from '@/components/home/ShopByNotes';
 import Link from 'next/link';
 import { getImageProps } from 'next/image';
-import { getBestsellers } from '@/lib/api/products';
+import { getBestsellers, getPublicProducts, productNotes } from '@/lib/api/products';
+import { getPackTiers } from '@/lib/api/bundles';
 import { getAllReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
 import { getSeoOrg } from '@/lib/api/seo-org';
-import { sanitizeRich } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, seoMeta } from '@/lib/site';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import ProductCard from '../_components/ProductCard';
 import SkImg from '../_components/SkImg';
-import DescriptionHtml from '@/components/product/DescriptionHtml';
+import FaqSection from '../_components/FaqSection';
+import PdpMixPack from '../_components/PdpMixPack';
 
 // Dashboard-controlled SEO ('home') over the page's own copy; the seo-org
 // description / OG image fill in when the home row is empty.
@@ -39,12 +41,18 @@ function BundledPhoto({ src, sizes, alt, ...props }) {
 }
 
 export default async function MaisonHome() {
-  const [featured, reviewsRes, faqs, seoOrg] = await Promise.all([
+  const [featured, catalog, reviewsRes, faqs, seoOrg, packTiers] = await Promise.all([
     getBestsellers(8).catch(() => []),
+    getPublicProducts({ limit: 48 }),
     getAllReviews({ limit: 30 }).catch(() => null),
     getFaqs('global').catch(() => []),
     getSeoOrg().catch(() => null),
+    getPackTiers(),
   ]);
+
+  const noteProducts = catalog.products.length ? catalog.products : featured;
+  const packProducts = noteProducts.filter((product) => product.inStock && product.defaultVariationId);
+  const notesHref = noteProducts.some((product) => productNotes(product).length) ? '#shop-by-notes' : '/shop';
 
   // Organization (dashboard-controlled, hardcoded fallback) + WebSite with the
   // sitelinks search box pointing at /search.
@@ -94,6 +102,7 @@ export default async function MaisonHome() {
         ) : <BundledPhoto src="/FRAGRANCE.webp" sizes={HERO_SIZES} alt="Velmique fragrance collection" loading="eager" fetchPriority="high" />}
         <span>VELMIQUE<br /><small>YOUR EVERYDAY SIGNATURE</small></span></div>
       </div></section>
+      <ShopByNotes products={noteProducts} />
       <div className="v-trust m-wrap">
         {[
           ['cash', 'COD', 'Available'],
@@ -106,27 +115,15 @@ export default async function MaisonHome() {
           </div>
         ))}
       </div>
-      <section className="v-section m-wrap" id="scent-studio"><div className="v-center"><span className="m-eyebrow">The Velmique Scent Studio</span><h2>Let’s Find Your Perfect Fragrance</h2><p>Not sure which perfume suits you? Discover it in a way that feels personal.</p></div><ScentStudio products={featured} /></section>
-      <section className="v-section m-wrap" id="shop-by-mood"><div className="v-heading"><div><h2>Shop by Mood</h2><p>Because a fragrance should feel like you.</p></div><Link href="/shop">Explore All Fragrances →</Link></div><div className="v-moods">{[['Fresh & Clean','Light, airy and refreshing','fresh','💧'],['Sweet & Romantic','Fruity, playful and feminine','floral','🌸'],['Bold & Intense','Rich, warm and long-lasting','woody','◈'],['Warm & Elegant','Smooth, musky and sophisticated','musk','✧']].map(([name,desc,q,icon],i)=><Link className={`v-mood v-mood--${i}`} href={`/shop?note=${q}`} key={name}><span className="v-mood__art">{(() => {const match=featured.find(p=>JSON.stringify([p.notes,p.variations?.[0]?.noteItems]).toLowerCase().includes(q)) || featured[i];return match?.images?.[0] ? <SkImg src={ik(match.images[0],400)} srcSet={ikSrcSet(match.images[0],[200,300,400,600])} sizes="(max-width: 740px) 50vw, 25vw" alt={`${name} fragrance`} loading="lazy" /> : <Leaf size={48} strokeWidth={1}/>;})()}</span><div><b>{name}</b><p>{desc}</p></div></Link>)}</div></section>
+      <section className="v-section m-wrap" id="scent-studio"><div className="v-center"><span className="m-eyebrow">The Velmique Scent Studio</span><h2>Let’s Find Your Perfect Fragrance</h2><p>Not sure which perfume suits you? Discover it in a way that feels personal.</p></div><ScentStudio products={featured} notesHref={notesHref} /></section>
       <section className="v-section m-wrap" id="m-featured"><div className="v-heading"><div><h2>Our Signature Collection</h2><p>A curated range of modern fragrances, crafted to leave a lasting impression.</p></div><Link href="/shop">View All Fragrances →</Link></div>{featured.length ? <div className="m-pgrid">{featured.slice(0,4).map(p=><ProductCard key={p.id} product={p} />)}</div> : <p>Our collection is being bottled. Please check back shortly.</p>}</section>
+      <div className="m-wrap">
+        <PdpMixPack placement="home" scents={packProducts} tiers={packTiers} />
+      </div>
       <section className="v-why"><BundledPhoto frameClassName="v-why__photo" src="/abouthero.webp" sizes="(max-width: 740px) 100vw, 33vw" alt="The world of Velmique" loading="lazy" /><div><h2><em>Why Choose Velmique?</em></h2><div className="v-pillars">{[[Leaf,'Thoughtfully Crafted Scents'],[Hourglass,'Long-Lasting Performance'],[Gem,'Premium Ingredients'],[Heart,'Modern & Versatile']].map(([Icon,t])=><div key={t}><Icon size={28} strokeWidth={1.2} aria-hidden="true"/><p>{t}</p></div>)}</div></div></section>
       {reviews.length ? <section className="v-section m-wrap"><div className="v-heading"><div><h2>Loved by Our Community</h2><p>Real people. Real experiences.</p></div></div><div className="v-reviews">{reviews.slice(0,3).map(renderReview)}</div></section> : null}
-      <section className="m-wrap v-pack"><div><span className="m-eyebrow">Better together</span><h2>Build Your<br />Fragrance Set</h2><p>Create your perfect duo or trio.<br />A scent for every side of you.</p><Link className="m-btn m-btn--fill" href="/pack">Build Your Pack →</Link></div><div className="v-pack__bottles">{featured.slice(0,3).map(p=>p.images?.[0] ? <SkImg key={p.id} natural frameClassName="v-pack__bottle" src={ik(p.images[0],300)} srcSet={ikSrcSet(p.images[0],[112,216,300,400])} sizes="(max-width: 740px) 30vw, 180px" alt={p.name} loading="lazy" /> : null)}</div></section>
 
-      {/* FAQ — admin-managed, from the backend */}
-      {faqs.length ? (
-        <section className="m-section" style={{ paddingTop: 0 }}><div className="m-wrap">
-          <div className="m-shead" style={{ textAlign: 'left', margin: '0 0 24px' }}><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
-          <div className="m-faq">
-            {faqs.map((f) => (
-              <details key={f.id}>
-                <summary>{f.question}</summary>
-                <DescriptionHtml className="m-faq__a" html={sanitizeRich(f.answer)} />
-              </details>
-            ))}
-          </div>
-        </div></section>
-      ) : null}
+      <FaqSection faqs={faqs} />
     </>
   );
 }

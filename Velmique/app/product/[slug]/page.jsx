@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import DescriptionHtml from '@/components/product/DescriptionHtml';
+import FaqSection from '../../_components/FaqSection';
 import ScentExperience from '@/components/product/ScentExperience';
 import NotePhoto from '@/components/product/NotePhoto';
 import BrandIcon from '@/components/ui/BrandIcon';
@@ -404,20 +405,7 @@ async function PdpReviews({ product, request }) {
 
 async function PdpFaq({ productId }) {
   const [productFaqs, globalFaqs] = await Promise.all([getFaqs('product', productId), getFaqs('global')]);
-  const faqs = productFaqs.length ? productFaqs : globalFaqs;
-  return faqs.length ? (
-    <section className="m-section m-later v-pdp-faq"><div className="m-wrap">
-      <div className="m-shead"><span className="m-eyebrow">Good to know</span><h2>Frequently Asked Questions</h2></div>
-      <div className="m-faq">
-        {faqs.map((f) => (
-          <details key={f.id}>
-            <summary>{f.question}</summary>
-            <DescriptionHtml className="m-faq__a" html={sanitizeRich(f.answer)} />
-          </details>
-        ))}
-      </div>
-    </div></section>
-  ) : null;
+  return <FaqSection className="m-later" faqs={productFaqs.length ? productFaqs : globalFaqs} />;
 }
 
 async function PdpRelated({ productId }) {
