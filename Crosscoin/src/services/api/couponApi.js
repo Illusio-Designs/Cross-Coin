@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import { getPublicCoupons, validateCoupon } from "./productApi";
 
 export class CouponIntegrationService {
@@ -69,7 +70,7 @@ export class CouponIntegrationService {
   }
 
   formatDiscount(discount, coupon) {
-    if (coupon.type === 'quantity_based' || coupon.type !== 'percentage') return `₹${discount} OFF`;
+    if (coupon.type === 'quantity_based' || coupon.type !== 'percentage') return `${formatRupees(discount)} OFF`;
     return `${discount}% OFF`;
   }
 

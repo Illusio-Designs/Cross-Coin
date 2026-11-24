@@ -49,7 +49,7 @@ const EMPTY_ADDR = {
   city: '', state: '', postalCode: '', country: 'India', isDefault: false,
 };
 
-const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 function getOrCreateGuestSessionId() {
   if (typeof document === 'undefined') return 'guest-' + Date.now();

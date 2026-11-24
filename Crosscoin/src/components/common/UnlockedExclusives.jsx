@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import React, { useState, useEffect, useRef } from 'react';
 import SafeImage from './SafeImage';
 import { getPublicProductReviews } from '../../services/publicApi';
@@ -244,8 +245,8 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                 <div className="info-card-body">
                   <div className="price-row">
                     <div>
-                      <span className="price">₹{productPrice}</span>
-                      {productComparePrice > 0 && <span className="price-old">₹{productComparePrice}</span>}
+                      <span className="price">{formatRupees(productPrice)}</span>
+                      {productComparePrice > 0 && <span className="price-old">{formatRupees(productComparePrice)}</span>}
                     </div>
                     <div className="btn-row">
                       <button className="btn-explore" onClick={() => setShowDetail(true)}>Explore</button>
@@ -301,8 +302,8 @@ const UnlockedExclusives = ({ products = [], loading = false }) => {
                   <div className="tab-panel active">
                     <p className="detail-title">{product.name}</p>
                     <div className="detail-price-row">
-                      <span className="detail-price">₹{productPrice}</span>
-                      {productComparePrice > 0 && <span className="detail-mrp">₹{productComparePrice}</span>}
+                      <span className="detail-price">{formatRupees(productPrice)}</span>
+                      {productComparePrice > 0 && <span className="detail-mrp">{formatRupees(productComparePrice)}</span>}
                       {avgRating && (
                         <div className="detail-rating-pill">
                           <span className="rating-pill__star">★</span>

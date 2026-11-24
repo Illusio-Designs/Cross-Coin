@@ -112,7 +112,7 @@ export function setPackTier(packId, tierPairs, tierTotal) {
   hydrate();
   const lines = cart.filter((i) => i.packId === packId);
   if (!lines.length || !tierPairs) return;
-  const perPair = Math.round(tierTotal / tierPairs);
+  const perPair = tierTotal / tierPairs;
   const curTotal = lines.reduce((s, l) => s + l.qty, 0);
   const anchor = lines.reduce((a, b) => (b.qty > a.qty ? b : a));
   const others = curTotal - anchor.qty;

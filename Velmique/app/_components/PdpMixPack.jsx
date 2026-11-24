@@ -10,10 +10,7 @@ import { openShiprocketCheckout, PACK_DISCOUNT_UNAVAILABLE, SHIPROCKET_RETRY_MES
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
 
-const inr = (paise) => '₹' + (paise / 100).toLocaleString('en-IN', {
-  minimumFractionDigits: paise % 100 ? 2 : 0,
-  maximumFractionDigits: 2,
-});
+const inr = (paise) => '₹' + (paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 export default function PdpMixPack({ current, scents, tiers, placement = 'product' }) {
   const home = placement === 'home';

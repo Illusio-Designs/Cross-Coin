@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import React, { useState, useEffect } from 'react';
 import { getPublicCoupons } from '../../services/publicApi';
 import { inlineHtml } from '../../utils/sanitizeHtml';
@@ -63,9 +64,9 @@ const CouponStrip = () => {
     let description = '';
     
     if (coupon.type === 'percentage') {
-      description = `<span class="discount-badge">${value}% OFF</span> on orders above ₹${minPurchase}`;
+      description = `<span class="discount-badge">${value}% OFF</span> on orders above ${formatRupees(minPurchase)}`;
     } else if (coupon.type === 'fixed') {
-      description = `<span class="discount-badge">₹${value} OFF</span> on orders above ₹${minPurchase}`;
+      description = `<span class="discount-badge">${formatRupees(value)} OFF</span> on orders above ${formatRupees(minPurchase)}`;
     } else if (coupon.type === 'tiered') {
       description = `Buy 2 → Extra <span class="discount-badge">₹50 OFF</span>, Buy 3 → <span class="discount-badge">₹100 OFF</span>`;
     } else if (coupon.type === 'quantity_based') {

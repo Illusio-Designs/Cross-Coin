@@ -799,7 +799,7 @@ export default function TestLayout({ children }) {
 
   // Set a line to a pair tier (Buy More, Save More) — qty becomes the pair count.
   const setLinePairs = (key, pairs, total0) => {
-    setLinePack(key, { qty: pairs, unit: Math.round(total0 / pairs), packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Packs` });
+    setLinePack(key, { qty: pairs, unit: total0 / pairs, packq: pairs, pack: pairs === 1 ? 'Single' : `${pairs} Packs` });
   };
 
   const applyPromo = async (codeArg) => {

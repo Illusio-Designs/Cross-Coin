@@ -57,5 +57,5 @@ export const BENEFITS = [
   { t: 'Seamless toe', d: 'A hand-linked toe seam sits flat against your foot — no rub, no blisters.' },
 ];
 
-export const inr = (n) => '₹' + Math.round(Number(n) || 0).toLocaleString('en-IN');
+export { formatRupees as inr } from '../../utils/formatRupees';
 export const productById = (id) => PRODUCTS.find((p) => p.id === id) || PRODUCTS[0];

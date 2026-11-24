@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import { getPublicCoupons } from '../../services/publicApi';
@@ -29,7 +30,7 @@ function offerText(c) {
   if (!c) return '';
   const v = Number(c.value) || 0;
   if (c.type === 'percentage') return `${v}% off your order`;
-  if (c.type === 'fixed') return `₹${v} off your order`;
+  if (c.type === 'fixed') return `${formatRupees(v)} off your order`;
   return c.description || 'Special offer on your order';
 }
 

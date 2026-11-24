@@ -9,7 +9,7 @@ import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import ProductCard from './ProductCard';
 import SkImg from './SkImg';
 
-const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 export default function PackBuilder({ products = [], tiers = [] }) {
   const { addToCart } = useStore();

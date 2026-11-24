@@ -12,7 +12,7 @@ import PdpMixPack from './PdpMixPack';
 import SkImg from './SkImg';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
-const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [], notes }) {
   const { addToCart, openCheckout } = useStore();

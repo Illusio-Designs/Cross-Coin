@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import SafeImage from "../common/SafeImage";
@@ -188,8 +189,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index = 0 }) => {
 
         <div className="product-footer">
           <span className="product-price">
-            ₹{price}
-            {comparePrice > 0 && <span className="original-price">₹{comparePrice}</span>}
+            {formatRupees(price)}
+            {comparePrice > 0 && <span className="original-price">{formatRupees(comparePrice)}</span>}
           </span>
           <button
             className="add-to-bag-btn"

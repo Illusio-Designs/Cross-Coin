@@ -8,7 +8,7 @@ import ReviewChip from './ReviewChip';
 import BrandIcon from '@/components/ui/BrandIcon';
 import NotePhoto from '@/components/product/NotePhoto';
 
-const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? 'currentColor' : 'none'} />;
 const Bag = () => <BrandIcon name="bag" size={17} />;

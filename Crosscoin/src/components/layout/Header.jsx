@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import SafeImage from "../common/SafeImage";
 import Link from "next/link";
@@ -373,8 +374,8 @@ const Header = () => {
                           <h5>{product.name}</h5>
                           <p className="search-result-price">
                             {product.variations && product.variations.length > 0
-                              ? `₹${Math.min(...product.variations.map((v) => v.price))}`
-                              : `₹${product.price || 'N/A'}`}
+                              ? formatRupees(Math.min(...product.variations.map((v) => v.price)))
+                              : (product.price ? formatRupees(product.price) : 'N/A')}
                           </p>
                         </div>
                       </div>

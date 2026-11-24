@@ -1,3 +1,4 @@
+import { formatRupees } from '../../utils/formatRupees';
 import { resetNativeOrderAttempts } from '../../lib/buyingFlow';
 ﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
@@ -184,7 +185,7 @@ function describeOffer(coupon) {
   if (raw) return raw;
   const value = parseFloat(coupon.value);
   if (coupon.type === 'percentage') return `${value}% OFF`;
-  if (coupon.type === 'fixed') return `₹${value} OFF`;
+  if (coupon.type === 'fixed') return `${formatRupees(value)} OFF`;
   if (coupon.type === 'tiered') return 'Buy more, save more';
   if (coupon.type === 'quantity_based') return 'Volume discount';
   return 'Special offer';
@@ -986,7 +987,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (data.success) {
         setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discountAmount: data.discountAmount, paymentModeRestriction: data.coupon.paymentModeRestriction });
-        setCouponSuccess(`"${data.coupon.code}" applied — ₹${parseFloat(data.discountAmount).toFixed(2)} off!`);
+        setCouponSuccess(`"${data.coupon.code}" applied — ${formatRupees(data.discountAmount)} off!`);
         setCouponCode('');
       } else {
         setCouponError(data.message || 'Invalid coupon code');
@@ -1575,7 +1576,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                   <p className="cd-freeship-label">
                     {freeShipQualifies
                       ? "🎉 You've unlocked FREE shipping!"
-                      : `Add ₹${freeShipRemaining} for FREE shipping`}
+                      : `Add ${formatRupees(Math.ceil(freeShipRemaining))} for FREE shipping`}
                   </p>
                   <div
                     className="cd-freeship-track"
@@ -1616,8 +1617,8 @@ const CartDrawer = ({ isOpen, onClose }) => {
                         {color && <p className="cd-item-meta">{color}</p>}
                         <div className="cd-item-row">
                           <div className="cd-item-prices">
-                            <span className="cd-item-price">₹{price.toFixed(2)}</span>
-                            {mrp > 0 && mrp > price && <span className="cd-item-original-price">₹{mrp.toFixed(2)}</span>}
+                            <span className="cd-item-price">{formatRupees(price)}</span>
+                            {mrp > 0 && mrp > price && <span className="cd-item-original-price">{formatRupees(mrp)}</span>}
                           </div>
                           {!buyNowItem && (
                             <div className="cd-qty">
@@ -1667,7 +1668,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 <div className="cd-section-title">Have a coupon?</div>
                 {appliedCoupon ? (
                   <div className="cd-coupon-applied">
-                    <span>{appliedCoupon.code} applied — ₹{couponDiscount.toFixed(2)} off</span>
+                    <span>{appliedCoupon.code} applied — {formatRupees(couponDiscount)} off</span>
                     <button type="button" className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
                   </div>
                 ) : (
@@ -1746,7 +1747,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                                       <span className="cd-offer-code">{c.code}</span>
                                       <span className="cd-offer-desc">
                                         {describeOffer(c)}
-                                        {parseFloat(c.minPurchase) > 0 ? ` · Min ₹${parseFloat(c.minPurchase)}` : ''}
+                                        {parseFloat(c.minPurchase) > 0 ? ` · Min ${formatRupees(c.minPurchase)}` : ''}
                                       </span>
                                     </div>
                                     <button

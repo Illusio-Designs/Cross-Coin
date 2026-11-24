@@ -264,7 +264,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
 
   const add = (buyNow) => {
     if (hasPacks && selOpt) {
-      const perPair = Math.round(selOpt.total / selOpt.pairs);
+      const perPair = selOpt.total / selOpt.pairs;
       addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: `${selOpt.pairs} Pack${selOpt.pairs > 1 ? 's' : ''}`, packq: selOpt.pairs, unit: perPair, was: cur.comparePrice || basePair, base: basePair, img: cur.img || mainImg || p.img }, selOpt.pairs);
     } else {
       addItem({ sitePriced: !!p.raw?.brandPriceOverride, id: p.id, vid: cur.id || null, name: p.name, brand: p.brand, color: cur.colors.join(' / ') || '', size, pack: cur.label, packq: cur.pairs, unit: cur.price, was: cur.comparePrice, base: cur.price, img: cur.img || mainImg || p.img }, qty);
