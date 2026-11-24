@@ -9,41 +9,30 @@ import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
-import SkImg from './SkImg';
+import ProductCard from './ProductCard';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
-const check = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-);
 
 export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [], notes }) {
   const { addToCart, openCheckout } = useStore();
 
-  // Build selectable options from real variations. Each variation has a size +
-  // price + image; fall back to a single synthetic option for simple products.
-  const options = useMemo(() => {
-    const vs = (product.variations || []).filter(Boolean);
-    if (!vs.length) {
-      return [{ id: product.defaultVariationId || product.id, label: product.sizes?.[0] || 'One Size', price: product.price, image: product.images?.[0] || '', inStock: product.inStock !== false, stock: null }];
-    }
-    return vs.map((v) => ({
-      id: v.id,
-      label: v.size || v.sku || 'Default',
-      price: v.price,
-      image: v.images?.[0]?.url || product.images?.[0] || '',
-      inStock: v.inStock !== false,
-      stock: Number.isFinite(v.stock) ? v.stock : null,
-    }));
+  const opt = useMemo(() => {
+    const variations = (product.variations || []).filter(Boolean);
+    const variation = variations.find((v) => String(v.id) === String(product.defaultVariationId)) || variations[0];
+    return {
+      id: variation?.id ?? (product.defaultVariationId || product.id),
+      label: variation?.size || variation?.sku || product.sizes?.[0] || 'One Size',
+      price: variation?.price ?? product.price,
+      image: variation?.images?.[0]?.url || product.images?.[0] || '',
+      inStock: variation ? variation.inStock !== false : product.inStock !== false,
+      stock: Number.isFinite(variation?.stock) ? variation.stock : null,
+    };
   }, [product]);
 
-  // Start on the default (first in-stock) variation, not blindly the first.
-  const [selVar, setSelVar] = useState(() => Math.max(0, options.findIndex((o) => String(o.id) === String(product.defaultVariationId))));
   const [qty, setQty] = useState(1);
   const [packIdx, setPackIdx] = useState(0);
   const [buildPack, setBuildPack] = useState(false);
-  const opt = options[selVar] || options[0];
-
   // "Select Pack" choices for products with their own admin packs (exact
   // totals; checkout re-prices a qty-N line via bundlePerUnit server-side).
   const packChoices = useMemo(() => {
@@ -61,12 +50,12 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
   const scentOpts = useMemo(() => {
     if (packs.length || !mixTiers.length) return [];
     return [
-      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label, slug: product.slug },
+      { pid: product.id, vid: opt.id, name: product.name, price: Number(opt.price) || 0, image: opt.image, size: opt.label, slug: product.slug, card: product },
       ...scents.filter((s) => String(s.id) !== String(product.id) && s.inStock !== false).slice(0, 8).map((s) => ({
-        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '', slug: s.slug,
+        pid: s.id, vid: s.defaultVariationId || null, name: s.name, price: Number(s.price) || 0, image: s.images?.[0] || '', size: s.sizes?.[0] || '', slug: s.slug, card: s,
       })),
     ];
-  }, [packs.length, mixTiers.length, product.id, product.name, product.slug, opt, scents]);
+  }, [packs.length, mixTiers.length, product, opt, scents]);
   const availableTiers = mixTiers.filter((tier) => tier.pairs <= scentOpts.length);
   const canBuildPack = availableTiers.length > 0 && opt.inStock;
   const isMix = canBuildPack && buildPack;
@@ -212,19 +201,6 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
 
   return (
     <>
-      {options.length > 0 && (
-        <div className="m-opt">
-          <div className="m-opt__h">Select Size</div>
-          <div className="m-sizes">
-            {options.map((o, i) => (
-              <button key={o.id} type="button" aria-pressed={i === selVar} className={`m-size ${i === selVar ? 'on' : ''} ${o.inStock ? '' : 'is-out'}`} onClick={() => setSelVar(i)}>
-                <b>{o.label}</b><span>{o.inStock ? inr(o.price) : 'Sold out'}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {notes}
 
       {packChoices.length > 1 && (
@@ -267,17 +243,15 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           )}
           {isMix && (
             <div className="v-pdp-pack__builder">
-              <div className="m-bypgrid">
+              <div className="v-pdp-pack__cards" role="region" aria-label="Fragrances for your pack" tabIndex={0}>
                 {scentOpts.map((o, i) => {
                   const on = picked.has(i);
+                  const toggle = () => togglePick(i);
                   return (
-                    <button key={`${o.pid}`} type="button" role="checkbox" aria-checked={on} className={`m-byp ${on ? 'on' : ''}`} onClick={() => togglePick(i)}>
-                      {i === 0 ? <span className="m-byp__this">This page</span> : null}
-                      <span className="m-byp__box">{check}</span>
-                      <span className="m-byp__img">{o.image ? <SkImg src={ik(o.image, 240)} alt={o.name} loading="lazy" /> : null}</span>
-                      <span className="m-byp__n">{o.name}</span>
-                      <span className="m-byp__p">{inr(o.price)}</span>
-                    </button>
+                    <ProductCard key={o.pid} product={o.card} selected={on} onImageClick={toggle}
+                      action={<button type="button" className="m-card__addbody" aria-pressed={on} onClick={toggle}>
+                        {on ? 'In Your Pack' : '+ Add to Pack'}
+                      </button>} />
                   );
                 })}
               </div>

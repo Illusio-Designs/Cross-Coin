@@ -4,17 +4,17 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from './SkImg';
+import ReviewChip from './ReviewChip';
 import BrandIcon from '@/components/ui/BrandIcon';
 import NotePhoto from '@/components/product/NotePhoto';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
 const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? 'currentColor' : 'none'} />;
-const Star = () => <BrandIcon name="star" size={13} fill="currentColor" />;
 const Bag = () => <BrandIcon name="bag" size={17} />;
 
 // `priority` — the card is the page's LCP image (home hero bestseller).
-export default function ProductCard({ product, priority = false }) {
+export default function ProductCard({ product, priority = false, action, onImageClick, selected = false }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
 
@@ -27,11 +27,16 @@ export default function ProductCard({ product, priority = false }) {
     .filter((note) => note?.name);
 
   const wished = isWishlisted(product.id);
-  const rating = Number(product.rating || 0);
-  const reviews = Number(product.reviews || 0);
   const orig = product.originalPrice && product.originalPrice > product.price ? product.originalPrice : 0;
 
   const soldOut = product.inStock === false || defVar?.inStock === false;
+  const tile = (
+    <span className="m-card__tile">
+      {img && <SkImg src={ik(img, 600)} srcSet={ikSrcSet(img, [300, 450, 600, 900])}
+        sizes="(max-width: 980px) 50vw, 290px" alt={onImageClick ? '' : product.name}
+        loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : undefined} />}
+    </span>
+  );
   const add = (e) => {
     e.preventDefault();
     if (soldOut) return;
@@ -53,24 +58,17 @@ export default function ProductCard({ product, priority = false }) {
   };
 
   return (
-    <article className="m-card">
+    <article className={`m-card${selected ? ' m-card--selected' : ''}`}>
       <div className="m-card__fig">
-        <Link className="m-card__imglink" href={href} aria-label={product.name}>
-          <span className="m-card__tile">{img ? (
-            <SkImg
-              src={ik(img, 600)}
-              srcSet={ikSrcSet(img, [300, 450, 600, 900])}
-              sizes="(max-width: 980px) 50vw, 290px"
-              alt={product.name}
-              loading={priority ? 'eager' : 'lazy'}
-              fetchPriority={priority ? 'high' : undefined}
-            />
-          ) : null}</span>
-
-        </Link>
+        {onImageClick ? (
+          <button type="button" className="m-card__imglink" disabled={soldOut}
+            aria-label={`Choose ${product.name} for your pack`} onClick={onImageClick}>{tile}</button>
+        ) : (
+          <Link className="m-card__imglink" href={href} aria-label={product.name}>{tile}</Link>
+        )}
         {product.badge ? <span className="m-card__tag">{product.badge}</span> : null}
         <button className={`m-card__wish ${wished ? 'on' : ''}`} aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`} aria-pressed={wished} onClick={wish}><Heart filled={wished} /></button>
-        {rating > 0 ? <span className="m-card__rbadge"><Star />{rating.toFixed(1)}/5</span> : null}
+        <ReviewChip rating={product.rating} reviews={product.reviews} />
 
       </div>
       <div className="m-card__body">
@@ -88,8 +86,12 @@ export default function ProductCard({ product, priority = false }) {
             ))}
           </ul>
         )}
-        {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
-        <button className="m-card__addbody" disabled={soldOut} aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`} onClick={add}><Bag />{soldOut ? 'Sold out' : 'Add to Bag'}</button>
+        {!soldOut && action ? action : (
+          <button type="button" className="m-card__addbody" disabled={soldOut}
+            aria-label={soldOut ? `${product.name} is sold out` : `Add ${product.name} to bag`} onClick={add}>
+            <Bag />{soldOut ? 'Sold out' : 'Add to Bag'}
+          </button>
+        )}
       </div>
     </article>
   );

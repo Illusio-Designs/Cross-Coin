@@ -36,10 +36,17 @@ module.exports = {
       // The Mint type pair (loaded in app/layout.jsx) for Tailwind-styled
       // shared components such as the cart drawer.
       fontFamily: {
-        serif:   ['Playfair Display', 'Georgia', 'serif'],
-        sans:    ['Inter', 'system-ui', 'sans-serif'],
-        body:    ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Playfair Display', 'Georgia', 'serif'],
+        serif:   'var(--m-d)',
+        sans:    'var(--m-b)',
+        body:    'var(--m-b)',
+        display: 'var(--m-d)',
+      },
+      borderRadius: {
+        DEFAULT: 'var(--m-radius)',
+        md: 'var(--m-radius)',
+        lg: 'var(--m-radius-panel)',
+        xl: 'var(--m-radius-panel)',
+        '2xl': 'var(--m-radius-panel)',
       },
       animation: {
         'marquee': 'marquee 25s linear infinite',

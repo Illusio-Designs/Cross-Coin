@@ -3,15 +3,9 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
-import SkImg from './SkImg';
+import ProductCard from './ProductCard';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
-const check = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-);
-const star = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 18l-6 3.4 1.3-6.7-5-4.6 6.8-.8L12 2Z" /></svg>
-);
 
 export default function PackBuilder({ products = [], tiers = [] }) {
   const { addToCart } = useStore();
@@ -66,7 +60,6 @@ export default function PackBuilder({ products = [], tiers = [] }) {
     ? (tiers[0] ? `Select ${tiers[0].pairs} scents to unlock ${tiers[0].off}% off.` : 'Add scents to build your pack.')
     : (() => { const nt = nextTier(count); return nt ? `Add ${nt.pairs - count} more to unlock ${nt.off}% off.` : `Maximum saving unlocked — ${off}% off your pack.`; })();
 
-  const savePct = (p) => (p.originalPrice && p.originalPrice > p.price ? Math.round((1 - p.price / p.originalPrice) * 100) : 0);
 
   // Tier stepper rows: a "Start" rung plus the admin's store-wide tiers.
   const tierRows = tiers.length ? [{ pairs: 1, off: 0, label: 'Start', badge: '' }, ...tiers] : [];
@@ -133,47 +126,19 @@ export default function PackBuilder({ products = [], tiers = [] }) {
           <div className="m-packgrid">
             {products.map((p) => {
               const n = qty[String(p.id)] || 0;
-              const on = n > 0;
-              const img = p.images?.[0] || '';
-              const sp = savePct(p);
-              const rating = Number(p.rating || 0);
-              const reviews = Number(p.reviews || 0);
-              const defVar = (p.variations || []).find((v) => String(v.id) === String(p.defaultVariationId)) || p.variations?.[0] || null;
-              const noteLine = (defVar?.noteItems?.length
-                ? defVar.noteItems.map((x) => x.name)
-                : (p.notes || []).map((x) => (typeof x === 'string' ? x : x?.name))
-              ).filter(Boolean).slice(0, 3).join(' · ');
-              return (
-                <article key={p.id} className={`m-card m-pkcard ${on ? 'sel' : ''}`}>
-                  <button type="button" className="m-card__fig m-pkcard__figbtn" onClick={() => bump(p.id, 1)} aria-label={`Add ${p.name} to pack`}>
-                    <span className="m-card__imglink">
-                      <span className="m-card__tile">{img ? <SkImg src={ik(img, 600)} alt={p.name} loading="lazy" /> : null}</span>
-                      <span className="m-card__shade" />
-                    </span>
-                    {p.badge ? <span className="m-card__tag">{p.badge}</span> : null}
-                    {sp ? <span className="m-pkcard__save">Save {sp}%</span> : null}
-                    {rating > 0 ? <span className="m-card__rbadge">{star}{rating.toFixed(1)}/5</span> : null}
-                    <span className="m-pkcard__check">{check}</span>
-                  </button>
-                  <div className="m-card__body">
-                    <div className="m-card__top">
-                      <span className="m-card__name">{p.name}</span>
-                      <span className="m-card__price"><b>{inr(p.price)}</b>{p.originalPrice && p.originalPrice > p.price ? <s>{inr(p.originalPrice)}</s> : null}</span>
-                    </div>
-                    {noteLine ? <div className="m-card__notes">{noteLine}</div> : null}
-                    {reviews > 0 ? <div className="m-card__rc">{reviews.toLocaleString('en-IN')} review{reviews === 1 ? '' : 's'}</div> : null}
-                    {on ? (
-                      <span className="m-pkqty">
-                        <button type="button" onClick={() => bump(p.id, -1)} aria-label={`Remove one ${p.name}`}>−</button>
-                        <output>{n} in pack<small>{inr(Number(p.price || 0) * n)}</small></output>
-                        <button type="button" onClick={() => bump(p.id, 1)} aria-label={`Add one more ${p.name}`}>+</button>
-                      </span>
-                    ) : (
-                      <button type="button" className="m-pkcard__add" onClick={() => bump(p.id, 1)}>+ Add to pack</button>
-                    )}
-                  </div>
-                </article>
+              const increase = () => bump(p.id, 1);
+              const action = n ? (
+                <div className="m-pkqty">
+                  <button type="button" onClick={() => bump(p.id, -1)} aria-label={`Remove one ${p.name}`}>−</button>
+                  <output>{n} in pack<small>{inr(Number(p.price || 0) * n)}</small></output>
+                  <button type="button" onClick={increase} aria-label={`Add one more ${p.name}`}>+</button>
+                </div>
+              ) : (
+                <button type="button" className="m-card__addbody" onClick={increase} aria-label={`Add ${p.name} to pack`}>
+                  + Add to Pack
+                </button>
               );
+              return <ProductCard key={p.id} product={p} selected={n > 0} onImageClick={increase} action={action} />;
             })}
           </div>
         </div>

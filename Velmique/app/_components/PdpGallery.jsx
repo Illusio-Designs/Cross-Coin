@@ -1,14 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ik, ikSrcSet } from '@/lib/imagekit';
-import SkImg from './SkImg';
 import BrandIcon from '@/components/ui/BrandIcon';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 const GALLERY_RESIZE = { uploads: true };
 const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
-const MAIN_SIZES = '(max-width: 740px) calc(100vw - 40px), 560px';
+const MAIN_SIZES = '(max-width: 820px) calc(100vw - 40px), 560px';
 
 /* Thumbnail gallery with a
    click-to-zoom lightbox: tap any image for a fullscreen view, swipe through
@@ -16,10 +15,17 @@ const MAIN_SIZES = '(max-width: 740px) calc(100vw - 40px), 560px';
 export default function PdpGallery({ images = [], name = '' }) {
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState(-1);
-  useEffect(() => { setSelected(0); setOpen(-1); }, [name]);
+  const [failedImage, setFailedImage] = useState('');
+  const thumbsRef = useRef(null);
+  const current = Math.min(selected, images.length - 1);
+  useEffect(() => { setSelected(0); setOpen(-1); setFailedImage(''); }, [name]);
   const close = useCallback(() => setOpen(-1), []);
   const lightboxRef = useFocusTrap(open >= 0, { onEscape: close });
-  const step = (d) => setOpen((o) => (o + d + images.length) % images.length);
+  const step = useCallback((direction) => {
+    const next = (open + direction + images.length) % images.length;
+    setOpen(next);
+    setSelected(next);
+  }, [open, images.length]);
 
   useEffect(() => {
     if (open < 0) return undefined;
@@ -32,29 +38,51 @@ export default function PdpGallery({ images = [], name = '' }) {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, close, step]);
 
   if (!images.length) return null;
 
-  const mainImage = images[selected];
+  const mainImage = images[current];
+  const selectFromRail = (event) => {
+    const direction = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    const index = (current + direction + images.length) % images.length;
+    setSelected(index);
+    thumbsRef.current?.children[index]?.focus();
+  };
+
   return (
     <>
-      <div className="v-gallery">
-        <div className="v-gallery__thumbs" aria-label="Product images">
-          {images.map((src, i) => (
-            <button key={src + i} type="button" aria-label={`View ${name} image ${i + 1}`}
-              aria-pressed={selected === i} className={selected === i ? 'on' : ''} onClick={() => setSelected(i)}>
-              <img src={ik(src, 144, GALLERY_RESIZE)} alt="" loading="lazy" decoding="async" fetchPriority="low" />
-            </button>
-          ))}
+      <div className={`v-gallery${images.length === 1 ? ' v-gallery--single' : ''}`}>
+        <div className="v-gallery__stage">
+          <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${current + 1}`}
+            disabled={failedImage === mainImage} onClick={() => setOpen(current)}>
+            {failedImage === mainImage ? (
+              <span className="v-gallery__unavailable">Image unavailable</span>
+            ) : (
+              <img key={mainImage} src={ik(mainImage, 1200, GALLERY_RESIZE)}
+                srcSet={ikSrcSet(mainImage, MAIN_WIDTHS, GALLERY_RESIZE)} sizes={MAIN_SIZES}
+                alt={`${name} — view ${current + 1}`} loading="eager" decoding="async" fetchPriority="high"
+                onError={() => setFailedImage(mainImage)} />
+            )}
+            {failedImage !== mainImage && <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18} /></span>}
+          </button>
+          {images.length > 1 && <p className="v-gallery__count" aria-live="polite">{current + 1} / {images.length}</p>}
         </div>
-        <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${selected+1}`} onClick={()=>setOpen(selected)}>
-          <SkImg key={mainImage} src={ik(mainImage, 1200, GALLERY_RESIZE)}
-            srcSet={ikSrcSet(mainImage, MAIN_WIDTHS, GALLERY_RESIZE)} sizes={MAIN_SIZES}
-            alt={`${name} — view ${selected + 1}`} loading="eager" fetchPriority="high" />
-          <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18}/></span>
-        </button>
+        {images.length > 1 && (
+          <div className="v-gallery__rail">
+            <div className="v-gallery__thumbs" ref={thumbsRef} role="group" aria-label="Product image thumbnails"
+              data-lenis-prevent onKeyDown={selectFromRail}>
+              {images.map((src, i) => (
+                <button key={src + i} type="button" aria-label={`View ${name} image ${i + 1}`}
+                  aria-pressed={current === i} onClick={() => setSelected(i)}>
+                  <img src={ik(src, 144, GALLERY_RESIZE)} alt="" loading="lazy" decoding="async" fetchPriority="low" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {open >= 0 && (

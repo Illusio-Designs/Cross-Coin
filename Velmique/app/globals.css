@@ -1,5 +1,5 @@
 /* Global base: Tailwind (used by the shared cart drawer and floating
-   widgets), accessibility primitives, the onyx & gold design tokens, and the
+   widgets), accessibility primitives, the shared burgundy theme, and the
    react-toastify skin. Page and shell styling lives in app/mint.css. Fonts
    (Playfair Display + Inter) are self-hosted below under their real family
    names. */
@@ -124,6 +124,14 @@
 /* Velmique surfaces, controls and text share one burgundy palette. */
 :root[data-maison] {
   color-scheme: dark;
+  --m-b: 'Inter', system-ui, sans-serif;
+  --m-d: 'Playfair Display', Georgia, serif;
+  --m-radius: 8px;
+  --m-radius-panel: 14px;
+  --m-radius-pill: 999px;
+  --v-text-body: 1rem;
+  --v-text-label: .875rem;
+  --v-text-meta: .8125rem;
   --m-bg: #2b0d1b;
   --m-bg-tint: #391225;
   --m-surface: #48192f;
@@ -190,7 +198,7 @@
   background: var(--m-accent);
   border-color: var(--m-accent);
   color: var(--m-on-band);
-  border-radius: 8px;
+  border-radius: var(--m-radius);
 }
 [data-maison] .pill-cta:hover:not(:disabled) {
   background: var(--m-accent-deep);
@@ -213,7 +221,7 @@ html {
 body {
   background-color: var(--bg);
   color: var(--ink);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--m-b);
   overflow-x: hidden;
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
@@ -229,7 +237,7 @@ body {
    `uppercase` utility is neutralised on them. (This rule sits after @tailwind
    utilities, so it wins on source order without !important.) */
 .font-display {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--m-d);
   letter-spacing: -0.015em;
   text-transform: none;
 }
@@ -250,7 +258,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   padding: 0.95rem 1.9rem;
   border: 1px solid var(--ink);
   border-radius: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--m-b);
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.22em;
@@ -337,15 +345,15 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   }
   .Toastify__toast {
     margin-bottom: 8px;
-    border-radius: 14px;
+    border-radius: var(--m-radius-panel);
   }
 }
 .Toastify__toast {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--m-b);
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--m-radius);
   box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
   padding: 14px 16px;
   min-height: 0;
@@ -359,7 +367,7 @@ html { scrollbar-width: none; -ms-overflow-style: none; }
   align-items: center;
 }
 .Toastify__toast-body > div:last-child {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--m-b);
   color: var(--ink);
 }
 .Toastify__close-button {
@@ -428,11 +436,11 @@ button.sr-headless-checkout.sr-headless-checkout {
   display: inline-flex !important; align-items: center !important; justify-content: center !important;
   padding: 9px 26px 7px !important;
   border: 1.5px solid var(--m-accent) !important;
-  border-radius: 8px !important;
+  border-radius: var(--m-radius) !important;
   background: var(--m-accent) !important;
   color: var(--m-on-band) !important;
   box-shadow: none !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-family: var(--m-b) !important;
   font-size: 12px !important; font-weight: 700 !important; letter-spacing: .16em !important; line-height: 1.6 !important;
   text-transform: uppercase !important; cursor: pointer; transition: .25s;
 }

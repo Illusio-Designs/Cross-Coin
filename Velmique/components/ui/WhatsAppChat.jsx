@@ -31,7 +31,7 @@ export default function WhatsAppChat() {
       <style jsx>{`
         .gzwa-fab { position: fixed; bottom: 32px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--m-accent); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(33,9,20,.45); z-index: 1000; transition: transform .2s, background .2s; }
         .gzwa-fab:hover { transform: scale(1.08); background: var(--m-accent-deep); }
-        .gzwa-greet { position: fixed; bottom: 100px; right: 24px; background: var(--m-surface); border: 1px solid var(--m-line); border-radius: 12px 12px 0 12px; padding: 10px 14px 10px 12px; box-shadow: 0 4px 20px rgba(0,0,0,.12); font-size: 13.5px; color: var(--m-ink); z-index: 999; display: flex; align-items: center; gap: 8px; max-width: 240px; white-space: nowrap; animation: gzwaPop .3s cubic-bezier(.34,1.4,.64,1); }
+        .gzwa-greet { position: fixed; bottom: 100px; right: 24px; background: var(--m-surface); border: 1px solid var(--m-line); border-radius: var(--m-radius) var(--m-radius) 0 var(--m-radius); padding: 10px 14px 10px 12px; box-shadow: 0 4px 20px rgba(0,0,0,.12); font-size: 13.5px; color: var(--m-ink); z-index: 999; display: flex; align-items: center; gap: 8px; max-width: 240px; white-space: nowrap; animation: gzwaPop .3s cubic-bezier(.34,1.4,.64,1); }
         .gzwa-greet:hover { background: var(--m-raised); }
         .gzwa-greet-close { background: none; border: none; cursor: pointer; color: var(--m-ink-faint); font-size: 18px; line-height: 1; padding: 0; flex-shrink: 0; }
         .gzwa-greet-close:hover { color: var(--m-ink); }

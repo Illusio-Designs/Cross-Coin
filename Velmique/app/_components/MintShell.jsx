@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Pause, Play } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import BrandIcon from '@/components/ui/BrandIcon';
 import CookieSettingsButton from '@/components/ui/CookieSettingsButton';
@@ -31,16 +32,27 @@ const ANNO = [
   { t: 'Cash on delivery available', d: 'M2.5 6h19v12h-19zM2.5 10h19' },
 ];
 function AnnouncementBar() {
+  const [paused, setPaused] = useState(false);
   return (
-    <div className="v-announcement" role="region" aria-label="Store announcements" tabIndex={0}>
-      <div className="v-announcement__items">
-        {ANNO.map(({ t, d }) => (
-          <span className="m-anno__i" key={t}>
-            {d && <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>}
-            {t}
-          </span>
-        ))}
+    <div className="v-announcement" role="region" aria-label="Store announcements" data-paused={paused}>
+      <div className="v-announcement__viewport" tabIndex={0}>
+        <div className="v-announcement__track">
+          {[false, true].map((duplicate) => (
+            <div className="v-announcement__items" key={String(duplicate)} aria-hidden={duplicate || undefined}>
+              {ANNO.map(({ t, d }) => (
+                <span className="m-anno__i" key={t}>
+                  {d && <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>}
+                  {t}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
+      <button type="button" className="v-announcement__toggle" aria-label={paused ? 'Play announcements' : 'Pause announcements'}
+        onClick={() => setPaused(!paused)}>
+        {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+      </button>
     </div>
   );
 }

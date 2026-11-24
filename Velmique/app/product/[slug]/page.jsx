@@ -102,21 +102,30 @@ export default async function MaisonProduct({ params }) {
         <nav className="m-crumb" aria-label="Breadcrumb"><Link href="/">Home</Link> / <Link href="/shop">Shop</Link> / <span aria-current="page">{product.name}</span></nav>
         <div className="m-pdp">
           <PdpGallery images={(product.images || []).slice(0, 6)} name={product.name} />
-          <div>
+          <div className="v-pdp-summary">
             {product.badge ? <span className="m-eyebrow">{product.badge}</span> : null}
-            <h1 className="m-pdp__title">{product.name}<span>Eau de Parfum{defVar?.size ? ` · ${defVar.size}` : ''}</span></h1>
+            <h1 className="m-pdp__title">{product.name}</h1>
+            <p className="v-pdp-kind">
+              Eau de Parfum {defVar?.size && <small className="v-pdp-volume">{defVar.size}</small>}
+            </p>
             <Suspense fallback={<RatingLine rating={product.rating || 0} reviewCount={product.reviews || 0} />}>
               <PdpRating product={product} request={reviewsRequest} />
             </Suspense>
-            <div className="m-pdp__price"><b>{inr(product.price)}</b>{product.originalPrice ? <s>{inr(product.originalPrice)}</s> : null}{savePct ? <span className="m-save">SAVE {savePct}%</span> : null}</div>
-            {product.description ? <p className="v-product-intro">{product.description.replace(/<[^>]*>/g, '').slice(0, 220)}</p> : null}
-            <p className="m-tax">Inclusive of all taxes</p>
-
-            <div className="m-ship">
-              {inStock
-                ? <span className="m-stockbadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>{stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock'}</span>
-                : <span className="m-stockbadge out"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Out of stock</span>}
+            <div className="v-pdp-offer">
+              <div>
+                <div className="m-pdp__price">
+                  <b>{inr(product.price)}</b>
+                  {product.originalPrice > product.price && <s>{inr(product.originalPrice)}</s>}
+                  {savePct > 0 && <span className="m-save">Save {savePct}%</span>}
+                </div>
+                <p className="m-tax">Inclusive of all taxes</p>
+              </div>
+              <span className={`m-stockbadge${inStock ? '' : ' out'}`}>
+                <BrandIcon name={inStock ? 'check' : 'close'} size={14} />
+                {inStock ? (stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock') : 'Out of stock'}
+              </span>
             </div>
+            {product.description ? <p className="v-product-intro">{product.description.replace(/<[^>]*>/g, '').slice(0, 220)}</p> : null}
 
             <Suspense fallback={
               <SkRegion label="Loading purchase options…" style={{ marginTop: 16 }}>
@@ -146,14 +155,23 @@ async function PdpPurchase({ product, request, scentRequest }) {
     id: variation.id, size: variation.size, sku: variation.sku, price: variation.price,
     images: variation.images?.slice(0, 1), inStock: variation.inStock, stock: variation.stock,
   }));
-  const purchaseProduct = { id, name, slug, defaultVariationId, inStock, price, sizes, images: images.slice(0, 1), variations };
+  const cardDetails = ({ rating, reviews, originalPrice, badge }) => ({ rating, reviews, originalPrice, badge });
+  const purchaseProduct = {
+    ...cardDetails(product), id, name, slug, defaultVariationId, inStock, price, sizes, images: images.slice(0, 1), variations,
+    notes: fragranceNotes,
+  };
   const scents = packs.length || !mixTiers.length ? [] : catalog.products
     .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false)
     .slice(0, 8)
-    .map((scent) => ({
-      id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
-      price: scent.price, sizes: scent.sizes.slice(0, 1), images: scent.images.slice(0, 1),
-    }));
+    .map((scent) => {
+      const variation = scent.variations.find((v) => String(v.id) === String(scent.defaultVariationId));
+      return {
+        ...cardDetails(scent),
+        id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
+        price: scent.price, sizes: scent.sizes.slice(0, 1), images: scent.images.slice(0, 1),
+        notes: variation?.noteItems?.length ? variation.noteItems : scent.notes,
+      };
+    });
   return (
     <PdpBuy product={purchaseProduct} packs={packs} mixTiers={mixTiers} scents={scents}
       notes={<PdpFragranceNotes notes={fragranceNotes} />} />
