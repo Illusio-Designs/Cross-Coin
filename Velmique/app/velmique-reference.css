@@ -8,7 +8,6 @@
 .m-card{border:1px solid var(--m-line);border-radius:var(--m-radius-panel);overflow:hidden;background:var(--m-surface);box-shadow:none;transition:border-color .2s,box-shadow .2s}
 .m-card:hover{transform:none;border-color:var(--m-line);box-shadow:0 10px 28px -18px #5b263840}
 .m-card__fig{aspect-ratio:1/1.07;background:var(--m-photo-bg)}
-.m-card__fig img{object-fit:contain}
 .m-card__body{padding:18px;display:flex;flex-direction:column;text-align:left;gap:9px}
 .m-card__top{align-items:flex-start;gap:8px}
 .m-card__name{font-size:21px;font-weight:500;line-height:1.2}
@@ -96,12 +95,12 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 .m-mnav .v-mobile-logo .m-logo { width: 170px; height: auto; max-width: 100%; }
 @media(max-width:740px) { .m-nav>.m-logo-link { order: 0; } .m-nav .m-logo { width: 138px; height: auto; } }
 
-/* Product images retain their natural proportions on a clean white canvas. */
+/* Fill the card with the photo while keeping its proportions. */
 .m-card__tile,
 .m-card__imglink,
 .m-card__fig,
 .m-card__tile .sk-frame { background: var(--m-photo-bg); }
-.m-card__fig img { object-fit: contain; }
+.m-card__tile .sk-frame > img { object-fit: cover; }
 
 /* Fully custom sort and comparison menus: no operating-system popup. */
 .v-select { position: relative; min-width: 0; text-align: left; }
@@ -599,7 +598,7 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 
 .v-announcement {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 40px;
   border-block-end: 1px solid var(--m-line);
   background: var(--m-band);
@@ -621,26 +620,23 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
   animation: v-announcement-scroll 28s linear infinite;
 }
 @keyframes v-announcement-scroll {
-  to { transform: translateX(calc(-100% / 3)); }
+  to { transform: translateX(calc(-100% / var(--announcement-copies))); }
 }
-.v-announcement[data-paused="true"] .v-announcement__track,
 .v-announcement__viewport:focus-within .v-announcement__track { animation-play-state: paused; }
 @media (hover: hover) {
   .v-announcement__viewport:hover .v-announcement__track { animation-play-state: paused; }
 }
 .v-announcement__items {
   display: flex;
+  flex: none;
   align-items: center;
-  width: max-content;
-  min-width: 50vw;
 }
 .v-announcement__item {
   display: flex;
-  flex: 1 0 auto;
+  flex: none;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding-inline: clamp(16px, 2vw, 28px);
+  padding-inline: clamp(12px, 1.4vw, 22px);
   border-inline-end: 1px solid var(--m-control-line);
   font-weight: 500;
   white-space: nowrap;
@@ -649,34 +645,13 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
   flex: none;
   color: var(--m-accent-soft);
 }
-.v-announcement__toggle {
-  display: grid;
-  width: 44px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  color: inherit;
-  background: var(--m-band);
-  cursor: pointer;
-}
-.v-announcement__toggle > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--m-control-line);
-  border-radius: 50%;
-}
-.v-announcement__toggle:hover > span { background: var(--m-surface); }
 .v-announcement__viewport, .v-scent__notes, .v-pdp-pack__cards { scrollbar-width: thin; scrollbar-color: var(--m-control-line) var(--m-bg-tint); }
-.v-announcement :is(.v-announcement__viewport, .v-announcement__toggle):focus-visible,
+.v-announcement__viewport:focus-visible,
 .v-scent__notes:focus-visible, .v-pdp-pack__cards:focus-visible { outline: 2px solid var(--m-accent-soft); outline-offset: -2px; }
 @media (prefers-reduced-motion: reduce) {
-  .v-announcement { grid-template-columns: minmax(0, 1fr); }
   .v-announcement__track { animation: none; }
-  .v-announcement__viewport { overflow-x: auto; mask-image: none; }
-  .v-announcement__items { min-width: 100vw; }
-  .v-announcement__items[aria-hidden="true"], .v-announcement__toggle { display: none; }
+  .v-announcement__viewport { justify-items: safe center; overflow-x: auto; mask-image: none; }
+  .v-announcement__items[aria-hidden="true"] { display: none; }
 }
 
 .m-root .m-logo-link {

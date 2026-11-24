@@ -14,7 +14,7 @@ const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? '
 const Bag = () => <BrandIcon name="bag" size={17} />;
 
 // `priority` — the card is the page's LCP image (home hero bestseller).
-export default function ProductCard({ product, priority = false, action, onImageClick, selected = false }) {
+export default function ProductCard({ product, priority = false, action, onImageClick, selected = false, showNotes = true }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
 
@@ -22,9 +22,10 @@ export default function ProductCard({ product, priority = false, action, onImage
   const href = `/product/${product.slug}`;
   // Use the same default variation as the product details page.
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
-  const notes = (defVar?.noteItems?.length ? defVar.noteItems : product.notes || [])
+  const rawNotes = defVar?.noteItems?.length ? defVar.noteItems : product.notes || [];
+  const notes = showNotes ? rawNotes
     .map((note) => typeof note === 'string' ? { name: note } : note)
-    .filter((note) => note?.name);
+    .filter((note) => note?.name) : [];
 
   const wished = isWishlisted(product.id);
   const orig = product.originalPrice && product.originalPrice > product.price ? product.originalPrice : 0;

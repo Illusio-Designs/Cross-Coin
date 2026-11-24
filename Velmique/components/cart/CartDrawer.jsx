@@ -31,7 +31,7 @@ import { ik } from '@/lib/imagekit';
 import SkImg from '@/app/_components/SkImg';
 import { fbTrack, viewCart, cartPageView, addShippingInfo, addPaymentInfo } from '@/utils/pixel';
 import { readCartRecovery, clearCartRecoveryParams, fetchRecoveredCart, toRecoveryItems } from '@/utils/cartRecovery';
-import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, loadShiprocketSdk, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
+import { openShiprocketCartCheckout } from '@/lib/api/shiprocketCheckout';
 import { savePurchaseForThankYou } from '@/lib/thankYou';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import PackBagCard from './PackBagCard';
@@ -302,69 +302,34 @@ export default function CartDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartOpen]);
 
-  // Shiprocket Checkout, when it is set up for the store: Shiprocket's BUY NOW
-  // button opens their checkout instead of our delivery + payment step (and
-  // replaces our coupon box — Shiprocket applies its own coupons).
-  // Bags with pack-priced lines (or a line without a variant) stay on our own
-  // checkout, which applies the pack price; Shiprocket only knows unit prices.
-  const [srEnabled, setSrEnabled] = useState();
-  const eligible = shiprocketTakes(items);
-  const useShiprocket = srEnabled === true && eligible;
-  useEffect(() => {
-    if (!cartOpen || !eligible) return;
-    let active = true;
-    shiprocketEnabled().then((enabled) => {
-      if (!active) return;
-      setSrEnabled(enabled);
-      if (enabled) loadShiprocketSdk().catch(() => {});
-    });
-    return () => { active = false; };
-  }, [cartOpen, eligible]);
-
-  // Advance to the checkout step. Fires InitiateCheckout (Meta) — tied to
-  // checkout intent, not drawer open — then shows the delivery + payment step
-  // or opens Shiprocket Checkout.
-  async function goToCheckout(e) {
+  async function goToCheckout(event) {
     if (!items.length || isProcessing) return;
-    fbTrack('InitiateCheckout', {
-      content_ids: items.map(i => String(i.productId ?? i.id)),
-      content_type: 'product',
-      contents: items.map(i => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
-      num_items: items.reduce((s, i) => s + (i.quantity || 1), 0),
-      value: items.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
-      currency: 'INR',
-    });
-    if (eligible && e) {
-      setIsProcessing(true);
-      setErrorMsg('');
-      try {
-        const enabled = await shiprocketEnabled();
-        setSrEnabled(enabled);
-        if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-        if (enabled) {
-          await openShiprocketCheckout(e, items, 'cart');
-          return;
-        }
-      } catch {
-        setErrorMsg(SHIPROCKET_RETRY_MESSAGE);
-        return;
-      } finally {
-        setIsProcessing(false);
-      }
+    setIsProcessing(true);
+    setErrorMsg('');
+    try {
+      await openShiprocketCartCheckout(event, items);
+    } catch (error) {
+      setErrorMsg(error.message);
+    } finally {
+      setIsProcessing(false);
     }
-    setCoStep(2);
-    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
   }
 
-  // "Buy now" and the /checkout page ask for the bag to open straight on the
-  // delivery & payment step (runs after the open effect above reset it to 1).
+  // A direct product-page purchase can request the storefront payment step.
   useEffect(() => {
-    if (!cartOpen || !checkoutRequested || !items.length || (eligible && srEnabled === undefined)) return;
+    if (!cartOpen || !checkoutRequested || !items.length) return;
     consumeCheckoutRequest();
-    // The hosted checkout opens from the shopper's tap on the bag.
-    if (!eligible || srEnabled === false) goToCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartOpen, checkoutRequested, items.length, eligible, srEnabled]);
+    fbTrack('InitiateCheckout', {
+      content_ids: items.map((item) => String(item.productId ?? item.id)),
+      content_type: 'product',
+      contents: items.map((item) => ({ id: String(item.productId ?? item.id), quantity: item.quantity || 1 })),
+      num_items: cartCount,
+      value: cartTotal,
+      currency: 'INR',
+    });
+    setCoStep(2);
+    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
+  }, [cartOpen, checkoutRequested, items, cartCount, cartTotal, consumeCheckoutRequest]);
 
   /* Abandoned-cart capture: once the shopper reaches the checkout step with a
      valid 10-digit phone + items in the bag, record it so the backend can send
@@ -435,9 +400,8 @@ export default function CartDrawer() {
   const subtotal       = cartTotal;
   const netSub         = Math.max(0, subtotal - packOff);
   const rawShippingFee = parseFloat(selectedFee?.fee || 0);
-  // Shiprocket Checkout applies its own coupons and payment offers, so ours
-  // (coupon + prepaid instant discount) aren't counted then.
-  const couponOff      = appliedCoupon && !useShiprocket ? parseFloat(appliedCoupon.discountAmount) : 0;
+  // The cart preview leaves coupons and payment offers to Shiprocket.
+  const couponOff      = appliedCoupon && coStep === 2 ? parseFloat(appliedCoupon.discountAmount) : 0;
   const isCod          = selectedFee?.orderType === 'cod';
   const isPrepaid      = selectedFee?.orderType === 'prepaid';
   // Free shipping: qualifies once the subtotal reaches the API threshold.
@@ -447,7 +411,7 @@ export default function CartDrawer() {
   const shippingFee  = (isCod && freeShipQualifies) ? 0 : rawShippingFee;
   const baseTotal    = Math.round(Math.max(0, netSub + shippingFee - couponOff));
   // Coupon and the ₹50 instant discount DON'T stack: a coupon suppresses it.
-  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon && !useShiprocket
+  const prepaidDisc  = isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && !appliedCoupon && coStep === 2
     ? Math.min(PREPAID_INSTANT_DISCOUNT_INR, baseTotal) : 0;
   const finalPayable = Math.round(Math.max(0, baseTotal - prepaidDisc));
 
@@ -1194,8 +1158,10 @@ export default function CartDrawer() {
                 <PackBagCard count={packCount} savings={Math.round(packOff)} onOpen={() => setCartOpen(false)} />
               </div>
 
-              {/* ── Coupon (not with Shiprocket: it applies its own) ─────── */}
-              {!useShiprocket && (
+              </>)}
+
+              {/* Coupons for direct product purchases using storefront checkout. */}
+              {coStep === 2 && (
               <div className="px-5 py-4 border-b border-[var(--m-line)] space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body">Promo Code</p>
                 {appliedCoupon ? (
@@ -1304,22 +1270,20 @@ export default function CartDrawer() {
               </div>
               )}
 
-              </>)}
-
               {/* ── Summary — visible on both steps so pricing is always clear ─ */}
               <div className="px-5 py-4 space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body mb-2">Order Summary</p>
                 <Row label="Subtotal" value={fmt(subtotal)} />
                 {packOff > 0 && <Row label="Pack Discount" value={`- ${fmt(packOff)}`} highlight />}
-                <Row label="Shipping" value={shippingFee > 0 ? fmt(shippingFee) : 'Free'} />
+                <Row label="Shipping" value={coStep === 1 ? 'At checkout' : shippingFee > 0 ? fmt(shippingFee) : 'Free'} />
                 {couponOff > 0  && <Row label="Coupon Discount"   value={`- ${fmt(couponOff)}`}  highlight />}
                 {prepaidDisc > 0 && <Row label="Prepaid Discount"  value={`- ${fmt(prepaidDisc)}`} highlight />}
                 <div className="h-px bg-[var(--m-line)] my-2" />
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[color:var(--m-ink)] font-body uppercase tracking-[0.2em] text-xs">Total</span>
-                  <span className="font-serif italic text-[color:var(--m-ink)] text-2xl">{fmt(finalPayable)}</span>
+                  <span className="text-[color:var(--m-ink)] font-body uppercase tracking-[0.2em] text-xs">{coStep === 1 ? 'Estimated subtotal' : 'Total'}</span>
+                  <span className="font-serif italic text-[color:var(--m-ink)] text-2xl">{fmt(coStep === 1 ? Math.round(netSub) : finalPayable)}</span>
                 </div>
-                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && !useShiprocket && (
+                {isPrepaid && PREPAID_INSTANT_DISCOUNT_INR > 0 && prepaidDisc === 0 && !appliedCoupon && coStep === 2 && (
                   <p className="text-[10px] font-body text-[color:var(--m-accent-soft)] mt-1">
                     {fmt(PREPAID_INSTANT_DISCOUNT_INR)} instant discount applied automatically when you pay online.
                   </p>
@@ -1472,18 +1436,11 @@ export default function CartDrawer() {
             {coStep === 1 ? (
               <>
                 {errorMsg && (
-                  <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+                  <div role="alert" className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
                     {errorMsg}
                   </div>
                 )}
-                {useShiprocket ? (
-                  <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={isProcessing} />
-                ) : (
-                <button onClick={goToCheckout} disabled={isProcessing || !items.length}
-                  className={`pill-cta pill-cta-dark w-full justify-center !py-3.5 !text-xs ${isProcessing || !items.length ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                  Proceed to checkout · {fmt(baseTotal)} <ArrowRight size={13} />
-                </button>
-                )}
+                <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={isProcessing} />
                 <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[color:var(--m-ink-soft)]">
                   Secure checkout · 7-day returns
                 </p>
@@ -1491,7 +1448,7 @@ export default function CartDrawer() {
             ) : (
               <>
                 {errorMsg && (
-                  <div className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
+                  <div role="alert" className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
                     {errorMsg}
                   </div>
                 )}

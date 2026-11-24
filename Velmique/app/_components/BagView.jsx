@@ -1,66 +1,32 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
+import { openShiprocketCartCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import PackBagCard from '@/components/cart/PackBagCard';
-import { showError } from '@/lib/toast';
-import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
 import { BagSkeleton, Sk } from './Skeleton';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 
-/* The bag as a page (/cart) and the checkout landing (/checkout). The full
-   checkout — address, coupons, shipping/COD fees, prepaid discount, Razorpay,
-   WhatsApp abandoned-cart capture — lives in the CartDrawer (root layout);
-   this view lists the bag and opens that drawer on its checkout step.
-   `autoCheckout` (the /checkout route) opens it straight away.
-   With Shiprocket Checkout set up (and a bag it can take), the checkout button
-   is Shiprocket's BUY NOW instead, opening their checkout for the bag. */
-export default function BagView({ autoCheckout = false }) {
-  const { cart, cartHydrated, cartTotal, cartCount, updateQuantity, removeFromCart, openCheckout } = useStore();
-  const opened = useRef(false);
-
-  // /checkout: open the drawer on delivery & payment once the saved bag has
-  // been restored (it hydrates from localStorage after mount).
-  useEffect(() => {
-    if (!autoCheckout || opened.current || !cart.length) return;
-    opened.current = true;
-    openCheckout();
-  }, [autoCheckout, cart.length, openCheckout]);
-
-  const packLines = cart.filter((i) => i.packGroup).reduce((a, i) => a + (Number(i.quantity) || 1), 0);
-
-  const [srOn, setSrOn] = useState(false);
+// A shopper can start Shiprocket Checkout from either /cart or /checkout.
+export default function BagView({ checkoutPage = false }) {
+  const { cart, cartHydrated, cartTotal, cartCount, updateQuantity, removeFromCart } = useStore();
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
-  const eligible = shiprocketTakes(cart);
-  const useShiprocket = srOn && eligible;
+  const [checkoutError, setCheckoutError] = useState('');
+  const packLines = cart.filter((item) => item.packGroup).reduce((count, item) => count + (Number(item.quantity) || 1), 0);
 
-  const onCheckout = async (e) => {
+  const onCheckout = async (event) => {
     if (srBusy || !cart.length) return;
-    if (!eligible) { openCheckout(); return; }
     setSrBusy(true);
+    setCheckoutError('');
     try {
-      const enabled = await shiprocketEnabled();
-      setSrOn(enabled);
-      if (enabled === false) { openCheckout(); return; }
-      if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
-      fbTrack('InitiateCheckout', {
-        content_ids: cart.map((i) => String(i.productId ?? i.id)),
-        content_type: 'product',
-        contents: cart.map((i) => ({ id: String(i.productId ?? i.id), quantity: i.quantity || 1 })),
-        num_items: cart.reduce((s, i) => s + (i.quantity || 1), 0),
-        value: cart.reduce((s, i) => s + Number(i.price || 0) * (i.quantity || 1), 0),
-        currency: 'INR',
-      });
-      await openShiprocketCheckout(e, cart, 'cart');
-    } catch {
-      showError(SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
+      await openShiprocketCartCheckout(event, cart);
+    } catch (error) {
+      setCheckoutError(error.message);
     } finally {
       setSrBusy(false);
     }
@@ -69,8 +35,8 @@ export default function BagView({ autoCheckout = false }) {
   return (
     <>
       <section className="m-wrap m-ph">
-        <span className="m-eyebrow">{autoCheckout ? 'Checkout' : 'Your selection'}</span>
-        <h1>{autoCheckout ? 'Almost Yours.' : 'The Bag.'}</h1>
+        <span className="m-eyebrow">{checkoutPage ? 'Checkout' : 'Your selection'}</span>
+        <h1>{checkoutPage ? 'Almost Yours.' : 'The Bag.'}</h1>
         {cart.length ? <p>{cartCount} item{cartCount === 1 ? '' : 's'} · {inr(cartTotal)}</p>
           : !cartHydrated ? <Sk w={120} h={14} style={{ marginTop: 18 }} /> : null}
       </section>
@@ -118,15 +84,10 @@ export default function BagView({ autoCheckout = false }) {
               <div className="m-sumrow"><span>Shipping</span><span>At checkout</span></div>
               <div className="m-sumrow tot"><span>Subtotal</span><b>{inr(cartTotal)}</b></div>
               <p className="m-muted" style={{ fontSize: 12.5, marginTop: 6 }}>Offers &amp; coupons, shipping, and Cash on Delivery or prepaid options are applied in the next step.</p>
-              {useShiprocket ? (
-                <div style={{ marginTop: 16 }}>
-                  <ShiprocketButton label="BUY NOW" onClick={onCheckout} busy={srBusy} />
-                </div>
-              ) : (
-                <button type="button" className="m-btn m-btn--fill" onClick={onCheckout} disabled={srBusy} style={{ justifyContent: 'center', width: '100%', marginTop: 16 }}>
-                  {srBusy ? 'Opening…' : autoCheckout ? 'Continue to delivery & payment' : 'Proceed to checkout'}
-                </button>
-              )}
+              <div style={{ marginTop: 16 }}>
+                {checkoutError && <p role="alert" className="m-muted" style={{ marginBottom: 8 }}>{checkoutError}</p>}
+                <ShiprocketButton label="BUY NOW" onClick={onCheckout} busy={srBusy} />
+              </div>
               <Link className="m-btn m-btn--ghost" href="/shop" style={{ justifyContent: 'center', width: '100%', marginTop: 10 }}>Continue shopping</Link>
               <PackBagCard count={packLines} />
             </aside>

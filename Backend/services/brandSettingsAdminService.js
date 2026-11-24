@@ -24,6 +24,7 @@ const { OWN_HOSTS, normalizeHost } = require('../utils/ownHosts.js');
 const { VALID_INDIAN_STATES } = require('./shippingValidationService.js');
 const settingsHelper = require('./settingsHelper.js');
 const audit = require('./settingsAuditService.js');
+const { parseCheckoutPackTiers } = require('../utils/checkoutPackTiers.js');
 
 // ── Sections (tabs) ──────────────────────────────────────────────────────────
 const SECTIONS = [
@@ -79,6 +80,7 @@ const FIELDS = [
   F('FREE_SHIPPING_THRESHOLD', 'shipping', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Delivery rules', hint: '0 = off. Same value as on Shipping & courier.' }),
   // Shiprocket Checkout — per store (each brand has its own Shiprocket keys).
   F('SHIPROCKET_CHECKOUT_ENABLED', 'payments', 'Use Shiprocket Checkout on the store', { brandOnly: true, type: 'toggle', default: 'false', category: 'payment', group: 'Shiprocket Checkout', hint: 'On = “Proceed to checkout” opens Shiprocket Checkout (needs both keys below). Off = the store’s own checkout.' }),
+  F('SHIPROCKET_CHECKOUT_PACK_TIERS', 'payments', 'Verified Shiprocket pack tiers', { brandOnly: true, rule: 'checkoutPackTiers', category: 'payment', group: 'Shiprocket Checkout', hint: 'Enter the automatic quantity tiers confirmed in Shiprocket as quantity:percent, for example 2:20,3:30. Leave blank to use the store checkout for packs.' }),
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Shiprocket Checkout API key', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Shiprocket Checkout API secret', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
 
@@ -280,6 +282,9 @@ function normalise(field, raw) {
 
 function validate(field, v) {
   if (v === '') return field.rule === 'required' ? RULES.required(v) : null;
+  if (field.rule === 'checkoutPackTiers') {
+    return parseCheckoutPackTiers(v).length ? null : 'Enter distinct quantity:percent tiers, such as 2:20,3:30.';
+  }
   if (field.type === 'number') {
     const n = Number(v);
     if (!Number.isFinite(n)) return 'Enter a number.';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
@@ -13,7 +13,6 @@ const NAV = [
   { label: 'Shop', href: '/shop' },
   { label: 'Collections', href: '/collections' },
   { label: 'Build a Pack', href: '/pack' },
-  { label: 'Gifting', href: '/pack' },
 ];
 // Extra destinations in the mobile slide-nav (desktop reaches them via icons).
 const MNAV_EXTRA = [
@@ -31,13 +30,31 @@ const ANNO = [
   { text: 'Cash on delivery available', icon: 'cash' },
 ];
 function AnnouncementBar() {
-  const [paused, setPaused] = useState(false);
+  const viewportRef = useRef(null);
+  const sequenceRef = useRef(null);
+  const [copies, setCopies] = useState(3);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const sequence = sequenceRef.current;
+    const fillViewport = () => {
+      const width = sequence.getBoundingClientRect().width;
+      if (width) setCopies(Math.max(3, Math.ceil(viewport.clientWidth / width) + 1));
+    };
+    const observer = new ResizeObserver(fillViewport);
+    observer.observe(viewport);
+    observer.observe(sequence);
+    fillViewport();
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="v-announcement" role="region" aria-label="Store announcements" data-paused={paused}>
-      <div className="v-announcement__viewport" tabIndex={0}>
-        <div className="v-announcement__track">
-          {[0, 1, 2].map((index) => (
-            <div className="v-announcement__items" key={index} aria-hidden={index > 0 || undefined}>
+    <div className="v-announcement" role="region" aria-label="Store announcements">
+      <div className="v-announcement__viewport" ref={viewportRef} tabIndex={0}>
+        <div className="v-announcement__track" style={{ '--announcement-copies': copies }}>
+          {Array.from({ length: copies }, (_, index) => (
+            <div className="v-announcement__items" key={index} ref={index === 0 ? sequenceRef : null}
+              aria-hidden={index > 0 || undefined}>
               {ANNO.map(({ text, icon }) => (
                 <span className="v-announcement__item" key={text}>
                   <BrandIcon name={icon} size={16} />
@@ -48,10 +65,6 @@ function AnnouncementBar() {
           ))}
         </div>
       </div>
-      <button type="button" className="v-announcement__toggle" aria-label={paused ? 'Play announcements' : 'Pause announcements'}
-        onClick={() => setPaused((value) => !value)}>
-        <span><BrandIcon name={paused ? 'play' : 'pause'} size={15} /></span>
-      </button>
     </div>
   );
 }

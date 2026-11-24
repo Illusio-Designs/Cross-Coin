@@ -107,7 +107,6 @@ export default function MintShell({ children }) {
                 <li><Link href="/test/shop">All Fragrances</Link></li>
                 <li><Link href="/test/shop">Best Sellers</Link></li>
                 <li><Link href="/test/shop">Collections</Link></li>
-                <li><Link href="/test/shop">Gift Sets</Link></li>
               </ul>
             </div>
             <div>

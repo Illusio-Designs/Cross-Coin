@@ -5,6 +5,9 @@ import Link from 'next/link';
 import BrandIcon from '@/components/ui/BrandIcon';
 import { useStore } from '@/lib/store';
 import { packDiscountPercent, packLineId, packUnitPrice } from '@/lib/packPricing';
+import { openShiprocketCheckout, shiprocketPackEnabled, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
+import { showError } from '@/lib/toast';
+import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
 
 const inr = (amount) => '₹' + Math.round(amount).toLocaleString('en-IN');
@@ -14,6 +17,8 @@ export default function PdpMixPack({ current, scents, tiers }) {
   const [picked, setPicked] = useState(() => new Set([current.id]));
   const rail = useRef(null);
   const [edges, setEdges] = useState({ start: true, end: true });
+  const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
   const products = [current, ...scents];
   const availableTiers = tiers.filter(({ pairs }) => pairs <= products.length);
   const selection = products.filter(({ id }) => picked.has(id));
@@ -54,7 +59,7 @@ export default function PdpMixPack({ current, scents, tiers }) {
     track.scrollBy({ left: direction * track.clientWidth * 0.8, behavior });
   };
 
-  const addPack = (checkout) => {
+  const addPack = () => {
     if (!off) return;
     // Each finished selection reaches its own tier, even with another pack in the bag.
     const packGroup = `byp-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
@@ -69,7 +74,36 @@ export default function PdpMixPack({ current, scents, tiers }) {
       slug: product.slug,
       quantity: 1,
       packGroup,
-    })), { checkout });
+    })));
+  };
+
+  const buyPack = async (event) => {
+    if (!off || openingRef.current) return;
+    openingRef.current = true;
+    setOpening(true);
+    try {
+      const supported = await shiprocketPackEnabled();
+      if (supported === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
+      if (!supported || selection.some((product) => !product.defaultVariationId)) {
+        showError('Pack pricing is unavailable in Shiprocket Checkout. Your selections are still here.', 'shiprocket-checkout');
+        return;
+      }
+      fbTrack('InitiateCheckout', {
+        content_ids: selection.map((product) => String(product.id)),
+        contents: selection.map((product) => ({ id: String(product.id), quantity: 1 })),
+        content_type: 'product',
+        num_items: count,
+        value: total,
+        currency: 'INR',
+      });
+      const lines = selection.map((product) => ({ variationId: product.defaultVariationId, quantity: 1 }));
+      await openShiprocketCheckout(event, lines, 'buy-now', { packDiscount: off });
+    } catch {
+      showError(SHIPROCKET_RETRY_MESSAGE, 'shiprocket-checkout');
+    } finally {
+      openingRef.current = false;
+      setOpening(false);
+    }
   };
 
   if (!availableTiers.length) return null;
@@ -101,7 +135,8 @@ export default function PdpMixPack({ current, scents, tiers }) {
         {products.map((product) => {
           const checked = picked.has(product.id);
           return (
-            <ProductCard key={product.id} product={product} selected={checked} onImageClick={() => toggle(product.id)}
+            <ProductCard key={product.id} product={product} selected={checked} showNotes={false}
+              onImageClick={() => toggle(product.id)}
               action={(
                 <label className="m-card__addbody v-pdp-pack__check">
                   <input type="checkbox" checked={checked} onChange={() => toggle(product.id)} aria-label={`Select ${product.name} for your pack`} />
@@ -122,8 +157,9 @@ export default function PdpMixPack({ current, scents, tiers }) {
         {next && <p>Choose {next.pairs - count} more to unlock {next.off}% off.</p>}
       </div>
       <div className="v-pdp-pack__actions">
-        <button type="button" className="m-btn" onClick={() => addPack(false)} disabled={!off}>Add Pack to Bag</button>
-        <button type="button" className="m-btn m-btn--fill" onClick={() => addPack(true)} disabled={!off}>Buy Pack Now</button>
+        <button type="button" className="m-btn" onClick={addPack} disabled={!off || opening}>Add Pack to Bag</button>
+        <button type="button" className="m-btn m-btn--fill" onClick={buyPack} disabled={!off || opening}
+          aria-busy={opening || undefined}>{opening ? 'Opening…' : 'Buy Pack Now'}</button>
       </div>
     </section>
   );

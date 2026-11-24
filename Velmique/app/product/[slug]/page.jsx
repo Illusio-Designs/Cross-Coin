@@ -173,7 +173,6 @@ async function PdpPurchase({ product, request, scentRequest }) {
   const cardDetails = ({ rating, reviews, originalPrice, badge }) => ({ rating, reviews, originalPrice, badge });
   const purchaseProduct = {
     ...cardDetails(product), id, name, slug, defaultVariationId, inStock, price, sizes, images: images.slice(0, 1), variations,
-    notes: fragranceNotes,
   };
   const scents = packs.length || !mixTiers.length ? [] : catalog.products
     .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false && scent.defaultVariationId)
@@ -183,7 +182,6 @@ async function PdpPurchase({ product, request, scentRequest }) {
         ...cardDetails(scent),
         id: scent.id, name: scent.name, slug: scent.slug, defaultVariationId: scent.defaultVariationId,
         price: scent.price, sizes: [variation?.size || scent.sizes[0]], images: scent.images.slice(0, 1),
-        notes: variation?.noteItems?.length ? variation.noteItems : scent.notes,
       };
     });
   return (

@@ -6,6 +6,8 @@ const { ensureCheckoutCatalog } = require('../utils/checkoutCatalog.js');
  * (X-Brand-Name header or ?brand=<slug>), falling back to brand 1.
  */
 const { Product, Category, Brand } = require('../model/associations.js');
+const { BundleTier } = require('../model/bundleTierModel.js');
+const { matchingCheckoutPackTiers } = require('../utils/checkoutPackTiers.js');
 const settingsHelper = require('../services/settingsHelper.js');
 const svc = require('../services/customCheckoutService.js');
 const { logger } = require('../config/logging.js');
@@ -92,18 +94,34 @@ exports.getPoints = async (req, res) => {
 // Called by the storefront; the HMAC secret stays server-side.
 // GET /api/custom-checkout/status — lets the storefront decide whether its
 // checkout button opens the provider's checkout (API key + secret saved).
+async function isCheckoutEnabled(brandId) {
+  const enabled = await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_ENABLED', 'false');
+  return String(enabled).toLowerCase() === 'true' && await svc.isConfigured(brandId);
+}
+
+async function getCheckoutPackTiers(brandId) {
+  const checked = await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_PACK_TIERS', '', { brandOnly: true });
+  if (!checked) return [];
+  const active = await BundleTier.findAll({
+    where: { brand_id: brandId, product_id: null, is_active: true },
+    attributes: ['pairs', 'discount_percent'],
+  });
+  return matchingCheckoutPackTiers(checked, active);
+}
+
 exports.status = async (req, res) => {
   try {
-    // On only when the store's switch is on AND both keys are saved.
     const brandId = req.brandId || 1;
-    const on = String(await settingsHelper.getSetting(brandId, 'SHIPROCKET_CHECKOUT_ENABLED', 'false')).toLowerCase() === 'true';
-    res.json({ success: true, enabled: on && await svc.isConfigured(brandId), shiprocketCalls: svc.providerCallsFor(brandId) });
+    const enabled = await isCheckoutEnabled(brandId);
+    const response = { success: true, enabled, shiprocketCalls: svc.providerCallsFor(brandId) };
+    if (req.query.pack === '1') response.packEnabled = enabled && (await getCheckoutPackTiers(brandId)).length > 0;
+    res.json(response);
   } catch (err) {
     res.json({ success: true, enabled: false });
   }
 };
 
-exports.createToken = async (req, res) => {
+async function createToken(req, res, pack = false) {
   try {
     // A checkout must belong to the store that opened it — never default to
     // Crosscoin when the store isn't named.
@@ -123,6 +141,18 @@ exports.createToken = async (req, res) => {
     }
     const items = [...quantities].map(([variant_id, quantity]) => ({ variant_id, quantity }));
     if (!items.length) return res.status(400).json({ success: false, message: 'items are required' });
+    if (pack) {
+      const count = items.reduce((sum, { quantity }) => sum + quantity, 0);
+      const tiers = await isCheckoutEnabled(brandId) ? await getCheckoutPackTiers(brandId) : [];
+      const tier = tiers.filter(([minimum]) => minimum <= count).at(-1);
+      if (!tier || tier[1] !== Number(req.body.discount_percent)) {
+        return res.status(409).json({
+          success: false,
+          code: 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE',
+          message: 'Pack pricing is unavailable in Shiprocket Checkout.',
+        });
+      }
+    }
     // The shopper's own IP + browser, captured here (the request comes from
     // their browser) and carried through the checkout, so the server Purchase
     // matches them as well as a native order's does. The order webhook comes
@@ -148,7 +178,10 @@ exports.createToken = async (req, res) => {
     logger.error('[custom-checkout] createToken failed: ' + (err?.response?.status || '') + ' ' + err.message);
     res.status(err.status || 502).json({ success: false, message: err.message, code: String(err.code || '').startsWith('CHECKOUT_') ? err.code : 'CHECKOUT_TOKEN_FAILED', provider: err?.response?.data });
   }
-};
+}
+
+exports.createToken = (req, res) => createToken(req, res);
+exports.createPackToken = (req, res) => createToken(req, res, true);
 
 // Admin: fetch one checkout order's details / list recent checkout orders.
 exports.orderDetails = async (req, res) => {

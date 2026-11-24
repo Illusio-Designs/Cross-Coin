@@ -95,6 +95,7 @@ router.get('/points', providerAuth, ctrl.getPoints);
 // ── Storefront: create a checkout access token (secret stays server-side) ──
 router.get('/status', brandRequired, ctrl.status);
 router.post('/token', brandRequired, ctrl.createToken);
+router.post('/pack-token', brandRequired, ctrl.createPackToken);
 
 // ── Provider → seller: order webhook (store's keys required) ──────────────
 router.post('/order-webhook', providerAuth, ctrl.orderWebhook);
