@@ -12,6 +12,10 @@ const settingsHelper = require('../services/settingsHelper.js');
 const svc = require('../services/customCheckoutService.js');
 const { logger } = require('../config/logging.js');
 
+const PACK_PREVIEW_ATTRIBUTE = 'velmique_pack_preview';
+const PACK_PREVIEW_URL = 'https://velmique.co.in/checkout-preview';
+const PACK_PREVIEW_SLUGS = ['muse', 'halva'];
+
 // Shiprocket Checkout pages from 0 (their samples call page=0 first, and their
 // own order-list API is 0-based): page=0 → first `limit` rows, page=1 → next.
 const pagination = (req) => {
@@ -158,6 +162,7 @@ async function createToken(req, res, pack = false) {
     // matches them as well as a native order's does. The order webhook comes
     // from the provider's server, which can't tell us these.
     const custom = (req.body.custom_attributes && typeof req.body.custom_attributes === 'object') ? { ...req.body.custom_attributes } : {};
+    delete custom[PACK_PREVIEW_ATTRIBUTE];
     if (req.ip) custom.client_ip = String(req.ip).slice(0, 64);
     if (req.headers['user-agent']) custom.user_agent = String(req.headers['user-agent']).slice(0, 400);
     // The store, stamped by us (not the browser): the order is saved under it
@@ -182,6 +187,48 @@ async function createToken(req, res, pack = false) {
 
 exports.createToken = (req, res) => createToken(req, res);
 exports.createPackToken = (req, res) => createToken(req, res, true);
+
+exports.createPackPreview = async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (req.brand?.slug !== 'velmique') return res.status(404).json({ message: 'This preview is available for Velmique.' });
+  try {
+    const brandId = req.brandId;
+    if (!(await isCheckoutEnabled(brandId))) return res.status(409).json({ message: 'Velmique Shiprocket Checkout is disabled.' });
+    const [tier, products] = await Promise.all([
+      BundleTier.findOne({ where: { brand_id: brandId, product_id: null, is_active: true, pairs: 2 } }),
+      Product.findAll({ where: { slug: PACK_PREVIEW_SLUGS, status: 'active' }, include: svc.productIncludes(brandId) }),
+    ]);
+    const percent = Number(tier?.discount_percent);
+    if (!(percent > 0 && percent < 100)) return res.status(409).json({ message: 'An active two-fragrance pack offer is required.' });
+    let expectedPaise = 0;
+    const items = [];
+    for (const slug of PACK_PREVIEW_SLUGS) {
+      const product = products.find((entry) => entry.slug === slug);
+      if (!product) return res.status(409).json({ message: 'Muse and Halva must both be available.' });
+      const listing = svc.mapProduct(product);
+      const variant = listing.variants.find((entry) => entry.quantity > 0 && Number(entry.price) > 0);
+      const imageUrl = variant?.image?.src || listing.image?.src;
+      if (!variant || !imageUrl) return res.status(409).json({ message: `No in-stock checkout variant with an image for ${listing.title}.` });
+      const paise = Math.round(Number(variant.price) * (1 - percent / 100) * 100);
+      expectedPaise += paise;
+      items.push({ variant_id: String(variant.id), quantity: 1, catalog_data: { name: listing.title, price: paise / 100, image_url: imageUrl } });
+    }
+    const reply = await svc.createCheckoutToken(brandId, {
+      items,
+      custom_attributes: { store: 'velmique', [PACK_PREVIEW_ATTRIBUTE]: '1' },
+      mobile_app: false,
+    }, PACK_PREVIEW_URL);
+    const token = reply?.result?.token || reply?.token;
+    if (reply?.success === false || typeof token !== 'string' || !token) {
+      return res.status(502).json({ message: 'Shiprocket returned no token for the price preview.' });
+    }
+    return res.json({ token, expectedPaise });
+  } catch (err) {
+    const status = err.response?.status;
+    logger.warn(`[custom-checkout] Velmique pack preview failed${status ? ` (${status})` : ''}: ${err.message}`);
+    return res.status(502).json({ message: status ? `Shiprocket rejected the preview request (HTTP ${status}).` : 'Shiprocket could not start the price preview.' });
+  }
+};
 
 // Admin: fetch one checkout order's details / list recent checkout orders.
 exports.orderDetails = async (req, res) => {
@@ -246,7 +293,10 @@ async function verifyAndIngest(brandId, claimedId) {
   // which store the order — and its Meta / Google Purchase — belongs to, so a
   // webhook URL without (or with the wrong) ?brand= can't file a Morbix order
   // under Crosscoin or the other way round.
-  const stamped = String(providerOrder?.cart_data?.custom_attributes?.store || providerOrder?.custom_attributes?.store || '').trim().toLowerCase();
+  const cartAttrs = providerOrder?.cart_data?.custom_attributes;
+  const orderAttrs = providerOrder?.custom_attributes;
+  if ([cartAttrs, orderAttrs].some((attrs) => String(attrs?.[PACK_PREVIEW_ATTRIBUTE]) === '1')) return { skipped: 'pack_preview' };
+  const stamped = String(cartAttrs?.store || orderAttrs?.store || '').trim().toLowerCase();
   if (stamped) {
     const Brand = require('../model/brandModel.js');
     const own = await Brand.findOne({ where: { slug: stamped }, attributes: ['id'] });
@@ -312,6 +362,7 @@ exports.abandonedWebhook = async (req, res) => {
   // Field names only (no values / personal data) for the staff test page.
   const note = (ok, reason) => svc.noteProviderCall(brandId, { push: false, abandoned: true, ok, method: 'POST', path: 'abandoned-webhook', reason, payloadKeys: keyShape(body) });
   try {
+    if (String(pick(body, /^velmique_pack_preview$/i)) === '1') return res.json({ ok: true, skipped: 'pack_preview' });
     const digits = String(pick(body, /phone|mobile|contact/i) || '').replace(/\D/g, '').slice(-10);
     if (digits.length !== 10) { note(false, 'no 10-digit phone in payload'); return res.json({ ok: true, skipped: 'no phone' }); }
     const first = pick(body, /^(first_?name|fname)$/i) || '';

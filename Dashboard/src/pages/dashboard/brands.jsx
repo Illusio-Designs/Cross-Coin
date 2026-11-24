@@ -77,6 +77,37 @@ const cleanHost = (d) => String(d || '').trim().replace(/^https?:\/\//i, '').rep
 const fmtWhen = (d) => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const brandLabel = (b) => b.display_name || b.name;
 
+function VelmiquePackPreview() {
+  const [busy, setBusy] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [error, setError] = useState('');
+
+  async function prepare() {
+    setBusy(true);
+    setError('');
+    setPreviewUrl('');
+    try {
+      const { token, expectedPaise } = await brandSettingsService.createVelmiquePackPreview();
+      const fragment = new URLSearchParams({ token, total: String(expectedPaise) });
+      setPreviewUrl(`https://velmique.co.in/checkout-preview#${fragment}`);
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not prepare the Shiprocket preview.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <span className="oss-inline oss-inline--test">
+      <button type="button" className="oss-btn" disabled={busy} onClick={prepare}>
+        {busy ? 'Preparing preview…' : 'Test Pack Pricing'}
+      </button>
+      {previewUrl && <a className="oss-btn" href={previewUrl} target="_blank" rel="noopener noreferrer" onClick={() => setTimeout(() => setPreviewUrl(''), 0)}>Open on Velmique</a>}
+      {error && <span role="alert" className="oss-bad">{error}</span>}
+    </span>
+  );
+}
+
 // ⓘ next to a field label: "where do I find this?" (text from the backend).
 function GuideButton({ f, open, onToggle }) {
   if (!f.guide) return null;
@@ -174,7 +205,12 @@ function SectionTest({ tab, brand, form }) {
   };
   let button = null;
   if (tab === 'payments') {
-    button = <button type="button" className="oss-btn" disabled={busy} onClick={() => run(() => brandSettingsService.testRazorpay(brand.id))}>{busy ? 'Checking…' : 'Test Razorpay keys'}</button>;
+    button = (
+      <>
+        <button type="button" className="oss-btn" disabled={busy} onClick={() => run(() => brandSettingsService.testRazorpay(brand.id))}>{busy ? 'Checking…' : 'Test Razorpay keys'}</button>
+        {brand.slug === 'velmique' && <VelmiquePackPreview />}
+      </>
+    );
   } else if (tab === 'shipping') {
     const has = form?.fields?.some((f) => f.key === 'ITHINK_PICKUP_ADDRESS_ID' && f.isSet);
     if (has) button = (
