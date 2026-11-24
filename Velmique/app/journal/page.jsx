@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getBlogPage } from '@/lib/api/blog';
 import { seoMeta } from '@/lib/site';
-import { ik } from '@/lib/imagekit';
+import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from '../_components/SkImg';
 import Pager from '../_components/Pager';
 
@@ -40,7 +40,12 @@ export default async function MaisonJournal({ searchParams }) {
             <div className="m-jgrid">
               {posts.map((p) => (
                 <Link className="m-jcard" href={`/journal/${p.slug}`} key={p.id}>
-                  {p.thumbImage ? <SkImg frameClassName="m-jcard__img" src={ik(p.thumbImage, 600)} alt="" loading="lazy" /> : <span className="m-jcard__img" />}
+                  {p.thumbImage ? (
+                    <SkImg frameClassName="m-jcard__img" src={ik(p.thumbImage, 600)}
+                      srcSet={ikSrcSet(p.thumbImage, [320, 480, 600, 800])}
+                      sizes="(max-width: 560px) calc(100vw - 32px), (max-width: 980px) calc(50vw - 30px), 380px"
+                      alt="" loading="lazy" />
+                  ) : <span className="m-jcard__img" />}
                   <div className="m-jcard__b">
                     {p.category ? <span className="m-jcard__cat">{p.category}</span> : null}
                     <h2 className="m-jcard__t">{p.title}</h2>

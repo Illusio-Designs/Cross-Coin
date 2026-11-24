@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getPost } from '@/lib/api/blog';
-import { richHtml } from '@/lib/sanitizeHtml';
+import { sanitizeRich } from '@/lib/sanitizeHtml';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 import { absUrl, pageMeta } from '@/lib/site';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from '../../_components/SkImg';
@@ -60,7 +61,8 @@ export default async function MaisonJournalPost({ params }) {
         </p>
         {post.coverImage ? <SkImg frameClassName="m-hero__cover" src={ik(post.coverImage, 1400)} srcSet={ikSrcSet(post.coverImage, [800, 1400])} sizes="(max-width: 900px) 100vw, 860px" alt="" loading="eager" fetchPriority="high" /> : null}
       </div>
-      <div className="m-prose" style={{ marginTop: 40 }} {...richHtml(post.body || `<p>${post.excerpt || ''}</p>`)} />
+      <DescriptionHtml className="m-prose" style={{ marginTop: 40 }} sizes="(max-width: 900px) calc(100vw - 40px), 860px"
+        html={sanitizeRich(post.body || `<p>${post.excerpt || ''}</p>`)} />
       <div style={{ textAlign: 'center', marginTop: 40 }}>
         <Link className="m-btn m-btn--ghost" href="/journal">More from the journal <span className="m-arrow">→</span></Link>
       </div>

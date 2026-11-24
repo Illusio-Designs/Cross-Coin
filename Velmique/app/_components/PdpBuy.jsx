@@ -9,6 +9,7 @@ import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import PdpMixPack from './PdpMixPack';
+import SkImg from './SkImg';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
@@ -161,7 +162,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
                   {opt.image ? (
                     <span className="m-packopt__imgs">
                       {Array.from({ length: Math.min(p.pairs, 3) }).map((_, k) => (
-                        <img key={k} src={ik(opt.image, 160)} alt="" loading="lazy" />
+                        <SkImg key={k} frameClassName="m-pack-tier-photo" src={ik(opt.image, 128)} alt="" loading="lazy" />
                       ))}
                     </span>
                   ) : null}

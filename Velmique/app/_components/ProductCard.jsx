@@ -14,7 +14,8 @@ const Heart = ({ filled }) => <BrandIcon name="heart" size={18} fill={filled ? '
 const Bag = () => <BrandIcon name="bag" size={17} />;
 
 // `priority` — the card is the page's LCP image (home hero bestseller).
-export default function ProductCard({ product, priority = false, action, onImageClick, selected = false, showNotes = true }) {
+export default function ProductCard({ product, priority = false, action, onImageClick, selected = false, showNotes = true,
+  imageSizes = '(max-width: 980px) calc(50vw - 24px), 290px' }) {
   const { addToCart, toggleWishlist, isWishlisted } = useStore();
   if (!product) return null;
 
@@ -33,8 +34,8 @@ export default function ProductCard({ product, priority = false, action, onImage
   const soldOut = product.inStock === false || defVar?.inStock === false;
   const tile = (
     <span className="m-card__tile">
-      {img && <SkImg src={ik(img, 600)} srcSet={ikSrcSet(img, [300, 450, 600, 900])}
-        sizes="(max-width: 980px) 50vw, 290px" alt={onImageClick ? '' : product.name}
+      {img && <SkImg src={ik(img, 600)} srcSet={ikSrcSet(img, [144, 216, 300, 450, 600, 900])}
+        sizes={imageSizes} alt={onImageClick ? '' : product.name}
         loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : undefined} />}
     </span>
   );

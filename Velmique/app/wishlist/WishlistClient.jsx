@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getProductBySlug } from '@/lib/api/products';
-import { ik } from '@/lib/imagekit';
+import { ik, ikSrcSet } from '@/lib/imagekit';
 import SkImg from '../_components/SkImg';
 import { ProductGridSkeleton } from '../_components/Skeleton';
 
@@ -62,7 +62,12 @@ export default function WishlistClient() {
             <article className="m-card" key={w.id}>
               <div className="m-card__fig">
                 <Link className="m-card__imglink" href={`/product/${w.slug}`} aria-label={w.name}>
-                  <span className="m-card__tile">{w.image ? <SkImg src={ik(w.image, 600)} alt={w.name} loading="lazy" /> : null}</span>
+                  <span className="m-card__tile">
+                    {w.image ? (
+                      <SkImg src={ik(w.image, 600)} srcSet={ikSrcSet(w.image, [240, 320, 480, 600])}
+                        sizes="(max-width: 980px) calc(50vw - 24px), 290px" alt={w.name} loading="lazy" />
+                    ) : null}
+                  </span>
                   <span className="m-card__shade" />
                 </Link>
                 <button className="m-card__wish on" aria-label={`Remove ${w.name} from wishlist`} onClick={() => toggleWishlist(w)}>{Heart}</button>

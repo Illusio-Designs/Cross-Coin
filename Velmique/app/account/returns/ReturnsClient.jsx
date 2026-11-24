@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserOrders, getMyReturns, createReturn } from '@/lib/api/orders';
 import { canRequestReturn, RETURN_STATUS_LABEL, returnRefundMethod } from '@/utils/orderStatus';
 import { ReturnsBodySkeleton, ReturnsSkeleton } from '../../_components/Skeleton';
+import SkImg from '../../_components/SkImg';
 
 const REASONS = [
   ['damaged', 'Damaged or leaking on arrival'],
@@ -148,7 +149,7 @@ export default function ReturnsClient() {
               <div className="m-photos">
                 {previews.map((src, i) => (
                   <span key={src} className="m-photos__i">
-                    <img src={src} alt={`Photo ${i + 1}`} />
+                    <SkImg frameClassName="m-photos__thumb" src={src} alt={`Photo ${i + 1}`} />
                     <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => set('photos', form.photos.filter((_, k) => k !== i))}>×</button>
                   </span>
                 ))}

@@ -4,7 +4,7 @@ import ScentExperience from '@/components/product/ScentExperience';
 import NotePhoto from '@/components/product/NotePhoto';
 import BrandIcon from '@/components/ui/BrandIcon';
 import Link from 'next/link';
-import { richHtml, sanitizeRich } from '@/lib/sanitizeHtml';
+import { sanitizeRich } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, pageMeta } from '@/lib/site';
 import { getProductBySlug, getBestsellers, getPublicProducts, noteKey } from '@/lib/api/products';
 import { buildScentExperience, isScentExperienceAttribute } from '@/lib/scentExperience';
@@ -287,7 +287,7 @@ function PdpFragranceNotes({ notes }) {
           <li key={name}>
             <span className="v-scent__note-photo" aria-hidden="true">
               <BrandIcon name="leaf" size={24} />
-              {image && <NotePhoto image={image} width={216} />}
+              {image && <NotePhoto image={image} width={216} widths={[112, 216, 300]} sizes="112px" natural={false} />}
             </span>
             <span className="v-scent__note-name">{name}</span>
           </li>
@@ -412,7 +412,7 @@ async function PdpFaq({ productId }) {
         {faqs.map((f) => (
           <details key={f.id}>
             <summary>{f.question}</summary>
-            <div className="m-faq__a" {...richHtml(f.answer)} />
+            <DescriptionHtml className="m-faq__a" html={sanitizeRich(f.answer)} />
           </details>
         ))}
       </div>

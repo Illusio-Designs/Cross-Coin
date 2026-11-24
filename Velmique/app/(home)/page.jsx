@@ -1,15 +1,17 @@
 import BrandIcon, { Gem, Leaf, Hourglass, Heart } from '@/components/ui/BrandIcon';
 import ScentStudio from '@/components/home/ScentStudio';
 import Link from 'next/link';
+import { getImageProps } from 'next/image';
 import { getBestsellers } from '@/lib/api/products';
 import { getAllReviews } from '@/lib/api/reviews';
 import { getFaqs } from '@/lib/api/faqs';
 import { getSeoOrg } from '@/lib/api/seo-org';
-import { richHtml } from '@/lib/sanitizeHtml';
+import { sanitizeRich } from '@/lib/sanitizeHtml';
 import { SITE_URL, absUrl, seoMeta } from '@/lib/site';
-import { ik } from '@/lib/imagekit';
+import { ik, ikSrcSet } from '@/lib/imagekit';
 import ProductCard from '../_components/ProductCard';
 import SkImg from '../_components/SkImg';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 
 // Dashboard-controlled SEO ('home') over the page's own copy; the seo-org
 // description / OG image fill in when the home row is empty.
@@ -29,6 +31,12 @@ export const revalidate = 60;
 const stars = (r) => { const n = Math.round(Number(r) || 5); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
 
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
+const HERO_SIZES = '(max-width: 740px) calc(100vw - 40px), (max-width: 1200px) 50vw, 600px';
+
+function BundledPhoto({ src, sizes, alt, ...props }) {
+  const { props: { src: optimizedSrc, srcSet } } = getImageProps({ src, sizes, alt, fill: true });
+  return <SkImg src={optimizedSrc} srcSet={srcSet} sizes={sizes} alt={alt} {...props} />;
+}
 
 export default async function MaisonHome() {
   const [featured, reviewsRes, faqs, seoOrg] = await Promise.all([
@@ -78,7 +86,13 @@ export default async function MaisonHome() {
       ))}
       <section className="v-hero"><div className="m-wrap v-hero__inner">
         <div className="v-hero__copy"><span className="m-eyebrow">A little luxury. Entirely you.</span><h1>Fragrances for<br /><em>Every Side of You</em></h1><p>Modern, expressive and long-lasting<br />scents crafted for your everyday moods.</p><div className="v-actions"><Link className="m-btn m-btn--fill" href="#scent-studio">Find Your Scent →</Link><Link className="m-btn" href="/shop">Shop Collection</Link></div></div>
-        <div className="v-hero__image">{best?.images?.[0] ? <SkImg src={ik(best.images[1] || best.images[0], 1000)} alt={best.name} loading="eager" fetchPriority="high" /> : <img src="/FRAGRANCE.webp" alt="Velmique fragrance collection" />}<span>VELMIQUE<br /><small>YOUR EVERYDAY SIGNATURE</small></span></div>
+        <div className="v-hero__image">{best?.images?.[0] ? (
+          <SkImg src={ik(best.images[1] || best.images[0], 1000)}
+            srcSet={ikSrcSet(best.images[1] || best.images[0], [400, 640, 800, 1000, 1200])}
+            sizes={HERO_SIZES}
+            alt={best.name} loading="eager" fetchPriority="high" />
+        ) : <BundledPhoto src="/FRAGRANCE.webp" sizes={HERO_SIZES} alt="Velmique fragrance collection" loading="eager" fetchPriority="high" />}
+        <span>VELMIQUE<br /><small>YOUR EVERYDAY SIGNATURE</small></span></div>
       </div></section>
       <div className="v-trust m-wrap">
         {[
@@ -93,11 +107,11 @@ export default async function MaisonHome() {
         ))}
       </div>
       <section className="v-section m-wrap" id="scent-studio"><div className="v-center"><span className="m-eyebrow">The Velmique Scent Studio</span><h2>Let’s Find Your Perfect Fragrance</h2><p>Not sure which perfume suits you? Discover it in a way that feels personal.</p></div><ScentStudio products={featured} /></section>
-      <section className="v-section m-wrap" id="shop-by-mood"><div className="v-heading"><div><h2>Shop by Mood</h2><p>Because a fragrance should feel like you.</p></div><Link href="/shop">Explore All Fragrances →</Link></div><div className="v-moods">{[['Fresh & Clean','Light, airy and refreshing','fresh','💧'],['Sweet & Romantic','Fruity, playful and feminine','floral','🌸'],['Bold & Intense','Rich, warm and long-lasting','woody','◈'],['Warm & Elegant','Smooth, musky and sophisticated','musk','✧']].map(([name,desc,q,icon],i)=><Link className={`v-mood v-mood--${i}`} href={`/shop?note=${q}`} key={name}><span className="v-mood__art">{(() => {const match=featured.find(p=>JSON.stringify([p.notes,p.variations?.[0]?.noteItems]).toLowerCase().includes(q)) || featured[i];return match?.images?.[0] ? <img src={ik(match.images[0],400)} alt={`${name} fragrance`} loading="lazy"/> : <Leaf size={48} strokeWidth={1}/>;})()}</span><div><b>{name}</b><p>{desc}</p></div></Link>)}</div></section>
+      <section className="v-section m-wrap" id="shop-by-mood"><div className="v-heading"><div><h2>Shop by Mood</h2><p>Because a fragrance should feel like you.</p></div><Link href="/shop">Explore All Fragrances →</Link></div><div className="v-moods">{[['Fresh & Clean','Light, airy and refreshing','fresh','💧'],['Sweet & Romantic','Fruity, playful and feminine','floral','🌸'],['Bold & Intense','Rich, warm and long-lasting','woody','◈'],['Warm & Elegant','Smooth, musky and sophisticated','musk','✧']].map(([name,desc,q,icon],i)=><Link className={`v-mood v-mood--${i}`} href={`/shop?note=${q}`} key={name}><span className="v-mood__art">{(() => {const match=featured.find(p=>JSON.stringify([p.notes,p.variations?.[0]?.noteItems]).toLowerCase().includes(q)) || featured[i];return match?.images?.[0] ? <SkImg src={ik(match.images[0],400)} srcSet={ikSrcSet(match.images[0],[200,300,400,600])} sizes="(max-width: 740px) 50vw, 25vw" alt={`${name} fragrance`} loading="lazy" /> : <Leaf size={48} strokeWidth={1}/>;})()}</span><div><b>{name}</b><p>{desc}</p></div></Link>)}</div></section>
       <section className="v-section m-wrap" id="m-featured"><div className="v-heading"><div><h2>Our Signature Collection</h2><p>A curated range of modern fragrances, crafted to leave a lasting impression.</p></div><Link href="/shop">View All Fragrances →</Link></div>{featured.length ? <div className="m-pgrid">{featured.slice(0,4).map(p=><ProductCard key={p.id} product={p} />)}</div> : <p>Our collection is being bottled. Please check back shortly.</p>}</section>
-      <section className="v-why"><img src="/abouthero.webp" alt="The world of Velmique" loading="lazy" /><div><h2><em>Why Choose Velmique?</em></h2><div className="v-pillars">{[[Leaf,'Thoughtfully Crafted Scents'],[Hourglass,'Long-Lasting Performance'],[Gem,'Premium Ingredients'],[Heart,'Modern & Versatile']].map(([Icon,t])=><div key={t}><Icon size={28} strokeWidth={1.2} aria-hidden="true"/><p>{t}</p></div>)}</div></div></section>
+      <section className="v-why"><BundledPhoto frameClassName="v-why__photo" src="/abouthero.webp" sizes="(max-width: 740px) 100vw, 33vw" alt="The world of Velmique" loading="lazy" /><div><h2><em>Why Choose Velmique?</em></h2><div className="v-pillars">{[[Leaf,'Thoughtfully Crafted Scents'],[Hourglass,'Long-Lasting Performance'],[Gem,'Premium Ingredients'],[Heart,'Modern & Versatile']].map(([Icon,t])=><div key={t}><Icon size={28} strokeWidth={1.2} aria-hidden="true"/><p>{t}</p></div>)}</div></div></section>
       {reviews.length ? <section className="v-section m-wrap"><div className="v-heading"><div><h2>Loved by Our Community</h2><p>Real people. Real experiences.</p></div></div><div className="v-reviews">{reviews.slice(0,3).map(renderReview)}</div></section> : null}
-      <section className="m-wrap v-pack"><div><span className="m-eyebrow">Better together</span><h2>Build Your<br />Fragrance Set</h2><p>Create your perfect duo or trio.<br />A scent for every side of you.</p><Link className="m-btn m-btn--fill" href="/pack">Build Your Pack →</Link></div><div className="v-pack__bottles">{featured.slice(0,3).map(p=>p.images?.[0] ? <img key={p.id} src={ik(p.images[0],350)} alt={p.name} loading="lazy" /> : null)}</div></section>
+      <section className="m-wrap v-pack"><div><span className="m-eyebrow">Better together</span><h2>Build Your<br />Fragrance Set</h2><p>Create your perfect duo or trio.<br />A scent for every side of you.</p><Link className="m-btn m-btn--fill" href="/pack">Build Your Pack →</Link></div><div className="v-pack__bottles">{featured.slice(0,3).map(p=>p.images?.[0] ? <SkImg key={p.id} natural frameClassName="v-pack__bottle" src={ik(p.images[0],300)} srcSet={ikSrcSet(p.images[0],[112,216,300,400])} sizes="(max-width: 740px) 30vw, 180px" alt={p.name} loading="lazy" /> : null)}</div></section>
 
       {/* FAQ — admin-managed, from the backend */}
       {faqs.length ? (
@@ -107,7 +121,7 @@ export default async function MaisonHome() {
             {faqs.map((f) => (
               <details key={f.id}>
                 <summary>{f.question}</summary>
-                <div className="m-faq__a" {...richHtml(f.answer)} />
+                <DescriptionHtml className="m-faq__a" html={sanitizeRich(f.answer)} />
               </details>
             ))}
           </div>

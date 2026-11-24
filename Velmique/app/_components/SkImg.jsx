@@ -21,7 +21,11 @@ import { useCallback, useState } from 'react';
 
    Every other prop (src, srcSet, sizes, loading, fetchPriority …) goes to the
    <img> unchanged; decoding defaults to async. */
-export default function SkImg({ frameClassName, className, onLoad, onError, alt = '', decoding = 'async', ...props }) {
+export default function SkImg(props) {
+  return <ShimmerImage key={props.src} {...props} />;
+}
+
+function ShimmerImage({ frameClassName, className, natural = false, onLoad, onError, alt = '', decoding = 'async', ...props }) {
   // 'wait' → shimmer; 'fade' → loaded now (animate in); 'ready' → was cached; 'error'.
   const [state, setState] = useState('wait');
 
@@ -38,7 +42,8 @@ export default function SkImg({ frameClassName, className, onLoad, onError, alt 
     else if (el.getAttribute('src')) setState('error');
   }, []);
 
-  const frame = ['sk-frame', frameClassName ? 'sk-frame--own' : '', frameClassName || '', state === 'wait' ? 'sk-img' : `is-${state}`]
+  const frame = ['sk-frame', frameClassName ? 'sk-frame--own' : '', natural ? 'sk-frame--natural' : '',
+    frameClassName || '', state === 'wait' ? 'sk-img' : `is-${state}`]
     .filter(Boolean).join(' ');
 
   return (

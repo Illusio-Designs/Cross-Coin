@@ -5,7 +5,10 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Clock, User, Calendar, ArrowUpRight, ChevronRight } from 'lucide-react';
 import SeoWrapper from '@/components/SeoWrapper';
 import { getPost, getPosts } from '@/lib/api/blog';
-import { richHtml } from '@/lib/sanitizeHtml';
+import { sanitizeRich } from '@/lib/sanitizeHtml';
+import { ik, ikSrcSet } from '@/lib/imagekit';
+import SkImg from '@/app/_components/SkImg';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); }
@@ -67,10 +70,13 @@ export default function BlogPostPage({ initialPost = null }) {
       <section className="relative w-full">
         <div className="relative w-full min-h-[520px] max-h-[820px] overflow-hidden bg-[var(--ink)] flex flex-col">
           {post.coverImage ? (
-            <img
-              src={post.coverImage}
+            <SkImg
+              src={ik(post.coverImage, 1200)}
+              srcSet={ikSrcSet(post.coverImage, [480, 800, 1200, 1600])}
+              sizes="100vw"
               alt={post.title}
-              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+              fetchPriority="high"
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-[var(--ink)] to-[var(--surface-2)]" />
@@ -143,10 +149,11 @@ export default function BlogPostPage({ initialPost = null }) {
             )}
 
             {/* Body */}
-            <div
+            <DescriptionHtml
               className="prose-velmique text-[var(--ink-soft)] font-body text-lg leading-[1.9] space-y-6 text-justify hyphens-auto"
               style={{ ['--prose-h2-color']: 'var(--ink)' }}
-              {...richHtml(post.body || `<p>${post.excerpt || ''}</p>`)}
+              sizes="(max-width: 900px) calc(100vw - 40px), 800px"
+              html={sanitizeRich(post.body || `<p>${post.excerpt || ''}</p>`)}
             />
 
           </article>
@@ -233,7 +240,10 @@ export default function BlogPostPage({ initialPost = null }) {
                   className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
                   <div className="absolute inset-0 bg-[var(--surface-2)]">
                     {(r.thumbImage || r.coverImage) && (
-                      <img src={r.thumbImage || r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <SkImg src={ik(r.thumbImage || r.coverImage, 450)}
+                        srcSet={ikSrcSet(r.thumbImage || r.coverImage, [216, 300, 450, 600])}
+                        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
+                        alt={r.title} loading="lazy" className="group-hover:scale-105" />
                     )}
                   </div>
                   {r.category && (

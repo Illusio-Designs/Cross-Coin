@@ -141,6 +141,7 @@ export default function PdpMixPack({ current, scents, tiers }) {
           const checked = picked.has(product.id);
           return (
             <ProductCard key={product.id} product={product} selected={checked} showNotes={false}
+              imageSizes="(max-width: 820px) min(43vw, 180px), 180px"
               onImageClick={() => toggle(product.id)}
               action={(
                 <label className="m-card__addbody v-pdp-pack__check">

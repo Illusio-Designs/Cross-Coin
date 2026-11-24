@@ -4,10 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ik, ikSrcSet } from '@/lib/imagekit';
 import BrandIcon from '@/components/ui/BrandIcon';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import SkImg from './SkImg';
 
-const GALLERY_RESIZE = { uploads: true };
 const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
 const MAIN_SIZES = '(max-width: 820px) calc(100vw - 40px), 560px';
+const THUMB_WIDTHS = [64, 144, 216];
+const THUMB_SIZES = '(max-width: 820px) 58px, 66px';
+const ZOOM_WIDTHS = [640, 900, 1200, 1600];
+const ZOOM_SIZES = '(max-width: 980px) 92vw, 900px';
 
 /* Thumbnail gallery with a
    click-to-zoom lightbox: tap any image for a fullscreen view, swipe through
@@ -61,9 +65,9 @@ export default function PdpGallery({ images = [], name = '' }) {
             {failedImage === mainImage ? (
               <span className="v-gallery__unavailable">Image unavailable</span>
             ) : (
-              <img key={mainImage} src={ik(mainImage, 1200, GALLERY_RESIZE)}
-                srcSet={ikSrcSet(mainImage, MAIN_WIDTHS, GALLERY_RESIZE)} sizes={MAIN_SIZES}
-                alt={`${name} — view ${current + 1}`} loading="eager" decoding="async" fetchPriority="high"
+              <SkImg natural src={ik(mainImage, 1200)}
+                srcSet={ikSrcSet(mainImage, MAIN_WIDTHS)} sizes={MAIN_SIZES}
+                alt={`${name} — view ${current + 1}`} loading="eager" fetchPriority="high"
                 onError={() => setFailedImage(mainImage)} />
             )}
             {failedImage !== mainImage && <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18} /></span>}
@@ -77,7 +81,8 @@ export default function PdpGallery({ images = [], name = '' }) {
               {images.map((src, i) => (
                 <button key={src + i} type="button" aria-label={`View ${name} image ${i + 1}`}
                   aria-pressed={current === i} onClick={() => setSelected(i)}>
-                  <img src={ik(src, 144, GALLERY_RESIZE)} alt="" loading="lazy" decoding="async" fetchPriority="low" />
+                  <SkImg src={ik(src, 144)} srcSet={ikSrcSet(src, THUMB_WIDTHS)} sizes={THUMB_SIZES}
+                    alt="" loading="lazy" fetchPriority="low" />
                 </button>
               ))}
             </div>
@@ -94,7 +99,9 @@ export default function PdpGallery({ images = [], name = '' }) {
             <button type="button" className="m-lbx__nav prev" aria-label="Previous image" onClick={(e) => { e.stopPropagation(); step(-1); }}><BrandIcon name="previous" /></button>
           )}
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
-          <img src={ik(images[open], 1600, GALLERY_RESIZE)} alt={`${name} — zoomed view ${open + 1}`} onClick={(e) => e.stopPropagation()} />
+          <SkImg natural frameClassName="v-gallery__lightbox-photo" src={ik(images[open], 1600)}
+            srcSet={ikSrcSet(images[open], ZOOM_WIDTHS)} sizes={ZOOM_SIZES}
+            alt={`${name} — zoomed view ${open + 1}`} onClick={(e) => e.stopPropagation()} />
           {images.length > 1 && (
             <button type="button" className="m-lbx__nav next" aria-label="Next image" onClick={(e) => { e.stopPropagation(); step(1); }}><BrandIcon name="arrow" /></button>
           )}

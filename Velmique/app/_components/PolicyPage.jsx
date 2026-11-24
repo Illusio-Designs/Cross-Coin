@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getPolicyByName } from '@/lib/api/policies';
-import { richHtml } from '@/lib/sanitizeHtml';
+import { sanitizeRich } from '@/lib/sanitizeHtml';
+import DescriptionHtml from '@/components/product/DescriptionHtml';
 
 /* A legal / policy page: content is authored in the dashboard (Policies) and
    rendered on the server — sanitised — so it is in the HTML for crawlers. */
@@ -16,7 +17,7 @@ export default async function PolicyPage({ name, eyebrow = 'Legal', fallbackTitl
       </section>
       <div className="m-wrap m-section" style={{ paddingTop: 0 }}>
         {html ? (
-          <article className="m-prose m-policy" {...richHtml(html)} />
+          <DescriptionHtml as="article" className="m-prose m-policy" html={sanitizeRich(html)} />
         ) : (
           <div className="m-empty">
             <h3>This policy is being prepared</h3>

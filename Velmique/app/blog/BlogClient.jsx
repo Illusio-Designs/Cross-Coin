@@ -3,18 +3,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Clock, User } from 'lucide-react';
 import { getBlogPage } from '@/lib/api/blog';
+import { ik, ikSrcSet } from '@/lib/imagekit';
+import SkImg from '@/app/_components/SkImg';
 import PageHeader from '@/components/layout/PageHeader';
 import SeoWrapper from '@/components/SeoWrapper';
 import Pagination from '@/components/common/Pagination';
 
 const LIMIT = 12;
-
-// Blog card images: request a pre-cropped 16:9 (800x450) frame from ImageKit for
-// uniform, sharp, lightweight cards. Non-ImageKit sources pass through unchanged.
-const blogCardImg = (url) => {
-  if (!url || typeof url !== 'string' || !url.includes('ik.imagekit.io')) return url;
-  return `${url.split('?')[0]}?tr=w-800,h-450,q-70,f-auto`;
-};
 
 function formatDate(str) {
   try { return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }); }
@@ -94,8 +89,12 @@ export default function BlogClient() {
                   <Link key={post.id} href={`/blog/${post.slug}`}
                     className="group relative block overflow-hidden" style={{ aspectRatio: '4/5' }}>
                     <div className="absolute inset-0 bg-[var(--surface-2)]">
-                      <img src={blogCardImg(post.thumbImage || post.coverImage)} alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      {(post.thumbImage || post.coverImage) && (
+                        <SkImg src={ik(post.thumbImage || post.coverImage, 600)}
+                          srcSet={ikSrcSet(post.thumbImage || post.coverImage, [300, 450, 600, 800])}
+                          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                          alt={post.title} loading="lazy" className="group-hover:scale-105" />
+                      )}
                     </div>
                     {post.category && (
                       <span className="absolute top-4 left-4 z-20 bg-white text-[var(--ink)] px-3 py-2 text-[8px] tracking-[0.2em] uppercase font-body">{post.category}</span>

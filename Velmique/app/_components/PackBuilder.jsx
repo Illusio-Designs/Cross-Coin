@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { ik } from '@/lib/imagekit';
 import { packDiscountPercent, packUnitPrice } from '@/lib/packPricing';
 import ProductCard from './ProductCard';
+import SkImg from './SkImg';
 
 const inr = (n) => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
 
@@ -97,7 +98,8 @@ export default function PackBuilder({ products = [], tiers = [] }) {
                         <span className="m-ptier__sub">{t.off ? `${t.pairs}+ scents` : '1 scent'}</span>
                         <span className="m-ptier__imgs">
                           {products.slice(0, Math.min(t.pairs, 3)).map((p) => (
-                            p.images?.[0] ? <img key={p.id} src={ik(p.images[0], 120)} alt="" loading="lazy" /> : null
+                            p.images?.[0] ? <SkImg key={p.id} frameClassName="m-pack-tier-photo" src={ik(p.images[0], 128)}
+                              alt="" loading="lazy" /> : null
                           ))}
                         </span>
                         <b className={`m-ptier__off ${t.off ? '' : 'mut'}`}>{t.off ? `${t.off}% OFF` : 'Full price'}</b>
