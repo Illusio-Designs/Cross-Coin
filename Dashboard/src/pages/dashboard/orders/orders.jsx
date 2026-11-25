@@ -248,7 +248,7 @@ const Orders = ({ initialTab } = {}) => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const onManualOrderCreated = (order) => {
         setManualOrderOpen(false);
-        setStatusFilter('to_confirm');
+        setStatusFilter(order.payment_type?.toLowerCase() === 'cod' ? 'to_confirm' : 'to_ship');
         setBrandFilter(String(order.brand_id));
         setPaymentTypeFilter('all');
         setPaymentStatusFilter('all');

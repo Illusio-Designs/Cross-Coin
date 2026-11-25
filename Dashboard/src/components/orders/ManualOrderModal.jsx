@@ -12,6 +12,10 @@ const FIELDS = [
   ['city', 'City', { required: true, minLength: 2, maxLength: 100 }],
   ['state', 'State or union territory', { required: true, minLength: 2, maxLength: 100 }],
 ];
+const PAYMENT_TYPES = [
+  { value: 'cod', label: 'Cash on delivery' },
+  { value: 'prepaid', label: 'Prepaid' },
+];
 const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 const amount = (value) => currency.format(Number(value));
 
@@ -29,6 +33,8 @@ function variationLabel(variation) {
 export default function ManualOrderModal({ open, brands, initialBrandId, onClose, onCreated }) {
   const [brand, setBrand] = useState('');
   const [fields, setFields] = useState({});
+  const [paymentType, setPaymentType] = useState('cod');
+  const [paymentId, setPaymentId] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [product, setProduct] = useState(null);
@@ -40,11 +46,15 @@ export default function ManualOrderModal({ open, brands, initialBrandId, onClose
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
   const requestId = useRef(null);
+  const prepaid = paymentType === 'prepaid';
+  const paymentLabel = prepaid ? 'Prepaid' : 'Cash on delivery';
+  const orderType = prepaid ? 'prepaid' : 'COD';
   const activeBrands = brands.filter((item) => item.status !== 'inactive' && item.slug);
 
   useEffect(() => {
     if (!open) {
       setBrand(''); setFields({}); setQuery(''); setProduct(null); setLines([]);
+      setPaymentType('cod'); setPaymentId('');
       setResults([]); setSearching(false); setSearchError(''); setError(''); setQuote(null);
       requestId.current = null;
     } else if (!brand) {
@@ -96,6 +106,8 @@ export default function ManualOrderModal({ open, brands, initialBrandId, onClose
       address: { address: fields.address, landmark: fields.landmark, city: fields.city, state: fields.state, pincode: fields.pin },
       items: lines.map(({ product_id, variation_id, quantity }) => ({ product_id, variation_id, quantity: Number(quantity) })),
       notes: fields.notes,
+      payment_type: paymentType,
+      ...(prepaid ? { razorpay_payment_id: paymentId.trim() } : {}),
     };
     submitting.current = true;
     setBusy(true);
@@ -111,7 +123,7 @@ export default function ManualOrderModal({ open, brands, initialBrandId, onClose
       }
     } catch (err) {
       const body = err.response?.data;
-      if (body?.code === 'TOTAL_CHANGED') setQuote(null);
+      if (['TOTAL_CHANGED', 'PAYMENT_TOTAL_MISMATCH'].includes(body?.code)) setQuote(null);
       setError([body?.message, ...(body?.errors || []).map((issue) => issue.message || issue)].filter(Boolean).join(' ') ||
         err.message || 'Couldn’t save the order. Try again.');
     } finally {
@@ -123,19 +135,20 @@ export default function ManualOrderModal({ open, brands, initialBrandId, onClose
   const variations = (product?.variations || []).filter((variation) => variation.stock > 0 && variation.status !== 'inactive');
   return (
     <Modal
-      isOpen={open} title={quote ? 'Review COD order' : 'New manual order'} size="lg"
+      isOpen={open} title={quote ? `Review ${orderType} order` : 'New manual order'} size="lg"
       onClose={busy ? undefined : onClose} showCloseButton={!busy} closeOnEscape={!busy} closeOnOverlayClick={false}
       footer={<>
         <Button variant="secondary" disabled={busy} onClick={quote ? () => { setQuote(null); setError(''); } : onClose}>{quote ? 'Edit order' : 'Cancel'}</Button>
         <Button type="submit" form="manual-order-form" loading={busy} loadingText={quote ? 'Creating…' : 'Checking…'}
-          disabled={!brand || !lines.length}>{quote ? 'Create COD order' : 'Review order'}</Button>
+          disabled={!brand || !lines.length}>{quote ? `Create ${orderType} order` : 'Review order'}</Button>
       </>}
     >
       <form id="manual-order-form" className="manual-order" onSubmit={submit}>
         {error && <p className="manual-order__error" role="alert">{error}</p>}
         {quote ? (
           <>
-            <p><strong>{activeBrands.find((item) => item.slug === brand)?.display_name || activeBrands.find((item) => item.slug === brand)?.name || brand}</strong> · Cash on delivery</p>
+            <p><strong>{activeBrands.find((item) => item.slug === brand)?.display_name || activeBrands.find((item) => item.slug === brand)?.name || brand}</strong> · {paymentLabel}</p>
+            {prepaid && <p>Razorpay payment ID <code>{paymentId.trim()}</code></p>}
             <p>{fields.full_name} · {fields.phone}<br />{[fields.address, fields.landmark, fields.city, fields.state, fields.pin].filter(Boolean).join(', ')}</p>
             <ul className="manual-order__list">
               {quote.items.map((item) => {
@@ -146,17 +159,24 @@ export default function ManualOrderModal({ open, brands, initialBrandId, onClose
             <dl className="manual-order__totals">
               <div><dt>Subtotal</dt><dd>{amount(quote.subtotal)}</dd></div>
               <div><dt>Shipping</dt><dd>{amount(quote.shipping_fee)}</dd></div>
-              <div><dt>Amount to collect</dt><dd>{amount(quote.total)}</dd></div>
+              <div><dt>{prepaid ? 'Amount paid' : 'Amount to collect'}</dt><dd>{amount(quote.total)}</dd></div>
             </dl>
-            <p className="manual-order__muted">The order will appear in To confirm.</p>
+            <p className="manual-order__muted">The order will appear in {prepaid ? 'To ship' : 'To confirm'}.</p>
           </>
         ) : (
           <>
             <div className="manual-order__grid">
               <Input type="select" label="Store" name="manual-order-store" required value={brand} disabled={busy}
                 options={activeBrands.map((item) => ({ value: item.slug, label: item.display_name || item.name }))}
-                onChange={(event) => { setBrand(event.target.value); clearSearch(); setLines([]); }} />
-              <Input label="Payment" name="manual-order-payment" value="Cash on delivery" readOnly />
+                onChange={(event) => { setBrand(event.target.value); clearSearch(); setLines([]); setPaymentId(''); }} />
+              <Input type="select" label="Payment type" name="manual-order-payment" value={paymentType}
+                options={PAYMENT_TYPES} disabled={busy} onChange={(event) => setPaymentType(event.target.value)} />
+              {prepaid && (
+                <Input label="Existing Razorpay payment ID" name="manual-order-payment-id" value={paymentId}
+                  placeholder="pay_…" helperText="Use the payment ID from the existing Razorpay transaction."
+                  autoComplete="off" spellCheck={false} required maxLength={68} disabled={busy}
+                  onChange={(event) => setPaymentId(event.target.value)} />
+              )}
               {FIELDS.map(([key, label, props]) => <Input key={key} label={label} name={`manual-order-${key}`} value={fields[key] || ''}
                 onChange={(event) => setFields({ ...fields, [key]: event.target.value })} disabled={busy} {...props} />)}
             </div>

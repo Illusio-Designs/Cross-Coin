@@ -1,3 +1,4 @@
+const { createHash } = require('node:crypto');
 const { createBrandPriceResolver } = require('../utils/brandPrice.js');
   /**
    * ┌────────────────────────────────────────────────────────────────┐
@@ -20,6 +21,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
    */
 
   const { Order } = require("../model/orderModel.js");
+  const { verifyManualPrepaidPayment } = require("../services/manualPrepaidPayment.js");
+  const { toSmallestUnit } = require("../utils/amountConverter.js");
   const { OrderItem } = require("../model/orderItemModel.js");
   const { OrderStatusHistory } = require("../model/orderStatusHistoryModel.js");
   const { Product } = require("../model/productModel.js");
@@ -183,9 +186,14 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     let transaction = null;
     const brandId = req.brand?.id || 1;
     const actorId = req.user.id;
-    const idempotencyKey = manual
-      ? manual.quote ? null : `manual:${actorId}:${req.body.request_id}`
-      : req.headers['x-idempotency-key'] || req.body.idempotency_key;
+    const prepaid = manual && req.body.payment_type === 'prepaid';
+    const paymentRef = prepaid ? req.body.razorpay_payment_id : null;
+    let idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotency_key;
+    if (manual) {
+      // Payment IDs are case-sensitive. Hash before storing in the order key.
+      const retryKey = prepaid ? `razorpay:${createHash('sha256').update(paymentRef).digest('hex')}` : `${actorId}:${req.body.request_id}`;
+      idempotencyKey = manual.quote ? null : `manual:${retryKey}`;
+    }
 
     if (manual && !req.brand) return res.status(400).json({ message: 'Choose an active store.' });
     if (!manual && typeof idempotencyKey === 'string' && idempotencyKey.startsWith('manual:')) {
@@ -200,7 +208,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       logger.debug("✅ Transaction started for order creation");
 
       const { items, notes, coupon_id, discount_amount } = req.body;
-      const payment_type = manual ? 'cod' : req.body.payment_type;
+      const payment_type = manual ? (prepaid ? 'razorpay' : 'cod') : req.body.payment_type;
       let shipping_address_id = req.body.shipping_address_id;
       let userId = manual ? null : actorId;
       logger.debug("createOrder: Request data:", {
@@ -221,10 +229,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         });
       }
 
-      // This endpoint places COD orders only. Online payments go through
-      // /api/checkout/initiate → Razorpay → /api/payments/razorpay/verify,
-      // which creates the order once the payment is captured.
-      if (payment_type !== 'cod') {
+      // Storefront prepaid orders are created by payment verification.
+      if (!manual && payment_type !== 'cod') {
         await transaction.rollback();
         return res.status(400).json({ message: "Online payments must use the checkout flow. Please retry from your cart." });
       }
@@ -238,6 +244,15 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
           if (Number(existingOrder.brand_id) !== Number(brandId)) return res.status(409).json({ message: 'This request was already used for another store.' });
           return res.json({ message: 'Order already created', order: existingOrder });
         }
+      }
+
+      // Lock any existing payment before stock, matching storefront verification.
+      const verifiedPayment = prepaid
+        ? await verifyManualPrepaidPayment(paymentRef, brandId, transaction, { lock: !manual.quote })
+        : null;
+      if (verifiedPayment?.error) {
+        await transaction.rollback();
+        return res.status(verifiedPayment.status).json({ message: verifiedPayment.error });
       }
 
       let shippingAddress;
@@ -512,7 +527,16 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       const subTotal = Number(totalAmount);
       const appliedDiscount = discount_amount ? Number(discount_amount) : 0;
       const shippingFee = Number(await calculateShippingFee(payment_type, subTotal, req.brand?.id || 1));
-      const finalAmount = Math.round(subTotal - appliedDiscount + shippingFee);
+      const total = subTotal - appliedDiscount + shippingFee;
+      const finalAmount = prepaid ? toSmallestUnit(total, 'INR') / 100 : Math.round(total);
+      if (prepaid && verifiedPayment.amount !== toSmallestUnit(finalAmount, 'INR')) {
+        await transaction.rollback();
+        const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+        return res.status(409).json({
+          code: 'PAYMENT_TOTAL_MISMATCH',
+          message: `Razorpay captured ${money.format(verifiedPayment.amount / 100)}, but the order total is ${money.format(finalAmount)}. Check the items and payment ID.`,
+        });
+      }
       logger.debug("subTotal:", subTotal);
       logger.debug("appliedDiscount:", appliedDiscount);
       logger.debug("shippingFee:", shippingFee);
@@ -679,6 +703,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         logger.debug("⚠️ createOrder: No session_id provided in body or cookies");
       }
 
+      const initialStatus = prepaid ? 'confirmed' : 'awaiting_confirmation';
+
       // Create order
       const order = await Order.create(
         {
@@ -691,8 +717,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
           shipping_fee: shippingFee,
           final_amount: finalAmount,
           payment_type,
-          payment_status: "pending",
-          status: "awaiting_confirmation",
+          payment_status: prepaid ? 'paid' : 'pending',
+          status: initialStatus,
           notes: notes || null,
           utm_tracking_id: utmTrackingId,
           brand_id: req.brand ? req.brand.id : 1,
@@ -703,6 +729,23 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       );
       logger.debug("createOrder: Order created with ID:", order.id);
 
+      if (prepaid) {
+        const payment = {
+          order_id: order.id,
+          user_id: userId,
+          guest_user_id: null,
+          payment_type: 'razorpay',
+          transaction_id: paymentRef,
+          razorpay_order_id: verifiedPayment.razorpayOrderId,
+          amount_paid: verifiedPayment.amount,
+          status: 'successful',
+          payment_gateway: 'Razorpay',
+          brand_id: brandId,
+        };
+        if (verifiedPayment.existing) await verifiedPayment.existing.update(payment, { transaction });
+        else await Payment.create(payment, { transaction });
+      }
+
       // Audit trail: record the order creation event with the inputs
       // that drove eligibility decisions (RTO score, address quality,
       // payment type). The auditLog helper lives in services/orderService.js.
@@ -710,6 +753,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         const { auditLog } = require('../services/orderService.js');
         await auditLog(order.id, 'create', manual ? actorId : userId || null, manual ? 'admin' : userId ? 'user' : 'guest', {
           ...(manual ? { source: 'manual', customer_id: userId } : {}),
+          ...(prepaid ? { razorpay_payment_id: paymentRef } : {}),
           payment_type,
           final_amount: finalAmount,
           rto_risk_score: rtoRiskScore,
@@ -755,7 +799,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       await OrderStatusHistory.create(
         {
           order_id: order.id,
-          status: manual ? "awaiting_confirmation" : "pending",
+          status: manual ? initialStatus : "pending",
           updated_by: manual ? actorId : userId,
         },
         { transaction }
@@ -827,8 +871,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         order: createdOrder,
       });
       logger.debug("createOrder: Response sent successfully");
-      // Staff review and confirm the order from the desk. A manual order
-      // doesn't send the storefront address-confirmation or purchase events.
+      // Manual orders don't send storefront address-confirmation or purchase events.
       if (manual) return;
 
       // Send WhatsApp order confirmation (fire-and-forget)
@@ -1397,7 +1440,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
         payments: payments.map((p) => {
           const j = p.toJSON();
           const raw = parseFloat(j.amount_paid) || 0;
-          return { ...j, amount: p.payment_type === 'cod' ? raw : raw / 100, is_refund: raw < 0 };
+          const localCod = p.payment_type === 'cod' && p.payment_gateway !== 'CustomCheckout';
+          return { ...j, amount: localCod ? raw : raw / 100, is_refund: raw < 0 };
         }),
         returns,
         ndr: ndrCases,

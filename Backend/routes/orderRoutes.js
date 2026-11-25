@@ -69,7 +69,13 @@ const manualOrderSchema = z.object({
     message: 'Use one line per product variation.',
   }),
   notes: z.string().trim().max(500).optional(),
+  payment_type: z.enum(['cod', 'prepaid']).default('cod'),
+  razorpay_payment_id: z.string().trim().regex(/^pay_[a-zA-Z0-9]{6,64}$/, 'Enter a valid Razorpay payment ID starting with pay_.').optional(),
 });
+const requireManualPaymentId = (schema) => schema.refine(
+  (order) => order.payment_type !== 'prepaid' || !!order.razorpay_payment_id,
+  { path: ['razorpay_payment_id'], message: 'Enter the existing Razorpay payment ID for this prepaid order.' },
+);
 
 // Accept the AWB under either query name — the storefront sends `awb_number`,
 // while the docs/curl use `awb`. Require at least one.
@@ -80,11 +86,11 @@ const trackByAwbSchema = z.object({
 
 // ── Admin / Order Manager ─────────────────────────────────────────────────
 router.get('/',                          isAuthenticated, isOrderManager, getAllOrders);
-router.post('/manual/quote',             isAuthenticated, isOrderManager, zValidateBody(manualOrderSchema), quoteManualOrder);
-router.post('/manual',                   isAuthenticated, isOrderManager, zValidateBody(manualOrderSchema.extend({
+router.post('/manual/quote',             isAuthenticated, isOrderManager, zValidateBody(requireManualPaymentId(manualOrderSchema)), quoteManualOrder);
+router.post('/manual',                   isAuthenticated, isOrderManager, zValidateBody(requireManualPaymentId(manualOrderSchema.extend({
   request_id: z.string().uuid(),
-  expected_total: z.number().int().nonnegative(),
-})), createManualOrder);
+  expected_total: z.number().nonnegative(),
+}))), createManualOrder);
 router.get('/desk/counts',               isAuthenticated, isOrderManager, require('../controller/orderController.js').getDeskCounts);
 router.get('/export/delivered',          isAuthenticated, isOrderManager, exportDeliveredOrders);
 router.get('/export/gst-report',         isAuthenticated, isOrderManager, exportDeliveredGSTReport);

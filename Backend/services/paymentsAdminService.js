@@ -17,8 +17,8 @@
  *   fixMismatch    — "Mark paid & confirm": reconcileOrderPayment with the
  *                    admin as actor (idempotent, audit-logged).
  *
- * Units: gateway rows store amount_paid in PAISE (refund rows negative); COD
- * rows (created on delivery) store RUPEES. Orders are in rupees. Status
+ * Units: gateway rows, including Shiprocket COD, store amount_paid in paise.
+ * Local courier COD collections and order totals are in rupees. Status
  * 'failed' never counts as money.
  *
  * Schema (lazy, once per process — see ensureSchema):
@@ -35,12 +35,12 @@ const { phoneHash } = require('../utils/encryption.js');
 const q = (sql, replacements = {}) => sequelize.query(sql, { replacements, type: QueryTypes.SELECT });
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const r2 = (v) => Math.round(num(v) * 100) / 100;
-const inr = (v) => `₹${Math.round(Math.abs(num(v))).toLocaleString('en-IN')}`;
+const inr = (v) => `₹${Math.abs(num(v)).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
 const COLLECTED = "('successful','completed','refunded','partial_refund','refund_pending')";
 const COD_OPEN = "('awaiting_confirmation','pending','confirmed','processing','booked','pickup initiated','manifested','in transit','shipped','out for delivery','undelivered','exception')";
 const COD_WITH_COURIER = "('booked','pickup initiated','manifested','in transit','shipped','out for delivery','undelivered')";
-const AMOUNT = "CASE WHEN p.payment_type = 'cod' THEN p.amount_paid ELSE p.amount_paid / 100 END";
+const AMOUNT = "CASE WHEN p.payment_type = 'cod' AND COALESCE(p.payment_gateway, '') <> 'CustomCheckout' THEN p.amount_paid ELSE p.amount_paid / 100 END";
 const TABS = ['all', 'paid', 'failed', 'pending', 'refund', 'cod', 'cancelled'];
 const IST_MS = 330 * 60000;
 
@@ -67,9 +67,9 @@ function ensureSchema() {
 // ── Helpers ────────────────────────────────────────────────────────────────
 const PERIODS = { 1: 1, 7: 7, 30: 30 };
 /** Start of the period: IST midnight, (days - 1) days ago. */
-function periodStart(period) {
+function periodStart(period, now = Date.now()) {
   const days = PERIODS[period] || 7;
-  const istNow = new Date(Date.now() + IST_MS);
+  const istNow = new Date(now + IST_MS);
   const ymd = istNow.toISOString().slice(0, 10);
   return new Date(new Date(`${ymd}T00:00:00.000+05:30`).getTime() - (days - 1) * 86400000);
 }
@@ -127,14 +127,14 @@ function describe(r) {
   const amt = num(r.amount);
   const orderCancelled = ['cancelled', 'order cancelled'].includes(String(r.order_status || '').toLowerCase());
   const orderPaid = ['paid', 'refunded', 'partial_refund', 'refund_pending'].includes(String(r.order_payment_status || '').toLowerCase());
-  if (r.src === 'c') {
+  if (r.src === 'c' || (r.payment_type === 'cod' && r.status === 'pending' && r.order_id && !orderCancelled)) {
     const shipped = /booked|pickup|manifested|transit|shipped|out for delivery|undelivered/.test(String(r.order_status || ''));
     return { kind: 'cod', why: shipped ? 'Courier collects on delivery' : 'Not shipped yet — collected on delivery' };
   }
   if (amt < 0) {
     const reason = String(r.notes || '').replace(/^Refund for order [^:]+:\s*/i, '').replace(/\s*·\s*FAILED:.*$/i, '').trim();
     if (r.status === 'failed') return { kind: 'refund_failed', why: 'Razorpay refused this refund — issue it again from Orders → Problems' };
-    const partial = r.order_final != null && Math.abs(amt) < num(r.order_final) - 0.5;
+    const partial = r.order_final != null && Math.round(Math.abs(amt) * 100) < Math.round(num(r.order_final) * 100);
     return { kind: partial ? 'partial' : 'refund', why: reason || (partial ? 'Part of the order refunded' : 'Order refunded') };
   }
   switch (r.status) {
@@ -375,6 +375,51 @@ async function backfillMethods(brandId, since) {
   }
 }
 
+// Scan Razorpay directly. Starting from local payments cannot find a payment
+// that reached the gateway but never wrote a local record.
+async function findMissingRazorpayOrders(brandId, { period, offset, until }) {
+  const razorpay = await require('./razorpayService.js').getInstance(brandId);
+  const count = 100;
+  const result = await razorpay.payments.all({
+    from: Math.floor(periodStart(period, until * 1000).getTime() / 1000), to: until, count, skip: offset,
+  });
+  if (!Array.isArray(result?.items)) throw new Error('Razorpay returned an invalid payments list.');
+
+  const captured = result.items.filter((payment) => payment.status === 'captured'
+    && /^pay_[a-zA-Z0-9]{6,64}$/.test(payment.id)
+    && Number(payment.amount) > Number(payment.amount_refunded || 0));
+  const refs = captured.map((payment) => payment.id);
+  const orderRefs = [...new Set(captured.map((payment) => payment.order_id).filter(Boolean))];
+  // Cross-store references also rule out a missing order when stores share a
+  // Razorpay account. Keep those references out of the dashboard response.
+  const known = refs.length ? await q(
+    `SELECT p.transaction_id, p.razorpay_order_id, p.brand_id, o.id AS linked_order_id
+       FROM payments p LEFT JOIN orders o ON o.id = p.order_id
+      WHERE p.transaction_id IN (:refs)
+        ${orderRefs.length ? 'OR p.razorpay_order_id IN (:orderRefs)' : ''}`,
+    { refs, ...(orderRefs.length ? { orderRefs } : {}) },
+  ) : [];
+  const linked = new Set();
+  const local = new Set();
+  for (const row of known) {
+    const references = [row.transaction_id, row.razorpay_order_id].filter(Boolean);
+    const target = row.linked_order_id || Number(row.brand_id) !== Number(brandId) ? linked : local;
+    references.forEach((reference) => target.add(reference));
+  }
+
+  const items = captured
+    .filter((payment) => !linked.has(payment.id) && !linked.has(payment.order_id))
+    .map((payment) => ({
+      paymentId: payment.id,
+      orderRef: payment.order_id || null,
+      amount: r2(Number(payment.amount) / 100),
+      currency: payment.currency,
+      at: payment.created_at ? new Date(Number(payment.created_at) * 1000).toISOString() : null,
+      hasLocalPayment: local.has(payment.id) || local.has(payment.order_id),
+    }));
+  return { items, checked: result.items.length, until, nextOffset: result.items.length === count ? offset + count : null };
+}
+
 // ── "Doesn't match Razorpay" ───────────────────────────────────────────────
 const CACHE_MS = 10 * 60000;
 const cache = new Map(); // brandKey -> { at, data }
@@ -557,4 +602,4 @@ async function fixOrder(orderId, actor) {
   return { ok: true, changed: true, message: `${n} is marked paid.` };
 }
 
-module.exports = { ensureSchema, listPayments, summary, mismatches, fixMismatch, failureReason, clearRecoveredMismatch };
+module.exports = { ensureSchema, listPayments, summary, findMissingRazorpayOrders, mismatches, fixMismatch, failureReason, clearRecoveredMismatch };

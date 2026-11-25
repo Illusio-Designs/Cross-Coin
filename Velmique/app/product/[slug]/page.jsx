@@ -14,6 +14,7 @@ import { getFaqs } from '@/lib/api/faqs';
 import { getBundleTiers, getPackTiers } from '@/lib/api/bundles';
 import ProductCard from '../../_components/ProductCard';
 import PdpBuy from '../../_components/PdpBuy';
+import PdpMixPack from '../../_components/PdpMixPack';
 import PdpGallery from '../../_components/PdpGallery';
 import WriteReview from '../../_components/WriteReview';
 import TrackEvent from '../../_components/TrackEvent';
@@ -73,7 +74,8 @@ export default async function MaisonProduct({ params }) {
 
   const reviewsRequest = getProductReviews(product.id, { limit: 6 });
   const catalogRequest = getPublicProducts({ limit: 48 });
-  const buyingOptions = Promise.all([getBundleTiers(product.id), getPackTiers(), catalogRequest]);
+  const bundleRequest = getBundleTiers(product.id);
+  const mixTiersRequest = getPackTiers();
 
   const defVar = (product.variations || []).find((v) => String(v.id) === String(product.defaultVariationId)) || product.variations?.[0] || null;
   const scentRequest = catalogRequest.then((catalog) => getPdpScent(product, defVar, catalog));
@@ -133,7 +135,8 @@ export default async function MaisonProduct({ params }) {
                 <Sk h={52} r={8} style={{ marginTop: 10 }} />
               </SkRegion>
             }>
-              <PdpPurchase product={product} request={buyingOptions} scentRequest={scentRequest} />
+              <PdpPurchase product={product} defVar={defVar} bundleRequest={bundleRequest}
+                mixTiersRequest={mixTiersRequest} catalogRequest={catalogRequest} scentRequest={scentRequest} />
             </Suspense>
           </div>
         </div>
@@ -164,19 +167,45 @@ function PdpDescription({ product }) {
   );
 }
 
-async function PdpPurchase({ product, request, scentRequest }) {
-  const [[packs, mixTiers, catalog], { fragranceNotes }] = await Promise.all([request, scentRequest]);
+const cardDetails = ({ rating, reviews, originalPrice, badge }) => ({ rating, reviews, originalPrice, badge });
+
+async function PdpPurchase({ product, defVar, bundleRequest, mixTiersRequest, catalogRequest, scentRequest }) {
+  const packs = await bundleRequest;
   const { id, name, slug, defaultVariationId, inStock, price, sizes, images } = product;
   const variations = product.variations.map((variation) => ({
     id: variation.id, size: variation.size, sku: variation.sku, price: variation.price,
     images: variation.images?.slice(0, 1), inStock: variation.inStock, stock: variation.stock,
   }));
-  const cardDetails = ({ rating, reviews, originalPrice, badge }) => ({ rating, reviews, originalPrice, badge });
   const purchaseProduct = {
     ...cardDetails(product), id, name, slug, defaultVariationId, inStock, price, sizes, images: images.slice(0, 1), variations,
   };
-  const scents = packs.length || !mixTiers.length ? [] : catalog.products
-    .filter((scent) => String(scent.id) !== String(id) && scent.inStock !== false && scent.defaultVariationId)
+  const initialNotes = getPdpScent(product, defVar, { products: [] }).fragranceNotes;
+  const notes = (
+    <Suspense fallback={<PdpFragranceNotes notes={initialNotes} />}>
+      <PdpEnrichedNotes request={scentRequest} />
+    </Suspense>
+  );
+  const mixPack = !packs.length && (defVar ? defVar.inStock !== false : inStock !== false) ? (
+    <Suspense fallback={null}>
+      <PdpMixPurchase product={purchaseProduct} defVar={defVar}
+        tiersRequest={mixTiersRequest} catalogRequest={catalogRequest} />
+    </Suspense>
+  ) : null;
+  return <PdpBuy product={purchaseProduct} packs={packs} notes={notes} mixPack={mixPack} />;
+}
+
+async function PdpEnrichedNotes({ request }) {
+  const { fragranceNotes } = await request;
+  return <PdpFragranceNotes notes={fragranceNotes} />;
+}
+
+async function PdpMixPurchase({ product, defVar, tiersRequest, catalogRequest }) {
+  const tiers = await tiersRequest;
+  if (!tiers.length) return null;
+
+  const catalog = await catalogRequest;
+  const scents = catalog.products
+    .filter((scent) => String(scent.id) !== String(product.id) && scent.inStock !== false && scent.defaultVariationId)
     .map((scent) => {
       const variation = scent.variations.find((v) => String(v.id) === String(scent.defaultVariationId));
       return {
@@ -185,10 +214,12 @@ async function PdpPurchase({ product, request, scentRequest }) {
         price: scent.price, sizes: [variation?.size || scent.sizes[0]], images: scent.images.slice(0, 1),
       };
     });
-  return (
-    <PdpBuy product={purchaseProduct} packs={packs} mixTiers={mixTiers} scents={scents}
-      notes={<PdpFragranceNotes notes={fragranceNotes} />} />
-  );
+  const current = {
+    ...product,
+    price: Number(defVar?.price ?? product.price) || 0,
+    sizes: [defVar?.size || defVar?.sku || product.sizes?.[0] || 'One Size'],
+  };
+  return <PdpMixPack key={product.id} current={current} scents={scents} tiers={tiers} />;
 }
 
 function summarizeReviews(product, reviewsRes) {

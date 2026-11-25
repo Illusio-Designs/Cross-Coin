@@ -20,7 +20,7 @@ const STEPS = [
   { key: 'out_for_delivery', label: 'On its way' },
   { key: 'delivered', label: 'Delivered' },
 ];
-const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 const fmtDate = (v) => { if (!v) return '—'; try { return new Date(v).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return '—'; } };
 const fmtDateTime = (v) => { if (!v) return ''; try { return new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }); } catch { return ''; } };
 
@@ -69,7 +69,9 @@ export default function TrackClient() {
     try {
       const resp = await trackOrder(r);
       const payload = resp?.data || resp;
-      if (payload?.order) setData(payload); else setError(resp?.message || 'Order not found');
+      if (payload?.order) setData(payload);
+      else if (payload?.order_number) setData({ order: payload });
+      else setError(resp?.message || 'Order not found');
     } catch (e) { setError(e.message || 'Order not found'); } finally { setLoading(false); }
   };
 
@@ -82,7 +84,9 @@ export default function TrackClient() {
   const note = o ? orderStatusNote(o.status, o.payment_type) : '';
   const trackingUrl = data?.tracking?.tracking_url || o?.tracking_url;
   const awb = o?.tracking_number || data?.tracking?.tracking_number;
-  const addr = data?.shipping_address;
+  const items = data?.items || o?.OrderItems || o?.items || [];
+  const addr = data?.shipping_address || o?.ShippingAddress || o?.shipping_address;
+  const placedAt = o?.created_at || o?.createdAt || o?.placed_at;
 
   return (
     <>
@@ -108,7 +112,7 @@ export default function TrackClient() {
                 <div>
                   <span className="m-eyebrow">Order</span>
                   <div className="m-crow__n">#{o.order_number}</div>
-                  <div className="m-jcard__meta" style={{ marginTop: 6 }}>{fmtDate(o.created_at || o.createdAt)} · {data.items?.length || 0} item{(data.items?.length || 0) === 1 ? '' : 's'} · {fmt(o.final_amount)}</div>
+                  <div className="m-jcard__meta" style={{ marginTop: 6 }}>{fmtDate(placedAt)} · {items.length} item{items.length === 1 ? '' : 's'} · {fmt(o.final_amount)}</div>
                 </div>
                 <span className={`m-badge m-badge--${orderStatusTone(o.status)}`}>{orderStatusLabel(o.status)}</span>
               </div>
@@ -155,7 +159,7 @@ export default function TrackClient() {
             <div className="m-ordcard">
               <h2 className="m-card-h">Items</h2>
               <ul className="m-olines">
-                {(data.items || []).map((it, i) => {
+                {items.map((it, i) => {
                   const img = pickItemImage(it);
                   const attrs = fmtAttrs(it.variation?.attributes || it.ProductVariation?.attributes);
                   return (

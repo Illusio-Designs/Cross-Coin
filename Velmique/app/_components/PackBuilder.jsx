@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import { packDiscountPercent, packUnitPrice } from '@/lib/packPricing';
 import { openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
@@ -35,7 +36,7 @@ export default function PackBuilder({ products = [], tiers = [] }) {
     if (!off || opening) return;
     const lines = products.flatMap((product) => {
       const quantity = qty[String(product.id)];
-      return quantity > 0 ? [{ variationId: product.defaultVariationId, quantity, packGroup: 'selected' }] : [];
+      return quantity > 0 ? [{ productId: product.id, variationId: product.defaultVariationId, quantity, packGroup: 'selected' }] : [];
     });
     if (lines.some((line) => !line.variationId)) {
       setCheckoutError('One fragrance is unavailable. Update your selection.');
@@ -44,6 +45,15 @@ export default function PackBuilder({ products = [], tiers = [] }) {
     setOpening(true);
     setCheckoutError('');
     try {
+      const contents = lines.map(({ productId, quantity }) => ({ id: String(productId), quantity }));
+      fbTrack('InitiateCheckout', {
+        content_ids: contents.map(({ id }) => id),
+        content_type: 'product',
+        contents,
+        num_items: count,
+        value: Number(total.toFixed(2)),
+        currency: 'INR',
+      });
       await openShiprocketCheckout(event, lines);
     } catch (error) {
       setCheckoutError(error.code === 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE' ? error.message : SHIPROCKET_RETRY_MESSAGE);

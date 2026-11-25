@@ -8,13 +8,12 @@ import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { showError } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
-import PdpMixPack from './PdpMixPack';
 import SkImg from './SkImg';
 
 const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-export default function PdpBuy({ product, packs = [], mixTiers = [], scents = [], notes }) {
+export default function PdpBuy({ product, packs = [], notes, mixPack }) {
   const { addToCart, openCheckout } = useStore();
 
   const opt = useMemo(() => {
@@ -97,9 +96,12 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
       });
     };
     update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
     window.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
     return () => {
+      observer.disconnect();
       window.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
       if (frame != null) cancelAnimationFrame(frame);
@@ -194,10 +196,7 @@ export default function PdpBuy({ product, packs = [], mixTiers = [], scents = []
           <button type="button" className="m-btn m-buynow" onClick={onBuyNow} disabled={soldOut || srBusy}>{srBusy ? 'Opening…' : 'Buy now'}</button>
         )}
 
-        {!pack && !soldOut && mixTiers.length > 0 && (
-          <PdpMixPack key={product.id} current={{ ...product, price: Number(opt.price) || 0, sizes: [opt.label] }}
-            scents={scents} tiers={mixTiers} />
-        )}
+        {mixPack}
       </div>
 
       {barOn && (

@@ -55,16 +55,24 @@ async function pricePackItems(lines, variants, getBundleUnit, getMixPercent) {
     entry.unitPaise++;
     remainder -= entry.quantity;
   }
-  return entries.map(([variant_id, { variant, quantity, unitPaise }]) => {
-    const price = unitPaise / 100;
+  return entries.map(([variant_id, { variant, quantity, totalPaise, unitPaise }]) => {
+    // Keep more precision in the unit price when two-decimal prices cannot
+    // represent the pack subtotal, e.g. three of one variant at ₹499 total.
+    const price = remainder > 0 ? totalPaise / (quantity * 100) : unitPaise / 100;
     if (!variant.image || price <= 0) throw pricingError('A pack item is missing checkout pricing or an image.');
     return { variant_id, quantity, catalog_data: { name: variant.name, price, image_url: variant.image } };
   });
 }
 
 function signPackQuote(items, brandId, secret) {
-  const quote = JSON.stringify(items.map(({ variant_id, quantity, catalog_data }) =>
-    [String(variant_id), quantity, Math.round(catalog_data.price * 100)]));
+  const quote = JSON.stringify(items.map(({ variant_id, quantity, catalog_data }) => {
+    const unitPaise = Math.round(catalog_data.price * 100);
+    const subtotalPaise = Math.round(catalog_data.price * quantity * 100);
+    const line = [String(variant_id), quantity, unitPaise];
+    // Preserve the older quote shape for amounts that already divide evenly.
+    if (subtotalPaise !== unitPaise * quantity) line.push(subtotalPaise);
+    return line;
+  }));
   const signature = crypto.createHmac('sha256', secret).update(`cc-pack-v1:${brandId}:${quote}`).digest('base64url');
   return `${signature}.${quote}`;
 }
@@ -76,7 +84,8 @@ function readPackQuote(raw, items, brandId, secret) {
   const signature = Buffer.from(raw.slice(0, boundary));
   const expected = Buffer.from(crypto.createHmac('sha256', secret).update(`cc-pack-v1:${brandId}:${quote}`).digest('base64url'));
   if (signature.length !== expected.length || !crypto.timingSafeEqual(signature, expected)) throw pricingError('Invalid pack quote signature.');
-  const lines = new Map(JSON.parse(quote).map(([id, quantity, paise]) => [id, { quantity, paise }]));
+  const lines = new Map(JSON.parse(quote).map(([id, quantity, paise, subtotalPaise]) =>
+    [id, { quantity, paise, ...(subtotalPaise == null ? {} : { subtotalPaise }) }]));
   const purchased = new Map();
   for (const item of items) {
     const id = String(item.variant_id);

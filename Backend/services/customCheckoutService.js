@@ -603,18 +603,33 @@ async function ingestCheckoutOrder(brandId, p) {
     // Resolve cart lines against real variations.
     const lines = [];
     const sitePrice = createBrandPriceResolver(brandId);
-    for (const it of items) {
+    const checkoutLines = packQuote
+      ? [...packQuote].map(([variant_id, { quantity }]) => ({ variant_id, quantity }))
+      : items;
+    for (const it of checkoutLines) {
       const v = await ProductVariation.findByPk(it.variant_id, { transaction: t });
       if (!v) { const e = new Error(`Unknown variant_id ${it.variant_id}`); e.status = 400; throw e; }
       const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
-      const price = packQuote ? packQuote.get(String(it.variant_id)).paise / 100 : await sitePrice(v.productId, v.price);
-      lines.push({ product_id: v.productId, variation_id: v.id, quantity: qty, price, discount: 0, subtotal: price * qty });
+      const base = { product_id: v.productId, variation_id: v.id, discount: 0 };
+      if (packQuote) {
+        // Order item prices have two decimal places. Allocate the signed total
+        // across units so every stored line still adds up exactly.
+        const { paise, subtotalPaise = paise * qty } = packQuote.get(String(it.variant_id));
+        const unitPaise = Math.floor(subtotalPaise / qty);
+        const extra = subtotalPaise % qty;
+        lines.push({ ...base, quantity: qty - extra, price: unitPaise / 100, subtotal: unitPaise * (qty - extra) / 100 });
+        if (extra) lines.push({ ...base, quantity: extra, price: (unitPaise + 1) / 100, subtotal: (unitPaise + 1) * extra / 100 });
+      } else {
+        const price = await sitePrice(v.productId, v.price);
+        lines.push({ ...base, quantity: qty, price, subtotal: price * qty });
+      }
     }
 
     // Line prices come from OUR brand/variation prices; provider totals must agree
     // with them (small tolerance for rounding) or the order is not ingested.
-    const linesTotal = lines.reduce((a, l) => a + l.subtotal, 0);
-    const subtotal = linesTotal;
+    const subtotal = packQuote
+      ? lines.reduce((sum, line) => sum + Math.round(line.subtotal * 100), 0) / 100
+      : lines.reduce((sum, line) => sum + line.subtotal, 0);
     const discount = Math.max(0, Number(p.total_discount) || 0);
     const shippingFee = Math.max(0, Number(p.shipping_charges) || 0);
     const expected = Math.max(0, Math.round((subtotal - discount + shippingFee) * 100) / 100);

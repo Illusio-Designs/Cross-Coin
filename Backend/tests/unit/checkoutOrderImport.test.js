@@ -73,6 +73,21 @@ test('pack token signs the authoritative quote and sends the same price to Shipr
   expect(payload.items).toEqual(items);
   expect(readPackQuote(payload.custom_attributes.cc_pack_quote, items, 1, 'fixture-secret').get('12').paise).toBe(64025);
 });
+test('fractional unit pack price survives token creation and imports against the exact subtotal', async () => {
+  axios.post.mockResolvedValue({ data: { token: 'fixture-pack' } });
+  const items = [{ variant_id: '12', quantity: 3, catalog_data: { price: 499 / 3 } }];
+  await createCheckoutToken(1, { items }, 'https://crosscoin.in/order-confirmation', { pack: true });
+  const { cart_data } = JSON.parse(axios.post.mock.calls[0][1]);
+  expect(cart_data.items[0].catalog_data.price).toBe(499 / 3);
+  await expect(ingestCheckoutOrder(1, provider({ cart_data, total_amount_payable: 498.99 }))).rejects.toThrow('Amount mismatch');
+  expect(models.Order.create).not.toHaveBeenCalled();
+  await ingestCheckoutOrder(1, provider({ cart_data, total_amount_payable: 499 }));
+  expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({ final_amount: 499, total_amount: 499 }), expect.anything());
+  expect(models.OrderItem.bulkCreate).toHaveBeenCalledWith([
+    expect.objectContaining({ quantity: 2, price: 166.33, subtotal: 332.66 }),
+    expect.objectContaining({ quantity: 1, price: 166.34, subtotal: 166.34 }),
+  ], expect.anything());
+});
 test('incorrect provider total is rejected and never saved or tracked', async () => {
   await expect(ingestCheckoutOrder(1, provider({ total_amount_payable: 499 }))).rejects.toThrow('Amount mismatch');
   expect(models.Order.create).not.toHaveBeenCalled(); expect(scheduled).toHaveLength(0);

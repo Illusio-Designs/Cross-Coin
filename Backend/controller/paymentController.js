@@ -40,6 +40,24 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
+module.exports.adminMissingRazorpayOrders = async (req, res) => {
+    if (!req.brand?.id) return res.status(400).json({ message: 'Choose an active store.' });
+    const period = Number(req.query.period || 7);
+    const offset = Number(req.query.offset || 0);
+    const now = Math.floor(Date.now() / 1000);
+    const until = Number(req.query.until || now);
+    if (![1, 7, 30].includes(period) || !Number.isSafeInteger(offset) || offset < 0 ||
+        !Number.isSafeInteger(until) || until > now || until <= 0) {
+        return res.status(400).json({ message: 'Start a new scan for Today, 7 days, or 30 days.' });
+    }
+    try {
+        const result = await paymentsAdmin.findMissingRazorpayOrders(req.brand.id, { period, offset, until });
+        return res.json({ success: true, ...result });
+    } catch (error) {
+        return adminFail(res, error, 'the Razorpay missing-order scan');
+    }
+};
+
 async function checkRazorpayReference(req, res, recover = false) {
     const { paymentRef } = req.params;
     if (!req.brand?.id) return res.status(400).json({ message: 'Choose an active store.' });

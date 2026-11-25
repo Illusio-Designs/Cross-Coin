@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Button, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, ConfirmBar, EmptyState, ErrorState,
@@ -50,7 +50,10 @@ const KIND = {
 };
 
 const num = (n) => Number(n || 0).toLocaleString("en-IN");
-const inr = (n) => `₹${num(Math.round(Math.abs(Number(n) || 0)))}`;
+const rupees = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" });
+const inr = (n) => rupees.format(Math.abs(Number(n) || 0));
+const paymentAmount = (payment) => payment.currency === "INR"
+  ? inr(payment.amount) : `${payment.amount ?? "—"} ${payment.currency || ""}`;
 const plural = (n, w) => `${num(n)} ${w}${Number(n) === 1 ? "" : "s"}`;
 const clock = (d) => new Date(d).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 const fullDate = (d) => (d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "");
@@ -86,26 +89,47 @@ const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWid
 // ── Tiles ────────────────────────────────────────────────────────
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
 
-function RazorpayLookup({ brands, selectedBrandId, isAdmin }) {
+function RazorpayLookup({ brands, selectedBrandId, period, isAdmin }) {
   const qc = useQueryClient();
   const [brand, setBrand] = useState("");
   const [reference, setReference] = useState("");
-  const [result, setResult] = useState(null);
+  const [lookup, setResult] = useState(null);
+  const resultRef = useRef(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(false);
+  const [scan, setScan] = useState(null);
   const availableBrands = brands.filter((item) => item.status === "active" && item.slug);
   const selectedBrand = brand || availableBrands.find((item) => String(item.id) === String(selectedBrandId))?.slug || "";
 
+  const result = lookup?.brand === selectedBrand ? lookup : null;
+  useEffect(() => { if (result) resultRef.current?.focus(); }, [result]);
+  const currentScan = scan?.brand === selectedBrand && scan.period === period ? scan : null;
   const resetResult = () => { setResult(null); setError(""); setConfirm(false); };
-  const check = async (event) => {
-    event.preventDefault();
-    if (!selectedBrand || !/^pay_[a-zA-Z0-9]{6,64}$/.test(reference.trim()) || busy) return;
+  const check = async (paymentId) => {
+    if (!selectedBrand || !/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
+    setReference(paymentId);
     resetResult();
     setBusy("check");
     try {
-      const payment = await paymentService.checkRazorpayPayment(selectedBrand, reference.trim());
+      const payment = await paymentService.checkRazorpayPayment(selectedBrand, paymentId);
       setResult({ ...payment, brand: selectedBrand });
+    } catch (e) { setError(e.message); }
+    finally { setBusy(null); }
+  };
+  const scanForMissingOrders = async (continueScan = false) => {
+    if (!selectedBrand || busy) return;
+    const previous = continueScan ? currentScan : null;
+    setBusy("scan");
+    setError("");
+    try {
+      const fresh = await paymentService.findMissingRazorpayOrders(selectedBrand, {
+        period,
+        ...(previous ? { offset: previous.nextOffset, until: previous.until } : {}),
+      });
+      const items = new Map((previous?.items || []).map((item) => [item.paymentId, item]));
+      fresh.items.forEach((item) => items.set(item.paymentId, item));
+      setScan({ ...fresh, items: [...items.values()], checked: fresh.checked + (previous?.checked || 0), brand: selectedBrand, period });
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
@@ -126,7 +150,7 @@ function RazorpayLookup({ brands, selectedBrandId, isAdmin }) {
     <section className="pl-card pl-rzp" id="razorpay-check" aria-labelledby="pl-rzp-title">
       <h2 id="pl-rzp-title">Check a Razorpay payment</h2>
       <p className="pl-faint pl-small">Look up a payment ID to see whether Razorpay captured it and whether it has an order.</p>
-      <form className="pl-rzp__form" onSubmit={check}>
+      <form className="pl-rzp__form" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
         <Input label="Store" name="rzp-lookup-store" type="select" value={selectedBrand} disabled={!!busy}
           options={availableBrands.map((item) => ({ value: item.slug, label: item.display_name || item.name }))}
           onChange={(event) => { setBrand(event.target.value); resetResult(); }} />
@@ -137,11 +161,9 @@ function RazorpayLookup({ brands, selectedBrandId, isAdmin }) {
       </form>
       {error && <p role="alert" className="pl-rzp__error">{error}</p>}
       {result && (
-        <div className="pl-rzp__result">
+        <div className="pl-rzp__result" ref={resultRef} tabIndex={-1}>
           <strong>{result.order ? `Order #${result.order.order_number}` : "No order found"}</strong>
-          <div>Razorpay: {result.remote.status} · {result.remote.currency === "INR"
-            ? new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(result.remote.amount)
-            : `${result.remote.amount ?? "—"} ${result.remote.currency || ""}`}</div>
+          <div>Razorpay: {result.remote.status} · {paymentAmount(result.remote)}</div>
           <span>Payment ID <code>{result.remote.id}</code></span>
           {result.remote.orderId && <span>Razorpay order <code>{result.remote.orderId}</code></span>}
           {result.order?.payment_status && <span>Order payment: {result.order.payment_status}</span>}
@@ -155,6 +177,40 @@ function RazorpayLookup({ brands, selectedBrandId, isAdmin }) {
               onConfirm={recover} onCancel={() => setConfirm(false)} />)}
         </div>
       )}
+      <div className="pl-rzp__result">
+        <strong>Find captured payments with missing orders</strong>
+        <p className="pl-faint pl-small">Scan the selected store’s Razorpay account for {period === 1 ? "today" : `the last ${period} days`}.</p>
+        <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders()}
+          disabled={!selectedBrand || !!busy} loading={busy === "scan" && !currentScan} loadingText="Scanning…">
+          {currentScan ? "Start a new scan" : "Find missing orders"}
+        </Button>
+        {currentScan && (
+          <>
+            <p role="status" className="pl-small">{plural(currentScan.checked, "payment")} checked · {plural(currentScan.items.length, "payment")} without a matching order</p>
+            {currentScan.items.length > 0 && (
+              <div className="pl-scroll" style={{ width: "100%" }}>
+                <table className="pl-table" aria-label="Captured Razorpay payments without orders">
+                  <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Payment record</th><th aria-label="Actions" /></tr></thead>
+                  <tbody>
+                    {currentScan.items.map((item) => (
+                      <tr key={item.paymentId}>
+                        <td><code>{item.paymentId}</code></td><td className="pl-nowrap">{paymentAmount(item)}</td>
+                        <td>{fullDate(item.at) || "—"}</td>
+                        <td>{item.hasLocalPayment ? "Saved locally" : "Razorpay only"}</td>
+                        <td><Button size="sm" variant="secondary" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {currentScan.nextOffset != null && (
+              <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders(true)}
+                loading={busy === "scan"} loadingText="Scanning…" disabled={!!busy}>Scan next batch</Button>
+            )}
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -407,7 +463,7 @@ export default function Payments() {
 
       <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
-      <RazorpayLookup brands={brands} selectedBrandId={brandId} isAdmin={!!isAdmin} />
+      <RazorpayLookup brands={brands} selectedBrandId={brandId} period={period} isAdmin={!!isAdmin} />
       <Mismatches brandId={brandId} isAdmin={!!isAdmin} />
 
       <div className="pl-toolbar">

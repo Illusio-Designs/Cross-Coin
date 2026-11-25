@@ -1126,6 +1126,13 @@ export const exceptionsService = {
 // Dashboard → Payments (Backend services/paymentsAdminService.js).
 const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
+  findMissingRazorpayOrders: async (brand, params) => {
+    try {
+      return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', {
+        headers: { 'X-Brand-Name': brand }, params,
+      })).data;
+    } catch (error) { throw payErr(error); }
+  },
   checkRazorpayPayment: async (brand, paymentRef) => {
     try {
       return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`, {

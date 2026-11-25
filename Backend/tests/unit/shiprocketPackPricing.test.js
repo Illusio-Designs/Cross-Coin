@@ -19,6 +19,15 @@ test('a mixed-colour fixed price bundle uses one tier and distributes the paise'
   expect(items.reduce((sum, i) => sum + Math.round(i.catalog_data.price * 100) * i.quantity, 0)).toBe(49900);
 });
 
+test('a fixed bundle of one variant sends enough unit precision to preserve its full price', async () => {
+  const items = await pricePackItems([line('11', 3, { pack_id: 'three' })], variants, async () => 499 / 3, async () => 0);
+  expect(items).toHaveLength(1);
+  expect(items[0].catalog_data.price).toBe(499 / 3);
+  expect(Math.round(items[0].catalog_data.price * items[0].quantity * 100)).toBe(49900);
+  const quote = signPackQuote(items, 1, 'fixture-secret');
+  expect(readPackQuote(quote, items, 1, 'fixture-secret').get('11')).toEqual({ quantity: 3, paise: 16633, subtotalPaise: 49900 });
+});
+
 test('loose and pack quantities for a shared variant resolve to one averaged provider line', async () => {
   const items = await pricePackItems([line('11', 2, { pack_id: 'two' }), line('11', 1)], variants, async () => 600, async () => 0);
   expect(items).toEqual([expect.objectContaining({ variant_id: '11', quantity: 3, catalog_data: expect.objectContaining({ price: 733 }) })]);

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { viewCart } from '@/utils/pixel';
 import { openShiprocketCartCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import PackBagCard from '@/components/cart/PackBagCard';
@@ -18,6 +19,17 @@ export default function BagView({ checkoutPage = false }) {
   const [srBusy, setSrBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const packLines = cart.filter((item) => item.packGroup).reduce((count, item) => count + (Number(item.quantity) || 1), 0);
+
+  const cartTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutPage || !cartHydrated || !cart.length || cartTracked.current) return;
+    cartTracked.current = true;
+    viewCart({
+      contents: cart.map((line) => ({ id: String(line.productId ?? line.id), quantity: line.quantity || 1 })),
+      value: cartTotal,
+      currency: 'INR',
+    });
+  }, [cart, cartHydrated, cartTotal, checkoutPage]);
 
   const onCheckout = async (event) => {
     if (srBusy || !cart.length) return;

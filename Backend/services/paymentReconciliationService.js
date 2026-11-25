@@ -127,7 +127,8 @@ async function lookupRazorpayPayment(paymentRef, brandId) {
   const payment = matching.find((row) => row.order_id)
     || matching.find((row) => row.transaction_id === paymentRef) || matching[0];
   const reservationId = payment?.reservation_id;
-  const linkedPayment = rows.find((row) => row.order_id && row.payment_gateway !== 'CustomCheckout');
+  const linkedPayment = rows.find((row) => row.order_id && row.transaction_id === paymentRef)
+    || rows.find((row) => row.order_id && row.payment_gateway !== 'CustomCheckout');
   const completed = linkedPayment || (reservationId
     ? await Payment.findOne({ where: { reservation_id: reservationId, brand_id: brandId, order_id: { [Op.ne]: null } } })
     : null);
@@ -144,7 +145,7 @@ async function lookupRazorpayPayment(paymentRef, brandId) {
     : orderMatch ? (completed.transaction_id && completed.transaction_id !== paymentRef
       ? 'An order already exists for this checkout with a different payment ID. Review both payments.' : null)
       : recoveryBlock(payment, truth, session);
-  const canLink = !reason && !!orderMatch && !completed.transaction_id && !!truth.order_id
+  const canLink = !reason && !!orderMatch && completed.payment_gateway !== 'CustomCheckout' && !completed.transaction_id && !!truth.order_id
     && completed.razorpay_order_id === truth.order_id && order.payment_type !== 'cod'
     && order.payment_status === 'paid' && ['successful', 'completed'].includes(completed.status)
     && truth.status === 'captured' && !(Number(truth.amount_refunded) > 0) && truth.currency === 'INR'
