@@ -79,6 +79,7 @@ const last10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
 function normMethod(m) {
   const s = String(m || '').toLowerCase().trim();
   if (!s || s === '-') return null;
+  if (s === 'cardless_emi' || s === 'bank_transfer') return s;
   if (s.includes('upi')) return 'upi';
   if (s.includes('card')) return 'card';
   if (s.includes('net')) return 'netbanking';
@@ -88,7 +89,8 @@ function normMethod(m) {
   if (s === 'cod') return 'cod';
   return 'other';
 }
-const METHOD_LABEL = { upi: 'UPI', card: 'Card', netbanking: 'Netbanking', wallet: 'Wallet', emi: 'EMI', paylater: 'Pay later', other: 'Other', cod: 'Cash on delivery' };
+const METHOD_LABEL = { upi: 'UPI', card: 'Card', netbanking: 'Netbanking', wallet: 'Wallet', emi: 'EMI',
+  cardless_emi: 'Cardless EMI', paylater: 'Pay later', bank_transfer: 'Bank transfer', other: 'Other', cod: 'Cash on delivery' };
 
 function rowMethod(r) {
   if (r.payment_type === 'cod') return 'cod';
@@ -420,6 +422,7 @@ async function findMissingRazorpayOrders(params) {
       orderRef: payment.order_id || null,
       amount: r2(Number(payment.amount) / 100),
       currency: payment.currency,
+      method: normMethod(payment.method),
       at: payment.created_at ? new Date(Number(payment.created_at) * 1000).toISOString() : null,
       hasLocalPayment,
       brandId,

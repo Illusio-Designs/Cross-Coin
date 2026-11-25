@@ -586,6 +586,9 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recove
   const isCod = isCodOrder(p, pay);
   const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
   const providerTransactionId = pay.txn_id || pay.pg_transaction_id || null;
+  const paymentMethod = [verifiedRazorpayPayment?.method, pay.payment_method, pay.method, p.payment_method]
+    .map((value) => typeof value === 'string' ? value.trim().toLowerCase().replace(/\s+/g, '_') : '')
+    .find((value) => /^[a-z][a-z0-9_-]{0,29}$/.test(value));
   const { razorpayOrderReferences } = require('../utils/shiprocketPaymentRecovery.js');
   const references = paid && (payments.length <= 1 || successfulPayments.length === 1) ? {
     razorpay_payment_id: verifiedRazorpayPayment?.id ?? [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id, p.razorpay_payment_id]
@@ -759,7 +762,7 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recove
       // Gateway marks the refund route: these payments refund via the
       // checkout provider's refund API, never our own Razorpay keys.
       payment_gateway: 'CustomCheckout',
-      notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
+      notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${paymentMethod || '-'}`,
       brand_id: brandId,
     }, { transaction: t });
     if (claim) await recoveryStore.bindOrder(claim.refs, order.id, t);

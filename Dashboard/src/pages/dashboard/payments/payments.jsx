@@ -91,6 +91,10 @@ const RECOVERY_LABEL = {
   missing: "Missing", pending: "Pending recovery", matched: "Order matched",
   recovered: "Recovered", needs_manual_review: "Needs manual review", conflict: "Duplicate or conflict",
 };
+const PAYMENT_METHOD_LABEL = {
+  upi: "UPI", card: "Card", netbanking: "Netbanking", wallet: "Wallet", emi: "EMI",
+  cardless_emi: "Cardless EMI", paylater: "Pay later", bank_transfer: "Bank transfer", other: "Other",
+};
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
 
 function RazorpayLookup({ brands, period, isAdmin }) {
@@ -248,7 +252,9 @@ function RazorpayLookup({ brands, period, isAdmin }) {
       {result && (
         <div className="pl-rzp__result" ref={resultRef} tabIndex={-1}>
           <strong>{result.order ? `Order #${result.order.order_number}` : "No order found"}</strong>
-          <div>Razorpay: {result.remote.status} · {paymentAmount(result.remote)}</div>
+          <div>Razorpay: {result.remote.status} · {paymentAmount(result.remote)}
+            {result.remote.method && ` · ${PAYMENT_METHOD_LABEL[result.remote.method] || "Other"}`}
+          </div>
           <span>Brand {brandName(result.brandId)}</span>
           <span>Payment ID <code>{result.remote.id}</code></span>
           {result.remote.orderId && <span>Razorpay order <code>{result.remote.orderId}</code></span>}
@@ -309,7 +315,10 @@ function RazorpayLookup({ brands, period, isAdmin }) {
                 <tbody>
                   {currentScan.items.map((item) => (
                     <tr key={item.paymentId}>
-                      <td><code>{item.paymentId}</code></td><td className="pl-nowrap">{paymentAmount(item)}</td>
+                      <td><code>{item.paymentId}</code></td>
+                      <td className="pl-nowrap">{paymentAmount(item)}
+                        {item.method && <div className="pl-small pl-faint">{PAYMENT_METHOD_LABEL[item.method] || "Other"}</div>}
+                      </td>
                       <td>{fullDate(item.at) || "—"}</td>
                       <td>{brandName(item.brandId)}</td>
                       <td>

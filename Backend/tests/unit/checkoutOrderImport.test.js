@@ -187,12 +187,14 @@ test('a different checkout reference for the same captured payment returns the e
   expect(scheduled).toHaveLength(0);
 });
 
-test('recovery preserves original prices even after a catalogue price change', async () => {
-  const payment = { id: 'pay_captured123', order_id: 'order_fixture123', amount: 69910 };
+test.each(['upi', 'card'])('recovery preserves original prices and the verified %s payment method', async (method) => {
+  const payment = { id: 'pay_captured123', order_id: 'order_fixture123', amount: 69910, method };
   const item = { variant_id: 12, quantity: 1, catalog_data: { price: 699.10 } };
-  await ingestCheckoutOrder(1, provider({ cart_data: { items: [item] }, total_amount_payable: 699.10 }), payment, { recovery: true });
+  await ingestCheckoutOrder(1, provider({ cart_data: { items: [item] }, total_amount_payable: 699.10,
+    payments: [{ payment_method: 'online' }] }), payment, { recovery: true });
   expect(models.OrderItem.bulkCreate).toHaveBeenCalledWith([expect.objectContaining({ price: 699.1 })], expect.anything());
-  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 69910 }), expect.anything());
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 69910,
+    notes: expect.stringContaining(`method ${method}`) }), expect.anything());
 });
 
 test('recovery never substitutes the current catalogue price for a missing original price', async () => {
