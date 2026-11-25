@@ -84,7 +84,7 @@ export default function ProviderWalletBalances({ brandId }) {
     const outcome = checkResult?.brandId === entry.brandId ? checkResult : null;
     const days = entry.days == null ? null : Math.round(entry.days * 10) / 10;
     return (
-      <li key={key} className="hm-wallet-row">
+      <li key={key} className="hm-wallet-card">
         <div className="hm-wallet-details">
           <strong>{entry.brandName}</strong>
           <span className={`hm-wallet-${entry.tone}`}>{entry.label}</span>
