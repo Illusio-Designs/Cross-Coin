@@ -379,21 +379,23 @@ async function backfillMethods(brandId, since) {
 
 // Scan Razorpay directly. Starting from local payments cannot find a payment
 // that reached the gateway but never wrote a local record.
-async function scanRazorpayCaptures({ period, from, offset, until }) {
-  const razorpay = await require('./razorpayService.js').getInstance();
+async function razorpayPaymentPage(razorpay, { from, offset, until }) {
   const count = 100;
-  const result = await razorpay.payments.all({
-    from: from ?? Math.floor(periodStart(period, until * 1000).getTime() / 1000), to: until, count, skip: offset,
-  });
+  const result = await razorpay.payments.all({ from, to: until, count, skip: offset });
   if (!Array.isArray(result?.items)) throw new Error('Razorpay returned an invalid payments list.');
+  return { items: result.items, nextOffset: result.items.length === count ? offset + count : null };
+}
 
-  const captured = result.items.filter((payment) => payment.status === 'captured'
+async function scanRazorpayCaptures({ from, offset, until }) {
+  const razorpay = await require('./razorpayService.js').getInstance();
+  const { items, nextOffset } = await razorpayPaymentPage(razorpay, { from, until, offset });
+  const captured = items.filter((payment) => payment.status === 'captured'
     && /^pay_[a-zA-Z0-9]{6,64}$/.test(payment.id)
     && Number(payment.amount) > Number(payment.amount_refunded || 0));
   const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
   const matches = await findRazorpayOrderMatches(captured);
   return {
-    captured, matches, checked: result.items.length, until, nextOffset: result.items.length === count ? offset + count : null,
+    nextOffset,
     missing: captured.filter((payment) => {
       const match = matches.get(payment.id);
       return !match.linked && !match.pending && !match.issue;
@@ -401,38 +403,58 @@ async function scanRazorpayCaptures({ period, from, offset, until }) {
   };
 }
 
-async function findMissingRazorpayOrders(params) {
-  const { captured, matches, checked, until, nextOffset } = await scanRazorpayCaptures(params);
+async function findMissingRazorpayOrders({ from, until }) {
+  const razorpay = await require('./razorpayService.js').getInstance();
+  const seen = new Set();
+  const captures = [];
+  let offset = 0;
+  while (offset != null) {
+    const page = await razorpayPaymentPage(razorpay, { from, until, offset });
+    let added = 0;
+    for (const payment of page.items) {
+      if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(payment?.id) || seen.has(payment.id)) continue;
+      seen.add(payment.id);
+      added++;
+      const timestamp = Number(payment.created_at);
+      if (payment.status === 'captured' && timestamp >= from && timestamp <= until) captures.push(payment);
+    }
+    if (page.nextOffset != null && !added) throw new Error('Razorpay repeated a page of payments.');
+    offset = page.nextOffset;
+  }
+
   const recoveryStore = require('./prepaidRecoveryStore.js');
-  const states = await recoveryStore.readRecoveries(captured.map(({ id }) => id));
-  const totals = { captured: captured.length, matched: 0, missing: 0, recovered: 0, pending: 0, failed: 0, conflicts: 0 };
-  const items = captured.flatMap((payment) => {
-    const { linked, issue, hasLocalPayment, brandId, pending } = matches.get(payment.id);
-    const recovery = states.get(payment.id);
-    const retryState = ['pending', 'needs_manual_review'].includes(recovery?.state) ? recovery.state : 'missing';
-    const state = issue ? 'conflict' : linked ? (recovery?.state === 'recovered' ? 'recovered' : 'matched') : retryState;
-    if (linked && !issue) totals.matched++;
-    else totals.missing++;
-    if (state === 'recovered') totals.recovered++;
-    if (state === 'pending') totals.pending++;
-    if (state === 'needs_manual_review') totals.failed++;
-    if (issue) totals.conflicts++;
-    return [{
-      paymentId: payment.id,
-      orderRef: payment.order_id || null,
-      amount: r2(Number(payment.amount) / 100),
-      currency: payment.currency,
-      method: normMethod(payment.method),
-      at: payment.created_at ? new Date(Number(payment.created_at) * 1000).toISOString() : null,
-      hasLocalPayment,
-      brandId,
-      matchIssue: issue,
-      state, recoveryReason: recovery?.reason || null, checkoutRef: recovery?.checkout_ref || null,
-      canVerify: !linked && !issue && !pending && recoveryStore.isCapture(payment),
-      orderNumber: linked?.order_number || null,
-    }];
-  });
-  return { items, checked, until, nextOffset, totals };
+  const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
+  const totals = { captured: captures.length, matched: 0, missing: 0 };
+  const items = [];
+  for (let index = 0; index < captures.length; index += 400) {
+    const batch = captures.slice(index, index + 400);
+    const matches = await findRazorpayOrderMatches(batch);
+    const missing = batch.filter(({ id }) => {
+      const match = matches.get(id);
+      return !match.linked && !match.hasExistingOrder;
+    });
+    totals.matched += batch.length - missing.length;
+    const states = await recoveryStore.readRecoveries(missing.map(({ id }) => id));
+    for (const payment of missing) {
+      const { issue, brandId, pending } = matches.get(payment.id);
+      const recovery = states.get(payment.id);
+      const canVerify = !issue && !pending && recoveryStore.isCapture(payment);
+      items.push({
+        paymentId: payment.id,
+        amount: r2(Number(payment.amount) / 100),
+        currency: payment.currency,
+        method: normMethod(payment.method),
+        at: new Date(Number(payment.created_at) * 1000).toISOString(),
+        brandId,
+        canVerify,
+        reason: canVerify ? null : issue || (pending ? 'Review the saved website checkout.' : 'This capture is refunded or ineligible for recovery.'),
+        checkoutRef: recovery?.checkout_ref || null,
+        checkoutBrandId: recovery?.brand_id || null,
+      });
+    }
+  }
+  totals.missing = items.length;
+  return { items, totals };
 }
 
 // ── "Doesn't match Razorpay" ───────────────────────────────────────────────

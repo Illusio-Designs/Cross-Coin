@@ -44,8 +44,7 @@ function ensureSchema() {
     ) ENGINE=InnoDB`);
     await query(`CREATE TABLE IF NOT EXISTS prepaid_recovery_schedule (
       id TINYINT PRIMARY KEY, next_at DATETIME NOT NULL, lease VARCHAR(36), lease_until DATETIME,
-      scan_period INT, scan_from BIGINT, scan_until BIGINT, scan_offset INT NOT NULL DEFAULT 0,
-      scan_failures INT NOT NULL DEFAULT 0, scan_error VARCHAR(300), recent_due_at DATETIME
+      recent_due_at DATETIME
     ) ENGINE=InnoDB`);
   })().catch((error) => { schema = null; throw error; });
   return schema;

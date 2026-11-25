@@ -3,7 +3,7 @@ const {
     updateOrderPayment,
     razorpayWebhook, handlePaymentFailure,
     adminListPayments, adminPaymentsSummary, adminPaymentMismatches, adminFixPaymentMismatch,
-    adminLookupRazorpayPayment, adminRecoverRazorpayPayment, adminMissingRazorpayOrders, adminShiprocketBackfill,
+    adminLookupRazorpayPayment, adminRecoverRazorpayPayment, adminMissingRazorpayOrders,
 } = require('../controller/paymentController.js');
 const { isAuthenticated, isOrderManager, isAdmin } = require('../middleware/authMiddleware.js');
 
@@ -25,7 +25,6 @@ router.get('/admin/list',         isAuthenticated, isOrderManager, adminListPaym
 router.get('/admin/summary',      isAuthenticated, isOrderManager, adminPaymentsSummary);
 router.get('/admin/mismatches',   isAuthenticated, isOrderManager, adminPaymentMismatches);
 router.get('/admin/razorpay/missing-orders', isAuthenticated, isOrderManager, adminMissingRazorpayOrders);
-router.route('/admin/shiprocket/backfill').all(isAuthenticated, isAdmin).get(adminShiprocketBackfill).post(adminShiprocketBackfill);
 router.get('/admin/razorpay/:paymentRef', isAuthenticated, isOrderManager, adminLookupRazorpayPayment);
 router.post('/admin/razorpay/:paymentRef/recover', isAuthenticated, isAdmin, adminRecoverRazorpayPayment);
 router.post('/admin/mismatches/fix', isAuthenticated, isAdmin, adminFixPaymentMismatch);

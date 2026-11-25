@@ -59,16 +59,16 @@ test('an invalid Razorpay signature cannot queue a payment', async () => {
   expect(queueCaptures).not.toHaveBeenCalled();
 });
 
-test('historical scans use IST day boundaries for older custom ranges', async () => {
+test('the day check uses IST midnight and ends on the selected day', async () => {
   const { res } = fixture();
-  await adminMissingRazorpayOrders({ query: { start: '2025-02-01', end: '2025-02-02' } }, res);
+  await adminMissingRazorpayOrders({ query: { date: '2025-02-01' } }, res);
   expect(findMissingRazorpayOrders).toHaveBeenCalledWith({ from: Date.parse('2025-01-31T18:30:00Z') / 1000,
-    until: Date.parse('2025-02-02T18:29:59Z') / 1000, offset: 0, period: 7 });
+    until: Date.parse('2025-02-01T18:29:59Z') / 1000 });
 });
 
 test('an impossible historical date is rejected before reaching Razorpay', async () => {
   const { res } = fixture();
-  await adminMissingRazorpayOrders({ query: { start: '2025-02-30', end: '2025-03-01' } }, res);
+  await adminMissingRazorpayOrders({ query: { date: '2025-02-30' } }, res);
   expect(res.status).toHaveBeenCalledWith(400);
   expect(findMissingRazorpayOrders).not.toHaveBeenCalled();
 });

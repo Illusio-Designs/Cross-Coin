@@ -31,28 +31,33 @@ async function discoverCheckout(payment, hint) {
   }
   if (hint) add(hint.brandId, hint.ref);
   for (const row of await store.readCheckouts(payment)) add(row.brand_id, row.checkout_ref);
-  if (!candidates.size && payment.order_id) {
-    const gateway = await require('./razorpayService.js').getOrder(payment.order_id);
-    const ref = [gateway?.notes?.shiprocket_order_id, gateway?.notes?.platform_order_id,
-      gateway?.notes?.checkout_order_id].find(store.validCheckoutRef);
-    if (gateway?.id === payment.order_id && ref) {
+  if (!candidates.size) {
+    const fromNotes = (notes) => [notes?.shiprocket_order_id, notes?.platform_order_id, notes?.checkout_order_id].find(store.validCheckoutRef);
+    let ref = fromNotes(payment.notes);
+    if (!ref && payment.order_id) {
+      const gateway = await require('./razorpayService.js').getOrder(payment.order_id);
+      if (gateway?.id === payment.order_id) ref = fromNotes(gateway.notes);
+    }
+    if (ref) {
       const brands = await store.enabledBrands();
       brands.forEach((brand) => add(brand.id, ref));
     }
   }
-  if (!candidates.size) throw message('Waiting for the original Shiprocket checkout reference.', 409, true);
+  if (!candidates.size) throw message('No Shiprocket checkout reference was found for this payment.', 409, true);
   const matches = new Map();
   let rejected;
   let unavailable = false;
   const providerStatuses = new Set();
-  for (const candidate of candidates.values()) {
-    let details;
-    try { details = await fetchProviderOrder(candidate.brandId, candidate.ref); }
-    catch (error) {
+  const results = await Promise.allSettled([...candidates.values()].map(async (candidate) => ({
+    ...candidate, details: await fetchProviderOrder(candidate.brandId, candidate.ref),
+  })));
+  for (const result of results) {
+    if (result.status === 'rejected') {
       unavailable = true;
-      if (Number.isInteger(error.providerStatus)) providerStatuses.add(error.providerStatus);
+      if (Number.isInteger(result.reason?.providerStatus)) providerStatuses.add(result.reason.providerStatus);
       continue;
     }
+    const { details, ...candidate } = result.value;
     if (String(details.payment_status || '').toLowerCase() !== 'success' &&
         String(details.platform_order_id || details.order_id || '') === candidate.ref) {
       unavailable = true;
@@ -121,7 +126,7 @@ async function resolvePayment(payment, hint) {
     orderBrandId = brand.id;
   }
   await checkout.verifyRecoveryPrices(orderBrandId, candidate.details, payment);
-  return { candidate };
+  return { candidate: { ...candidate, orderBrandId } };
 }
 
 async function recover(row, { hint, actorId = null, verified } = {}) {
@@ -179,7 +184,7 @@ async function recover(row, { hint, actorId = null, verified } = {}) {
 
 async function claimPayment(id) {
   const lease = randomUUID();
-  const filter = id ? "payment_id = :id AND state IN ('pending','needs_manual_review','recovered','matched')" : "state = 'pending' AND next_at <= UTC_TIMESTAMP()";
+  const filter = id ? "payment_id = :id AND state IN ('pending','needs_manual_review','recovered','matched')" : "historical = FALSE AND state = 'pending' AND next_at <= UTC_TIMESTAMP()";
   await store.query(`UPDATE prepaid_recovery SET lease = :lease, lease_until = UTC_TIMESTAMP() + INTERVAL 10 MINUTE
     WHERE ${filter} AND (lease_until IS NULL OR lease_until <= UTC_TIMESTAMP())
     ORDER BY historical ASC, next_at, payment_id LIMIT 1`, { lease, id });
@@ -191,7 +196,9 @@ async function manual(paymentId, { hint, actorId, verifyOnly = false } = {}) {
   const payment = await verifyPayment(paymentId);
   if (verifyOnly) {
     const { existing, candidate } = await resolvePayment(payment, hint);
-    return { existing, checkoutRef: candidate?.ref, brandId: candidate?.brandId };
+    return { existing, checkoutRef: candidate?.ref, brandId: candidate?.brandId,
+      orderBrandId: candidate?.orderBrandId,
+      itemCount: candidate?.details.cart_data.items.reduce((count, item) => count + Number(item.quantity), 0) };
   }
   await store.queueCaptures([payment], { historical: true });
   const row = await claimPayment(paymentId);
@@ -226,24 +233,6 @@ async function ensureSchedule() {
   await store.query('INSERT IGNORE INTO prepaid_recovery_schedule (id, next_at) VALUES (1, UTC_TIMESTAMP())');
 }
 
-async function scheduleHistory(period, { from = null, until = Math.floor(Date.now() / 1000) } = {}) {
-  await ensureSchedule();
-  await store.query(`UPDATE prepaid_recovery_schedule SET scan_period = :period, scan_from = :from, scan_until = :until,
-    scan_offset = 0, scan_failures = 0, scan_error = NULL
-    WHERE id = 1 AND scan_period IS NULL`, { period, from, until });
-  return historyStatus();
-}
-
-async function historyStatus() {
-  await store.ensureSchema();
-  const [scan] = await store.rows('SELECT scan_period, scan_error FROM prepaid_recovery_schedule WHERE id = 1');
-  const counts = await store.rows('SELECT state, COUNT(*) AS count FROM prepaid_recovery WHERE historical = TRUE GROUP BY state');
-  const result = Object.fromEntries(counts.map((row) => [row.state, Number(row.count)]));
-  return { scanning: !!scan?.scan_period, active: !!scan?.scan_period || !!result.pending,
-    pending: result.pending || 0, recovered: result.recovered || 0, failed: result.needs_manual_review || 0,
-    scanError: scan?.scan_error || null };
-}
-
 async function run() {
   await ensureSchedule();
   const lease = randomUUID();
@@ -256,26 +245,6 @@ async function run() {
   const errors = [];
   try {
     const payments = require('./paymentsAdminService.js');
-    if (scan.scan_period) {
-      try {
-        const result = await payments.scanRazorpayCaptures({ period: Number(scan.scan_period), offset: Number(scan.scan_offset),
-          until: Number(scan.scan_until), from: scan.scan_from == null ? undefined : Number(scan.scan_from) });
-        await store.queueCaptures(result.missing, { historical: true });
-        await store.query(`UPDATE prepaid_recovery_schedule SET scan_offset = :offset, scan_period = :period,
-          scan_failures = 0, scan_error = NULL
-          WHERE id = 1 AND lease = :lease`,
-        { offset: result.nextOffset || 0, period: result.nextOffset == null ? null : scan.scan_period, lease });
-      } catch (error) {
-        errors.push(`Historical Razorpay scan: ${error.message}`);
-        const failures = Number(scan.scan_failures) + 1;
-        const scanError = failures >= 3 ? 'The historical scan paused after three failed Razorpay requests. Start it again to retry.'
-          : 'Razorpay could not load the historical payments. The scan will retry.';
-        await store.query(`UPDATE prepaid_recovery_schedule SET scan_failures = :failures, scan_error = :scanError,
-          scan_period = :period WHERE id = 1 AND lease = :lease`,
-        { failures, scanError, period: failures >= 3 ? null : scan.scan_period, lease });
-        if (failures === 3) await require('./errorReporter.js').notify('Historical prepaid recovery scan paused', scanError);
-      }
-    }
     // Capture webhooks are primary. This overlap catches dropped deliveries.
     const now = Math.floor(Date.now() / 1000);
     if (Number(scan.recent_due)) {
@@ -302,4 +271,4 @@ async function run() {
   }
 }
 
-module.exports = { manual, run, scheduleHistory, historyStatus, requireOriginalCheckout, referencesOf };
+module.exports = { manual, run, requireOriginalCheckout, referencesOf };

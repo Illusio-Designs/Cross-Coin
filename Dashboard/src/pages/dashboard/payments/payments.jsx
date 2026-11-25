@@ -87,17 +87,13 @@ function openOrder(orderNumber) {
 const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWidth={2} aria-hidden="true" />;
 
 // ── Tiles ────────────────────────────────────────────────────────
-const RECOVERY_LABEL = {
-  missing: "Missing", pending: "Pending recovery", matched: "Order matched",
-  recovered: "Recovered", needs_manual_review: "Needs manual review", conflict: "Duplicate or conflict",
-};
 const PAYMENT_METHOD_LABEL = {
   upi: "UPI", card: "Card", netbanking: "Netbanking", wallet: "Wallet", emi: "EMI",
   cardless_emi: "Cardless EMI", paylater: "Pay later", bank_transfer: "Bank transfer", other: "Other",
 };
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
 
-function RazorpayLookup({ brands, period, isAdmin }) {
+function RazorpayLookup({ brands, isAdmin }) {
   const qc = useQueryClient();
   const [reference, setReference] = useState("");
   const [result, setResult] = useState(null);
@@ -105,31 +101,23 @@ function RazorpayLookup({ brands, period, isAdmin }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(false);
-  const backfill = useQuery({
-    queryKey: ["payments", "shiprocket-backfill"],
-    queryFn: paymentService.shiprocketBackfillStatus,
-    enabled: isAdmin,
-    refetchInterval: (query) => query.state.data?.active ? 15000 : false,
-  });
   const [scan, setScan] = useState(null);
-  const [confirmBackfill, setConfirmBackfill] = useState(false);
-  const [verifiedRow, setVerifiedRow] = useState(null);
+  const [date, setDate] = useState(() => istDay(Date.now()));
   const [checkoutHint, setCheckoutHint] = useState({ brandId: "", ref: "" });
-  const [dates, setDates] = useState({ start: "", end: "" });
-  const customDates = dates.start || dates.end;
-  const validDates = !customDates || (dates.start && dates.end && dates.start <= dates.end);
-  const range = { period, ...(customDates ? dates : {}) };
-  const rangeLabel = customDates ? `${dates.start} through ${dates.end}` : period === 1 ? "Today" : `Last ${period} days`;
+  const [verifiedLookup, setVerifiedLookup] = useState(null);
+  const scanRequest = useRef(null);
   const brandName = (id) => {
     const brand = brands.find((item) => String(item.id) === String(id));
     return brand?.display_name || brand?.name || "Unknown";
   };
 
   useEffect(() => { if (result) resultRef.current?.focus(); }, [result]);
-  const currentScan = scan?.period === period ? scan : null;
+  useEffect(() => () => scanRequest.current?.abort(), []);
+  const currentScan = scan?.date === date ? scan : null;
   const resetResult = () => {
     setResult(null); setError(""); setConfirm(false);
     setCheckoutHint({ brandId: "", ref: "" });
+    setVerifiedLookup(null);
   };
   const check = async (paymentId) => {
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
@@ -142,80 +130,110 @@ function RazorpayLookup({ brands, period, isAdmin }) {
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
-  const scanForMissingOrders = async (continueScan = false) => {
-    if (busy || !validDates) return;
-    const previous = continueScan ? currentScan : null;
+  const removeMatchedPayment = (paymentId, createdOrder) => {
+    setScan((previous) => {
+      if (!previous?.items.some((item) => item.paymentId === paymentId)) return previous;
+      const items = previous.items.filter((item) => item.paymentId !== paymentId);
+      return { ...previous, items, lastCreatedOrder: createdOrder || previous.lastCreatedOrder,
+        totals: { ...previous.totals, matched: previous.totals.matched + 1, missing: items.length } };
+    });
+  };
+  const updateScanItem = (paymentId, changes) => {
+    setScan((previous) => previous && {
+      ...previous, items: previous.items.map((item) => item.paymentId === paymentId ? { ...item, ...changes } : item),
+    });
+  };
+  const verifyItem = async (item, signal) => {
+    try {
+      const verified = await paymentService.recoverRazorpayPayment(item.paymentId, {
+        verifyOnly: true, ref: item.checkoutRef, brandId: item.checkoutBrandId,
+      }, signal);
+      if (signal?.aborted) return;
+      if (verified.order) removeMatchedPayment(item.paymentId);
+      else updateScanItem(item.paymentId, { verification: "verified", reason: null, verified });
+    } catch (e) {
+      if (!signal?.aborted) updateScanItem(item.paymentId, { verification: "review", reason: e.message, verified: null });
+    }
+  };
+  const scanForMissingOrders = async () => {
+    if (busy || !date) return;
+    scanRequest.current?.abort();
+    const request = new AbortController();
+    scanRequest.current = request;
     setBusy("scan");
     setError("");
-    setVerifiedRow(null);
+    setScan(null);
+    let eligible = [];
     try {
-      const fresh = await paymentService.findMissingRazorpayOrders({
-        ...range,
-        ...(previous ? { offset: previous.nextOffset, until: previous.until } : {}),
+      const fresh = await paymentService.findMissingRazorpayOrders(date, request.signal);
+      if (request.signal.aborted) return;
+      if (fresh.date !== date) throw new Error("The API did not confirm the selected date. Try the date check again.");
+      eligible = isAdmin ? fresh.items.filter((item) => item.canVerify) : [];
+      setScan({ ...fresh, date, items: fresh.items.map((item) => ({
+        ...item, verification: isAdmin && item.canVerify ? "checking" : "review",
+      })) });
+    } catch (e) {
+      if (!request.signal.aborted) setError(e.message);
+    } finally {
+      if (!request.signal.aborted) setBusy(null);
+    }
+    let index = 0;
+    const verifyNext = async () => {
+      while (!request.signal.aborted && index < eligible.length) {
+        const item = eligible[index++];
+        await verifyItem(item, request.signal);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, eligible.length) }, verifyNext));
+  };
+  const canImportShiprocket = isAdmin && result?.remote.status === "captured" && !result.order && !result.canCreate;
+  const verifyLookupCheckout = async () => {
+    if (!canImportShiprocket || busy) return;
+    setBusy("verify-lookup");
+    setError("");
+    try {
+      const verified = await paymentService.recoverRazorpayPayment(result.remote.id, {
+        ...checkoutHint, ref: checkoutHint.ref.trim(), verifyOnly: true,
       });
-      const items = new Map((previous?.items || []).map((item) => [item.paymentId, item]));
-      fresh.items.forEach((item) => items.set(item.paymentId, item));
-      setScan({ ...fresh, items: [...items.values()], period });
+      if (verified.order) {
+        setResult({ ...result, order: verified.order, brandId: verified.order.brand_id ?? result.brandId, reason: null });
+        removeMatchedPayment(result.remote.id);
+      } else {
+        setVerifiedLookup(verified);
+      }
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
-  const canImportShiprocket = isAdmin && result?.remote.status === "captured" && !result.order && !result.canCreate;
   const recover = async () => {
     const shiprocket = confirm === "shiprocket";
-    if (!isAdmin || busy || (shiprocket ? !canImportShiprocket : !(result?.canCreate || result?.canLink))) return;
+    if (!isAdmin || busy || (shiprocket ? !canImportShiprocket || !verifiedLookup?.checkoutRef : !(result?.canCreate || result?.canLink))) return;
     setBusy("recover");
     setError("");
     try {
       const recovered = await paymentService.recoverRazorpayPayment(result.remote.id,
-        shiprocket ? { ...checkoutHint, ref: checkoutHint.ref.trim() } : null);
+        shiprocket ? { ref: verifiedLookup.checkoutRef, brandId: verifiedLookup.brandId } : null);
       setResult({ ...result, brandId: recovered.order?.brand_id ?? result.brandId, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
-      setScan((previous) => previous && {
-        ...previous, items: previous.items.map((item) => item.paymentId !== result.remote.id ? item : {
-          ...item, state: "recovered", orderNumber: recovered.order?.order_number, canVerify: false, recoveryReason: null,
-        }),
-      });
+      if (recovered.order?.order_number) removeMatchedPayment(result.remote.id, recovered.order.order_number);
       showSuccess(null, recovered.message);
       qc.invalidateQueries({ queryKey: ["payments"] });
-    } catch (e) { setError(e.message); }
+    } catch (e) { setError(e.message); if (shiprocket) setVerifiedLookup(null); }
     finally { setBusy(null); setConfirm(false); }
   };
 
-  const handleRecoveryRow = async (item, create = false) => {
-    if (busy || (create && verifiedRow?.paymentId !== item.paymentId)) return;
-    setBusy(create ? "create-row" : "verify-row");
+  const createVerifiedOrder = async (item) => {
+    if (busy || !item.verified?.checkoutRef) return;
+    setBusy(item.paymentId);
     setError("");
     try {
-      const response = await paymentService.recoverRazorpayPayment(item.paymentId, { verifyOnly: !create });
-      if (response.order) {
-        setScan((previous) => previous && { ...previous, items: previous.items.map((entry) => (
-          entry.paymentId === item.paymentId ? {
-            ...entry, state: create ? "recovered" : "matched", orderNumber: response.order.order_number,
-            canVerify: false, recoveryReason: null,
-          } : entry
-        )) });
-        setVerifiedRow(null);
-        if (create) showSuccess(null, response.message);
-        qc.invalidateQueries({ queryKey: ["payments"] });
-      } else {
-        setVerifiedRow({ paymentId: item.paymentId, checkoutRef: response.checkoutRef });
-      }
+      const recovery = await paymentService.recoverRazorpayPayment(item.paymentId, {
+        ref: item.verified.checkoutRef, brandId: item.verified.brandId,
+      });
+      removeMatchedPayment(item.paymentId, recovery.order?.order_number);
+      showSuccess(null, recovery.message);
+      qc.invalidateQueries({ queryKey: ["payments"] });
     } catch (e) {
-      setScan((previous) => previous && { ...previous, items: previous.items.map((entry) => (
-        entry.paymentId === item.paymentId ? { ...entry, recoveryReason: e.message } : entry
-      )) });
-      setVerifiedRow(null);
+      updateScanItem(item.paymentId, { verification: "review", reason: e.message, verified: null });
     } finally { setBusy(null); }
-  };
-
-  const startBackfill = async () => {
-    if (!validDates || busy) return;
-    setBusy("backfill");
-    setError("");
-    try {
-      const progress = await paymentService.startShiprocketBackfill(range);
-      qc.setQueryData(["payments", "shiprocket-backfill"], progress);
-    } catch (e) { setError(e.message); }
-    finally { setBusy(null); setConfirmBackfill(false); }
   };
 
   return (
@@ -231,22 +249,18 @@ function RazorpayLookup({ brands, period, isAdmin }) {
             onChange={(event) => { setReference(event.target.value); resetResult(); }} />
           <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!reference.trim() || !!busy}>Check payment</Button>
         </form>
-        <div className="pl-rzp__scan">
-          <div>
-            <h3>Missing orders</h3>
-            <p className="pl-faint pl-small">{validDates ? rangeLabel : "Choose a start and end date"}</p>
-          </div>
-          <Button variant="secondary" onClick={() => scanForMissingOrders()}
-            disabled={!!busy || !validDates} loading={busy === "scan" && !currentScan} loadingText="Scanning…">
-            {currentScan ? "Start a new scan" : "Find missing orders"}
-          </Button>
-        </div>
-      </div>
-      <div className="pl-rzp__form">
-        <Input label="From date (optional)" name="recovery-start-date" type="date" value={dates.start} disabled={!!busy}
-          onChange={(event) => { setDates({ ...dates, start: event.target.value }); setScan(null); setVerifiedRow(null); setConfirmBackfill(false); }} />
-        <Input label="Through date (optional)" name="recovery-end-date" type="date" value={dates.end} min={dates.start || undefined} disabled={!!busy}
-          onChange={(event) => { setDates({ ...dates, end: event.target.value }); setScan(null); setVerifiedRow(null); setConfirmBackfill(false); }} />
+        <form className="pl-rzp__form pl-rzp__day" onSubmit={(event) => { event.preventDefault(); scanForMissingOrders(); }}>
+          <Input label="Missing orders date (IST)" name="recovery-date" type="date" value={date}
+            max={istDay(Date.now())} disabled={!!busy} required
+            onChange={(event) => {
+              scanRequest.current?.abort();
+              setDate(event.target.value);
+              setScan(null);
+              setError("");
+            }} />
+          <Button type="submit" variant="secondary" disabled={!!busy || !date}
+            loading={busy === "scan"} loadingText="Checking Razorpay…">Find missing orders</Button>
+        </form>
       </div>
       {error && <p role="alert" className="pl-rzp__error">{error}</p>}
       {result && (
@@ -280,20 +294,26 @@ function RazorpayLookup({ brands, period, isAdmin }) {
             <>
               <div className="pl-rzp__form">
                 <Input type="select" name="recovery-store" label="Store for a known checkout" value={checkoutHint.brandId}
-                  onChange={(event) => { setConfirm(false); setCheckoutHint({ ...checkoutHint, brandId: event.target.value }); }}
+                  onChange={(event) => { setConfirm(false); setVerifiedLookup(null); setCheckoutHint({ ...checkoutHint, brandId: event.target.value }); }}
                   options={brands.filter((brand) => brand.status === "active").map((brand) => (
                     { value: String(brand.id), label: brand.display_name || brand.name }
                   ))} disabled={!!busy} />
                 <Input name="recovery-checkout-reference" label="Shiprocket checkout reference" value={checkoutHint.ref}
-                  onChange={(event) => { setConfirm(false); setCheckoutHint({ ...checkoutHint, ref: event.target.value }); }}
+                  onChange={(event) => { setConfirm(false); setVerifiedLookup(null); setCheckoutHint({ ...checkoutHint, ref: event.target.value }); }}
                   placeholder="Optional if checkout was recorded" maxLength={96} disabled={!!busy} />
               </div>
-              {!confirm
-                ? <Button size="sm" variant="secondary" disabled={!!busy || (!!checkoutHint.ref.trim() !== !!checkoutHint.brandId)}
-                  onClick={() => setConfirm("shiprocket")}>Recover Shiprocket order</Button>
-                : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel="Verify and create order"
-                  message="Create the paid order if Razorpay and the original Shiprocket checkout match?"
-                  onConfirm={recover} onCancel={() => setConfirm(false)} />}
+              {verifiedLookup?.checkoutRef ? (
+                <>
+                  <div>Verified checkout <code>{verifiedLookup.checkoutRef}</code></div>
+                  {!confirm ? <Button size="sm" disabled={!!busy} onClick={() => setConfirm("shiprocket")}>Create order</Button>
+                    : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel="Create order"
+                      message="Create this paid order from the verified Shiprocket checkout?"
+                      onConfirm={recover} onCancel={() => setConfirm(false)} />}
+                </>
+              ) : (
+                <Button size="sm" variant="secondary" disabled={!!busy || (!!checkoutHint.ref.trim() !== !!checkoutHint.brandId)}
+                  loading={busy === "verify-lookup"} onClick={verifyLookupCheckout}>Verify checkout</Button>
+              )}
             </>
           )}
         </div>
@@ -301,17 +321,20 @@ function RazorpayLookup({ brands, period, isAdmin }) {
       {currentScan && (
         <div className="pl-rzp__result">
           <p role="status" className="pl-small">
-            {plural(currentScan.items.length, "capture")} loaded · {num(currentScan.items.filter((item) => item.orderNumber && item.state !== "conflict").length)} matched
-            {" · "}{num(currentScan.items.filter((item) => !item.orderNumber).length)} without an order
-            {" · "}{num(currentScan.items.filter((item) => item.state === "recovered").length)} recovered
-            {" · "}{num(currentScan.items.filter((item) => item.state === "pending").length)} pending
-            {" · "}{num(currentScan.items.filter((item) => item.state === "needs_manual_review").length)} need review
-            {" · "}{num(currentScan.items.filter((item) => item.state === "conflict").length)} conflicts
+            {num(currentScan.totals.captured)} captured · {num(currentScan.totals.matched)} with orders
+            {" · "}{num(currentScan.totals.missing)} missing
+            {currentScan.items.some((item) => item.verification === "checking") && " · Checking Shiprocket"}
           </p>
+          {currentScan.lastCreatedOrder && (
+            <Button size="sm" variant="secondary" onClick={() => openOrder(currentScan.lastCreatedOrder)}>
+              Open order {currentScan.lastCreatedOrder}
+            </Button>
+          )}
+          {!currentScan.items.length && <p className="pl-small pl-faint">No captured payments without an order for this day.</p>}
           {currentScan.items.length > 0 && (
             <div className="pl-scroll pl-rzp__scan-table">
-              <table className="pl-table" aria-label="Captured Razorpay payments to review">
-                <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Brand</th><th>Payment record</th><th aria-label="Actions" /></tr></thead>
+              <table className="pl-table" aria-label="Captured Razorpay payments without orders">
+                <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Brand</th><th>Checkout</th><th aria-label="Actions" /></tr></thead>
                 <tbody>
                   {currentScan.items.map((item) => (
                     <tr key={item.paymentId}>
@@ -320,24 +343,25 @@ function RazorpayLookup({ brands, period, isAdmin }) {
                         {item.method && <div className="pl-small pl-faint">{PAYMENT_METHOD_LABEL[item.method] || "Other"}</div>}
                       </td>
                       <td>{fullDate(item.at) || "—"}</td>
-                      <td>{brandName(item.brandId)}</td>
+                      <td>{brandName(item.verified?.orderBrandId ?? item.brandId)}</td>
                       <td>
-                        {RECOVERY_LABEL[item.state] || "Review payment"}
-                        {(item.matchIssue || item.recoveryReason) && <div className="pl-small pl-faint">{item.matchIssue || item.recoveryReason}</div>}
-                        {verifiedRow?.paymentId === item.paymentId && <div className="pl-small">Verified checkout {verifiedRow.checkoutRef}</div>}
+                        {item.verification === "checking" && "Checking Shiprocket…"}
+                        {item.verification === "verified" && (
+                          <>Verified · {plural(item.verified.itemCount, "item")} <code>{item.verified.checkoutRef}</code></>
+                        )}
+                        {item.verification === "review" && (
+                          <>{isAdmin || item.reason ? "Needs review" : "Admin verification required"}
+                            {item.reason && <div className="pl-small pl-faint">{item.reason}</div>}
+                          </>
+                        )}
                       </td>
                       <td>
-                        {item.orderNumber && item.state !== "conflict" ? (
-                          <Button size="sm" variant="secondary" onClick={() => openOrder(item.orderNumber)}>Open order</Button>
-                        ) : (
-                          <>
-                            {isAdmin && item.canVerify && (
-                              <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => handleRecoveryRow(item, verifiedRow?.paymentId === item.paymentId)}>
-                                {verifiedRow?.paymentId === item.paymentId ? "Create order" : "Verify checkout"}
-                              </Button>
-                            )}
-                            <Button size="sm" variant="ghost" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button>
-                          </>
+                        {item.verification === "verified" && (
+                          <Button size="sm" variant="primary" disabled={!!busy} loading={busy === item.paymentId}
+                            onClick={() => createVerifiedOrder(item)}>Create order</Button>
+                        )}
+                        {item.verification === "review" && (
+                          <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button>
                         )}
                       </td>
                     </tr>
@@ -346,29 +370,6 @@ function RazorpayLookup({ brands, period, isAdmin }) {
               </table>
             </div>
           )}
-          {currentScan.nextOffset != null && (
-            <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders(true)}
-              loading={busy === "scan"} loadingText="Scanning…" disabled={!!busy}>Scan next batch</Button>
-          )}
-        </div>
-      )}
-      {isAdmin && (
-        <div className="pl-rzp__result">
-          <strong>Historical Shiprocket orders</strong>
-          {backfill.data && (backfill.data.active || backfill.data.recovered > 0 || backfill.data.failed > 0) && (
-            <p className="pl-small" role="status">
-              {backfill.data.scanning ? "Scanning Razorpay" : backfill.data.active ? "Recovering" : "Finished"}
-              {" · "}{num(backfill.data.pending)} queued · {plural(backfill.data.recovered, "order")} recovered · {num(backfill.data.failed)} need review
-            </p>
-          )}
-          {backfill.data?.lastError && <p className="pl-small">{backfill.data.lastError}</p>}
-          {backfill.data?.scanError && <p role="alert" className="pl-small">{backfill.data.scanError}</p>}
-          {confirmBackfill
-            ? <ConfirmBar tone="primary" busy={busy === "backfill"} confirmLabel="Start recovery"
-              message={`Scan Razorpay for ${rangeLabel.toLowerCase()} and recover up to one verified paid order per minute?`}
-              onConfirm={startBackfill} onCancel={() => setConfirmBackfill(false)} />
-            : <Button size="sm" variant="secondary" disabled={!!busy || !!backfill.data?.active || !validDates}
-              onClick={() => setConfirmBackfill(true)}>Recover older orders</Button>}
         </div>
       )}
       <div className="pl-rzp__recent">
@@ -623,7 +624,7 @@ export default function Payments() {
 
       <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
-      <RazorpayLookup brands={brands} period={period} isAdmin={!!isAdmin} />
+      <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
 
       <div className="pl-toolbar">
         <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />

@@ -63,6 +63,7 @@ async function findRazorpayOrderMatches(payments) {
         || row.transaction_id === id || ['pending', 'failed'].includes(row.status)));
     return [id, {
       linked, pending, issue, savedPaymentId, brandId: brands.size === 1 ? brands.values().next().value : null,
+      hasExistingOrder: matched.some((row) => !!row.linked_order_id),
       hasLocalPayment: candidates.length > 0,
     }];
   }));

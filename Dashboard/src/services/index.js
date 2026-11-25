@@ -1126,9 +1126,9 @@ export const exceptionsService = {
 // Dashboard → Payments (Backend services/paymentsAdminService.js).
 const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
-  findMissingRazorpayOrders: async (params) => {
+  findMissingRazorpayOrders: async (date, signal) => {
     try {
-      return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', { params })).data;
+      return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', { params: { date }, signal, timeout: 60000 })).data;
     } catch (error) { throw payErr(error); }
   },
   checkRazorpayPayment: async (paymentRef) => {
@@ -1136,23 +1136,15 @@ export const paymentService = {
       return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`)).data;
     } catch (error) { throw payErr(error); }
   },
-  recoverRazorpayPayment: async (paymentRef, shiprocket) => {
+  recoverRazorpayPayment: async (paymentRef, shiprocket, signal) => {
     try {
       return (await adminApi.post(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}/recover`,
         shiprocket ? {
           source: 'shiprocket',
           verify_only: shiprocket.verifyOnly === true,
           ...(shiprocket.ref ? { shiprocket_order_id: shiprocket.ref, brand_id: shiprocket.brandId } : {}),
-        } : {}, { timeout: shiprocket ? 120000 : 45000 })).data;
+        } : {}, { signal, timeout: shiprocket ? 120000 : 45000 })).data;
     } catch (error) { throw payErr(error); }
-  },
-  shiprocketBackfillStatus: async () => {
-    try { return (await adminApi.get('/api/payments/admin/shiprocket/backfill')).data; }
-    catch (error) { throw payErr(error); }
-  },
-  startShiprocketBackfill: async (range) => {
-    try { return (await adminApi.post('/api/payments/admin/shiprocket/backfill', range)).data; }
-    catch (error) { throw payErr(error); }
   },
   // { period: 1|7|30, tab, q, brandId, page, limit } → { rows, total, pages, … }
   list: async (params = {}) => {

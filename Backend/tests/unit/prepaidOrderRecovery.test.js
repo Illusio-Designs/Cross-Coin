@@ -79,6 +79,14 @@ test('verification rejects missing customer data before creating an order', asyn
   expect(ingestVerifiedOrder).not.toHaveBeenCalled();
 });
 
+test('an on-demand checkout check returns the verified summary without queuing or creating an order', async () => {
+  await expect(recovery.manual(payment.id, { verifyOnly: true })).resolves.toMatchObject({
+    checkoutRef: details.platform_order_id, brandId: 8, orderBrandId: 8, itemCount: 1,
+  });
+  expect(store.queueCaptures).not.toHaveBeenCalled();
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
+});
+
 test('a payment already linked to an order returns the order without importing again', async () => {
   findRazorpayOrderMatches.mockResolvedValue(new Map([[payment.id, { linked: { linked_order_id: 42, order_number: 'VQ-42' } }]]));
   await expect(recovery.manual(payment.id)).resolves.toMatchObject({ state: 'matched', order: { id: 42 } });
@@ -87,5 +95,15 @@ test('a payment already linked to an order returns the order without importing a
 
 test('a worker without the database schedule lease cannot process another order', async () => {
   await expect(recovery.run()).resolves.toMatchObject({ status: 'skipped' });
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
+});
+
+test('the worker ignores a previously scheduled backfill and only claims current records', async () => {
+  const { scanRazorpayCaptures } = require('../../services/paymentsAdminService.js');
+  store.rows.mockImplementation(async (sql) => sql.includes('FROM prepaid_recovery_schedule')
+    ? [{ scan_period: 30, recent_due: 0 }] : []);
+  await expect(recovery.run()).resolves.toMatchObject({ status: 'ok' });
+  expect(store.query).toHaveBeenCalledWith(expect.stringContaining("WHERE historical = FALSE AND state = 'pending'"), expect.anything());
+  expect(scanRazorpayCaptures).not.toHaveBeenCalled();
   expect(ingestVerifiedOrder).not.toHaveBeenCalled();
 });

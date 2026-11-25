@@ -40,33 +40,20 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
-function captureDateRange(start, end, now) {
-    if (start == null && end == null) return {};
-    const date = (value) => {
-        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
-        const utc = new Date(`${value}T00:00:00Z`);
-        if (!Number.isFinite(utc.getTime()) || utc.toISOString().slice(0, 10) !== value) return NaN;
-        return Date.parse(`${value}T00:00:00+05:30`) / 1000;
-    };
-    const from = date(start);
-    const endDay = date(end);
-    if (!Number.isFinite(from) || !Number.isFinite(endDay) || from <= 0 || from > endDay || from > now) return null;
-    return { from, until: Math.min(now, endDay + 86399) };
-}
-
 module.exports.adminMissingRazorpayOrders = async (req, res) => {
-    const period = Number(req.query.period || 7);
-    const offset = Number(req.query.offset || 0);
+    const { date } = req.query;
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ message: 'Choose one payment date.' });
+    }
+    const utc = new Date(`${date}T00:00:00Z`);
+    const from = Date.parse(`${date}T00:00:00+05:30`) / 1000;
     const now = Math.floor(Date.now() / 1000);
-    const window = captureDateRange(req.query.start, req.query.end, now);
-    const until = Number(req.query.until || window?.until || now);
-    if (![1, 7, 30].includes(period) || !Number.isSafeInteger(offset) || offset < 0 ||
-        !Number.isSafeInteger(until) || !window || until > (window.until || now) || until < (window.from || 1)) {
-        return res.status(400).json({ message: 'Choose a valid payment date range and start a new scan.' });
+    if (!Number.isFinite(from) || from <= 0 || from > now || utc.toISOString().slice(0, 10) !== date) {
+        return res.status(400).json({ message: 'Choose a valid payment date.' });
     }
     try {
-        const result = await paymentsAdmin.findMissingRazorpayOrders({ period, offset, until, from: window.from });
-        return res.json({ success: true, ...result });
+        const result = await paymentsAdmin.findMissingRazorpayOrders({ from, until: Math.min(now, from + 86399) });
+        return res.json({ success: true, ...result, date });
     } catch (error) {
         return adminFail(res, error, 'the Razorpay missing-order scan');
     }
@@ -138,7 +125,8 @@ async function recoverShiprocketOrder(req, res, paymentRef) {
     }
     try {
         const result = await manual(paymentRef, { hint, actorId: req.user?.id, verifyOnly });
-        if (verifyOnly) return res.json({ success: true, order: result.existing, checkoutRef: result.checkoutRef, brandId: result.brandId });
+        if (verifyOnly) return res.json({ success: true, order: result.existing, checkoutRef: result.checkoutRef,
+            brandId: result.brandId, orderBrandId: result.orderBrandId, itemCount: result.itemCount });
         if (!result.order) return res.status(409).json({ message: result.reason, recoveryState: result.state });
         return res.json({ success: true, order: result.order, message: result.state === 'recovered'
             ? `Order ${result.order.order_number} recovered from Shiprocket.` : 'The order already exists.' });
@@ -147,20 +135,6 @@ async function recoverShiprocketOrder(req, res, paymentRef) {
         throw error;
     }
 }
-
-module.exports.adminShiprocketBackfill = async (req, res) => {
-    try {
-        const recovery = require('../services/prepaidOrderRecovery.js');
-        const period = Number(req.body?.period || 30);
-        const window = captureDateRange(req.body?.start, req.body?.end, Math.floor(Date.now() / 1000));
-        if (req.method === 'POST' && (![1, 7, 30].includes(period) || !window)) {
-            return res.status(400).json({ message: 'Choose a valid payment date range.' });
-        }
-        return res.json({ success: true, ...(req.method === 'POST' ? await recovery.scheduleHistory(period, window) : await recovery.historyStatus()) });
-    } catch (error) {
-        return adminFail(res, error, 'prepaid recovery history');
-    }
-};
 
 module.exports.adminLookupRazorpayPayment = (req, res) => checkRazorpayReference(req, res);
 module.exports.adminRecoverRazorpayPayment = (req, res) => checkRazorpayReference(req, res, true);
