@@ -41,6 +41,11 @@ const Payment = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    razorpay_payment_id: {
+      type: DataTypes.STRING(68),
+      allowNull: true,
+      comment: 'Razorpay reference when transaction_id belongs to a checkout provider',
+    },
     razorpay_order_id: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -99,6 +104,10 @@ const Payment = sequelize.define(
       },
       {
         fields: ["razorpay_order_id"],
+      },
+      {
+        name: "idx_payments_razorpay_payment_id",
+        fields: ["razorpay_payment_id"],
       },
     ],
   }

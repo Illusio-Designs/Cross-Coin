@@ -6,7 +6,7 @@ jest.mock('../../model/associations.js', () => ({
   Product: { addHook: jest.fn() }, Category: { addHook: jest.fn() },
   ProductVariation: { findByPk: jest.fn(), decrement: jest.fn() },
   Order: { findOne: jest.fn(), create: jest.fn() }, OrderItem: { bulkCreate: jest.fn() },
-  GuestUser: { findOne: jest.fn(), create: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn() },
+  GuestUser: { findOne: jest.fn(), create: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn(), update: jest.fn() },
 }));
 jest.mock('../../model/productBrandModel.js', () => ({ ProductBrand: { findOne: jest.fn() } }));
 jest.mock('../../services/settingsHelper.js', () => ({ getSetting: async () => 'fixture-secret' }));
@@ -47,6 +47,30 @@ test('799 site price imports against 899 base variation and schedules correctly 
   expect(sendFacebookEvent).toHaveBeenCalledWith('Purchase', expect.objectContaining({ brand_id: 1, final_amount: 799, fbp: 'test-browser' }));
   expect(sendGAEvent).toHaveBeenCalledWith('purchase', expect.objectContaining({ brand_id: 1, final_amount: 799, ga_client_id: 'test-client' }));
 });
+test('Shiprocket records the captured Razorpay references alongside the original refund reference', async () => {
+  await ingestCheckoutOrder(1, provider({ payments: [
+    { status: 'failed', pg_transaction_id: 'pay_failed123', amount: 799 },
+    { status: 'captured', txn_id: 'shiprocket-fixture-1', pg_transaction_id: 'pay_captured123', pg_order_id: 'order_fixture123', amount: 799 },
+  ] }));
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({
+    transaction_id: 'shiprocket-fixture-1', razorpay_payment_id: 'pay_captured123',
+    razorpay_order_id: 'order_fixture123', amount_paid: 79900,
+  }), expect.anything());
+});
+
+test('a verified repeat can restore missing references on a legacy Shiprocket order', async () => {
+  models.Order.findOne.mockResolvedValue({ id: 42, brand_id: 1, order_number: 'CC-TEST-42' });
+  await ingestCheckoutOrder(1, provider({ payments: [
+    { txn_id: 'shiprocket-fixture-1', pg_transaction_id: 'pay_captured123', pg_order_id: 'order_fixture123' },
+  ] }));
+  expect(models.Payment.update).toHaveBeenCalledWith({ razorpay_payment_id: 'pay_captured123' }, { where: {
+    order_id: 42, brand_id: 1, payment_gateway: 'CustomCheckout',
+    transaction_id: 'shiprocket-fixture-1', razorpay_payment_id: null,
+  } });
+  expect(models.Order.create).not.toHaveBeenCalled();
+  expect(models.Payment.create).not.toHaveBeenCalled();
+});
+
 test('without a site override the variation price still applies', async () => {
   ProductBrand.findOne.mockResolvedValue(null);
   await ingestCheckoutOrder(2, provider({ total_amount_payable: 899 }));

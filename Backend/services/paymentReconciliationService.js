@@ -83,7 +83,7 @@ function recoveryBlock(payment, truth, session) {
   if (Number(truth.amount_refunded) > 0 || REFUND_STATES.includes(payment?.status)) {
     return 'This payment has a refund or a refund in progress.';
   }
-  if (!payment) return 'There is no matching checkout payment record in this store.';
+  if (!payment) return 'There is no matching checkout payment record across the brands.';
   if (!session?.reservation_id || !session.shipping_address_id || !session.items?.length) {
     return 'The original checkout details are unavailable. Review the payment before making any refund.';
   }
@@ -101,59 +101,38 @@ function recoveryBlock(payment, truth, session) {
   return null;
 }
 
-async function lookupRazorpayPayment(paymentRef, brandId) {
+async function lookupRazorpayPayment(paymentRef) {
   let truth;
   try {
-    truth = await razorpayService.getPayment(paymentRef, brandId);
+    truth = await razorpayService.getPayment(paymentRef);
   } catch (error) {
-    logger.warn(`[reconcile] Razorpay lookup failed for store ${brandId}: ${error.message}`);
-    return { error: 'Couldn’t find this payment in the selected store’s Razorpay account. Check the store and payment ID.', status: 502 };
+    logger.warn(`[reconcile] Shared Razorpay lookup failed: ${error.message}`);
+    return { error: 'Couldn’t find this payment in the shared Razorpay account. Check the payment ID.', status: 502 };
   }
   if (!truth || truth.id !== paymentRef) return { error: 'Razorpay payment not found.', status: 404 };
 
-  const references = [{ transaction_id: paymentRef }];
-  if (truth.order_id) references.push({ razorpay_order_id: truth.order_id });
-  const rows = await Payment.findAll({
-    where: { [Op.or]: references, amount_paid: { [Op.gt]: 0 }, payment_type: { [Op.ne]: 'cod' } },
-    order: [['id', 'DESC']],
-  });
-  if (rows.some((row) => Number(row.brand_id) !== Number(brandId))) {
-    return { error: 'This payment does not belong to the selected store.', status: 409 };
-  }
-
-  const matching = rows.filter((row) => row.payment_gateway !== 'CustomCheckout' &&
-    (!row.transaction_id?.startsWith('pay_') || row.transaction_id === paymentRef ||
-      (!row.order_id && ['pending', 'failed'].includes(row.status))));
-  const payment = matching.find((row) => row.order_id)
-    || matching.find((row) => row.transaction_id === paymentRef) || matching[0];
-  const reservationId = payment?.reservation_id;
-  const linkedPayment = rows.find((row) => row.order_id && row.transaction_id === paymentRef)
-    || rows.find((row) => row.order_id && row.payment_gateway !== 'CustomCheckout');
-  const completed = linkedPayment || (reservationId
-    ? await Payment.findOne({ where: { reservation_id: reservationId, brand_id: brandId, order_id: { [Op.ne]: null } } })
-    : null);
-  const order = completed && await Order.findByPk(completed.order_id);
-  const orderMatch = order && Number(order.brand_id) === Number(brandId) ? {
-    id: order.id, order_number: order.order_number, status: order.status, payment_status: order.payment_status,
-    payment_id: completed.transaction_id || null,
+  const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
+  const matches = await findRazorpayOrderMatches([truth]);
+  const { linked, pending, issue, savedPaymentId, brandId } = matches.get(paymentRef);
+  const orderMatch = linked ? {
+    id: linked.linked_order_id, order_number: linked.order_number, status: linked.order_status,
+    payment_status: linked.order_payment_status, payment_id: savedPaymentId,
+    amount_paid: Number(linked.amount_paid) / 100,
+    razorpay_order_id: linked.razorpay_order_id || null,
   } : null;
-  const conflict = (completed && !orderMatch) || rows.some((row) => row.order_id && Number(row.order_id) !== Number(completed?.order_id));
-  const session = truth.status === 'captured' && truth.order_id && payment && !completed && !conflict
+  const session = truth.status === 'captured' && truth.order_id && pending && !linked && !issue
     ? await require('./stockReservationService.js').getReservationByRazorpayOrder(truth.order_id)
     : null;
-  const reason = conflict ? 'This payment has a conflicting order reference. Review it before creating an order.'
-    : orderMatch ? (completed.transaction_id && completed.transaction_id !== paymentRef
-      ? 'An order already exists for this checkout with a different payment ID. Review both payments.' : null)
-      : recoveryBlock(payment, truth, session);
-  const canLink = !reason && !!orderMatch && completed.payment_gateway !== 'CustomCheckout' && !completed.transaction_id && !!truth.order_id
-    && completed.razorpay_order_id === truth.order_id && order.payment_type !== 'cod'
-    && order.payment_status === 'paid' && ['successful', 'completed'].includes(completed.status)
+  const reason = issue || (linked ? null : recoveryBlock(pending, truth, session));
+  const canLink = !reason && !!linked && linked.payment_gateway !== 'CustomCheckout' && !linked.transaction_id && !!truth.order_id
+    && linked.razorpay_order_id === truth.order_id && linked.order_payment_type !== 'cod'
+    && linked.order_payment_status === 'paid' && ['successful', 'completed'].includes(linked.status)
     && truth.status === 'captured' && !(Number(truth.amount_refunded) > 0) && truth.currency === 'INR'
-    && Number(truth.amount) === Number(completed.amount_paid)
-    && Number(truth.amount) === toSmallestUnit(Number(order.final_amount), 'INR');
+    && Number(truth.amount) === Number(linked.amount_paid)
+    && Number(truth.amount) === toSmallestUnit(Number(linked.final_amount), 'INR');
   return {
-    remote: remoteSummary(truth), order: orderMatch,
-    localPaymentId: completed?.id || payment?.id || null, canCreate: !orderMatch && !reason, canLink, reason,
+    remote: remoteSummary(truth), order: orderMatch, brandId,
+    localPaymentId: linked?.id || pending?.id || null, canCreate: !orderMatch && !reason, canLink, reason,
   };
 }
 
@@ -349,13 +328,18 @@ async function reconcileOrderPayment(orderId, { dryRun = false, actor = null, re
  * service finds an order already made for this reservation). Not captured →
  * nothing to do (a Razorpay "failed" is copied onto the row).
  */
-async function reconcileOrphanPayment(paymentId, { dryRun = false, actor = null, expectedPaymentRef = null } = {}) {
+async function reconcileOrphanPayment(paymentId, { dryRun = false, actor = null, expectedPaymentRef = null, expectedBrandId = null } = {}) {
   const payment = await Payment.findByPk(paymentId);
   if (!payment) return { success: false, error: `payment ${paymentId} not found` };
+  if (expectedBrandId != null && Number(payment.brand_id) !== Number(expectedBrandId)) {
+    return { success: false, error: 'The store on this payment changed. Check the payment again.' };
+  }
   if (payment.order_id) {
     if (expectedPaymentRef) {
       const order = await Order.findByPk(payment.order_id);
-      return order ? { success: true, orderAction: 'existing', order } : { success: false, error: 'The linked order could not be found.' };
+      return order && Number(order.brand_id) === Number(payment.brand_id)
+        ? { success: true, orderAction: 'existing', order }
+        : { success: false, error: 'The linked order could not be found for this payment’s store.' };
     }
     return reconcileOrderPayment(payment.order_id, { dryRun, actor, reopenCancelled: !!actor });
   }
@@ -365,7 +349,7 @@ async function reconcileOrphanPayment(paymentId, { dryRun = false, actor = null,
   let truth;
   try {
     truth = expectedPaymentRef
-      ? await razorpayService.getPayment(expectedPaymentRef, payment.brand_id || 1)
+      ? await razorpayService.getPayment(expectedPaymentRef)
       : await fetchRazorpayTruth(payment, payment.brand_id || 1);
   } catch (err) {
     return { success: false, error: `Razorpay lookup failed: ${err.message}` };

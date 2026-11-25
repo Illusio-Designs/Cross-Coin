@@ -1573,7 +1573,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
           const linkedPayments = await Payment.findAll({
             attributes: ['order_id'],
             where: { order_id: { [Op.ne]: null }, [Op.or]: [
-              { transaction_id: searchTerm }, { razorpay_order_id: searchTerm },
+              { transaction_id: searchTerm }, { razorpay_payment_id: searchTerm }, { razorpay_order_id: searchTerm },
             ] },
           });
           if (linkedPayments.length) searchConditions.push({ id: { [Op.in]: linkedPayments.map((payment) => payment.order_id) } });

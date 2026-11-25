@@ -208,7 +208,7 @@ async function listPayments(query = {}) {
       pw.push('p.order_id IN (:ids)'); cw.push('o.id IN (:ids)');
     } else {
       repl.qExact = search; repl.qLike = `%${search}%`;
-      pw.push('(p.transaction_id = :qExact OR p.razorpay_order_id = :qExact OR o.order_number LIKE :qLike)');
+      pw.push('(p.transaction_id = :qExact OR p.razorpay_payment_id = :qExact OR p.razorpay_order_id = :qExact OR o.order_number LIKE :qLike)');
       cw.push('o.order_number LIKE :qLike');
     }
   } else {
@@ -228,11 +228,11 @@ async function listPayments(query = {}) {
   const withCod = tab === 'all' || tab === 'cod';
 
   const paySql = `SELECT 'p' AS src, p.id, p.order_id, p.payment_type, p.payment_gateway, ${AMOUNT} AS amount, p.status,
-                         p.transaction_id, p.razorpay_order_id, p.notes, p.pay_method, p.created_at, p.brand_id
+                         p.transaction_id, p.razorpay_payment_id, p.razorpay_order_id, p.notes, p.pay_method, p.created_at, p.brand_id
                     FROM payments p LEFT JOIN orders o ON o.id = p.order_id
                    WHERE ${pw.join(' AND ') || '1=1'}`;
   const codSql = `SELECT 'c' AS src, NULL AS id, o.id AS order_id, 'cod' AS payment_type, NULL AS payment_gateway, o.final_amount AS amount,
-                         'cod_open' AS status, NULL AS transaction_id, NULL AS razorpay_order_id, NULL AS notes, NULL AS pay_method,
+                         'cod_open' AS status, NULL AS transaction_id, NULL AS razorpay_payment_id, NULL AS razorpay_order_id, NULL AS notes, NULL AS pay_method,
                          o.created_at, o.brand_id
                     FROM orders o
                    WHERE o.payment_type = 'cod' AND o.status IN ${COD_OPEN}
@@ -270,7 +270,7 @@ async function listPayments(query = {}) {
         amount: r2(r.amount),
         method: m,
         methodLabel: m ? METHOD_LABEL[m] : 'Online',
-        ref: r.src === 'c' ? null : (r.transaction_id && !/^COD-/.test(r.transaction_id) ? r.transaction_id : r.razorpay_order_id || null),
+        ref: r.src === 'c' ? null : (r.razorpay_payment_id || (r.transaction_id && !/^COD-/.test(r.transaction_id) ? r.transaction_id : r.razorpay_order_id || null)),
         orderId: r.order_id || null,
         orderNumber: r.order_number || null,
         customer: r.customer ? String(r.customer).trim() : null,
@@ -377,8 +377,8 @@ async function backfillMethods(brandId, since) {
 
 // Scan Razorpay directly. Starting from local payments cannot find a payment
 // that reached the gateway but never wrote a local record.
-async function findMissingRazorpayOrders(brandId, { period, offset, until }) {
-  const razorpay = await require('./razorpayService.js').getInstance(brandId);
+async function findMissingRazorpayOrders({ period, offset, until }) {
+  const razorpay = await require('./razorpayService.js').getInstance();
   const count = 100;
   const result = await razorpay.payments.all({
     from: Math.floor(periodStart(period, until * 1000).getTime() / 1000), to: until, count, skip: offset,
@@ -388,35 +388,22 @@ async function findMissingRazorpayOrders(brandId, { period, offset, until }) {
   const captured = result.items.filter((payment) => payment.status === 'captured'
     && /^pay_[a-zA-Z0-9]{6,64}$/.test(payment.id)
     && Number(payment.amount) > Number(payment.amount_refunded || 0));
-  const refs = captured.map((payment) => payment.id);
-  const orderRefs = [...new Set(captured.map((payment) => payment.order_id).filter(Boolean))];
-  // Cross-store references also rule out a missing order when stores share a
-  // Razorpay account. Keep those references out of the dashboard response.
-  const known = refs.length ? await q(
-    `SELECT p.transaction_id, p.razorpay_order_id, p.brand_id, o.id AS linked_order_id
-       FROM payments p LEFT JOIN orders o ON o.id = p.order_id
-      WHERE p.transaction_id IN (:refs)
-        ${orderRefs.length ? 'OR p.razorpay_order_id IN (:orderRefs)' : ''}`,
-    { refs, ...(orderRefs.length ? { orderRefs } : {}) },
-  ) : [];
-  const linked = new Set();
-  const local = new Set();
-  for (const row of known) {
-    const references = [row.transaction_id, row.razorpay_order_id].filter(Boolean);
-    const target = row.linked_order_id || Number(row.brand_id) !== Number(brandId) ? linked : local;
-    references.forEach((reference) => target.add(reference));
-  }
-
-  const items = captured
-    .filter((payment) => !linked.has(payment.id) && !linked.has(payment.order_id))
-    .map((payment) => ({
+  const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
+  const matches = await findRazorpayOrderMatches(captured);
+  const items = captured.flatMap((payment) => {
+    const { linked, issue, hasLocalPayment, brandId } = matches.get(payment.id);
+    if (linked && !issue) return [];
+    return [{
       paymentId: payment.id,
       orderRef: payment.order_id || null,
       amount: r2(Number(payment.amount) / 100),
       currency: payment.currency,
       at: payment.created_at ? new Date(Number(payment.created_at) * 1000).toISOString() : null,
-      hasLocalPayment: local.has(payment.id) || local.has(payment.order_id),
-    }));
+      hasLocalPayment,
+      brandId,
+      matchIssue: issue,
+    }];
+  });
   return { items, checked: result.items.length, until, nextOffset: result.items.length === count ? offset + count : null };
 }
 

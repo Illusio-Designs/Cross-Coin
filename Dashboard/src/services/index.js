@@ -1126,24 +1126,20 @@ export const exceptionsService = {
 // Dashboard → Payments (Backend services/paymentsAdminService.js).
 const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
-  findMissingRazorpayOrders: async (brand, params) => {
+  findMissingRazorpayOrders: async (params) => {
     try {
-      return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', {
-        headers: { 'X-Brand-Name': brand }, params,
-      })).data;
+      return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', { params })).data;
     } catch (error) { throw payErr(error); }
   },
-  checkRazorpayPayment: async (brand, paymentRef) => {
+  checkRazorpayPayment: async (paymentRef) => {
     try {
-      return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`, {
-        headers: { 'X-Brand-Name': brand },
-      })).data;
+      return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`)).data;
     } catch (error) { throw payErr(error); }
   },
-  recoverRazorpayPayment: async (brand, paymentRef) => {
+  recoverRazorpayPayment: async (paymentRef) => {
     try {
       return (await adminApi.post(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}/recover`, {}, {
-        headers: { 'X-Brand-Name': brand }, timeout: 45000,
+        timeout: 45000,
       })).data;
     } catch (error) { throw payErr(error); }
   },

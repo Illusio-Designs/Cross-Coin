@@ -625,7 +625,7 @@ const startServer = async () => {
         // future restarts → fast cold starts. IMPORTANT: bump
         // STARTUP_MIGRATIONS_VERSION whenever you ADD a migration below, so it
         // runs once more to apply the new one.
-        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v31';
+        const STARTUP_MIGRATIONS_VERSION = 'startup-migrations-v32';
         let startupMigrationsApplied = false;
         try {
             await sequelize.query(`CREATE TABLE IF NOT EXISTS migration_flags (flag VARCHAR(64) PRIMARY KEY, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -653,6 +653,16 @@ const startServer = async () => {
                 await fn();
                 await sequelize.query(`INSERT IGNORE INTO migration_flags (flag) VALUES (?)`, { replacements: [flag] });
             };
+
+        // Keep Shiprocket's refund reference separate from its Razorpay ID.
+        try {
+            const [columns] = await sequelize.query(`SHOW COLUMNS FROM payments WHERE Field = 'razorpay_payment_id'`);
+            if (!columns.length) await sequelize.query('ALTER TABLE payments ADD COLUMN razorpay_payment_id VARCHAR(68) NULL');
+            const [indexes] = await sequelize.query(`SHOW INDEX FROM payments WHERE Key_name = 'idx_payments_razorpay_payment_id'`);
+            if (!indexes.length) await sequelize.query('ALTER TABLE payments ADD INDEX idx_payments_razorpay_payment_id (razorpay_payment_id)');
+        } catch (err) {
+            logger.error('Razorpay payment reference migration failed: ' + err.message);
+        }
 
         // ── Idempotent migration: visit_hits (server-counted storefront visits) ─
         // Aggregate per (brand, IST day, channel/campaign/geo/device) counts fed

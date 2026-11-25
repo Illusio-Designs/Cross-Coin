@@ -41,7 +41,6 @@ module.exports.adminPaymentMismatches = async (req, res) => {
 };
 
 module.exports.adminMissingRazorpayOrders = async (req, res) => {
-    if (!req.brand?.id) return res.status(400).json({ message: 'Choose an active store.' });
     const period = Number(req.query.period || 7);
     const offset = Number(req.query.offset || 0);
     const now = Math.floor(Date.now() / 1000);
@@ -51,7 +50,7 @@ module.exports.adminMissingRazorpayOrders = async (req, res) => {
         return res.status(400).json({ message: 'Start a new scan for Today, 7 days, or 30 days.' });
     }
     try {
-        const result = await paymentsAdmin.findMissingRazorpayOrders(req.brand.id, { period, offset, until });
+        const result = await paymentsAdmin.findMissingRazorpayOrders({ period, offset, until });
         return res.json({ success: true, ...result });
     } catch (error) {
         return adminFail(res, error, 'the Razorpay missing-order scan');
@@ -60,11 +59,10 @@ module.exports.adminMissingRazorpayOrders = async (req, res) => {
 
 async function checkRazorpayReference(req, res, recover = false) {
     const { paymentRef } = req.params;
-    if (!req.brand?.id) return res.status(400).json({ message: 'Choose an active store.' });
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentRef)) return res.status(400).json({ message: 'Enter a valid Razorpay payment ID starting with pay_.' });
     try {
         const { lookupRazorpayPayment, reconcileOrphanPayment } = require('../services/paymentReconciliationService.js');
-        const result = await lookupRazorpayPayment(paymentRef, req.brand.id);
+        const result = await lookupRazorpayPayment(paymentRef);
         if (result.error) return res.status(result.status).json({ message: result.error });
         if (!recover) {
             const { localPaymentId, ...lookup } = result;
@@ -73,7 +71,7 @@ async function checkRazorpayReference(req, res, recover = false) {
         if (result.canLink) {
             const [changed] = await Payment.update({ transaction_id: paymentRef }, {
                 where: {
-                    id: result.localPaymentId, order_id: result.order.id, brand_id: req.brand.id,
+                    id: result.localPaymentId, order_id: result.order.id, brand_id: result.brandId,
                     razorpay_order_id: result.remote.orderId,
                     status: { [Op.in]: ['successful', 'completed'] },
                     [Op.or]: [{ transaction_id: null }, { transaction_id: '' }],
@@ -88,7 +86,7 @@ async function checkRazorpayReference(req, res, recover = false) {
         if (result.order) return res.json({ success: true, order: result.order, message: result.reason || 'The order already exists.' });
         if (!result.canCreate) return res.status(409).json({ message: result.reason || 'The payment cannot be recovered.' });
         const recovered = await reconcileOrphanPayment(result.localPaymentId, {
-            actor: { id: req.user.id, role: 'admin' }, expectedPaymentRef: paymentRef,
+            actor: { id: req.user.id, role: 'admin' }, expectedPaymentRef: paymentRef, expectedBrandId: result.brandId,
         });
         if (!recovered.success || !recovered.order) {
             return res.status(409).json({ message: recovered.error || recovered.reason || 'Couldn’t recover the order. Check the payment again.' });

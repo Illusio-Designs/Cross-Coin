@@ -89,47 +89,47 @@ const ic = (icon, size = 16) => <HugeiconsIcon icon={icon} size={size} strokeWid
 // ── Tiles ────────────────────────────────────────────────────────
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
 
-function RazorpayLookup({ brands, selectedBrandId, period, isAdmin }) {
+function RazorpayLookup({ brands, period, isAdmin }) {
   const qc = useQueryClient();
-  const [brand, setBrand] = useState("");
   const [reference, setReference] = useState("");
-  const [lookup, setResult] = useState(null);
+  const [result, setResult] = useState(null);
   const resultRef = useRef(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [scan, setScan] = useState(null);
-  const availableBrands = brands.filter((item) => item.status === "active" && item.slug);
-  const selectedBrand = brand || availableBrands.find((item) => String(item.id) === String(selectedBrandId))?.slug || "";
+  const brandName = (id) => {
+    const brand = brands.find((item) => String(item.id) === String(id));
+    return brand?.display_name || brand?.name || "Unknown";
+  };
 
-  const result = lookup?.brand === selectedBrand ? lookup : null;
   useEffect(() => { if (result) resultRef.current?.focus(); }, [result]);
-  const currentScan = scan?.brand === selectedBrand && scan.period === period ? scan : null;
+  const currentScan = scan?.period === period ? scan : null;
   const resetResult = () => { setResult(null); setError(""); setConfirm(false); };
   const check = async (paymentId) => {
-    if (!selectedBrand || !/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
+    if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
     setReference(paymentId);
     resetResult();
     setBusy("check");
     try {
-      const payment = await paymentService.checkRazorpayPayment(selectedBrand, paymentId);
-      setResult({ ...payment, brand: selectedBrand });
+      const payment = await paymentService.checkRazorpayPayment(paymentId);
+      setResult(payment);
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
   const scanForMissingOrders = async (continueScan = false) => {
-    if (!selectedBrand || busy) return;
+    if (busy) return;
     const previous = continueScan ? currentScan : null;
     setBusy("scan");
     setError("");
     try {
-      const fresh = await paymentService.findMissingRazorpayOrders(selectedBrand, {
+      const fresh = await paymentService.findMissingRazorpayOrders({
         period,
         ...(previous ? { offset: previous.nextOffset, until: previous.until } : {}),
       });
       const items = new Map((previous?.items || []).map((item) => [item.paymentId, item]));
       fresh.items.forEach((item) => items.set(item.paymentId, item));
-      setScan({ ...fresh, items: [...items.values()], checked: fresh.checked + (previous?.checked || 0), brand: selectedBrand, period });
+      setScan({ ...fresh, items: [...items.values()], checked: fresh.checked + (previous?.checked || 0), period });
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
@@ -138,8 +138,11 @@ function RazorpayLookup({ brands, selectedBrandId, period, isAdmin }) {
     setBusy("recover");
     setError("");
     try {
-      const recovered = await paymentService.recoverRazorpayPayment(result.brand, result.remote.id);
+      const recovered = await paymentService.recoverRazorpayPayment(result.remote.id);
       setResult({ ...result, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
+      setScan((previous) => previous && {
+        ...previous, items: previous.items.filter((item) => item.paymentId !== result.remote.id),
+      });
       showSuccess(null, recovered.message);
       qc.invalidateQueries({ queryKey: ["payments"] });
     } catch (e) { setError(e.message); }
@@ -148,24 +151,45 @@ function RazorpayLookup({ brands, selectedBrandId, period, isAdmin }) {
 
   return (
     <section className="pl-card pl-rzp" id="razorpay-check" aria-labelledby="pl-rzp-title">
-      <h2 id="pl-rzp-title">Check a Razorpay payment</h2>
-      <p className="pl-faint pl-small">Look up a payment ID to see whether Razorpay captured it and whether it has an order.</p>
-      <form className="pl-rzp__form" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
-        <Input label="Store" name="rzp-lookup-store" type="select" value={selectedBrand} disabled={!!busy}
-          options={availableBrands.map((item) => ({ value: item.slug, label: item.display_name || item.name }))}
-          onChange={(event) => { setBrand(event.target.value); resetResult(); }} />
-        <Input label="Payment ID" name="rzp-lookup-reference" value={reference} placeholder="pay_…" maxLength={68}
-          autoComplete="off" spellCheck={false} disabled={!!busy} required pattern="pay_[a-zA-Z0-9]{6,64}"
-          onChange={(event) => { setReference(event.target.value); resetResult(); }} />
-        <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!selectedBrand || !reference.trim() || !!busy}>Check payment</Button>
-      </form>
+      <header className="pl-rzp__heading">
+        <h2 id="pl-rzp-title">Razorpay reconciliation</h2>
+        <p className="pl-faint pl-small">Check the shared Razorpay account against orders from all brands.</p>
+      </header>
+      <div className="pl-rzp__tools">
+        <form className="pl-rzp__form" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
+          <Input label="Payment ID" name="rzp-lookup-reference" value={reference} placeholder="pay_…" maxLength={68}
+            autoComplete="off" spellCheck={false} disabled={!!busy} required pattern="pay_[a-zA-Z0-9]{6,64}"
+            onChange={(event) => { setReference(event.target.value); resetResult(); }} />
+          <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!reference.trim() || !!busy}>Check payment</Button>
+        </form>
+        <div className="pl-rzp__scan">
+          <div>
+            <h3>Missing orders</h3>
+            <p className="pl-faint pl-small">{period === 1 ? "Today" : `Last ${period} days`}</p>
+          </div>
+          <Button variant="secondary" onClick={() => scanForMissingOrders()}
+            disabled={!!busy} loading={busy === "scan" && !currentScan} loadingText="Scanning…">
+            {currentScan ? "Start a new scan" : "Find missing orders"}
+          </Button>
+        </div>
+      </div>
       {error && <p role="alert" className="pl-rzp__error">{error}</p>}
       {result && (
         <div className="pl-rzp__result" ref={resultRef} tabIndex={-1}>
           <strong>{result.order ? `Order #${result.order.order_number}` : "No order found"}</strong>
           <div>Razorpay: {result.remote.status} · {paymentAmount(result.remote)}</div>
+          <span>Brand {brandName(result.brandId)}</span>
           <span>Payment ID <code>{result.remote.id}</code></span>
           {result.remote.orderId && <span>Razorpay order <code>{result.remote.orderId}</code></span>}
+          {result.order?.payment_id && result.order.payment_id !== result.remote.id && (
+            <span>Payment ID on order <code>{result.order.payment_id}</code></span>
+          )}
+          {result.order?.razorpay_order_id && result.order.razorpay_order_id !== result.remote.orderId && (
+            <span>Saved Razorpay order <code>{result.order.razorpay_order_id}</code></span>
+          )}
+          {result.order?.amount_paid != null && result.remote.currency === "INR" && result.order.amount_paid !== result.remote.amount && (
+            <span>Saved payment amount {inr(result.order.amount_paid)}</span>
+          )}
           {result.order?.payment_status && <span>Order payment: {result.order.payment_status}</span>}
           {result.reason && <p>{result.reason}</p>}
           {result.order && <Button size="sm" variant="secondary" onClick={() => openOrder(result.order.order_number)}>Open order</Button>}
@@ -177,39 +201,35 @@ function RazorpayLookup({ brands, selectedBrandId, period, isAdmin }) {
               onConfirm={recover} onCancel={() => setConfirm(false)} />)}
         </div>
       )}
-      <div className="pl-rzp__result">
-        <strong>Find captured payments with missing orders</strong>
-        <p className="pl-faint pl-small">Scan the selected store’s Razorpay account for {period === 1 ? "today" : `the last ${period} days`}.</p>
-        <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders()}
-          disabled={!selectedBrand || !!busy} loading={busy === "scan" && !currentScan} loadingText="Scanning…">
-          {currentScan ? "Start a new scan" : "Find missing orders"}
-        </Button>
-        {currentScan && (
-          <>
-            <p role="status" className="pl-small">{plural(currentScan.checked, "payment")} checked · {plural(currentScan.items.length, "payment")} without a matching order</p>
-            {currentScan.items.length > 0 && (
-              <div className="pl-scroll" style={{ width: "100%" }}>
-                <table className="pl-table" aria-label="Captured Razorpay payments without orders">
-                  <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Payment record</th><th aria-label="Actions" /></tr></thead>
-                  <tbody>
-                    {currentScan.items.map((item) => (
-                      <tr key={item.paymentId}>
-                        <td><code>{item.paymentId}</code></td><td className="pl-nowrap">{paymentAmount(item)}</td>
-                        <td>{fullDate(item.at) || "—"}</td>
-                        <td>{item.hasLocalPayment ? "Saved locally" : "Razorpay only"}</td>
-                        <td><Button size="sm" variant="secondary" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {currentScan.nextOffset != null && (
-              <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders(true)}
-                loading={busy === "scan"} loadingText="Scanning…" disabled={!!busy}>Scan next batch</Button>
-            )}
-          </>
-        )}
+      {currentScan && (
+        <div className="pl-rzp__result">
+          <p role="status" className="pl-small">{plural(currentScan.checked, "payment")} checked · {plural(currentScan.items.length, "payment")} to review</p>
+          {currentScan.items.length > 0 && (
+            <div className="pl-scroll pl-rzp__scan-table">
+              <table className="pl-table" aria-label="Captured Razorpay payments to review">
+                <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Brand</th><th>Payment record</th><th aria-label="Actions" /></tr></thead>
+                <tbody>
+                  {currentScan.items.map((item) => (
+                    <tr key={item.paymentId}>
+                      <td><code>{item.paymentId}</code></td><td className="pl-nowrap">{paymentAmount(item)}</td>
+                      <td>{fullDate(item.at) || "—"}</td>
+                      <td>{brandName(item.brandId)}</td>
+                      <td>{item.matchIssue || (item.hasLocalPayment ? "Saved locally" : "Razorpay only")}</td>
+                      <td><Button size="sm" variant="secondary" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {currentScan.nextOffset != null && (
+            <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders(true)}
+              loading={busy === "scan"} loadingText="Scanning…" disabled={!!busy}>Scan next batch</Button>
+          )}
+        </div>
+      )}
+      <div className="pl-rzp__recent">
+        <Mismatches isAdmin={isAdmin} />
       </div>
     </section>
   );
@@ -250,21 +270,20 @@ function Tiles({ s, error, onRetry, retrying, stale }) {
 }
 
 // ── "Doesn't match Razorpay" ─────────────────────────────────────
-function Mismatches({ brandId, isAdmin }) {
+function Mismatches({ isAdmin }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(null);       // item key or 'all'
   const [confirm, setConfirm] = useState(null); // { kind: 'all' } | { kind: 'refund', item }
   const q = useQuery({
-    queryKey: ["payments", "mismatches", brandId],
-    queryFn: () => paymentService.mismatches({ brandId }),
-    placeholderData: keepPreviousData, // brand change: keep the last check on screen, dimmed
+    queryKey: ["payments", "mismatches"],
+    queryFn: () => paymentService.mismatches({}),
     staleTime: 5 * 60 * 1000,
     retry: 0,
   });
   const recheck = async () => {
     try {
-      const fresh = await paymentService.mismatches({ brandId, refresh: true });
-      qc.setQueryData(["payments", "mismatches", brandId], fresh);
+      const fresh = await paymentService.mismatches({ refresh: true });
+      qc.setQueryData(["payments", "mismatches"], fresh);
     } catch (e) { showError(null, `Couldn’t check with Razorpay — ${e.message}`); }
   };
   const afterFix = () => {
@@ -305,8 +324,6 @@ function Mismatches({ brandId, isAdmin }) {
       </section>
     );
   }
-  const stale = q.isPlaceholderData;
-  const staleStyle = stale ? { ...DIM, pointerEvents: "none" } : undefined;
   if (q.error && !q.data) {
     return <ErrorState message={`Couldn’t check payments with Razorpay — ${q.error.message}`} onRetry={() => q.refetch()} retrying={q.isFetching} />;
   }
@@ -321,14 +338,14 @@ function Mismatches({ brandId, isAdmin }) {
   );
   if (!items.length) {
     return (
-      <section className="pl-mm pl-mm--quiet" style={staleStyle} aria-busy={stale || undefined}>
+      <section className="pl-mm pl-mm--quiet">
         <span className="pl-small">{d.checked ? `All ${plural(d.checked, "recent unpaid payment")} match Razorpay.` : "No unpaid online payments in the last 3 days to check."}</span>
         {foot}
       </section>
     );
   }
   return (
-    <section className="pl-mm" aria-labelledby="pl-mm-title" style={staleStyle} aria-busy={stale || undefined}>
+    <section className="pl-mm" aria-labelledby="pl-mm-title">
       <div className="pl-mm-head">
         <div className="pl-mm-text">
           <b id="pl-mm-title" className="pl-mm-title">{plural(items.length, "payment")} {items.length === 1 ? "doesn’t" : "don’t"} match Razorpay</b>
@@ -463,8 +480,7 @@ export default function Payments() {
 
       <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
-      <RazorpayLookup brands={brands} selectedBrandId={brandId} period={period} isAdmin={!!isAdmin} />
-      <Mismatches brandId={brandId} isAdmin={!!isAdmin} />
+      <RazorpayLookup brands={brands} period={period} isAdmin={!!isAdmin} />
 
       <div className="pl-toolbar">
         <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />

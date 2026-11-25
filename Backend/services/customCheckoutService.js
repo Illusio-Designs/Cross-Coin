@@ -545,18 +545,38 @@ async function ingestCheckoutOrder(brandId, p) {
   const items = p?.cart_data?.items || [];
   if (!platformId || !items.length) { const e = new Error('platform_order_id and cart_data.items are required'); e.status = 400; throw e; }
 
+  const payments = Array.isArray(p.payments) ? p.payments : [];
+  const successfulPayments = payments.filter((payment) =>
+    ['captured', 'success', 'successful', 'paid', 'completed'].includes(String(payment?.status || payment?.payment_status || '').toLowerCase()));
+  const pay = (successfulPayments.length === 1 ? successfulPayments[0] : payments[0]) || {};
+  const isCod = isCodOrder(p, pay);
+  const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
+  const providerTransactionId = pay.txn_id || pay.pg_transaction_id || null;
+  const references = paid && (payments.length === 1 || successfulPayments.length === 1) ? {
+    razorpay_payment_id: [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id]
+      .find((value) => typeof value === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(value)),
+    razorpay_order_id: [pay.razorpay_order_id, pay.pg_order_id, pay.pg_transaction_id]
+      .find((value) => typeof value === 'string' && /^order_[a-zA-Z0-9]{6,64}$/.test(value)),
+  } : {};
   const idemKey = `cco:${platformId}`.slice(0, 100);
   const already = await Order.findOne({ where: { idempotency_key: idemKey } });
   if (already) {
     if (Number(already.brand_id) !== Number(brandId)) {
       const error = new Error('Checkout order belongs to a different store'); error.status = 409; throw error;
     }
+    // A verified duplicate delivery can fill references on a legacy order.
+    // Match the original Shiprocket ledger row and only fill empty fields.
+    if (providerTransactionId) {
+      for (const [field, value] of Object.entries(references)) {
+        if (value) await Payment.update({ [field]: value }, { where: {
+          order_id: already.id, brand_id: brandId, payment_gateway: 'CustomCheckout',
+          transaction_id: providerTransactionId, [field]: null,
+        } });
+      }
+    }
     return { created: false, order_number: already.order_number };
   }
 
-  const pay = (p.payments || [])[0] || {};
-  const isCod = isCodOrder(p, pay);
-  const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
   // A successful SDK return is not proof that a prepaid payment completed.
   if (!isCod && !paid) return { skipped: 'awaiting_payment' };
 
@@ -679,7 +699,8 @@ async function ingestCheckoutOrder(brandId, p) {
       user_id: null,
       guest_user_id: guest.id,
       payment_type: isCod ? 'cod' : 'razorpay',
-      transaction_id: pay.txn_id || pay.pg_transaction_id || null,
+      transaction_id: providerTransactionId,
+      ...references,
       amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
       status: paid ? 'successful' : 'pending',
       // Gateway marks the refund route: these payments refund via the

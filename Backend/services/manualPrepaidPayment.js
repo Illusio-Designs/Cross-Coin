@@ -18,8 +18,8 @@ async function verifyManualPrepaidPayment(paymentId, brandId, transaction, { loc
     return { status: 409, error: 'Use a captured INR Razorpay payment with no refunds.' };
   }
 
-  const references = [{ transaction_id: paymentId }];
-  if (remote.order_id) references.push({ razorpay_order_id: remote.order_id });
+  const references = [{ transaction_id: paymentId }, { razorpay_payment_id: paymentId }];
+  if (remote.order_id) references.push({ razorpay_order_id: remote.order_id }, { transaction_id: remote.order_id });
   const rows = await Payment.findAll({
     where: { [Op.or]: references },
     order: [['id', 'ASC']],
