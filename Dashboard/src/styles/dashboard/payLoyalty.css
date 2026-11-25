@@ -156,5 +156,6 @@
 @media (max-width: 740px) {
   .pl-rzp__tools { grid-template-columns: minmax(0, 1fr); }
   .pl-rzp__day { justify-self: start; }
+  .pl-rzp__lookup, .pl-rzp__recent { display: none; }
 }
 @media (max-width: 380px) { .pl-rzp__form { grid-template-columns: minmax(0, 1fr); } }

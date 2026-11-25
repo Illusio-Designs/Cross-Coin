@@ -9,12 +9,6 @@ const PROVIDERS = {
 };
 const queryKey = ["dashboard", "wallet-balances"];
 const money = (amount, currency) => new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(amount);
-const BILLING_STATUS = {
-  unmapped: "Map this brand’s Meta ad account in Reports → Ads.",
-  not_connected: "Connect a Meta ads token to see the bill due.",
-  unavailable: "Meta bill due is unavailable for this account.",
-};
-
 export default function ProviderWalletBalances({ brandId }) {
   const qc = useQueryClient();
   const { data, isLoading, error } = useQuery({
@@ -59,11 +53,8 @@ export default function ProviderWalletBalances({ brandId }) {
             return (
               <div className="hm-card" key={key}>
                 <strong>{provider.label} · {isMeta ? entry.brandName : "All brands"}</strong>
-                <div>Available funds · {amount}</div>
+                <div>Recorded available funds · {amount}</div>
                 {entry.recordedAt && <small>Recorded {new Date(entry.recordedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</small>}
-                {isMeta && entry.billing && (
-                  <p>{entry.billing.status === "ok" ? `Bill due via Meta API · ${money(entry.billing.amount, entry.billing.currency)}` : BILLING_STATUS[entry.billing.status]}</p>
-                )}
                 {editing ? (
                   <form onSubmit={save}>
                     <Input label="Available balance" name={`${key}-wallet-amount`} inputMode="decimal" required
@@ -83,9 +74,9 @@ export default function ProviderWalletBalances({ brandId }) {
                     <Button size="sm" variant="secondary" disabled={saving} onClick={() => {
                       setSaveError("");
                       setDraft({ provider: entry.provider, brandId: entry.brandId, amount: entry.amount ?? "",
-                        currency: entry.recordedAt ? entry.currency : entry.billing?.currency || entry.currency });
+                        currency: entry.currency });
                     }}>Record balance</Button>
-                    <a href={provider.url} target="_blank" rel="noreferrer">Open provider</a>
+                    <a href={provider.url} target="_blank" rel="noreferrer">{isMeta ? "Open Billing & payments" : "Open iThink"}</a>
                   </div>
                 )}
               </div>

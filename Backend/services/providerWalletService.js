@@ -49,14 +49,9 @@ async function listBalances(brandId) {
       WHERE b.status = 'active' AND (:brandId IS NULL OR b.id = :brandId) ORDER BY b.id`,
     { replacements: { brandId: selectedBrand }, type: QueryTypes.SELECT }),
   ]);
-  const metaAds = require('./metaAdsService.js');
-  const configured = await metaAds.getMapping().catch(() => null);
-  const mapping = configured && new Map(configured.map((entry) => [entry.brandId, entry.accountId]));
-  const meta = await Promise.all(brands.map(async (brand) => ({
+  const meta = brands.map((brand) => ({
     provider: 'meta', brandId: Number(brand.id), brandName: brand.brand_name, ...snapshot(brand),
-    billing: mapping ? await metaAds.getBillingBalance(Number(brand.id), mapping.get(Number(brand.id)))
-      .catch(() => ({ status: 'unavailable' })) : { status: 'unavailable' },
-  })));
+  }));
   // The former shared Meta record stays stored; it had no brand identity.
   return [{ provider: 'ithink', ...snapshot(shared[0]) }, ...meta];
 }

@@ -1,17 +1,11 @@
 jest.mock('../../config/db.js', () => ({ sequelize: { query: jest.fn() } }));
-jest.mock('../../services/metaAdsService.js', () => ({ getMapping: jest.fn(), getBillingBalance: jest.fn() }));
 
 const { sequelize } = require('../../config/db.js');
-const meta = require('../../services/metaAdsService.js');
 const { listBalances, saveBalance } = require('../../services/providerWalletService.js');
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  meta.getMapping.mockResolvedValue([{ brandId: 7, accountId: '77811' }, { brandId: 8, accountId: '88224' }]);
-  meta.getBillingBalance.mockResolvedValue({ status: 'ok', amount: 80, currency: 'INR' });
-});
+beforeEach(() => jest.clearAllMocks());
 
-test('shares the iThink amount, isolates Meta records, and keeps the bill due separate', async () => {
+test('shares the iThink amount and returns only the selected brand’s recorded Meta funds', async () => {
   sequelize.query.mockImplementation(async (sql) => {
     if (sql.includes("WHERE provider = 'ithink'")) return [
       { amount: '0.00', currency: 'INR', recorded_at: new Date('2026-11-25T09:00:00Z') },
@@ -21,11 +15,8 @@ test('shares the iThink amount, isolates Meta records, and keeps the bill due se
   });
   await expect(listBalances(8)).resolves.toEqual([
     { provider: 'ithink', amount: 0, currency: 'INR', recordedAt: '2026-11-25T09:00:00.000Z' },
-    { provider: 'meta', brandId: 8, brandName: 'Morbix', amount: null, currency: 'INR', recordedAt: null,
-      billing: { status: 'ok', amount: 80, currency: 'INR' } },
+    { provider: 'meta', brandId: 8, brandName: 'Morbix', amount: null, currency: 'INR', recordedAt: null },
   ]);
-  expect(meta.getBillingBalance).toHaveBeenCalledTimes(1);
-  expect(meta.getBillingBalance).toHaveBeenCalledWith(8, '88224');
   expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('w.brand_id = b.id'),
     expect.objectContaining({ replacements: { brandId: 8 } }));
 });

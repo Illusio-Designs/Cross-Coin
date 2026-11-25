@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { notifyEvent } from '../lib/adminToast';
+import { hasActiveOrderPush } from '../utils/pushNotifications';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
 const MAX_NOTIFICATIONS = 50;
@@ -162,17 +163,16 @@ function playSound(type) {
 }
 
 // While the tab is in the background: show "(2) New order" in the tab title and,
-// when the browser allows notifications, a desktop pop-up. It uses the same tag
-// as the Web Push alert for that order, so the two never show twice.
+// a desktop pop-up for browsers that are using the dashboard fallback.
 let hiddenCount = 0;
 let baseTitle = null;
-function flagHidden(type, data) {
+function flagHidden(type, data, showPopup = true) {
   if (typeof document === 'undefined' || !document.hidden) return;
   if (baseTitle === null) baseTitle = document.title;
   hiddenCount += 1;
   document.title = `(${hiddenCount}) ${type === 'order' ? 'New order' : 'New WhatsApp'} · ${baseTitle}`;
   try {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    if (showPopup && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       const isOrder = type === 'order';
       const amount = data.amount != null ? ` · ₹${Math.round(Number(data.amount) || 0).toLocaleString('en-IN')}` : '';
       const n = new Notification(isOrder ? `New order ${data.orderNumber || ''}`.trim() : 'New WhatsApp message', {
@@ -197,10 +197,14 @@ export function useNotifications() {
   const [seeding, setSeeding] = useState(true);
   const seenIds = useRef({ orders: new Set(), whatsapp: new Set() });
 
-  const addNotification = useCallback((type, data) => {
+  const addNotification = useCallback(async (type, data) => {
     const item = { id: `${type}-${data.id || Date.now()}`, type, data, read: false, time: new Date() };
     setNotifications(prev => [item, ...prev].slice(0, MAX_NOTIFICATIONS));
     setUnreadCount(c => c + 1);
+    if (type === 'order' && await hasActiveOrderPush()) {
+      flagHidden(type, data, false);
+      return;
+    }
     playSound(type);
     flagHidden(type, data);
     notifyEvent(type, data); // gooey toast with a "View" action

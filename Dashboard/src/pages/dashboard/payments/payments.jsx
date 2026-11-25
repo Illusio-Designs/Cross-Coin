@@ -243,7 +243,7 @@ function RazorpayLookup({ brands, isAdmin }) {
         <p className="pl-faint pl-small">Check the shared Razorpay account against orders from all brands.</p>
       </header>
       <div className="pl-rzp__tools">
-        <form className="pl-rzp__form" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
+        <form className="pl-rzp__form pl-rzp__lookup" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
           <Input label="Payment ID" name="rzp-lookup-reference" value={reference} placeholder="pay_…" maxLength={68}
             autoComplete="off" spellCheck={false} disabled={!!busy} required pattern="pay_[a-zA-Z0-9]{6,64}"
             onChange={(event) => { setReference(event.target.value); resetResult(); }} />
@@ -373,11 +373,21 @@ function RazorpayLookup({ brands, isAdmin }) {
           )}
         </div>
       )}
-      <div className="pl-rzp__recent">
-        <Mismatches isAdmin={isAdmin} />
-      </div>
+      <DesktopMismatches isAdmin={isAdmin} />
     </section>
   );
+}
+
+function DesktopMismatches({ isAdmin }) {
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 740px)");
+    const update = () => setDesktop(!media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return desktop && <div className="pl-rzp__recent"><Mismatches isAdmin={isAdmin} /></div>;
 }
 
 const COD_REMITTANCE_LABEL = {

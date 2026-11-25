@@ -24,6 +24,18 @@ export function pushPermission() {
   return typeof Notification !== 'undefined' ? Notification.permission : 'default';
 }
 
+export async function hasActiveOrderPush() {
+  if (!pushSupported() || pushPermission() !== 'granted') return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg?.active) return false;
+    const sub = await reg.pushManager.getSubscription();
+    return !!sub && (sub.expirationTime == null || sub.expirationTime > Date.now());
+  } catch {
+    return false;
+  }
+}
+
 // Returns { ok, reason, endpoint }. reason ∈ unsupported | disabled | denied | error.
 export async function enablePush() {
   if (!pushSupported()) return { ok: false, reason: 'unsupported' };
@@ -56,11 +68,17 @@ export async function enablePush() {
       sub = null;
     }
   }
-  if (!sub) {
+  const isNew = !sub;
+  if (isNew) {
     sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
   }
 
-  await whatsappService.savePushSubscription(sub.toJSON());
+  try {
+    await whatsappService.savePushSubscription(sub.toJSON());
+  } catch (error) {
+    if (isNew) await sub.unsubscribe().catch(() => {});
+    throw error;
+  }
   return { ok: true, endpoint: sub.endpoint };
 }
 

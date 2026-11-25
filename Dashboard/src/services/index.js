@@ -2184,7 +2184,7 @@ export const bundleService = {
 // Dashboard Services
 export const dashboardService = {
   getWalletBalances: async (brandId) => {
-    try { return (await adminApi.get('/api/dashboard/wallet-balances', { params: brandId ? { brandId } : {}, timeout: 35000 })).data.balances; }
+    try { return (await adminApi.get('/api/dashboard/wallet-balances', { params: brandId ? { brandId } : {} })).data.balances; }
     catch (error) { throw payErr(error); }
   },
   saveWalletBalance: async (snapshot) => {
