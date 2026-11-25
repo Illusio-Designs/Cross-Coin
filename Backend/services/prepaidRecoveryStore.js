@@ -46,6 +46,10 @@ function ensureSchema() {
       id TINYINT PRIMARY KEY, next_at DATETIME NOT NULL, lease VARCHAR(36), lease_until DATETIME,
       recent_due_at DATETIME
     ) ENGINE=InnoDB`);
+    await query(`CREATE TABLE IF NOT EXISTS prepaid_capture_cursor (
+      id TINYINT PRIMARY KEY, completed_through BIGINT NOT NULL,
+      window_until BIGINT, next_offset INT NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB`);
   })().catch((error) => { schema = null; throw error; });
   return schema;
 }
@@ -75,13 +79,25 @@ async function queueCaptures(payments, { historical = false } = {}) {
 async function rememberCheckout(brandId, checkoutRef, references = {}, resolved = false) {
   if (!validCheckoutRef(checkoutRef)) return;
   await ensureSchema();
+  const paymentId = validPaymentId(references.paymentId) ? references.paymentId : null;
+  const gatewayOrderId = validGatewayOrder(references.gatewayOrderId) ? references.gatewayOrderId : null;
   await query(`INSERT INTO prepaid_checkout_inbox (brand_id, checkout_ref, payment_id, gateway_order_id, next_at, resolved)
     VALUES (:brandId, :checkoutRef, :pay, :gateway, UTC_TIMESTAMP() + INTERVAL 2 MINUTE, :resolved)
     ON DUPLICATE KEY UPDATE payment_id = COALESCE(VALUES(payment_id), prepaid_checkout_inbox.payment_id),
       gateway_order_id = COALESCE(VALUES(gateway_order_id), prepaid_checkout_inbox.gateway_order_id),
       resolved = GREATEST(prepaid_checkout_inbox.resolved, VALUES(resolved))`,
-  { brandId, checkoutRef, pay: validPaymentId(references.paymentId) ? references.paymentId : null,
-    gateway: validGatewayOrder(references.gatewayOrderId) ? references.gatewayOrderId : null, resolved });
+  { brandId, checkoutRef, pay: paymentId, gateway: gatewayOrderId, resolved });
+  if (paymentId || gatewayOrderId) {
+    // A previously unlinked capture may only become recoverable after the
+    // provider supplies a reference. The stored reference prevents a replay
+    // from repeatedly resetting the retry budget.
+    await query(`UPDATE prepaid_recovery SET state = 'pending', checkout_ref = :checkoutRef,
+      brand_id = :brandId, attempts = 0, reason = NULL, next_at = UTC_TIMESTAMP()
+      WHERE historical = FALSE AND state = 'needs_manual_review' AND checkout_ref IS NULL AND lease IS NULL
+      AND reason IN ('No Shiprocket checkout reference was found for this payment.', 'Waiting for the original Shiprocket checkout reference.')
+      AND (payment_id = :paymentId OR gateway_order_id = :gatewayOrderId)`,
+    { checkoutRef, brandId, paymentId, gatewayOrderId });
+  }
 }
 
 async function enabledBrands() {

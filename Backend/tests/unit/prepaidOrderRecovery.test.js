@@ -107,3 +107,30 @@ test('the worker ignores a previously scheduled backfill and only claims current
   expect(scanRazorpayCaptures).not.toHaveBeenCalled();
   expect(ingestVerifiedOrder).not.toHaveBeenCalled();
 });
+
+test('the capture scan saves its cursor only after a page is persisted and resumes a failed page', async () => {
+  const { scanRazorpayCaptures } = require('../../services/paymentsAdminService.js');
+  const end = Math.floor(Date.now() / 1000) - 100;
+  const cursor = { completed_through: end - 100, window_until: end, next_offset: 100 };
+  store.rows.mockImplementation(async (sql) => {
+    if (sql.includes('FROM prepaid_recovery_schedule')) return [{ recent_due: 1 }];
+    if (sql.includes('FROM prepaid_capture_cursor')) return [cursor];
+    return [];
+  });
+  scanRazorpayCaptures.mockResolvedValueOnce({ missing: [payment], nextOffset: 200 })
+    .mockRejectedValueOnce(new Error('provider unavailable'))
+    .mockResolvedValueOnce({ missing: [], nextOffset: null });
+  const update = store.query.getMockImplementation();
+  store.query.mockImplementation(async (sql, values) => {
+    if (sql.includes('SET next_offset = :offset')) cursor.next_offset = values.offset;
+    return update(sql, values);
+  });
+
+  await expect(recovery.run()).resolves.toMatchObject({ status: 'partial' });
+  expect(cursor.next_offset).toBe(200);
+  expect(store.queueCaptures).toHaveBeenCalledWith([payment]);
+  await expect(recovery.run()).resolves.toMatchObject({ status: 'ok' });
+  expect(scanRazorpayCaptures.mock.calls.map(([page]) => [page.until, page.offset])).toEqual([
+    [end, 100], [end, 200], [end, 200],
+  ]);
+});

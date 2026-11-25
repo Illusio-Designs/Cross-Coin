@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { PageHeader } from './primitives';
 import { dashboardService, brandService } from '../../services';
 import Dropdown from '../ui/Dropdown';
+import ProviderWalletBalances from './ProviderWalletBalances';
 import { HugeiconsIcon } from '@hugeicons/react';
 import {
   Package01Icon, ArrowRight01Icon, WhatsappIcon, Building01Icon,
@@ -140,7 +141,7 @@ const SearchIcon = () => (
 );
 
 function TodayHome() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [brandId, setBrandId] = useState('');
   const [brandList, setBrandList] = useState([]);
   const [tab, setTab] = useState('all');
@@ -216,6 +217,8 @@ function TodayHome() {
           />
         </div>
       </div>
+
+      {isAdmin && <ProviderWalletBalances />}
 
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">

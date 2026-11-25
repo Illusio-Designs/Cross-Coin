@@ -1126,6 +1126,10 @@ export const exceptionsService = {
 // Dashboard → Payments (Backend services/paymentsAdminService.js).
 const payErr = (error) => new Error(error.response?.data?.message || getErrorMessage(error.response?.data || error.message));
 export const paymentService = {
+  getCodRemittance: async (date) => {
+    try { return (await adminApi.get('/api/payments/admin/cod/remittance', { params: { date }, timeout: 25000 })).data; }
+    catch (error) { throw payErr(error); }
+  },
   findMissingRazorpayOrders: async (date, signal) => {
     try {
       return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', { params: { date }, signal, timeout: 60000 })).data;
@@ -2179,6 +2183,14 @@ export const bundleService = {
 
 // Dashboard Services
 export const dashboardService = {
+  getWalletBalances: async () => {
+    try { return (await adminApi.get('/api/dashboard/wallet-balances')).data.balances; }
+    catch (error) { throw payErr(error); }
+  },
+  saveWalletBalance: async (snapshot) => {
+    try { return (await adminApi.put('/api/dashboard/wallet-balances', snapshot)).data.balances; }
+    catch (error) { throw payErr(error); }
+  },
   // Home "today": work queues, pipeline, numbers and recent activity.
   getToday: async (brandId) => {
     const { data } = await adminApi.get("/api/dashboard/today", { params: brandId ? { brandId } : {} });

@@ -233,6 +233,28 @@ async function ensureSchedule() {
   await store.query('INSERT IGNORE INTO prepaid_recovery_schedule (id, next_at) VALUES (1, UTC_TIMESTAMP())');
 }
 
+async function scanRecentCaptures(now) {
+  const { scanRazorpayCaptures } = require('./paymentsAdminService.js');
+  await store.query('INSERT IGNORE INTO prepaid_capture_cursor (id, completed_through) VALUES (1, :baseline)', { baseline: now });
+  const [cursor] = await store.rows('SELECT * FROM prepaid_capture_cursor WHERE id = 1');
+  const completed = Number(cursor.completed_through);
+  const until = Number(cursor.window_until) || Math.min(now, completed + 3600);
+  const from = Math.max(1, completed - 3600);
+  let offset = Number(cursor.next_offset);
+  await store.query('UPDATE prepaid_capture_cursor SET window_until = :until WHERE id = 1', { until });
+  for (let page = 0; page < 3 && offset != null; page++) {
+    const batch = await scanRazorpayCaptures({ from, until, offset });
+    await store.queueCaptures(batch.missing);
+    offset = batch.nextOffset;
+    if (offset == null) {
+      await store.query('UPDATE prepaid_capture_cursor SET completed_through = :until, window_until = NULL, next_offset = 0 WHERE id = 1', { until });
+    } else {
+      await store.query('UPDATE prepaid_capture_cursor SET next_offset = :offset WHERE id = 1', { offset });
+    }
+  }
+  return offset == null && until >= now;
+}
+
 async function run() {
   await ensureSchedule();
   const lease = randomUUID();
@@ -244,20 +266,14 @@ async function run() {
   if (!scan) return { status: 'skipped', summary: 'Recovery is not due' };
   const errors = [];
   try {
-    const payments = require('./paymentsAdminService.js');
-    // Capture webhooks are primary. This overlap catches dropped deliveries.
+    // Keep the window and its next page across outages and high-volume ticks.
     const now = Math.floor(Date.now() / 1000);
     if (Number(scan.recent_due)) {
-      await store.query(`UPDATE prepaid_recovery_schedule SET recent_due_at = UTC_TIMESTAMP() + INTERVAL 5 MINUTE
-        WHERE id = 1 AND lease = :lease`, { lease });
       try {
-        let offset = 0;
-        for (let page = 0; page < 3 && offset != null; page++) {
-          const batch = await payments.scanRazorpayCaptures({ from: now - 3600, until: now, offset });
-          await store.queueCaptures(batch.missing);
-          offset = batch.nextOffset;
+        if (await scanRecentCaptures(now)) {
+          await store.query(`UPDATE prepaid_recovery_schedule SET recent_due_at = UTC_TIMESTAMP() + INTERVAL 5 MINUTE
+            WHERE id = 1 AND lease = :lease`, { lease });
         }
-        if (offset != null) errors.push('Recent Razorpay scan reached its page limit.');
       } catch (error) { errors.push(`Recent Razorpay scan: ${error.message}`); }
     }
     try { await refreshInbox(); } catch (error) { errors.push(`Checkout inbox: ${error.message}`); }

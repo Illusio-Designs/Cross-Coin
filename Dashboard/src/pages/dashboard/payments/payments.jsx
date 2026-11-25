@@ -239,7 +239,7 @@ function RazorpayLookup({ brands, isAdmin }) {
   return (
     <section className="pl-card pl-rzp" id="razorpay-check" aria-labelledby="pl-rzp-title">
       <header className="pl-rzp__heading">
-        <h2 id="pl-rzp-title">Razorpay reconciliation</h2>
+        <h2 id="pl-rzp-title">Prepaid reconciliation · Razorpay</h2>
         <p className="pl-faint pl-small">Check the shared Razorpay account against orders from all brands.</p>
       </header>
       <div className="pl-rzp__tools">
@@ -376,6 +376,75 @@ function RazorpayLookup({ brands, isAdmin }) {
       <div className="pl-rzp__recent">
         <Mismatches isAdmin={isAdmin} />
       </div>
+    </section>
+  );
+}
+
+const COD_REMITTANCE_LABEL = {
+  matched: "Matched", missing: "Order missing", conflict: "Conflicting records",
+  not_cod: "Order is prepaid", amount_mismatch: "Amount mismatch",
+};
+
+function CodRemittance() {
+  const [date, setDate] = useState(() => istDay(Date.now()));
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  const check = async (event) => {
+    event.preventDefault();
+    if (!date || busy) return;
+    setBusy(true);
+    setReport(null);
+    setError("");
+    try {
+      const result = await paymentService.getCodRemittance(date);
+      if (result.date !== date) throw new Error("The API did not confirm the remittance date.");
+      setReport(result);
+    } catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <section className="pl-card pl-rzp" aria-labelledby="cod-remittance-title">
+      <header className="pl-rzp__heading">
+        <h2 id="cod-remittance-title">COD reconciliation</h2>
+        <p className="pl-faint pl-small">Match iThink remittance shipments to website orders across all brands by AWB.</p>
+      </header>
+      <form className="pl-rzp__form" onSubmit={check}>
+        <DateRangePicker label="Remittance date (IST)" className="pl-rzp__date" inline single showIcon={false}
+          startDate={date} maxDate={istDay(Date.now())} disabled={busy}
+          onStartChange={(value) => { if (value !== date) { setDate(value); setReport(null); setError(""); } }} />
+        <Button type="submit" variant="secondary" loading={busy} loadingText="Checking iThink…" disabled={!date}>Check remittance</Button>
+      </form>
+      {error && <p role="alert" className="pl-rzp__error">{error}</p>}
+      {report?.status === "not_configured" && <p role="status">Connect iThink credentials in Brand settings to check remittances.</p>}
+      {report?.status === "unavailable" && <p role="alert">iThink could not load this remittance. Try again.</p>}
+      {(report?.status === "ok" || report?.status === "partial") && (
+        <div className="pl-rzp__result">
+          {report.status === "partial" && <p role="alert">Some iThink accounts could not be checked. The results are partial.</p>}
+          <p className="pl-small" role="status">
+            {plural(report.rows.length, "shipment")} · {num(report.matched)} matched · {num(report.rows.length - report.matched)} need review
+            {report.netRemittedPaise != null && ` · Net remitted ${rupees.format(report.netRemittedPaise / 100)}`}
+          </p>
+          {!report.rows.length && report.status === "ok" && <p className="pl-small">No shipments reported for this remittance date.</p>}
+          {report.rows.length > 0 && (
+            <div className="pl-scroll pl-rzp__scan-table">
+              <table className="pl-table" aria-label="iThink COD remittance">
+                <thead><tr><th>AWB</th><th>Website order</th><th>Courier amount</th><th>Order amount</th><th>Status</th></tr></thead>
+                <tbody>{report.rows.map((row) => (
+                  <tr key={row.awb}>
+                    <td><code>{row.awb}</code></td>
+                    <td>{row.orderNumber ? <Button size="sm" variant="quiet" onClick={() => openOrder(row.orderNumber)}>{row.orderNumber}</Button> : "—"}</td>
+                    <td>{row.amountPaise == null ? "—" : rupees.format(row.amountPaise / 100)}</td>
+                    <td>{row.expectedPaise == null ? "—" : inr(row.expectedPaise / 100)}</td>
+                    <td>{COD_REMITTANCE_LABEL[row.status]}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -626,6 +695,7 @@ export default function Payments() {
       <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
       <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
+      <CodRemittance />
 
       <div className="pl-toolbar">
         <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />

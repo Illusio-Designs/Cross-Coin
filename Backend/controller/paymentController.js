@@ -40,22 +40,39 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
-module.exports.adminMissingRazorpayOrders = async (req, res) => {
-    const { date } = req.query;
+function istPaymentDay(date) {
     if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({ message: 'Choose one payment date.' });
+        return null;
     }
     const utc = new Date(`${date}T00:00:00Z`);
     const from = Date.parse(`${date}T00:00:00+05:30`) / 1000;
     const now = Math.floor(Date.now() / 1000);
     if (!Number.isFinite(from) || from <= 0 || from > now || utc.toISOString().slice(0, 10) !== date) {
-        return res.status(400).json({ message: 'Choose a valid payment date.' });
+        return null;
     }
+    return { from, until: Math.min(now, from + 86399) };
+}
+
+module.exports.adminMissingRazorpayOrders = async (req, res) => {
+    const { date } = req.query;
+    const day = istPaymentDay(date);
+    if (!day) return res.status(400).json({ message: 'Choose one valid payment date.' });
     try {
-        const result = await paymentsAdmin.findMissingRazorpayOrders({ from, until: Math.min(now, from + 86399) });
+        const result = await paymentsAdmin.findMissingRazorpayOrders(day);
         return res.json({ success: true, ...result, date });
     } catch (error) {
         return adminFail(res, error, 'the Razorpay missing-order scan');
+    }
+};
+
+module.exports.adminCodRemittance = async (req, res) => {
+    const { date } = req.query;
+    if (!istPaymentDay(date)) return res.status(400).json({ message: 'Choose one valid remittance date.' });
+    try {
+        const result = await require('../services/codRemittanceService.js').reconcileCod(date);
+        return res.json({ success: true, ...result, date });
+    } catch (error) {
+        return adminFail(res, error, 'the iThink COD remittance');
     }
 };
 

@@ -73,6 +73,22 @@ class IThinkService {
     };
   }
 
+  async getCodRemittance(date) {
+    await this.initialize();
+    const payload = { data: { ...this._authData(), remittance_date: date } };
+    const read = async (endpoint) => {
+      const { data } = await this.axiosInstance.post(`/api_v3/remittance/${endpoint}.json`, payload, {
+        timeout: 12000,
+        validateStatus: (status) => status === 200 || status === 404,
+      });
+      if (data?.status === 'success' && Array.isArray(data.data)) return data.data;
+      if (/^(?:no (?:remittance )?data found|no records found)\.?$/i.test(String(data?.message || '').trim())) return [];
+      throw new Error('iThink did not return a valid COD remittance report.');
+    };
+    const [summary, shipments] = await Promise.all([read('get'), read('get_details')]);
+    return { summary, shipments };
+  }
+
   /** Redact PII before logging */
   _redactPII(data) {
     if (!data) return data;
