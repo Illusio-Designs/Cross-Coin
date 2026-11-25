@@ -144,7 +144,7 @@ export default function PdpMixPack({ current, scents, tiers, placement = 'produc
         </div>
       </div>
       <div className="v-pdp-pack__cards" ref={rail} role="region" aria-label="Fragrances for your pack"
-        tabIndex={0} data-lenis-prevent>
+        tabIndex={0} data-lenis-prevent-horizontal>
         {products.map((product) => {
           const checked = picked.has(product.id);
           return (
