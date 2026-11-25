@@ -423,14 +423,6 @@ export const serverLogsService = {
       throw new Error(error.response?.data?.message || error.message || 'Failed to save the settings');
     }
   },
-  sendTest: async () => {
-    try {
-      const { data } = await adminApi.post('/api/admin/system/server-logs/test');
-      return data.result;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || error.message || 'Failed to send the test alert');
-    }
-  },
 };
 
 // Meta Conversions API (server-side pixel) diagnostics. Both endpoints resolve

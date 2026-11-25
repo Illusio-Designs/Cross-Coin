@@ -5,7 +5,7 @@ import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { serverLogsService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
+import { RefreshIcon } from '@hugeicons/core-free-icons';
 
 /* ──────────────────────────────────────────────────────────────
    Server logs (Settings → Server logs, admins only). Server Watch.
@@ -24,10 +24,10 @@ import { RefreshIcon, SentIcon } from '@hugeicons/core-free-icons';
    · Hour by hour: requests per group, errors, blocked, orders.
    · Logged problems: errors and blocked requests, grouped.
      (Store chips, By store and orders: storefront server only.)
-   · Settings tab: recipients, alert hours, alert levels, test alert.
+   · Settings tab: recipients, alert hours and alert levels.
 
    Data: GET /api/admin/system/server-logs?app=store|admin (every 60 s),
-   PUT …/server-logs/settings, POST …/server-logs/test.
+   PUT …/server-logs/settings.
    Times are shown in India time.
    ────────────────────────────────────────────────────────────── */
 
@@ -410,28 +410,10 @@ function TemplateStatus({ t }) {
     </span>
   );
 }
-// One recipient's test result, with what WhatsApp did with it.
-function WaResult({ w }) {
-  if (!w.ok) return <><Pill tone="bad">Not delivered</Pill> <span className="sh-small">{w.error}</span></>;
-  const how = w.via === 'text' ? ' as plain message' : '';
-  if (w.delivery === 'read') return <Pill tone="ok">Read{how}</Pill>;
-  if (w.delivery === 'delivered') return <Pill tone="ok">Delivered{how}</Pill>;
-  return (
-    <>
-      <Pill tone="warn">Accepted by WhatsApp{how}</Pill>{' '}
-      <span className="sh-small">
-        {w.via === 'text' ? 'Not delivered yet. Without an approved template it only arrives if this number messaged your business number in the last 24 hours.' : 'Not confirmed as delivered yet. Check the phone.'}
-      </span>
-    </>
-  );
-}
-
 function SettingsTab({ data, onSaved }) {
   const [f, setF] = useState(() => ({ ...data.settings, emails: data.settings.emails.join(', '), whatsapp: data.settings.whatsapp.join(', '), rules: { ...data.settings.rules } }));
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [test, setTest] = useState(null);
   const allDay = (f.hoursFrom === 0 && f.hoursTo === 24) || f.hoursFrom === f.hoursTo;
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
@@ -450,15 +432,10 @@ function SettingsTab({ data, onSaved }) {
     } finally { setSaving(false); }
   };
 
-  const sendTest = async () => {
-    setTesting(true); setTest(null);
-    try { setTest(await serverLogsService.sendTest()); } catch (err) { setTest({ error: err.message }); } finally { setTesting(false); }
-  };
-
   return (
     <form className="sl-settings" onSubmit={save}>
       <section className="rep-panel">
-        <div className="rep-ph"><h3>Who gets alerts</h3><span className="hint">Separate with commas. Save before sending a test.</span></div>
+        <div className="rep-ph"><h3>Who gets alerts</h3><span className="hint">Separate recipients with commas.</span></div>
         <div className="sl-form">
           <Switch checked={!!f.enabled} onChange={(v) => set('enabled', v)} label="Server Watch alerts on" description="Off: problems are still logged here, nothing is sent." />
           <label className="sl-field">
@@ -504,23 +481,8 @@ function SettingsTab({ data, onSaved }) {
 
       <div className="sl-actions">
         <button type="submit" className="sh-btn sh-btn--primary" disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
-        <button type="button" className="sh-btn" onClick={sendTest} disabled={testing}>
-          <HugeiconsIcon icon={SentIcon} size={13} strokeWidth={2} aria-hidden="true" />{testing ? 'Sending…' : 'Send test alert'}
-        </button>
         {msg && <span className={`sh-msg sh-msg--${msg.tone}`} role="status">{msg.text}</span>}
       </div>
-      {test && (
-        <div className="sl-test" role="status">
-          {test.error ? <div className="sl-bad">{test.error}</div> : (
-            <>
-              <div>Email: {test.email?.ok ? <Pill tone="ok">Sent</Pill> : <><Pill tone="bad">Not sent</Pill> <span className="sh-small">{test.email?.error}</span></>}</div>
-              {(test.whatsapp || []).map((w, i) => (
-                <div key={i}>WhatsApp {w.phone}: <WaResult w={w} /></div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
     </form>
   );
 }
