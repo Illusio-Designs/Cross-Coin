@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   Button, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, ConfirmBar, EmptyState, ErrorState,
-  Skeleton, SkeletonKpis, SkeletonTableRows, Input,
+  Skeleton, SkeletonKpis, SkeletonTableRows, Input, DateRangePicker,
 } from "../../../components/ui";
 import Dropdown from "../../../components/ui/Dropdown";
 import { paymentService, brandService } from "../../../services";
@@ -250,11 +250,12 @@ function RazorpayLookup({ brands, isAdmin }) {
           <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!reference.trim() || !!busy}>Check payment</Button>
         </form>
         <form className="pl-rzp__form pl-rzp__day" onSubmit={(event) => { event.preventDefault(); scanForMissingOrders(); }}>
-          <Input label="Missing orders date (IST)" name="recovery-date" type="date" value={date}
-            max={istDay(Date.now())} disabled={!!busy} required
-            onChange={(event) => {
+          <DateRangePicker label="Missing orders date (IST)" inline single showIcon={false} startDate={date}
+            maxDate={istDay(Date.now())} disabled={!!busy} className="pl-rzp__date"
+            onStartChange={(selectedDate) => {
+              if (selectedDate === date) return;
               scanRequest.current?.abort();
-              setDate(event.target.value);
+              setDate(selectedDate);
               setScan(null);
               setError("");
             }} />

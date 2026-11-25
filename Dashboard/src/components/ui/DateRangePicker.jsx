@@ -138,6 +138,7 @@ const DateRangePicker = ({
   single = false, // single-date mode: one click picks a date and closes
   minDate = '',   // 'YYYY-MM-DD' — dates before this are disabled
   maxDate = '',   // 'YYYY-MM-DD' — dates after this are disabled
+  disabled = false,
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
@@ -154,11 +155,12 @@ const DateRangePicker = ({
 
   // Close on outside click
   useEffect(() => {
+    if (disabled) { setOpen(false); return; }
     if (!open) return;
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [disabled, open]);
 
   const handleToggle = () => {
     if (!open) {
@@ -253,7 +255,9 @@ const DateRangePicker = ({
       )}
 
       <div className="drp-trigger-row">
-        <button type="button" className={`drp-trigger ${open ? 'drp-trigger--active' : ''}`} onClick={handleToggle}>
+        <button type="button" className={`drp-trigger ${open ? 'drp-trigger--active' : ''}`} onClick={handleToggle}
+          disabled={disabled} aria-expanded={open && !disabled}
+          aria-label={single && label ? `${label} ${startDate ? formatDisplay(startDate) : 'Select date'}` : undefined}>
           <CalendarIcon />
           <span className="drp-trigger-text">
             {single
@@ -267,19 +271,19 @@ const DateRangePicker = ({
         </button>
 
         {onClear && hasValue && (
-          <button type="button" className="drp-clear-btn" onClick={handleClear}>
+          <button type="button" className="drp-clear-btn" onClick={handleClear} disabled={disabled}>
             <ClearIcon /> Clear
           </button>
         )}
 
         {onApply && (
-          <button type="button" className="drp-apply-btn" onClick={handleApply}>
+          <button type="button" className="drp-apply-btn" onClick={handleApply} disabled={disabled}>
             Apply
           </button>
         )}
       </div>
 
-      {open && (
+      {open && !disabled && (
         <div className={`drp-dropdown${alignRight ? ' drp-dropdown--right' : ''}`}>
           <div className="drp-dropdown-body">
             {/* Presets — range mode only */}
