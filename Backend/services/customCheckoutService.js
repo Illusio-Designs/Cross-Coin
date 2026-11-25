@@ -45,8 +45,11 @@ const cap = (s) => String(s || '').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const parseAttrs = (a) => {
   if (!a) return {};
-  if (typeof a === 'string') { try { return JSON.parse(a) || {}; } catch { return {}; } }
-  return typeof a === 'object' ? a : {};
+  if (typeof a === 'string') { try { a = JSON.parse(a); } catch { return {}; } }
+  if (Array.isArray(a)) {
+    return Object.fromEntries(a.filter((entry) => typeof entry?.key === 'string').map(({ key, value }) => [key, value]));
+  }
+  return a && typeof a === 'object' ? a : {};
 };
 
 // ── Shared product mapper ────────────────────────────────────────────────────
@@ -538,7 +541,7 @@ async function purchasePayload(brandId, orderNumber) {
 // completes. Map it into a real Order (+ items, address, guest, payment) so
 // it shows in the Dashboard like any other order. Idempotent by
 // platform_order_id via the orders.idempotency_key column.
-async function ingestCheckoutOrder(brandId, p) {
+async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
   const status = String(p?.status || '').toUpperCase();
   if (status && status !== 'SUCCESS') return { skipped: `status_${status}` };
   const platformId = String(p?.platform_order_id || p?.order_id || '').trim();
@@ -552,11 +555,11 @@ async function ingestCheckoutOrder(brandId, p) {
   const isCod = isCodOrder(p, pay);
   const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
   const providerTransactionId = pay.txn_id || pay.pg_transaction_id || null;
-  const references = paid && (payments.length === 1 || successfulPayments.length === 1) ? {
-    razorpay_payment_id: [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id]
+  const { razorpayOrderReferences } = require('../utils/shiprocketPaymentRecovery.js');
+  const references = paid && (payments.length <= 1 || successfulPayments.length === 1) ? {
+    razorpay_payment_id: verifiedRazorpayPayment?.id ?? [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id, p.razorpay_payment_id]
       .find((value) => typeof value === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(value)),
-    razorpay_order_id: [pay.razorpay_order_id, pay.pg_order_id, pay.pg_transaction_id]
-      .find((value) => typeof value === 'string' && /^order_[a-zA-Z0-9]{6,64}$/.test(value)),
+    razorpay_order_id: verifiedRazorpayPayment?.order_id ?? razorpayOrderReferences(pay)[0] ?? razorpayOrderReferences(p)[0],
   } : {};
   const idemKey = `cco:${platformId}`.slice(0, 100);
   const already = await Order.findOne({ where: { idempotency_key: idemKey } });
@@ -815,6 +818,6 @@ module.exports = {
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
   initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
-  trackingFromAttributes, visitIdFor, customerIdFor,
+  trackingFromAttributes, visitIdFor, customerIdFor, parseAttrs,
   getPushConfig,
 };

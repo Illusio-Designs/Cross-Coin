@@ -240,6 +240,8 @@ router.get('/serviceability/:pincode', optionalBrand, async (req, res) => {
 const CRON_JOBS = {
     'status-refresh': 'cron:shipping-status-refresh',
     'loyalty-expiry': 'cron:loyalty-expiry',
+    'shiprocket-order-reconciliation': 'shiprocket-order-reconciliation',
+    'shiprocket-order-backfill': 'shiprocket-order-backfill',
 };
 router.all('/cron/run', async (req, res) => {
     const token = process.env.CRON_TOKEN || process.env.ADMIN_METRICS_TOKEN;
@@ -253,6 +255,13 @@ router.all('/cron/run', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Unknown job', allowed: Object.keys(CRON_JOBS) });
     }
     try {
+        if (job === 'shiprocket-order-reconciliation' || job === 'shiprocket-order-backfill') {
+            const { getJob, runJobLogged } = require('../config/cronJobs.js');
+            const outcome = await runJobLogged(getJob(jobName));
+            return res.status(outcome.status === 'failed' ? 502 : 200).json({
+                success: outcome.status !== 'failed', status: outcome.status || 'busy', summary: outcome.summary,
+            });
+        }
         const { enqueue } = require('../services/integrationQueue.js');
         await enqueue(jobName, { via: 'http-cron', at: Date.now() });
         return res.json({ success: true, enqueued: jobName });

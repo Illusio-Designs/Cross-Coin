@@ -61,7 +61,7 @@ async function checkRazorpayReference(req, res, recover = false) {
     const { paymentRef } = req.params;
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentRef)) return res.status(400).json({ message: 'Enter a valid Razorpay payment ID starting with pay_.' });
     try {
-        if (recover && req.body?.shiprocket_order_id != null) {
+        if (recover && (req.body?.source === 'shiprocket' || req.body?.shiprocket_order_id != null)) {
             return await recoverShiprocketOrder(req, res, paymentRef);
         }
         const { lookupRazorpayPayment, reconcileOrphanPayment } = require('../services/paymentReconciliationService.js');
@@ -106,10 +106,6 @@ async function checkRazorpayReference(req, res, recover = false) {
 }
 
 async function recoverShiprocketOrder(req, res, paymentRef) {
-    const orderRef = String(req.body.shiprocket_order_id || '').trim();
-    if (!req.brand?.id || !/^[a-zA-Z0-9_-]{1,100}$/.test(orderRef)) {
-        return res.status(400).json({ message: 'Choose a store and enter its Shiprocket order ID.' });
-    }
     const payment = await razorpayService.getPayment(paymentRef);
     if (!payment || payment.id !== paymentRef || payment.status !== 'captured' || payment.currency !== 'INR' ||
         !Number.isSafeInteger(Number(payment.amount)) || Number(payment.amount) <= 0 || Number(payment.amount_refunded) > 0) {
@@ -127,8 +123,10 @@ async function recoverShiprocketOrder(req, res, paymentRef) {
 
     let result;
     try {
-        const { verifyAndIngest } = require('./customCheckoutController.js');
-        result = await verifyAndIngest(req.brand.id, orderRef, payment);
+        const { findShiprocketOrderForPayment } = require('../services/shiprocketOrderReconciliation.js');
+        const { ingestVerifiedOrder } = require('./customCheckoutController.js');
+        const checkout = await findShiprocketOrderForPayment(payment);
+        result = await ingestVerifiedOrder(checkout.brandId, checkout.id, checkout.details, payment, { prepaidOnly: true });
     } catch (error) {
         if (error.status) return res.status(error.status === 401 ? 422 : error.status).json({ message: error.message });
         throw error;
@@ -137,6 +135,16 @@ async function recoverShiprocketOrder(req, res, paymentRef) {
     const order = await Order.findOne({ where: { order_number: result.order_number }, attributes: ['id', 'order_number', 'brand_id', 'payment_status'] });
     return res.json({ success: true, order, message: result.created ? `Order ${result.order_number} recovered from Shiprocket.` : 'The order already exists.' });
 }
+
+module.exports.adminShiprocketBackfill = async (req, res) => {
+    try {
+        const backfill = require('../services/shiprocketOrderBackfill.js');
+        return res.json({ success: true, ...(req.method === 'POST' ? await backfill.start() : await backfill.status()) });
+    } catch (error) {
+        if (error.status) return res.status(error.status).json({ message: error.message });
+        return adminFail(res, error, 'the Shiprocket order backfill');
+    }
+};
 
 module.exports.adminLookupRazorpayPayment = (req, res) => checkRazorpayReference(req, res);
 module.exports.adminRecoverRazorpayPayment = (req, res) => checkRazorpayReference(req, res, true);

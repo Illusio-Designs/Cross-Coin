@@ -4,6 +4,7 @@ jest.mock('../../services/settingsHelper.js', () => ({}));
 jest.mock('../../services/customCheckoutService.js', () => ({
   createCheckoutToken: jest.fn(),
   ensureProductsPushed: jest.fn(), fetchCheckoutOrder: jest.fn(), ingestCheckoutOrder: jest.fn(),
+  parseAttrs: (attrs) => attrs || {},
 }));
 jest.mock('../../config/logging.js', () => ({ logger: { warn: jest.fn(), error: jest.fn() } }));
 

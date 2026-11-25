@@ -97,9 +97,14 @@ function RazorpayLookup({ brands, period, isAdmin }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(false);
-  const [shiprocketBrand, setShiprocketBrand] = useState("");
-  const [shiprocketOrderId, setShiprocketOrderId] = useState("");
+  const backfill = useQuery({
+    queryKey: ["payments", "shiprocket-backfill"],
+    queryFn: paymentService.shiprocketBackfillStatus,
+    enabled: isAdmin,
+    refetchInterval: (query) => query.state.data?.active ? 15000 : false,
+  });
   const [scan, setScan] = useState(null);
+  const [confirmBackfill, setConfirmBackfill] = useState(false);
   const brandName = (id) => {
     const brand = brands.find((item) => String(item.id) === String(id));
     return brand?.display_name || brand?.name || "Unknown";
@@ -109,7 +114,6 @@ function RazorpayLookup({ brands, period, isAdmin }) {
   const currentScan = scan?.period === period ? scan : null;
   const resetResult = () => {
     setResult(null); setError(""); setConfirm(false);
-    setShiprocketBrand(""); setShiprocketOrderId("");
   };
   const check = async (paymentId) => {
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
@@ -140,12 +144,8 @@ function RazorpayLookup({ brands, period, isAdmin }) {
   };
   const canImportShiprocket = isAdmin && result?.remote.status === "captured" && !result.order && !result.canCreate;
   const recover = async () => {
-    const shiprocket = confirm === "shiprocket"
-      ? { brand: shiprocketBrand, orderId: shiprocketOrderId.trim() }
-      : null;
-    if (!isAdmin || busy || (shiprocket
-      ? !canImportShiprocket || !shiprocket.brand || !shiprocket.orderId
-      : !(result?.canCreate || result?.canLink))) return;
+    const shiprocket = confirm === "shiprocket";
+    if (!isAdmin || busy || (shiprocket ? !canImportShiprocket : !(result?.canCreate || result?.canLink))) return;
     setBusy("recover");
     setError("");
     try {
@@ -158,6 +158,16 @@ function RazorpayLookup({ brands, period, isAdmin }) {
       qc.invalidateQueries({ queryKey: ["payments"] });
     } catch (e) { setError(e.message); }
     finally { setBusy(null); setConfirm(false); }
+  };
+
+  const startBackfill = async () => {
+    setBusy("backfill");
+    setError("");
+    try {
+      const progress = await paymentService.startShiprocketBackfill();
+      qc.setQueryData(["payments", "shiprocket-backfill"], progress);
+    } catch (e) { setError(e.message); }
+    finally { setBusy(null); setConfirmBackfill(false); }
   };
 
   return (
@@ -210,27 +220,11 @@ function RazorpayLookup({ brands, period, isAdmin }) {
             : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel={result.canLink ? "Save payment ID" : "Recover order"}
               message={result.canLink ? "Save the verified Razorpay payment ID on this paid order?" : "Create the paid order from the saved checkout and continue with fulfillment?"}
               onConfirm={recover} onCancel={() => setConfirm(false)} />)}
-          {canImportShiprocket && (
-            <>
-              <form className="pl-rzp__form pl-rzp__recover" onSubmit={(event) => {
-                event.preventDefault();
-                if (shiprocketBrand && shiprocketOrderId.trim()) setConfirm("shiprocket");
-              }}>
-                <Input type="select" name="shiprocket-recover-store" label="Store" value={shiprocketBrand}
-                  disabled={!!busy} options={brands.filter((brand) => brand.status === "active" && brand.slug)
-                    .map((brand) => ({ value: brand.slug, label: brand.display_name || brand.name }))}
-                  onChange={(event) => { setShiprocketBrand(event.target.value); setConfirm(false); }} />
-                <Input name="shiprocket-recover-order" label="Shiprocket order ID" value={shiprocketOrderId} maxLength={100} required
-                  disabled={!!busy} onChange={(event) => { setShiprocketOrderId(event.target.value); setConfirm(false); }} />
-                <Button type="submit" variant="secondary" disabled={!!busy || !shiprocketBrand || !shiprocketOrderId.trim()}>Recover Shiprocket order</Button>
-              </form>
-              {confirm === "shiprocket" && (
-                <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel="Verify and create order"
-                  message="Check the Shiprocket order against the captured payment and create the order if they match?"
-                  onConfirm={recover} onCancel={() => setConfirm(false)} />
-              )}
-            </>
-          )}
+          {canImportShiprocket && (!confirm
+            ? <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => setConfirm("shiprocket")}>Recover Shiprocket order</Button>
+            : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel="Find and recover order"
+              message="Search all enabled Shiprocket stores and create the order if its checkout matches this captured payment?"
+              onConfirm={recover} onCancel={() => setConfirm(false)} />)}
         </div>
       )}
       {currentScan && (
@@ -258,6 +252,23 @@ function RazorpayLookup({ brands, period, isAdmin }) {
             <Button size="sm" variant="secondary" onClick={() => scanForMissingOrders(true)}
               loading={busy === "scan"} loadingText="Scanning…" disabled={!!busy}>Scan next batch</Button>
           )}
+        </div>
+      )}
+      {isAdmin && (
+        <div className="pl-rzp__result">
+          <strong>Historical Shiprocket orders</strong>
+          {backfill.data?.startedAt && (
+            <p className="pl-small" role="status">
+              {backfill.data.active ? "Running" : "Finished"} · {plural(backfill.data.recovered, "order")} recovered · {num(backfill.data.failed)} need review
+            </p>
+          )}
+          {backfill.data?.lastError && <p className="pl-small">{backfill.data.lastError}</p>}
+          {confirmBackfill
+            ? <ConfirmBar tone="primary" busy={busy === "backfill"} confirmLabel="Start recovery"
+              message="Check historical Shiprocket checkouts across all stores and recover at most one paid order per minute?"
+              onConfirm={startBackfill} onCancel={() => setConfirmBackfill(false)} />
+            : <Button size="sm" variant="secondary" disabled={!!busy || !!backfill.data?.active}
+              onClick={() => setConfirmBackfill(true)}>Recover older orders</Button>}
         </div>
       )}
       <div className="pl-rzp__recent">

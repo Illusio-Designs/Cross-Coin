@@ -241,17 +241,38 @@ exports.syncCollection = async (req, res) => {
 
 // Confirm an order really exists at the provider (signed fetch), then save it
 // locally from the provider's own copy. Idempotent.
-async function verifyAndIngest(brandId, claimedId, expectedPayment) {
-  let providerOrder;
+async function fetchProviderOrder(brandId, claimedId) {
   try {
     const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
     // The provider wraps the order in `result` (older replies used `data`).
-    const d = confirmed?.result || confirmed?.data || confirmed;
-    providerOrder = Array.isArray(d) ? d[0] : d;
-    if (!providerOrder) throw new Error('order not found at provider');
+    const data = confirmed?.result ?? confirmed?.data ?? confirmed;
+    const order = Array.isArray(data) ? data[0] : data;
+    if (!order || typeof order !== 'object' || confirmed?.success === false || order.success === false) {
+      throw new Error('order not found at provider');
+    }
+    return order;
   } catch (verifyErr) {
     logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
     const e = new Error('Order could not be verified with the checkout provider'); e.status = 401; throw e;
+  }
+}
+
+async function verifyAndIngest(brandId, claimedId, expectedPayment, options) {
+  const providerOrder = await fetchProviderOrder(brandId, claimedId);
+  return ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, options);
+}
+
+async function ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, { prepaidOnly = false, since } = {}) {
+  if (prepaidOnly) {
+    const confirmedId = String(providerOrder.platform_order_id || providerOrder.order_id || '').trim();
+    if (confirmedId !== claimedId) throw Object.assign(new Error('Shiprocket returned a different order reference.'), { status: 409 });
+    const created = Date.parse(providerOrder.created_at || providerOrder.createdAt || providerOrder.order_date || '');
+    if (Number.isFinite(created) && created < since) return { skipped: 'outside_recovery_window' };
+    const payments = Array.isArray(providerOrder.payments) ? providerOrder.payments.filter(Boolean) : [];
+    if (String(providerOrder.payment_status || '').toLowerCase() !== 'success' ||
+        svc.isCodOrder(providerOrder) || payments.some((payment) => svc.isCodOrder(providerOrder, payment))) {
+      return { skipped: 'not_confirmed_prepaid' };
+    }
   }
 
   // Build the order ONLY from the provider's own copy (items, amounts,
@@ -267,22 +288,25 @@ async function verifyAndIngest(brandId, claimedId, expectedPayment) {
   // webhook URL without (or with the wrong) ?brand= can't file a Morbix order
   // under Crosscoin or the other way round.
   if (expectedPayment) require('../utils/shiprocketPaymentRecovery.js').verifyShiprocketRecovery(providerOrder, claimedId, expectedPayment);
-  const cartAttrs = providerOrder?.cart_data?.custom_attributes;
-  const orderAttrs = providerOrder?.custom_attributes;
+  const cartAttrs = svc.parseAttrs(providerOrder.cart_data.custom_attributes);
+  const orderAttrs = svc.parseAttrs(providerOrder.custom_attributes);
   if ([cartAttrs, orderAttrs].some((attrs) => String(attrs?.[PACK_PREVIEW_ATTRIBUTE]) === '1')) return { skipped: 'pack_preview' };
   const stamped = String(cartAttrs?.store || orderAttrs?.store || '').trim().toLowerCase();
   if (stamped) {
     const Brand = require('../model/brandModel.js');
     const own = await Brand.findOne({ where: { slug: stamped }, attributes: ['id'] });
+    if (!own && (prepaidOnly || expectedPayment)) throw Object.assign(new Error('Shiprocket checkout store could not be matched.'), { status: 409 });
     if (own && own.id !== brandId) {
       logger.warn(`[custom-checkout] order ${claimedId} came in for brand ${brandId} but was opened on ${stamped} (brand ${own.id}) — saving it under ${stamped}`);
       brandId = own.id;
     }
   }
-  return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
+  return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId }, expectedPayment);
 }
 
 exports.verifyAndIngest = verifyAndIngest;
+exports.fetchProviderOrder = fetchProviderOrder;
+exports.ingestVerifiedOrder = ingestVerifiedOrder;
 
 // POST /api/custom-checkout/order-webhook?brand=<slug>
 // The provider POSTs the full order here after checkout (register this URL,

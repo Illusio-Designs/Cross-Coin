@@ -1139,11 +1139,16 @@ export const paymentService = {
   recoverRazorpayPayment: async (paymentRef, shiprocket) => {
     try {
       return (await adminApi.post(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}/recover`,
-        shiprocket ? { shiprocket_order_id: shiprocket.orderId } : {}, {
-          ...(shiprocket ? { headers: { 'X-Brand-Name': shiprocket.brand } } : {}),
-          timeout: 45000,
-        })).data;
+        shiprocket ? { source: 'shiprocket' } : {}, { timeout: shiprocket ? 120000 : 45000 })).data;
     } catch (error) { throw payErr(error); }
+  },
+  shiprocketBackfillStatus: async () => {
+    try { return (await adminApi.get('/api/payments/admin/shiprocket/backfill')).data; }
+    catch (error) { throw payErr(error); }
+  },
+  startShiprocketBackfill: async () => {
+    try { return (await adminApi.post('/api/payments/admin/shiprocket/backfill')).data; }
+    catch (error) { throw payErr(error); }
   },
   // { period: 1|7|30, tab, q, brandId, page, limit } → { rows, total, pages, … }
   list: async (params = {}) => {

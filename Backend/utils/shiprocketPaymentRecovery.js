@@ -1,3 +1,8 @@
+function razorpayOrderReferences(entry) {
+  return [entry.razorpay_order_id, entry.pg_order_id, entry.gateway_order_id, entry.pg_transaction_id, entry.txn_id]
+    .filter((id) => typeof id === 'string' && /^order_[a-zA-Z0-9]{6,64}$/.test(id));
+}
+
 function verifyShiprocketRecovery(order, orderId, payment) {
   const fail = (message) => { throw Object.assign(new Error(message), { status: 409 }); };
   if (String(order.platform_order_id || order.order_id || '') !== orderId) {
@@ -11,14 +16,16 @@ function verifyShiprocketRecovery(order, orderId, payment) {
   const payments = Array.isArray(order.payments) ? order.payments.filter(Boolean) : [];
   const captured = payments.filter((entry) =>
     ['captured', 'success', 'successful', 'paid', 'completed'].includes(String(entry.status || entry.payment_status || '').toLowerCase()));
-  const candidates = captured.length === 1 ? captured : payments.length === 1 ? payments : [];
+  const candidates = captured.length === 1 ? captured : payments.length <= 1 ? [payments[0] || {}] : [];
   const matched = candidates.filter((entry) => {
     if ([entry.payment_method, entry.payment_type, entry.payment_mode, entry.gateway, entry.mode]
       .some((value) => /^(cod|cash[\s_-]*on[\s_-]*delivery|cash)$/i.test(String(value || '').trim()))) return false;
-    const ids = [entry.razorpay_payment_id, entry.pg_transaction_id, entry.txn_id]
+    const ids = [entry.razorpay_payment_id, entry.pg_transaction_id, entry.txn_id, order.razorpay_payment_id]
       .filter((id) => typeof id === 'string' && /^pay_/.test(id));
+    const orderIds = [...razorpayOrderReferences(entry), ...razorpayOrderReferences(order)];
+    if (orderIds.some((id) => id !== payment.order_id)) return false;
     if (ids.length) return ids.includes(payment.id) && ids.every((id) => id === payment.id);
-    return payment.order_id && [entry.razorpay_order_id, entry.pg_order_id, entry.pg_transaction_id].includes(payment.order_id);
+    return orderIds.length > 0;
   });
   if (matched.length !== 1) fail('The Razorpay payment ID or order reference does not match this Shiprocket order.');
   const total = Number(order.total_amount_payable);
@@ -27,4 +34,4 @@ function verifyShiprocketRecovery(order, orderId, payment) {
   }
 }
 
-module.exports = { verifyShiprocketRecovery };
+module.exports = { razorpayOrderReferences, verifyShiprocketRecovery };

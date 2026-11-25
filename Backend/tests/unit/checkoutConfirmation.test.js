@@ -1,10 +1,10 @@
 jest.mock('../../model/associations.js', () => ({ Product: {}, Category: {}, Brand: {} }));
 jest.mock('../../services/settingsHelper.js', () => ({}));
 jest.mock('../../config/logging.js', () => ({ logger: { error: jest.fn(), warn: jest.fn() } }));
-jest.mock('../../services/customCheckoutService.js', () => ({ fetchCheckoutOrder: jest.fn(), ingestCheckoutOrder: jest.fn(), purchasePayload: jest.fn() }));
+jest.mock('../../services/customCheckoutService.js', () => ({ fetchCheckoutOrder: jest.fn(), ingestCheckoutOrder: jest.fn(), purchasePayload: jest.fn(), parseAttrs: (attrs) => attrs || {}, isCodOrder: (order) => order.payment_method === 'COD' }));
 jest.mock('../../integration/facebookPixel.js', () => ({ buyerMatchKeys: jest.fn(() => ({})), sendFacebookEvent: jest.fn() }));
 const svc = require('../../services/customCheckoutService');
-const { confirmReturn } = require('../../controller/customCheckoutController');
+const { confirmReturn, verifyAndIngest } = require('../../controller/customCheckoutController');
 let immediate;
 beforeEach(() => {
   jest.clearAllMocks(); immediate = jest.spyOn(global, 'setImmediate').mockImplementation(() => {});
@@ -26,4 +26,19 @@ test('missing local or wrong-store payload never returns a false success',async(
 });
 test('provider verification failure never imports or returns a success',async()=>{
  svc.fetchCheckoutOrder.mockRejectedValue(Error('unavailable'));const r=res();await confirmReturn(req(),r);expect(svc.ingestCheckoutOrder).not.toHaveBeenCalled();expect(r.status).toHaveBeenCalledWith(401);expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ok:false}));
+});
+
+test.each([{ payment_status: 'pending' }, { payment_status: 'success', payment_method: 'COD' }])(
+  'scheduled recovery skips an order whose details do not confirm a prepaid payment',
+  async (payment) => {
+    svc.fetchCheckoutOrder.mockResolvedValue({ result: { platform_order_id: 'provider-1', ...payment } });
+    await expect(verifyAndIngest(1, 'provider-1', null, { prepaidOnly: true })).resolves.toEqual({ skipped: 'not_confirmed_prepaid' });
+    expect(svc.ingestCheckoutOrder).not.toHaveBeenCalled();
+  },
+);
+
+test('scheduled recovery rejects details for a different order ID', async () => {
+  svc.fetchCheckoutOrder.mockResolvedValue({ result: { platform_order_id: 'provider-2', payment_status: 'success' } });
+  await expect(verifyAndIngest(1, 'provider-1', null, { prepaidOnly: true })).rejects.toThrow('different order reference');
+  expect(svc.ingestCheckoutOrder).not.toHaveBeenCalled();
 });

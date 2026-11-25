@@ -11,12 +11,20 @@ test('accepts the captured Razorpay ID on a verified Shiprocket order', () => {
   expect(() => verifyShiprocketRecovery(order({ txn_id: 'provider-ref', pg_transaction_id: capture.id }), 'platform-1', capture)).not.toThrow();
 });
 
-test('accepts a matching Razorpay order ID when no payment ID was saved', () => {
-  expect(() => verifyShiprocketRecovery(order({ pg_order_id: capture.order_id }), 'platform-1', capture)).not.toThrow();
-});
+test.each(['pg_order_id', 'gateway_order_id', 'txn_id'])(
+  'accepts a matching Razorpay order ID in %s when no payment ID was saved',
+  (field) => {
+    expect(() => verifyShiprocketRecovery(order({ [field]: capture.order_id }), 'platform-1', capture)).not.toThrow();
+  },
+);
 
 test('rejects a different captured payment ID even if the Razorpay order ID matches', () => {
   const other = order({ pg_transaction_id: 'pay_different', pg_order_id: capture.order_id });
+  expect(() => verifyShiprocketRecovery(other, 'platform-1', capture)).toThrow('does not match');
+});
+
+test('rejects conflicting Razorpay order IDs even when the payment ID matches', () => {
+  const other = order({ razorpay_payment_id: capture.id, pg_order_id: capture.order_id, gateway_order_id: 'order_different' });
   expect(() => verifyShiprocketRecovery(other, 'platform-1', capture)).toThrow('does not match');
 });
 

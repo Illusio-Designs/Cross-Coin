@@ -58,6 +58,17 @@ test('Shiprocket records the captured Razorpay references alongside the original
   }), expect.anything());
 });
 
+test.each([undefined, 'pay_captured123'])('preserves the gateway order ID with verified payment %s', async (paymentId) => {
+  const orderId = 'order_fixture123';
+  const details = provider({ payments: [{ txn_id: 'shiprocket-fixture-1', gateway_order_id: orderId, amount: 799 }] });
+  const verifiedPayment = paymentId ? { id: paymentId, order_id: orderId } : undefined;
+  await ingestCheckoutOrder(1, details, verifiedPayment);
+
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({
+    transaction_id: 'shiprocket-fixture-1', razorpay_payment_id: paymentId, razorpay_order_id: orderId,
+  }), expect.anything());
+});
+
 test('a verified repeat can restore missing references on a legacy Shiprocket order', async () => {
   models.Order.findOne.mockResolvedValue({ id: 42, brand_id: 1, order_number: 'CC-TEST-42' });
   await ingestCheckoutOrder(1, provider({ payments: [
