@@ -61,6 +61,9 @@ async function checkRazorpayReference(req, res, recover = false) {
     const { paymentRef } = req.params;
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentRef)) return res.status(400).json({ message: 'Enter a valid Razorpay payment ID starting with pay_.' });
     try {
+        if (recover && req.body?.shiprocket_order_id != null) {
+            return await recoverShiprocketOrder(req, res, paymentRef);
+        }
         const { lookupRazorpayPayment, reconcileOrphanPayment } = require('../services/paymentReconciliationService.js');
         const result = await lookupRazorpayPayment(paymentRef);
         if (result.error) return res.status(result.status).json({ message: result.error });
@@ -100,6 +103,39 @@ async function checkRazorpayReference(req, res, recover = false) {
     } catch (error) {
         return adminFail(res, error, recover ? 'the Razorpay recovery' : 'the Razorpay payment');
     }
+}
+
+async function recoverShiprocketOrder(req, res, paymentRef) {
+    const orderRef = String(req.body.shiprocket_order_id || '').trim();
+    if (!req.brand?.id || !/^[a-zA-Z0-9_-]{1,100}$/.test(orderRef)) {
+        return res.status(400).json({ message: 'Choose a store and enter its Shiprocket order ID.' });
+    }
+    const payment = await razorpayService.getPayment(paymentRef);
+    if (!payment || payment.id !== paymentRef || payment.status !== 'captured' || payment.currency !== 'INR' ||
+        !Number.isSafeInteger(Number(payment.amount)) || Number(payment.amount) <= 0 || Number(payment.amount_refunded) > 0) {
+        return res.status(409).json({ message: 'Use a captured INR Razorpay payment with no refunds.' });
+    }
+    const { findRazorpayOrderMatches } = require('../services/razorpayOrderMatching.js');
+    const match = (await findRazorpayOrderMatches([payment])).get(paymentRef);
+    if (match.issue || match.pending) {
+        return res.status(409).json({ message: match.issue || 'This payment belongs to a saved checkout. Review that checkout before importing a Shiprocket order.' });
+    }
+    if (match.linked) {
+        const { linked } = match;
+        return res.json({ success: true, order: { id: linked.linked_order_id, order_number: linked.order_number, brand_id: linked.order_brand_id }, message: 'The order already exists.' });
+    }
+
+    let result;
+    try {
+        const { verifyAndIngest } = require('./customCheckoutController.js');
+        result = await verifyAndIngest(req.brand.id, orderRef, payment);
+    } catch (error) {
+        if (error.status) return res.status(error.status === 401 ? 422 : error.status).json({ message: error.message });
+        throw error;
+    }
+    if (!result.order_number) return res.status(409).json({ message: 'Shiprocket has no verified order ready to import.' });
+    const order = await Order.findOne({ where: { order_number: result.order_number }, attributes: ['id', 'order_number', 'brand_id', 'payment_status'] });
+    return res.json({ success: true, order, message: result.created ? `Order ${result.order_number} recovered from Shiprocket.` : 'The order already exists.' });
 }
 
 module.exports.adminLookupRazorpayPayment = (req, res) => checkRazorpayReference(req, res);
@@ -485,7 +521,7 @@ module.exports.razorpayWebhook = async (req, res) => {
     }
 
     const event = parsed;
-    const eventId = event.id;
+    const eventId = req.headers['x-razorpay-event-id'] || event.id;
     const eventType = event.event;
 
     // Idempotency: skip if already processed. The event is recorded only
@@ -513,91 +549,40 @@ module.exports.razorpayWebhook = async (req, res) => {
         const rzpOrderId = payment.order_id;
         const rzpPaymentId = payment.id;
 
-        // ── NEW FLOW: Check for checkout session (payment-first) ──────────
         const stockReservation = require('../services/stockReservationService.js');
         const orderCreationService = require('../services/orderCreationService.js');
+        if (!rzpOrderId || !rzpPaymentId) return res.status(200).json({ status: 'ignored' });
+        const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
+        if (paymentRecord?.payment_gateway === 'CustomCheckout') return res.status(200).json({ status: 'ignored' });
         const session = await stockReservation.getReservationByRazorpayOrder(rzpOrderId);
 
         if (session) {
-          try {
-            await orderCreationService.handlePaymentSuccess({
-              session,
-              razorpayPaymentId: rzpPaymentId,
-              razorpayOrderId: rzpOrderId,
-              source: 'webhook',
-            });
-            logger.info(`Webhook: order created from session via payment.captured (reservation: ${session.reservation_id})`);
-          } catch (e) {
-            // Answer 5xx so Razorpay retries; the nightly reconciliation and
-            // Dashboard → Payments also pick the captured payment up.
-            logger.error(`Webhook: failed to create order from session: ${e.message}`);
-            throw e;
+          const expected = toSmallestUnit(Number(session.totals?.final), 'INR');
+          if (payment.currency !== 'INR' || Number(payment.amount) !== expected ||
+              (paymentRecord && Number(paymentRecord.brand_id) !== Number(session.brand_id || 1))) {
+            throw new Error(`Captured payment ${rzpPaymentId} does not match the saved checkout.`);
           }
+          await orderCreationService.handlePaymentSuccess({
+            session,
+            razorpayPaymentId: rzpPaymentId,
+            razorpayOrderId: rzpOrderId,
+            source: 'webhook',
+          });
+          logger.info(`Webhook: captured payment ${rzpPaymentId} processed for reservation ${session.reservation_id}`);
         } else {
-          // ── OLD FLOW: Find order via payment record ─────────────────────
-          let paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
-
-          // ── FALLBACK: If no payment record, find order by amount + time ──
-          // This handles older checkouts that never stored a payment row
-          if (!paymentRecord) {
-            const rzpPayment = event.payload?.payment?.entity;
-            const amountInRupees = rzpPayment ? parseFloat(rzpPayment.amount) / 100 : null;
-            const email = (rzpPayment?.email || '').toLowerCase().trim();
-            const phone = (rzpPayment?.contact || '').replace(/\D/g, '').slice(-10);
-
-            if (amountInRupees && (email || phone)) {
-              // Find a pending prepaid order matching this customer + amount within last 2 hours
-              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-              const { User: UserModel } = require('../model/userModel.js');
-              const { GuestUser: GuestModel } = require('../model/guestUserModel.js');
-
-              // Search by email in users
-              let matchedUser = null;
-              if (email) matchedUser = await UserModel.findOne({ where: { email } });
-              if (!matchedUser && phone) matchedUser = await UserModel.findOne({ where: { phone: { [Op.like]: `%${phone}` } } });
-
-              let matchedGuest = null;
-              if (!matchedUser && email) matchedGuest = await GuestModel.findOne({ where: { email } });
-              if (!matchedUser && !matchedGuest && phone) matchedGuest = await GuestModel.findOne({ where: { phone: { [Op.like]: `%${phone}` } } });
-
-              const ownerFilter = matchedUser ? { user_id: matchedUser.id }
-                : matchedGuest ? { guest_user_id: matchedGuest.id }
-                : null;
-
-              if (ownerFilter) {
-                const candidateOrder = await Order.findOne({
-                  where: {
-                    ...ownerFilter,
-                    payment_type: { [Op.notIn]: ['cod'] },
-                    payment_status: { [Op.in]: ['pending', 'failed'] },
-                    final_amount: { [Op.between]: [amountInRupees - 1, amountInRupees + 1] },
-                    createdAt: { [Op.gte]: twoHoursAgo },
-                  },
-                  order: [['createdAt', 'DESC']],
-                });
-
-                if (candidateOrder) {
-                  // Create the missing payment record and link it
-                  paymentRecord = await Payment.create({
-                    order_id: candidateOrder.id,
-                    user_id: candidateOrder.user_id || null,
-                    guest_user_id: candidateOrder.guest_user_id || null,
-                    payment_type: 'razorpay',
-                    razorpay_order_id: rzpOrderId,
-                    amount_paid: toSmallestUnit(amountInRupees, 'INR'), // paise, like every gateway row
-                    status: 'pending',
-                    payment_gateway: 'Razorpay',
-                    brand_id: candidateOrder.brand_id || 1,
-                  });
-                  logger.info(`Webhook: created missing payment record for order ${candidateOrder.order_number} via fallback match`);
-                }
-              }
-            }
+          if (paymentRecord && !paymentRecord.order_id) {
+            // A temporary session lookup failure must leave this event
+            // retryable. The payment stays visible for reconciliation.
+            throw new Error(`Captured payment ${rzpPaymentId} has a local checkout but no recoverable session.`);
           }
-
           if (paymentRecord && paymentRecord.order_id) {
             const order = await Order.findByPk(paymentRecord.order_id);
-            if (order && order.payment_status !== 'paid') {
+            if (!order || Number(order.brand_id) !== Number(paymentRecord.brand_id) || payment.currency !== 'INR' ||
+                Number(payment.amount) !== toSmallestUnit(Number(order.final_amount), 'INR') ||
+                (paymentRecord.transaction_id?.startsWith('pay_') && paymentRecord.transaction_id !== rzpPaymentId)) {
+              throw new Error(`Captured payment ${rzpPaymentId} does not match its linked legacy order.`);
+            }
+            if (order.payment_status !== 'paid') {
               order.payment_status = 'paid';
               order.status = 'confirmed';
               await order.save();

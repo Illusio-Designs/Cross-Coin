@@ -556,8 +556,6 @@ export default function TestLayout({ children }) {
   const promoRef = useRef(null);
 
   const openDrawer = () => { setStep('cart'); setDrawer(true); };
-  const buyNowIC = useRef(false);
-  const [buyNowTick, setBuyNowTick] = useState(0);
   const viewCartSent = useRef(false);
 
   useEffect(() => {
@@ -592,15 +590,7 @@ export default function TestLayout({ children }) {
 
   useEffect(() => {
     const onToast = (e) => { setToastMsg(e.detail || ''); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 1800); };
-    // "Buy it now" (PDP) opens the real drawer straight to checkout; the plain
-    // add-to-cart / cart icon opens it at the cart step.
-    const onOpen = (e) => {
-      const toCheckout = e?.detail === 'checkout';
-      // Buy-now skips the cart's "Proceed to checkout" button, so flag it and
-      // fire the same InitiateCheckout once the drawer shows the checkout step.
-      if (toCheckout) { buyNowIC.current = true; setBuyNowTick((n) => n + 1); }
-      setStep(toCheckout ? 'checkout' : 'cart'); setDrawer(true);
-    };
+    const onOpen = () => { setStep('cart'); setDrawer(true); };
     window.addEventListener('cc-test-toast', onToast);
     window.addEventListener('cc-test-opencart', onOpen);
     return () => {
@@ -718,10 +708,8 @@ export default function TestLayout({ children }) {
 
   // Match Morbix/Soxbae: Shiprocket handles packs too. Matching discounts
   // are configured in Shiprocket rather than passed as client prices.
-  const [srOn, setSrOn] = useState(true);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on !== false); }); return () => { live = false; }; }, []);
-  const useShiprocket = srOn && cart.length > 0 && cart.every((i) => i.vid != null);
+  const useShiprocket = cart.length > 0;
   useEffect(() => { if (useShiprocket && coupon) setCoupon(null); }, [useShiprocket, coupon]);
 
   // Order math (same rules as the live cart): free-shipping threshold + fees come
@@ -770,22 +758,16 @@ export default function TestLayout({ children }) {
     viewCartSent.current = true;
     try { gtagTrack('view_cart', { currency: 'INR', value: Math.max(0, sub - disc), items: ga4CartItems() }); } catch (_) { /* never throw */ }
   }, [drawer, step, cart.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Buy-now → checkout: the same InitiateCheckout "Proceed to checkout" fires, exactly once.
-  useEffect(() => {
-    if (!buyNowIC.current || !drawer || step !== 'checkout' || !cart.length) return;
-    buyNowIC.current = false;
-    trackInitiateCheckout();
-  }, [buyNowTick, drawer, step, cart.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cart → Shiprocket Checkout with every line; if it can't start, our own
-  // checkout step takes over.
   const checkoutShiprocket = async (e) => {
     if (srBusy || !cart.length) return;
+    if (cart.some((item) => !item.vid)) {
+      showToast('Remove unavailable options from your cart and add them again.');
+      return;
+    }
     trackInitiateCheckout();
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled()) === false) { setSrOn(false); showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
-      setSrOn(true);
+      if ((await shiprocketEnabled()) === false) { showToast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
       await openShiprocketCheckout(e, cart.map((i) => ({
         variationId: i.vid, quantity: i.qty, packId: i.packId,
         packPrice: tiersMap[i.id]?.some((tier) => Number(tier.pairs) === i.qty) || (i.packq > 1 && i.qty === i.packq && i.unit < i.base),

@@ -97,6 +97,8 @@ function RazorpayLookup({ brands, period, isAdmin }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(false);
+  const [shiprocketBrand, setShiprocketBrand] = useState("");
+  const [shiprocketOrderId, setShiprocketOrderId] = useState("");
   const [scan, setScan] = useState(null);
   const brandName = (id) => {
     const brand = brands.find((item) => String(item.id) === String(id));
@@ -105,7 +107,10 @@ function RazorpayLookup({ brands, period, isAdmin }) {
 
   useEffect(() => { if (result) resultRef.current?.focus(); }, [result]);
   const currentScan = scan?.period === period ? scan : null;
-  const resetResult = () => { setResult(null); setError(""); setConfirm(false); };
+  const resetResult = () => {
+    setResult(null); setError(""); setConfirm(false);
+    setShiprocketBrand(""); setShiprocketOrderId("");
+  };
   const check = async (paymentId) => {
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
     setReference(paymentId);
@@ -133,13 +138,19 @@ function RazorpayLookup({ brands, period, isAdmin }) {
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
   };
+  const canImportShiprocket = isAdmin && result?.remote.status === "captured" && !result.order && !result.canCreate;
   const recover = async () => {
-    if (!(result?.canCreate || result?.canLink) || !isAdmin || busy) return;
+    const shiprocket = confirm === "shiprocket"
+      ? { brand: shiprocketBrand, orderId: shiprocketOrderId.trim() }
+      : null;
+    if (!isAdmin || busy || (shiprocket
+      ? !canImportShiprocket || !shiprocket.brand || !shiprocket.orderId
+      : !(result?.canCreate || result?.canLink))) return;
     setBusy("recover");
     setError("");
     try {
-      const recovered = await paymentService.recoverRazorpayPayment(result.remote.id);
-      setResult({ ...result, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
+      const recovered = await paymentService.recoverRazorpayPayment(result.remote.id, shiprocket);
+      setResult({ ...result, brandId: recovered.order?.brand_id ?? result.brandId, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
       setScan((previous) => previous && {
         ...previous, items: previous.items.filter((item) => item.paymentId !== result.remote.id),
       });
@@ -199,6 +210,27 @@ function RazorpayLookup({ brands, period, isAdmin }) {
             : <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel={result.canLink ? "Save payment ID" : "Recover order"}
               message={result.canLink ? "Save the verified Razorpay payment ID on this paid order?" : "Create the paid order from the saved checkout and continue with fulfillment?"}
               onConfirm={recover} onCancel={() => setConfirm(false)} />)}
+          {canImportShiprocket && (
+            <>
+              <form className="pl-rzp__form pl-rzp__recover" onSubmit={(event) => {
+                event.preventDefault();
+                if (shiprocketBrand && shiprocketOrderId.trim()) setConfirm("shiprocket");
+              }}>
+                <Input type="select" name="shiprocket-recover-store" label="Store" value={shiprocketBrand}
+                  disabled={!!busy} options={brands.filter((brand) => brand.status === "active" && brand.slug)
+                    .map((brand) => ({ value: brand.slug, label: brand.display_name || brand.name }))}
+                  onChange={(event) => { setShiprocketBrand(event.target.value); setConfirm(false); }} />
+                <Input name="shiprocket-recover-order" label="Shiprocket order ID" value={shiprocketOrderId} maxLength={100} required
+                  disabled={!!busy} onChange={(event) => { setShiprocketOrderId(event.target.value); setConfirm(false); }} />
+                <Button type="submit" variant="secondary" disabled={!!busy || !shiprocketBrand || !shiprocketOrderId.trim()}>Recover Shiprocket order</Button>
+              </form>
+              {confirm === "shiprocket" && (
+                <ConfirmBar tone="primary" busy={busy === "recover"} confirmLabel="Verify and create order"
+                  message="Check the Shiprocket order against the captured payment and create the order if they match?"
+                  onConfirm={recover} onCancel={() => setConfirm(false)} />
+              )}
+            </>
+          )}
         </div>
       )}
       {currentScan && (

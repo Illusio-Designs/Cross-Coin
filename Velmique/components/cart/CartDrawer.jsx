@@ -315,21 +315,9 @@ export default function CartDrawer() {
     }
   }
 
-  // A direct product-page purchase can request the storefront payment step.
   useEffect(() => {
-    if (!cartOpen || !checkoutRequested || !items.length) return;
-    consumeCheckoutRequest();
-    fbTrack('InitiateCheckout', {
-      content_ids: items.map((item) => String(item.productId ?? item.id)),
-      content_type: 'product',
-      contents: items.map((item) => ({ id: String(item.productId ?? item.id), quantity: item.quantity || 1 })),
-      num_items: cartCount,
-      value: cartTotal,
-      currency: 'INR',
-    });
-    setCoStep(2);
-    requestAnimationFrame(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; });
-  }, [cartOpen, checkoutRequested, items, cartCount, cartTotal, consumeCheckoutRequest]);
+    if (checkoutRequested) consumeCheckoutRequest();
+  }, [checkoutRequested, consumeCheckoutRequest]);
 
   /* Abandoned-cart capture: once the shopper reaches the checkout step with a
      valid 10-digit phone + items in the bag, record it so the backend can send

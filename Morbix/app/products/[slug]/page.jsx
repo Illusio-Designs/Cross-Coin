@@ -10,7 +10,7 @@ import ReviewsSection from '@/components/home/ReviewsSection';
 import FaqSection from '@/components/home/FaqSection';
 import ProductCard from '@/components/home/ProductCard';
 import LazyMount from '@/components/common/LazyMount';
-import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers, brandFetch } from '@/lib/api';
+import { getProductBySlug, getAllProducts, getStoreReviews, getFaqs, getBundleTiers } from '@/lib/api';
 import '@/app/styles/pdp.css';
 
 // Incrementally static (ISR): each product page is built once, served from
@@ -99,13 +99,7 @@ export default async function ProductPage({ params }) {
   // the product photo and price reach the shopper as soon as possible. The
   // sections further down (reviews, "You might also like", FAQs) fetch their
   // own data and stream in after, each in its own <Suspense>.
-  const [bundleTiers, couponsRes] = await Promise.all([
-    getBundleTiers(product.id),
-    brandFetch('/api/coupons/listing', 300).catch(() => ({ coupons: [] })),
-  ]);
-  // Surface a real prepaid-only coupon (admin-created) on the buy panel — no
-  // hard-coded discount. Shoppers apply the code at checkout to get the offer.
-  const prepaidCoupon = (couponsRes?.coupons || []).find((c) => c.paymentModeRestriction === 'prepaid') || null;
+  const bundleTiers = await getBundleTiers(product.id);
 
   const jsonLd = buildProductJsonLd(product);
 
@@ -121,7 +115,7 @@ export default async function ProductPage({ params }) {
       </nav>
 
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
-      <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} prepaidCoupon={prepaidCoupon} />
+      <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} />
 
       {/* Everything below the first screen is built only as the shopper
           scrolls near it (LazyMount), so the photo, price and Buy button

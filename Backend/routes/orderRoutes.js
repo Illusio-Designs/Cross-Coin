@@ -1,4 +1,5 @@
 const express = require('express');
+const shiprocketCheckoutOnly = require('../middleware/shiprocketCheckoutOnly.js');
 const {
     getAllOrders, getUserOrders, getOrder,
     createOrder, createGuestOrder, quoteManualOrder, createManualOrder,
@@ -120,7 +121,7 @@ router.put('/:id/address',             isAuthenticated, isOrderManager, updateOr
 //  refunds prepaid orders. The old standalone /rto endpoints were unused.)
 
 // ── Public ────────────────────────────────────────────────────────────────
-router.post('/guest-checkout',          validateBody(schemas.checkout), createGuestOrder);
+router.post('/guest-checkout',          shiprocketCheckoutOnly, validateBody(schemas.checkout), createGuestOrder);
 router.get('/track/awb',                zValidateQuery(trackByAwbSchema), trackOrderByAWB);
 router.get('/track/:order_number',      trackOrderByOrderNumber);
 // Pre-checkout: client sends a typed address and gets back the COD
@@ -138,7 +139,7 @@ router.post('/shipping/webhook',        verifyWebhookSignature('shipping'), hand
 router.post('/fship/webhook',           verifyWebhookSignature('fship'),    handleShippingWebhook);  // legacy alias
 
 // ── Authenticated user ────────────────────────────────────────────────────
-router.post('/',                        isAuthenticated, createOrder);
+router.post('/',                        isAuthenticated, shiprocketCheckoutOnly, createOrder);
 router.get('/my-orders',                isAuthenticated, getUserOrders);
 router.get('/:id/desk',                 isAuthenticated, isOrderManager, require('../controller/orderController.js').getOrderDesk);
 router.get('/:id',                      isAuthenticated, getOrder);

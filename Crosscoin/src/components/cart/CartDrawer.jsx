@@ -1,3 +1,5 @@
+import ShiprocketButton from '../checkout/ShiprocketButton';
+import { openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { formatRupees } from '../../utils/formatRupees';
 import { resetNativeOrderAttempts } from '../../lib/buyingFlow';
 ﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
@@ -739,6 +741,26 @@ const CartDrawer = ({ isOpen, onClose }) => {
 
   // ── Computed totals ─────────────────────────────────────────────────────
   const activeItems = buyNowItem ? [buyNowItem] : cartItems;
+  const openHostedCheckout = async (event) => {
+    if (isProcessing || !activeItems.length) return;
+    if (activeItems.some((item) => !(item.variationId || item.variation_id))) {
+      showOrderPlacedErrorToast('Remove unavailable options from your cart and add them again.');
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await openShiprocketCheckout(event, activeItems.map((item) => ({
+        variationId: item.variationId || item.variation_id,
+        quantity: item.quantity || 1,
+        packId: item.packId,
+        packPrice: item.packPrice,
+      })), buyNowItem ? 'buy-now' : 'cart');
+    } catch (error) {
+      showOrderPlacedErrorToast(error.message || 'Checkout couldn’t open. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   const activeTotal = buyNowItem ? buyNowTotal : cartTotal;
   // Base = the items being ordered (buy-now item or cart), before coupons — the
   // same subtotal the server compares against the threshold.
@@ -1663,399 +1685,9 @@ const CartDrawer = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* ── 2. Coupon (input + collapsed offers picker) ── */}
-              <div className="cd-sv-section" id="cd-section-coupon">
-                <div className="cd-section-title">Have a coupon?</div>
-                {appliedCoupon ? (
-                  <div className="cd-coupon-applied">
-                    <span>{appliedCoupon.code} applied — {formatRupees(couponDiscount)} off</span>
-                    <button type="button" className="cd-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="cd-coupon-wrap">
-                      <input
-                        className="cd-coupon-input"
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplyCoupon(); } }}
-                        placeholder="Enter coupon code"
-                        autoComplete="off"
-                        aria-label="Coupon code"
-                      />
-                      <button
-                        type="button"
-                        className="cd-coupon-btn"
-                        onClick={handleApplyCoupon}
-                        disabled={couponLoading || !couponCode.trim()}
-                      >
-                        {couponLoading ? '…' : 'Apply'}
-                      </button>
-                    </div>
-                    {couponError && <p className="cd-coupon-error" role="alert">{couponError}</p>}
-
-                    {bestOffer && (
-                      <div className="cd-bestoffer" ref={offersRef}>
-                        {/* Single BEST applicable coupon, shown as a banner. */}
-                        <div className="cd-bestoffer-banner">
-                          <span className="cd-bestoffer-mark" aria-hidden="true"><IconMoneyBag /></span>
-                          <div className="cd-bestoffer-main">
-                            <p className="cd-bestoffer-headline">
-                              {bestOffer.applicable ? (
-                                offerHasSave(bestOffer.coupon) ? (
-                                  <>Apply <strong>{bestOffer.coupon.code}</strong> — save ₹{bestOffer.discount}</>
-                                ) : (
-                                  <>Apply <strong>{bestOffer.coupon.code}</strong> — {describeOffer(bestOffer.coupon)}</>
-                                )
-                              ) : (
-                                <>Add ₹{bestOffer.need} more to use <strong>{bestOffer.coupon.code}</strong></>
-                              )}
-                            </p>
-                            <p className="cd-bestoffer-sub">{bestOffer.applicable ? 'Best offer for your cart' : 'Almost there — unlock this offer'}</p>
-                          </div>
-                          {bestOffer.applicable && (
-                            <button
-                              type="button"
-                              className="cd-bestoffer-apply"
-                              onClick={() => handleApplyCoupon(bestOffer.coupon.code)}
-                              disabled={couponLoading}
-                              aria-label={`Apply coupon ${bestOffer.coupon.code}`}
-                            >
-                              {couponLoading ? '…' : 'Apply'}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* See all offers — the remaining coupons (best excluded). */}
-                        {remainingOffers.length > 0 && (
-                          <>
-                            <button
-                              type="button"
-                              className="cd-seeall-toggle"
-                              onClick={() => setOffersOpen((o) => !o)}
-                              aria-expanded={offersOpen}
-                            >
-                              <span>See all {offerCoupons.length} offers</span>
-                              <span className={`cd-dropdown-arrow ${offersOpen ? 'open' : ''}`}><IconChevronDown /></span>
-                            </button>
-                            {offersOpen && (
-                              <div className="cd-seeall-list" role="list">
-                                {remainingOffers.map((c) => (
-                                  <div className="cd-seeall-row" key={c.id || c.code}>
-                                    <div className="cd-seeall-info">
-                                      <span className="cd-offer-code">{c.code}</span>
-                                      <span className="cd-offer-desc">
-                                        {describeOffer(c)}
-                                        {parseFloat(c.minPurchase) > 0 ? ` · Min ${formatRupees(c.minPurchase)}` : ''}
-                                      </span>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      className="cd-seeall-apply"
-                                      onClick={() => handleApplyCoupon(c.code)}
-                                      disabled={couponLoading}
-                                      aria-label={`Apply coupon ${c.code}`}
-                                    >
-                                      Apply
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+              <div className="cd-sv-section">
+                <div className="cd-section-title">Subtotal {formatRupees(activeTotal)}</div>
               </div>
-
-              {/* ── 3. Delivery Details (combined contact + address for guests) ── */}
-              <div className="cd-sv-section" id="cd-section-address">
-                <div className="cd-section-title">{isAuthenticated ? 'Delivery Address' : 'Delivery Details'}</div>
-
-                {addressLoading ? <div className="cd-loading" style={{ display: 'grid', gap: 10 }}>{[0,1].map(i => <Skeleton key={i} height={72} style={{ borderRadius: 10 }} />)}</div> : (
-                  <>
-                    {isAuthenticated && addresses.length === 0 && !showAddressForm && (
-                      <p className="cd-address-empty-hint">Add a delivery address below to place your order.</p>
-                    )}
-                    {!isAuthenticated && !selectedAddress && !showAddressForm && (
-                      <p className="cd-address-empty-hint">Fill in your details below to place your order.</p>
-                    )}
-                    {isAuthenticated && addresses.length > 1 ? (
-                      /* Multiple addresses - show dropdown */
-                      <div className="cd-address-section">
-                        <div className="cd-section-subtitle">Select your delivery address</div>
-                        <div className="cd-address-dropdown-container" ref={dropdownRef}>
-                          <div
-                            className="cd-address-dropdown-trigger"
-                            onClick={() => setShowAddressDropdown(!showAddressDropdown)}
-                          >
-                            <span>Choose Address</span>
-                            <span className={`cd-dropdown-arrow ${showAddressDropdown ? 'open' : ''}`}>
-                              <IconChevronDown />
-                            </span>
-                          </div>
-                          {showAddressDropdown && (
-                            <div className="cd-address-dropdown">
-                              {addresses.map(addr => (
-                                <div
-                                  key={addr.id}
-                                  className={`cd-address-option ${selectedAddress?.id === addr.id ? 'selected' : ''}`}
-                                  onClick={async () => {
-                                    setSelectedAddress(addr);
-                                    setShowAddressDropdown(false);
-                                    // Task 16: check serviceability for saved address pincode
-                                    const pin = String(addr.postal_code || addr.postalCode || '').replace(/\D/g, '');
-                                    if (pin.length === 6) {
-                                      try {
-                                        const result = await checkPincodeServiceability(pin);
-                                        setPincodeServiceability({
-                                          serviceable: result?.serviceable !== false,
-                                          cod_allowed: result?.cod_allowed !== false,
-                                          city: result?.city || '',
-                                          state: result?.state || '',
-                                        });
-                                      } catch { setPincodeServiceability(null); }
-                                    } else {
-                                      setPincodeServiceability(null);
-                                    }
-                                  }}
-                                >
-                                  <div className="cd-address-body">
-                                    <p className="cd-address-name">{addr.full_name || addr.fullName} {(addr.isDefault || addr.is_default) && <span className="cd-default-tag">Default</span>}</p>
-                                    <p className="cd-address-line">{addr.address}</p>
-                                    {addr.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {addr.landmark}</p>}
-                                    <p className="cd-address-line">{addr.city}, {addr.state} {addr.postal_code}</p>
-                                    <p className="cd-address-line">{addr.phone_number}</p>
-                                  </div>
-                                  <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(addr); setShowAddressDropdown(false); }} aria-label="Edit"><IconEdit /></button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        {selectedAddress && (
-                          <div className="cd-selected-address">
-                            <div className="cd-selected-address-label">Selected Address:</div>
-                            <div className="cd-address-card cd-address-selected">
-                              <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
-                              <div className="cd-address-body">
-                                <p className="cd-address-name">{selectedAddress.full_name || selectedAddress.fullName} {(selectedAddress.isDefault || selectedAddress.is_default) && <span className="cd-default-tag">Default</span>}</p>
-                                <p className="cd-address-line">{selectedAddress.address}</p>
-                                {selectedAddress.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {selectedAddress.landmark}</p>}
-                                <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
-                                <p className="cd-address-line">{selectedAddress.phone_number}</p>
-                              </div>
-                              <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(selectedAddress); }} aria-label="Edit"><IconEdit /></button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : isAuthenticated && addresses.length === 1 ? (
-                      /* Single address - show as card */
-                      <div className="cd-address-card cd-address-selected">
-                        <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
-                        <div className="cd-address-body">
-                          <p className="cd-address-name">{addresses[0].full_name || addresses[0].fullName} {(addresses[0].isDefault || addresses[0].is_default) && <span className="cd-default-tag">Default</span>}</p>
-                          <p className="cd-address-line">{addresses[0].address}</p>
-                          {addresses[0].landmark && <p className="cd-address-line cd-address-landmark">Landmark: {addresses[0].landmark}</p>}
-                          <p className="cd-address-line">{addresses[0].city}, {addresses[0].state} {addresses[0].postal_code}</p>
-                          <p className="cd-address-line">{addresses[0].phone_number}</p>
-                        </div>
-                        <button className="cd-address-edit" onClick={e => { e.stopPropagation(); handleEditAddress(addresses[0]); }} aria-label="Edit"><IconEdit /></button>
-                      </div>
-                    ) : !isAuthenticated && selectedAddress && !showAddressForm ? (
-                      /* Guest address */
-                      <div className="cd-address-card cd-address-selected">
-                        <div className="cd-address-radio"><div className="cd-radio-dot active" /></div>
-                        <div className="cd-address-body">
-                          <p className="cd-address-name">{selectedAddress.full_name}</p>
-                          <p className="cd-address-line">{selectedAddress.address}</p>
-                          {selectedAddress.landmark && <p className="cd-address-line cd-address-landmark">Landmark: {selectedAddress.landmark}</p>}
-                          <p className="cd-address-line">{selectedAddress.city}, {selectedAddress.state} {selectedAddress.postal_code}</p>
-                          <p className="cd-address-line">{selectedAddress.phone_number}</p>
-                        </div>
-                        <button className="cd-address-edit" onClick={() => { setAddressForm({ fullName: selectedAddress.full_name, phoneNumber: selectedAddress.phone_number, address: selectedAddress.address, landmark: selectedAddress.landmark || '', city: selectedAddress.city, state: selectedAddress.state, postalCode: selectedAddress.postal_code, country: selectedAddress.country, isDefault: false }); setShowAddressForm(true); }} aria-label="Edit"><IconEdit /></button>
-                      </div>
-                    ) : null}
-                    {!showAddressForm && (
-                      <button className="cd-add-address-btn" onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressForm(EMPTY_ADDR); }}>
-                        <IconPlus /> Add {selectedAddress || (isAuthenticated && addresses.length > 0) ? 'Another' : 'New'} Address
-                      </button>
-                    )}
-                    {showAddressForm && (
-                      <form className="cd-address-form" onSubmit={handleSaveAddress}>
-                        <div className="cd-form-grid">
-                          {/* Guest: contact fields merged into address form */}
-                          {!isAuthenticated && (
-                            <>
-                              <div className="cd-form-group">
-                                <label className="cd-label">First Name *</label>
-                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} type="text" value={guestInfo.firstName} onChange={e => setGuestInfo(p => ({ ...p, firstName: e.target.value }))} placeholder="First name" autoComplete="given-name" />
-                                {fieldErrors.name && <p className="cd-field-error" role="alert">{fieldErrors.name}</p>}
-                              </div>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Last Name</label>
-                                <input className="cd-input" type="text" value={guestInfo.lastName} onChange={e => setGuestInfo(p => ({ ...p, lastName: e.target.value }))} placeholder="Last name" autoComplete="family-name" />
-                              </div>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Email *</label>
-                                <input className={`cd-input ${fieldErrors.email ? 'cd-input-error' : ''}`} type="email" inputMode="email" value={guestInfo.email} onChange={e => setGuestInfo(p => ({ ...p, email: e.target.value }))} placeholder="name@example.com" autoComplete="email" aria-invalid={!!fieldErrors.email} />
-                                {fieldErrors.email && <p className="cd-field-error" role="alert">{fieldErrors.email}</p>}
-                              </div>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Phone *</label>
-                                <input className={`cd-input ${fieldErrors.phone ? 'cd-input-error' : ''}`} type="tel" inputMode="numeric" maxLength={10} value={guestInfo.phone} onChange={handleGuestPhoneChange} placeholder="10-digit mobile" autoComplete="tel" aria-invalid={!!fieldErrors.phone} />
-                                {fieldErrors.phone && <p className="cd-field-error" role="alert">{fieldErrors.phone}</p>}
-                              </div>
-                            </>
-                          )}
-                          {/* Authenticated: name + phone in address form */}
-                          {isAuthenticated && (
-                            <>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Full Name *</label>
-                                <input className={`cd-input ${fieldErrors.name ? 'cd-input-error' : ''}`} name="fullName" value={addressForm.fullName} onChange={handleAddrChange} required placeholder="Full name" autoComplete="name" />
-                                {fieldErrors.name && <p className="cd-field-error" role="alert">{fieldErrors.name}</p>}
-                              </div>
-                              <div className="cd-form-group">
-                                <label className="cd-label">Phone *</label>
-                                <input
-                                  className={`cd-input ${fieldErrors.phone || addressPhoneError ? 'cd-input-error' : ''}`}
-                                  name="phoneNumber"
-                                  type="tel"
-                                  inputMode="numeric"
-                                  maxLength={10}
-                                  value={addressForm.phoneNumber}
-                                  onChange={handleAddrChange}
-                                  required
-                                  placeholder="10-digit mobile"
-                                  autoComplete="tel-national"
-                                  aria-invalid={!!(fieldErrors.phone || addressPhoneError)}
-                                />
-                                {(fieldErrors.phone || addressPhoneError) && <p className="cd-field-error" role="alert">{fieldErrors.phone || addressPhoneError}</p>}
-                              </div>
-                            </>
-                          )}
-                          <div className="cd-form-group cd-form-full">
-                            <label className="cd-label">Address *</label>
-                            <input className={`cd-input ${fieldErrors.address ? 'cd-input-error' : ''}`} name="address" value={addressForm.address} onChange={handleAddrChange} required placeholder="House/flat no., street, area" autoComplete="street-address" />
-                            {fieldErrors.address && <p className="cd-field-error" role="alert">{fieldErrors.address}</p>}
-                          </div>
-                          <div className="cd-form-group cd-form-full">
-                            <label className="cd-label">Landmark (optional, improves delivery)</label>
-                            <input className="cd-input" name="landmark" value={addressForm.landmark} onChange={handleAddrChange} placeholder="Near hospital, opposite school, etc." maxLength={255} autoComplete="address-line2" />
-                          </div>
-                          <div className="cd-form-group">
-                            <label className="cd-label">City *</label>
-                            <input className={`cd-input ${fieldErrors.city ? 'cd-input-error' : ''}`} name="city" value={addressForm.city} onChange={handleAddrChange} required placeholder="City" autoComplete="address-level2" />
-                            {fieldErrors.city && <p className="cd-field-error" role="alert">{fieldErrors.city}</p>}
-                          </div>
-                          <div className="cd-form-group">
-                            <label className="cd-label">State *</label>
-                            <input className={`cd-input ${fieldErrors.state ? 'cd-input-error' : ''}`} name="state" value={addressForm.state} onChange={handleAddrChange} required placeholder="State" autoComplete="address-level1" />
-                            {fieldErrors.state && <p className="cd-field-error" role="alert">{fieldErrors.state}</p>}
-                          </div>
-                          <div className="cd-form-group">
-                            <label className="cd-label">PIN Code *</label>
-                            <input className={`cd-input ${fieldErrors.pincode ? 'cd-input-error' : ''}`} name="postalCode" value={addressForm.postalCode} onChange={handleAddrChange} onBlur={handlePincodeBlur} required placeholder="6-digit PIN" autoComplete="postal-code" />
-                            {fieldErrors.pincode && <p className="cd-field-error" role="alert">{fieldErrors.pincode}</p>}
-                            {isMounted && pincodeServiceability && pincodeServiceability.serviceable === false && (
-                              <p className="cd-field-error" role="alert" style={{ color: '#dc2626' }}>
-                                Sorry, we don’t deliver to this PIN code yet.
-                              </p>
-                            )}
-                          </div>
-                          <div className="cd-form-group">
-                            <label className="cd-label">Country</label>
-                            <input className="cd-input" name="country" value={addressForm.country} onChange={handleAddrChange} placeholder="Country" autoComplete="country-name" />
-                          </div>
-                          {isAuthenticated && (
-                            <div className="cd-form-group cd-form-full"><label className="cd-checkbox-label"><input type="checkbox" name="isDefault" checked={addressForm.isDefault} onChange={handleAddrChange} /> Set as default address</label></div>
-                          )}
-                        </div>
-                        {addrWarnings.length > 0 && (
-                          <div className="cd-addr-warnings" role="note" style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '2px 0 8px', padding: '9px 11px', background: '#fdf6e3', border: '1px solid #e6cf9a', borderRadius: 8 }}>
-                            {addrWarnings.map((w, i) => (
-                              <p key={i} style={{ margin: 0, fontSize: 12.5, color: '#8a5a12', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                                <span aria-hidden="true">💡</span>{w}
-                              </p>
-                            ))}
-                          </div>
-                        )}
-                        <div className="cd-form-actions">
-                          <p className="cd-autosave-hint" aria-live="polite" style={{ flex: 1, margin: 0, fontSize: 12.5, color: addressSaving ? '#180D3E' : '#777', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {addressSaving ? (
-                              <><span className="cd-autosave-dot" aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: '#2e7d32', display: 'inline-block' }} /> Saving your address…</>
-                            ) : (
-                              <>Your address saves automatically once all details are filled.</>
-                            )}
-                          </p>
-                          <button type="button" className="cd-btn-ghost" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); setFieldErrors({}); }}>Cancel</button>
-                        </div>
-                      </form>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* ── 5. Payment method ── */}
-              {sortedShippingFees.length > 0 && (
-                <div className="cd-sv-section" id="cd-section-delivery">
-                  <div className="cd-section-title">How would you like to pay?</div>
-                  <div className="cd-delivery-list">
-                    {sortedShippingFees.map(fee => {
-                      const isCodBlocked = isMounted && fee.orderType === 'cod' && pincodeServiceability && pincodeServiceability.cod_allowed === false;
-                      const feeEffective = (fee.orderType === 'cod' && freeShipQualifies) ? 0 : parseFloat(fee.fee || 0);
-                      return (
-                        <label
-                          key={fee.id}
-                          className={`cd-delivery-card ${fee.orderType === 'prepaid' ? 'cd-delivery-prepaid' : 'cd-delivery-cod'} ${selectedFee?.id === fee.id ? 'cd-delivery-selected' : ''} ${isCodBlocked ? 'cd-delivery-disabled' : ''}`}
-                          style={isCodBlocked ? { opacity: 0.5, pointerEvents: 'none' } : {}}
-                        >
-                          <input type="radio" name="delivery" className="cd-radio-hidden" checked={selectedFee?.id === fee.id} onChange={() => !isCodBlocked && handleSelectFee(fee)} disabled={isCodBlocked} />
-                          <span className="cd-delivery-icon">
-                            {fee.orderType === 'cod' ? <IconMoneyBag /> : <IconTruck />}
-                          </span>
-                          <div className="cd-delivery-info">
-                            <p className="cd-delivery-name">
-                              {fee.orderType === 'cod' ? 'Cash on Delivery' : 'UPI / Card (Prepaid)'}
-                            </p>
-                            {fee.orderType === 'cod' && !isCodBlocked && (
-                              <span className="cd-delivery-popular">⭐ Most Popular</span>
-                            )}
-                            {fee.orderType === 'prepaid' && (
-                              <p className="cd-delivery-subdesc">Pay securely via UPI, Credit or Debit Card</p>
-                            )}
-                            {fee.orderType === 'cod' && !isCodBlocked && (
-                              <p className="cd-delivery-subdesc">Pay when you receive your order</p>
-                            )}
-                            {isCodBlocked && (
-                              <p className="cd-delivery-subdesc" style={{ color: '#dc2626' }}>COD not available for this location</p>
-                            )}
-                            <p className="cd-delivery-desc">
-                              {fee.orderType === 'prepaid'
-                                ? `${!appliedCoupon ? `₹${Math.round(Math.min(PREPAID_INSTANT_DISCOUNT_INR, finalTotal))} less · ` : ''}Delivery by ${getDeliveryDateStr()}`
-                                : `Delivery by ${getDeliveryDateStr()}`}
-                            </p>
-                          </div>
-                          <div className="cd-delivery-fee-wrap">
-                            <span className="cd-delivery-sparkle">✦</span>
-                            <span className={`cd-delivery-fee ${feeEffective === 0 ? 'free' : ''}`}>
-                              {feeEffective === 0 ? 'FREE' : `₹${feeEffective.toFixed(0)}`}
-                            </span>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-
-
             </div>
           )}
 
@@ -2089,27 +1721,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               );
             })()}
 
-            {/* Not-serviceable notice — blocks the order for this PIN code */}
-            {isMounted && pincodeServiceability && pincodeServiceability.serviceable === false && (
-              <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 13, marginBottom: 10, textAlign: 'center' }}>
-                We don’t deliver to this PIN code yet — please try a different delivery address.
-              </div>
-            )}
-
-            {/* CTA button */}
-            <button
-              className="cd-btn-primary cd-btn-full"
-              onClick={handlePlaceOrder}
-              disabled={isProcessing || (isMounted && pincodeServiceability && pincodeServiceability.serviceable === false)}
-            >
-              {isProcessing
-                ? 'Processing...'
-                : isPrepaidDelivery
-                  ? `Place Order – ₹${prepaidPayable.toFixed(0)}`
-                  : isCodDelivery
-                    ? `Place Order – ₹${finalTotal.toFixed(0)}`
-                    : 'Place Order'}
-            </button>
+            <ShiprocketButton label="BUY NOW" onClick={openHostedCheckout} busy={isProcessing} />
 
             {/* WhatsApp */}
             <a

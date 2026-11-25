@@ -241,7 +241,7 @@ exports.syncCollection = async (req, res) => {
 
 // Confirm an order really exists at the provider (signed fetch), then save it
 // locally from the provider's own copy. Idempotent.
-async function verifyAndIngest(brandId, claimedId) {
+async function verifyAndIngest(brandId, claimedId, expectedPayment) {
   let providerOrder;
   try {
     const confirmed = await svc.fetchCheckoutOrder(brandId, claimedId);
@@ -266,6 +266,7 @@ async function verifyAndIngest(brandId, claimedId) {
   // which store the order — and its Meta / Google Purchase — belongs to, so a
   // webhook URL without (or with the wrong) ?brand= can't file a Morbix order
   // under Crosscoin or the other way round.
+  if (expectedPayment) require('../utils/shiprocketPaymentRecovery.js').verifyShiprocketRecovery(providerOrder, claimedId, expectedPayment);
   const cartAttrs = providerOrder?.cart_data?.custom_attributes;
   const orderAttrs = providerOrder?.custom_attributes;
   if ([cartAttrs, orderAttrs].some((attrs) => String(attrs?.[PACK_PREVIEW_ATTRIBUTE]) === '1')) return { skipped: 'pack_preview' };
@@ -280,6 +281,8 @@ async function verifyAndIngest(brandId, claimedId) {
   }
   return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId });
 }
+
+exports.verifyAndIngest = verifyAndIngest;
 
 // POST /api/custom-checkout/order-webhook?brand=<slug>
 // The provider POSTs the full order here after checkout (register this URL,

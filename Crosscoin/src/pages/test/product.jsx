@@ -109,9 +109,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
   const [rv, setRv] = useState({ name: '', email: '', rating: 5, comment: '', busy: false, done: false, err: '' });
   // Shiprocket Checkout (when switched on for CrossCoin): Buy now opens it
   // straight away with just this selection.
-  const [srOn, setSrOn] = useState(true);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on !== false); }); return () => { live = false; }; }, []);
 
   useEffect(() => {
     if (!canLoadProduct) return;
@@ -277,7 +275,6 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
   };
 
   // Pack selections carry the bundle flag so the server can price them.
-  const useShiprocket = srOn;
   const onBuyNow = async (e) => {
     if (srBusy) return;
     const line = { variationId: cur.id || null, quantity: hasPacks && selOpt ? selOpt.pairs : qty, packPrice: hasPacks && selOpt?.pairs > 1 };
@@ -291,8 +288,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
     } catch (_) { /* analytics never blocks the checkout */ }
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled()) === false) { setSrOn(false); toast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
-      setSrOn(true);
+      if ((await shiprocketEnabled()) === false) { toast('Shiprocket Checkout is not enabled or configured for Cross Coin yet. Please contact support.'); return; }
       await openShiprocketCheckout(e, [line], 'buy-now');
     } catch (_) {
       toast('Checkout couldn’t open. Please check your connection and tap Buy now again.');
@@ -377,7 +373,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
               <button className="btn btn--crimson btn--lg" style={{ flex: 1 }} onClick={() => add(false)}>Add to cart · {inr(payable)}</button>
             </div>
 
-            <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} poweredBy={useShiprocket} />
+            <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
             {prodReviews.items.length > 0 && <div style={{ marginTop: 18 }}><ProductReviewCarousel key={p.id} reviews={prodReviews.items} /></div>}
           </div>
         </div>

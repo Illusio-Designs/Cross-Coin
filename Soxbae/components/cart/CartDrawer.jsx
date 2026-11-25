@@ -496,10 +496,8 @@ export default function CartDrawer() {
   // price comes from the offers set up in Shiprocket). It replaces the drawer's
   // checkout step and its coupon box (Shiprocket applies its own coupons). Only
   // a clear "switched off" for the store brings back our own checkout.
-  const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
-  const useShiprocket = !srOff && items.length > 0;
+  const useShiprocket = items.length > 0;
 
   // Clamp the coupon so an over-large coupon can never make the order negative.
   // Shiprocket Checkout applies its own coupons, so ours isn't counted then.
@@ -569,31 +567,26 @@ export default function CartDrawer() {
       value: items.reduce((s, i) => s + Number(i.price ?? 0) * i.qty, 0),
       currency: 'INR',
     });
-    if (useShiprocket) {
-      setError('');
-      setSrBusy(true);
-      try {
-        const on = await shiprocketEnabled();
-        if (on === false) {
-          setSrOff(true); // switched off for the store: use the drawer's own checkout
-        } else {
-          const old = items.filter((i) => i.variationId == null);
-          if (old.length) {
-            setError(`Please remove ${old.map((i) => i.name).join(', ')} from the cart and add ${old.length > 1 ? 'them' : 'it'} again, then check out.`);
-            return;
-          }
-          await openShiprocketCheckout(e, items.map((i) => ({ variationId: i.variationId, quantity: i.qty || 1, packId: i.packId })), 'cart');
-          return;
-        }
-      } catch {
-        setError('Checkout couldn’t open. Please check your connection and tap again.');
+    setError('');
+    setSrBusy(true);
+    try {
+      const old = items.filter((item) => !item.variationId);
+      if (old.length) {
+        setError(`Please remove ${old.map((item) => item.name).join(', ')} and add ${old.length > 1 ? 'them' : 'it'} again to check out.`);
         return;
-      } finally {
-        setSrBusy(false);
       }
+      if ((await shiprocketEnabled()) === false) {
+        setError('Shiprocket Checkout is currently unavailable. Your items are still in the cart.');
+        return;
+      }
+      await openShiprocketCheckout(e, items.map((item) => ({
+        variationId: item.variationId, quantity: item.qty || 1, packId: item.packId, packPrice: item.packPrice,
+      })), 'cart');
+    } catch (error) {
+      setError(error.code === 'CHECKOUT_PACK_DISCOUNT_UNAVAILABLE' ? error.message : 'Checkout couldn’t open. Please check your connection and try again.');
+    } finally {
+      setSrBusy(false);
     }
-    setCoStep(2);
-    requestAnimationFrame(() => { const b = document.querySelector('.cd-body-checkout'); if (b) b.scrollTop = 0; });
   };
 
   /* Abandoned-cart capture: once the shopper is on the checkout step with a valid
@@ -1516,13 +1509,7 @@ export default function CartDrawer() {
               {coStep === 1 ? (
                 <>
                   {error && <p className="cd-error">{error}</p>}
-                  {useShiprocket ? (
-                    <ShiprocketButton label="BUY NOW" diagnosticSource="cart" onClick={goToCheckout} busy={srBusy} disabled={processing} />
-                  ) : (
-                  <button className="cd-checkout" onClick={goToCheckout} disabled={processing || !items.length}>
-                    Proceed to checkout · ₹{total.toFixed(0)}
-                  </button>
-                  )}
+                  <ShiprocketButton label="BUY NOW" diagnosticSource="cart" onClick={goToCheckout} busy={srBusy} disabled={processing} />
                   <div className="cd-trust" style={{ marginTop: 10, marginBottom: 0 }}>
                     <span><Icon name="ShieldCheck" size={14} /> Secure</span>
                     <span><Icon name="RefreshCw" size={14} /> Easy returns</span>

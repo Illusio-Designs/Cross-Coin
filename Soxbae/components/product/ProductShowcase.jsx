@@ -55,7 +55,7 @@ function specLabel(key) {
   return t ? t[0].toUpperCase() + t.slice(1) : String(key);
 }
 
-export default function ProductShowcase({ product, initialColor, bundleTiers = [], prepaidCoupon = null }) {
+export default function ProductShowcase({ product, initialColor, bundleTiers = [] }) {
   const { add, addPack, open: cartOpen } = useCart();
   const variants = Array.isArray(product.variants) ? product.variants : [];
   const colorNames = product.colorNames || [];
@@ -259,10 +259,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
   };
 
   // Shiprocket uses the server-priced pack for the selected variants.
-  const [srOff, setSrOff] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOff(on === false); }); return () => { live = false; }; }, []);
-  const useShiprocket = !srOff;
 
   const buyNowLines = () => {
     if (hasPacks && packPairs > 1 && product.colors?.length > 0) {
@@ -283,8 +280,8 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     e?.preventDefault();
     e?.stopPropagation();
     if (!inStock || srBusy) return;
-    const lines = useShiprocket ? buyNowLines() : [];
-    if (!lines.length || lines.some((l) => l.variationId == null)) { addToCart(); return; }
+    const lines = buyNowLines();
+    if (!lines.length || lines.some((line) => !line.variationId)) { toast.error('Please choose an available product option.'); return; }
     const pairs = lines.reduce((a, l) => a + l.quantity, 0);
     fbTrack('InitiateCheckout', {
       content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
@@ -293,7 +290,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
     });
     setSrBusy(true);
     try {
-      if ((await shiprocketEnabled()) === false) { setSrOff(true); addToCart(); return; }
+      if ((await shiprocketEnabled()) === false) { toast.error('Shiprocket Checkout is currently unavailable.'); return; }
       await openShiprocketCheckout(e, lines, 'buy-now');
     } catch {
       toast.error('Checkout couldn’t open. Please check your connection and tap Buy now again.');
@@ -551,20 +548,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
           {inStock && (
             <div className="pdx-buy-wrap">
               {/* Our prepaid code doesn't apply inside Shiprocket Checkout. */}
-              {prepaidCoupon?.code && !useShiprocket && (
-                <div className="pdx-prepaid-ribbon" aria-label={`Use code ${prepaidCoupon.code} for extra off on prepaid orders`}>
-                  <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
-                  <strong>{prepaidCoupon.code}</strong>
-                  <span className="pdx-perf" aria-hidden="true"><i /><i /><i /></span>
-                </div>
-              )}
-              {useShiprocket ? (
-                <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
-              ) : (
-                <button type="button" className="pdx-buy-now" onClick={onBuyNow}>
-                  <Icon name="ShoppingBag" size={17} /> BUY NOW · Cash On Delivery
-                </button>
-              )}
+              <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} />
               {deliveryEstimate && <p className="pdp-delivery-estimate">Estimated delivery: <time dateTime={deliveryEstimate.earliest.dateTime}>{deliveryEstimate.earliest.label}</time>{' – '}<time dateTime={deliveryEstimate.latest.dateTime}>{deliveryEstimate.latest.label}</time></p>}
             </div>
           )}

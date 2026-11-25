@@ -220,20 +220,22 @@ async function extendReservation(reservationId, extraSeconds = RETRY_EXTEND_TTL)
  */
 async function linkRazorpayOrder(razorpayOrderId, reservationId) {
   const redis = getRedis();
-  if (!redis) return;
+  if (!redis) throw new Error('Checkout session storage is unavailable.');
 
   const client = redis.getClient();
-  await client.set(KEY_RZP_MAP(razorpayOrderId), reservationId, 'EX', RZP_MAP_TTL);
+  const key = KEY_RESERVATION(reservationId);
+  const raw = await client.get(key);
+  if (!raw) throw new Error('Checkout session expired before payment opened. Please start again.');
 
-  // Also update the session with the razorpay order ID
-  const raw = await client.get(KEY_RESERVATION(reservationId));
-  if (raw) {
-    const session = JSON.parse(raw);
-    session.razorpay_order_id = razorpayOrderId;
-    const ttl = await client.ttl(KEY_RESERVATION(reservationId));
-    await client.set(KEY_RESERVATION(reservationId), JSON.stringify(session), 'EX', Math.max(ttl, 60));
-    await persistSession(razorpayOrderId, session);
-  }
+  const session = JSON.parse(raw);
+  session.razorpay_order_id = razorpayOrderId;
+  // A gateway order can be returned to the browser only when we can recover
+  // its checkout even if Redis expires or the customer closes the checkout.
+  await persistSession(razorpayOrderId, session);
+
+  const ttl = await client.ttl(key);
+  await client.set(key, JSON.stringify(session), 'XX', 'EX', Math.max(ttl, 60));
+  await client.set(KEY_RZP_MAP(razorpayOrderId), reservationId, 'EX', RZP_MAP_TTL);
 }
 
 // ── Durable copy of the session (MySQL) ────────────────────────────────────
@@ -257,21 +259,18 @@ function ensureStore() {
 
 let lastPrune = 0;
 async function persistSession(razorpayOrderId, session) {
-  try {
-    await ensureStore();
-    const { sequelize } = require('../config/db.js');
-    await sequelize.query(
-      `INSERT INTO checkout_session_store (razorpay_order_id, reservation_id, brand_id, session, created_at)
-       VALUES (?, ?, ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE session = VALUES(session), reservation_id = VALUES(reservation_id)`,
-      { replacements: [razorpayOrderId, session.reservation_id, session.brand_id || null, JSON.stringify(session)] }
-    );
-    if (Date.now() - lastPrune > 6 * 3600 * 1000) {
-      lastPrune = Date.now();
-      await sequelize.query(`DELETE FROM checkout_session_store WHERE created_at < NOW() - INTERVAL ${STORE_KEEP_DAYS} DAY`);
-    }
-  } catch (e) {
-    logger.warn(`[StockReservation] Couldn't keep a durable copy of ${session.reservation_id}: ${e.message}`);
+  await ensureStore();
+  const { sequelize } = require('../config/db.js');
+  await sequelize.query(
+    `INSERT INTO checkout_session_store (razorpay_order_id, reservation_id, brand_id, session, created_at)
+     VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE session = VALUES(session), reservation_id = VALUES(reservation_id)`,
+    { replacements: [razorpayOrderId, session.reservation_id, session.brand_id || null, JSON.stringify(session)] }
+  );
+  if (Date.now() - lastPrune > 6 * 3600 * 1000) {
+    lastPrune = Date.now();
+    await sequelize.query(`DELETE FROM checkout_session_store WHERE created_at < NOW() - INTERVAL ${STORE_KEEP_DAYS} DAY`)
+      .catch((e) => logger.warn(`[StockReservation] Checkout session cleanup skipped: ${e.message}`));
   }
 }
 
@@ -295,12 +294,17 @@ async function getStoredSession(razorpayOrderId) {
  * durable MySQL copy once the Redis keys have expired.
  */
 async function getReservationByRazorpayOrder(razorpayOrderId) {
+  if (!razorpayOrderId) return null;
   const redis = getRedis();
   if (redis) {
-    const reservationId = await redis.get(KEY_RZP_MAP(razorpayOrderId));
-    if (reservationId) {
-      const live = await getReservation(reservationId);
-      if (live) return live;
+    try {
+      const reservationId = await redis.get(KEY_RZP_MAP(razorpayOrderId));
+      if (reservationId) {
+        const live = await getReservation(reservationId);
+        if (live?.razorpay_order_id === razorpayOrderId) return live;
+      }
+    } catch (error) {
+      logger.warn(`[StockReservation] Redis checkout lookup failed for ${razorpayOrderId}: ${error.message}`);
     }
   }
   return getStoredSession(razorpayOrderId);

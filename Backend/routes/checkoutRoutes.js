@@ -1,4 +1,5 @@
 const express = require('express');
+const shiprocketCheckoutOnly = require('../middleware/shiprocketCheckoutOnly.js');
 const otpRouter = express.Router();     // mounted at /api/auth
 const router = express.Router();        // mounted at /api/checkout
 const {
@@ -90,8 +91,8 @@ otpRouter.post('/otp/send', validateBody(otpSendSchema), sendPhoneOtp);
 otpRouter.post('/otp/verify', validateBody(otpVerifySchema), verifyPhoneOtp);
 
 // Payment-first checkout (prepaid)
-router.post('/initiate', isAuthenticated, validateBody(initiateSchema), initiateCheckout);
-router.post('/retry', isAuthenticated, validateBody(retrySchema), retryCheckout);
-router.post('/guest/initiate', validateBody(guestInitiateSchema), initiateGuestCheckout);
+router.post('/initiate', isAuthenticated, shiprocketCheckoutOnly, validateBody(initiateSchema), initiateCheckout);
+router.post('/retry', isAuthenticated, shiprocketCheckoutOnly, validateBody(retrySchema), retryCheckout);
+router.post('/guest/initiate', shiprocketCheckoutOnly, validateBody(guestInitiateSchema), initiateGuestCheckout);
 
 module.exports = { otpRouter, checkoutRouter: router };

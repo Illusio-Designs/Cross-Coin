@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { getPublicCoupons } from '@/lib/api/orders';
 import { shiprocketEnabled, shiprocketTakes, openShiprocketCheckout, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { showError } from '@/lib/toast';
@@ -10,11 +9,10 @@ import { fbTrack } from '@/utils/pixel';
 import { ik } from '@/lib/imagekit';
 import SkImg from './SkImg';
 
-const PREPAID_INSTANT_DISCOUNT_INR = Math.max(0, parseFloat(process.env.NEXT_PUBLIC_PREPAID_INSTANT_DISCOUNT_INR || '0') || 0);
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 export default function PdpBuy({ product, packs = [], notes, mixPack }) {
-  const { addToCart, openCheckout } = useStore();
+  const { addToCart } = useStore();
 
   const opt = useMemo(() => {
     const variations = (product.variations || []).filter(Boolean);
@@ -69,18 +67,6 @@ export default function PdpBuy({ product, packs = [], notes, mixPack }) {
     return true;
   };
 
-  // Prepaid offer ribbon over Buy now — the brand's real prepaid-only coupon,
-  // else the configured instant prepaid discount; nothing when neither exists.
-  const [prepaidOffer, setPrepaidOffer] = useState(PREPAID_INSTANT_DISCOUNT_INR > 0 ? `₹${PREPAID_INSTANT_DISCOUNT_INR} off on prepaid` : '');
-  useEffect(() => {
-    let alive = true;
-    getPublicCoupons().then((list) => {
-      const c = (list || []).find((x) => x?.code && x.paymentModeRestriction === 'prepaid');
-      if (alive && c) setPrepaidOffer(`Prepaid: use ${c.code}`);
-    }).catch(() => {});
-    return () => { alive = false; };
-  }, []);
-
   // Keep the sticky add button in sync even when a jump skips past the buy area.
   const buyRef = useRef(null);
   const [barOn, setBarOn] = useState(false);
@@ -107,25 +93,22 @@ export default function PdpBuy({ product, packs = [], notes, mixPack }) {
       if (frame != null) cancelAnimationFrame(frame);
     };
   }, []);
-  // Buy now: add, then open the bag straight on delivery & payment.
-  const buy = () => { if (add()) openCheckout(); };
-
-  // Direct checkout leaves the bag alone.
-  const [srOn, setSrOn] = useState(false);
   const [srBusy, setSrBusy] = useState(false);
-  useEffect(() => { let live = true; shiprocketEnabled().then((on) => { if (live) setSrOn(on); }); return () => { live = false; }; }, []);
   const checkoutLine = line();
-  const eligible = shiprocketTakes([checkoutLine]);
-  const useShiprocket = srOn && eligible;
 
   const onBuyNow = async (e) => {
     if (soldOut || srBusy) return;
-    if (!eligible) { buy(); return; }
+    if (!shiprocketTakes([checkoutLine])) {
+      showError('Please choose an available fragrance option.', 'shiprocket-checkout');
+      return;
+    }
     setSrBusy(true);
     try {
       const enabled = await shiprocketEnabled();
-      setSrOn(enabled);
-      if (enabled === false) { buy(); return; }
+      if (enabled === false) {
+        showError('Shiprocket Checkout is currently unavailable.', 'shiprocket-checkout');
+        return;
+      }
       if (enabled === null) throw new Error(SHIPROCKET_RETRY_MESSAGE);
       fbTrack('InitiateCheckout', {
         content_ids: [String(product.id)], content_type: 'product', content_name: product.name || undefined,
@@ -186,15 +169,9 @@ export default function PdpBuy({ product, packs = [], notes, mixPack }) {
           </button>
         </div>
         {opt.inStock && opt.stock != null && opt.stock > 0 && opt.stock <= 5 ? <p className="m-lowstock">Only {opt.stock} left in {opt.label}</p> : null}
-        {/* Our prepaid offer doesn't apply inside Shiprocket Checkout. */}
-        {prepaidOffer && !useShiprocket ? <div className="m-prepaidchip">{prepaidOffer}</div> : null}
-        {useShiprocket ? (
-          <div style={{ marginTop: 12 }}>
-            <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={soldOut} />
-          </div>
-        ) : (
-          <button type="button" className="m-btn m-buynow" onClick={onBuyNow} disabled={soldOut || srBusy}>{srBusy ? 'Opening…' : 'Buy now'}</button>
-        )}
+        <div style={{ marginTop: 12 }}>
+          <ShiprocketButton label="BUY NOW" onClick={onBuyNow} busy={srBusy} disabled={soldOut} />
+        </div>
 
         {mixPack}
       </div>

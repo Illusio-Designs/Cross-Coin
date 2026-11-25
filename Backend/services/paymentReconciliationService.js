@@ -120,10 +120,27 @@ async function lookupRazorpayPayment(paymentRef) {
     amount_paid: Number(linked.amount_paid) / 100,
     razorpay_order_id: linked.razorpay_order_id || null,
   } : null;
-  const session = truth.status === 'captured' && truth.order_id && pending && !linked && !issue
+  const session = truth.status === 'captured' && truth.order_id && !linked && !issue
     ? await require('./stockReservationService.js').getReservationByRazorpayOrder(truth.order_id)
     : null;
-  const reason = issue || (linked ? null : recoveryBlock(pending, truth, session));
+  let reason = issue || (linked ? null : recoveryBlock(pending, truth, session));
+  if (!pending && !linked && !issue && truth.status === 'captured' && truth.order_id) {
+    if (session) {
+      reason = 'The checkout was saved, but its local payment record is missing.';
+    } else {
+      try {
+        const gatewayOrder = await razorpayService.getOrder(truth.order_id);
+        if (gatewayOrder?.id === truth.order_id) {
+          const nativeReference = /^res_\d+_[a-f0-9]+$/.test(gatewayOrder.notes?.reservation_id || gatewayOrder.receipt || '');
+          reason = nativeReference
+            ? 'Razorpay has a CrossCoin checkout reference, but the saved checkout and local payment are missing.'
+            : 'No CrossCoin checkout reference was found. Check the originating checkout provider or payment link.';
+        }
+      } catch (error) {
+        logger.warn(`[reconcile] Couldn’t check Razorpay order reference: ${error.message}`);
+      }
+    }
+  }
   const canLink = !reason && !!linked && linked.payment_gateway !== 'CustomCheckout' && !linked.transaction_id && !!truth.order_id
     && linked.razorpay_order_id === truth.order_id && linked.order_payment_type !== 'cod'
     && linked.order_payment_status === 'paid' && ['successful', 'completed'].includes(linked.status)
@@ -131,7 +148,7 @@ async function lookupRazorpayPayment(paymentRef) {
     && Number(truth.amount) === Number(linked.amount_paid)
     && Number(truth.amount) === toSmallestUnit(Number(linked.final_amount), 'INR');
   return {
-    remote: remoteSummary(truth), order: orderMatch, brandId,
+    remote: remoteSummary(truth), order: orderMatch, brandId: brandId ?? session?.brand_id ?? null,
     localPaymentId: linked?.id || pending?.id || null, canCreate: !orderMatch && !reason, canLink, reason,
   };
 }
