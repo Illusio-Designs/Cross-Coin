@@ -170,7 +170,7 @@ class GraphError extends Error {
 }
 
 // GET a Graph path (token as a param) or a paging.next URL (token inside).
-async function graphGet(pathOrUrl, params, token) {
+async function graphGet(pathOrUrl, params, token, timeout = 30000) {
   const isNext = /^https:\/\//i.test(pathOrUrl);
   if (isNext && !pathOrUrl.startsWith('https://graph.facebook.com/')) throw new GraphError('Meta sent an unexpected paging link');
   const url = isNext ? pathOrUrl : `${GRAPH}/${String(pathOrUrl).replace(/^\//, '')}`;
@@ -178,7 +178,7 @@ async function graphGet(pathOrUrl, params, token) {
   try {
     r = await axios.get(url, {
       params: isNext ? undefined : { ...(params || {}), access_token: token },
-      timeout: 30000,
+      timeout,
       validateStatus: () => true,
     });
   } catch (e) {
@@ -256,7 +256,7 @@ async function resolveToken({ refresh = false } = {}) {
   return found ? tokenCache : null;
 }
 
-function clearCaches() { tokenCache = null; accountsCache = null; }
+function clearCaches() { tokenCache = null; accountsCache = null; billingCache.clear(); }
 
 // ── Ad accounts + mapping ───────────────────────────────────────────────────
 let accountsCache = null; // { at, list }
@@ -275,6 +275,44 @@ async function listAdAccounts(token) {
 async function getMapping() {
   const rows = await q(`SELECT brand_id, value FROM brand_settings WHERE \`key\` = :k`, { k: ACCOUNT_KEY });
   return rows.map((r) => ({ brandId: Number(r.brand_id), accountId: digits(r.value) })).filter((m) => m.accountId);
+}
+
+const billingCache = new Map();
+async function getBillingBalance(brandId, accountId) {
+  if (!/^\d+$/.test(accountId || '')) return { status: 'unmapped' };
+  const key = `${brandId}:${accountId}`;
+  const cached = billingCache.get(key);
+  if (cached && Date.now() - cached.at < 2 * 60 * 1000) return cached.promise;
+
+  const promise = (async () => {
+    const [ads, capi, sharedAds, sharedCapi] = await Promise.all([
+      helper().getSetting(brandId, 'META_ADS_TOKEN', null, { brandOnly: true }),
+      helper().getSetting(brandId, 'FB_ACCESS_TOKEN', null, { brandOnly: true }),
+      readGlobal('META_ADS_TOKEN'), readGlobal('FB_ACCESS_TOKEN'),
+    ].map((p) => p.catch(() => null)));
+    const tokens = [...new Set([ads, sharedAds, process.env.META_ADS_TOKEN, capi, sharedCapi]
+      .map((token) => String(token || '').trim()).filter(Boolean))];
+    if (!tokens.length) return { status: 'not_connected', accountId };
+    for (const token of tokens) {
+      let account;
+      try {
+        account = await graphGet(`act_${accountId}`, { fields: 'account_id,balance,currency' }, token, 6000);
+      } catch (error) {
+        if (error.status && [400, 401, 403].includes(error.status) && !error.rateLimited) continue;
+        break;
+      }
+      // The Ad Account API reports bill due, in minor units for these currencies.
+      const balance = String(account.balance ?? '');
+      if (String(account.account_id) === accountId && ['INR', 'USD', 'EUR'].includes(account.currency)
+          && /^-?\d+$/.test(balance) && Number.isSafeInteger(Number(balance))) {
+        return { status: 'ok', accountId, amount: Number(balance) / 100, currency: account.currency };
+      }
+      break;
+    }
+    return { status: 'unavailable', accountId };
+  })();
+  billingCache.set(key, { at: Date.now(), promise });
+  return promise;
 }
 
 async function lastJobRun() {
@@ -647,6 +685,6 @@ async function syncAll(opts = {}) {
 module.exports = {
   GRAPH, GLOBAL_BRAND_ID, GLOBAL_TOKEN_KEY, AD_SPEND_DDL, AD_SYNC_DDL, AD_PLACEMENT_DDL, RATE_LIMIT_CODES,
   ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping,
-  getConnection, saveToken, saveMapping, syncAll, syncAccount, syncPlacements, toRow, pickAction, rangeFor,
+  getConnection, saveToken, saveMapping, getBillingBalance, syncAll, syncAccount, syncPlacements, toRow, pickAction, rangeFor,
   GraphError,
 };

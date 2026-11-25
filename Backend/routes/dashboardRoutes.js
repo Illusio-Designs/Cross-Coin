@@ -18,7 +18,11 @@ router.get("/today", authenticate, isOrderManager, async (req, res) => {
 async function walletBalances(req, res) {
   const wallet = require('../services/providerWalletService.js');
   try {
-    const balances = req.method === 'PUT' ? await wallet.saveBalance(req.body || {}, req.user?.id) : await wallet.listBalances();
+    if (req.method === 'PUT') {
+      await wallet.saveBalance(req.body || {}, req.user?.id);
+      return res.json({ success: true });
+    }
+    const balances = await wallet.listBalances(req.query.brandId);
     res.json({ success: true, balances });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });

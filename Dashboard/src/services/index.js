@@ -2183,12 +2183,12 @@ export const bundleService = {
 
 // Dashboard Services
 export const dashboardService = {
-  getWalletBalances: async () => {
-    try { return (await adminApi.get('/api/dashboard/wallet-balances')).data.balances; }
+  getWalletBalances: async (brandId) => {
+    try { return (await adminApi.get('/api/dashboard/wallet-balances', { params: brandId ? { brandId } : {}, timeout: 35000 })).data.balances; }
     catch (error) { throw payErr(error); }
   },
   saveWalletBalance: async (snapshot) => {
-    try { return (await adminApi.put('/api/dashboard/wallet-balances', snapshot)).data.balances; }
+    try { return (await adminApi.put('/api/dashboard/wallet-balances', snapshot)).data; }
     catch (error) { throw payErr(error); }
   },
   // Home "today": work queues, pipeline, numbers and recent activity.

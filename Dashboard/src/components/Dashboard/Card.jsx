@@ -218,7 +218,7 @@ function TodayHome() {
         </div>
       </div>
 
-      {isAdmin && <ProviderWalletBalances />}
+      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
 
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">
