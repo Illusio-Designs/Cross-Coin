@@ -24,7 +24,6 @@ const { OWN_HOSTS, normalizeHost } = require('../utils/ownHosts.js');
 const { VALID_INDIAN_STATES } = require('./shippingValidationService.js');
 const settingsHelper = require('./settingsHelper.js');
 const audit = require('./settingsAuditService.js');
-const { parseCheckoutPackTiers } = require('../utils/checkoutPackTiers.js');
 
 // ── Sections (tabs) ──────────────────────────────────────────────────────────
 const SECTIONS = [
@@ -75,12 +74,10 @@ const FIELDS = [
   F('RAZORPAY_KEY_SECRET', 'payments', 'Razorpay key secret', { type: 'secret', category: 'payment', group: 'Razorpay' }),
   F('RAZORPAY_WEBHOOK_SECRET', 'payments', 'Razorpay webhook secret', { type: 'secret', category: 'payment', group: 'Razorpay' }),
   F('PREPAID_INSTANT_DISCOUNT', 'payments', 'Instant discount for paying online (₹)', { type: 'number', min: 0, max: 10000, default: '50', category: 'payment', group: 'Checkout rules', hint: 'Largest discount the server accepts without a coupon.' }),
-  F('COD_MAX_ORDER_VALUE', 'payments', 'Cash on delivery allowed up to (₹)', { type: 'number', min: 0, max: 1000000, default: '1500', category: 'payment', group: 'Checkout rules', hint: 'Same value as on Shipping & courier.' }),
   F('COD_MIN_ADDRESS_QUALITY', 'payments', 'Lowest address score allowed for COD (0–100)', { type: 'number', min: 0, max: 100, default: '60', category: 'payment', group: 'Checkout rules', hint: '0 = never block COD for a messy address.' }),
   F('FREE_SHIPPING_THRESHOLD', 'shipping', 'Free delivery over (₹)', { type: 'number', min: 0, max: 1000000, default: '0', category: 'shipping', group: 'Delivery rules', hint: '0 = off. Same value as on Shipping & courier.' }),
   // Shiprocket Checkout — per store (each brand has its own Shiprocket keys).
   F('SHIPROCKET_CHECKOUT_ENABLED', 'payments', 'Use Shiprocket Checkout on the store', { brandOnly: true, type: 'toggle', default: 'false', category: 'payment', group: 'Shiprocket Checkout', hint: 'On = “Proceed to checkout” opens Shiprocket Checkout (needs both keys below). Off = the store’s own checkout.' }),
-  F('SHIPROCKET_CHECKOUT_PACK_TIERS', 'payments', 'Legacy Shiprocket pack tiers', { brandOnly: true, rule: 'checkoutPackTiers', category: 'payment', group: 'Shiprocket Checkout', hint: 'Pack prices now come from the active bundles and pack offers in CrossCoin.' }),
   F('CUSTOM_CHECKOUT_API_KEY', 'payments', 'Shiprocket Checkout API key', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
   F('CUSTOM_CHECKOUT_HMAC_SECRET', 'payments', 'Shiprocket Checkout API secret', { brandOnly: true, type: 'secret', category: 'payment', group: 'Shiprocket Checkout' }),
 
@@ -127,7 +124,6 @@ const GUIDES = {
   RAZORPAY_KEY_SECRET: 'Shown only once, when you generate the key in Razorpay → API keys. If it is lost, regenerate the key and update both values here.',
   RAZORPAY_WEBHOOK_SECRET: 'Razorpay → Account & Settings → Webhooks → the webhook pointing to api.crosscoin.in → the secret you typed when you created it.',
   PREPAID_INSTANT_DISCOUNT: 'Your own rule: the ₹ off shoppers get for paying online instead of cash on delivery.',
-  COD_MAX_ORDER_VALUE: 'Your own rule: orders above this amount must be paid online.',
   COD_MIN_ADDRESS_QUALITY: 'Your own rule: addresses scoring below this (incomplete or messy) can’t use cash on delivery. 0 turns it off.',
   FREE_SHIPPING_THRESHOLD: 'Your own rule: orders above this amount ship free. 0 turns it off.',
   SHIPROCKET_CHECKOUT_ENABLED: 'Turn on once both keys are saved and Shiprocket shows this store’s products. The keys alone already let Shiprocket read the catalog and send orders.',
@@ -230,9 +226,10 @@ function unusedLabel(key, brandId) {
 const SHARED_WA_BRAND_ID = Number(process.env.WHATSAPP_SHARED_BRAND_ID) || 1;
 const WA_KEY = /^WHATSAPP_(API_TOKEN|PHONE_NUMBER_ID|BUSINESS_ACCOUNT_ID|CATALOG_ID)$/i;
 
-// Owned by other pages — never shown or touched here.
+// Settings managed elsewhere and retired fields stay out of both brand forms.
 const OWNED_ELSEWHERE = (key, category) =>
   category === 'seo' || /^SEO_/i.test(key) || key === 'company_gstin' || key === 'PICKUP_SCHEDULE'
+  || /^(COD_MAX_ORDER_VALUE|SHIPROCKET_CHECKOUT_PACK_TIERS)$/i.test(key)
   || /cleanup_done|^dpdp_|_seed(_|$)|schema[_-]?version|_migrated|seo-init/i.test(key);
 
 // Brand record fields edited in the Store tab (brands table, not brand_settings).
@@ -282,9 +279,6 @@ function normalise(field, raw) {
 
 function validate(field, v) {
   if (v === '') return field.rule === 'required' ? RULES.required(v) : null;
-  if (field.rule === 'checkoutPackTiers') {
-    return parseCheckoutPackTiers(v).length ? null : 'Enter distinct quantity:percent tiers, such as 2:20,3:30.';
-  }
   if (field.type === 'number') {
     const n = Number(v);
     if (!Number.isFinite(n)) return 'Enter a number.';

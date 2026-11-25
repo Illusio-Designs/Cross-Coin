@@ -2,7 +2,6 @@ import ProtectedRoute from "../../components/common/ProtectedRoute";
 import Sidebar from "../../components/Sidebar/Sidebar.jsx";
 import CardGrid from '../../components/Dashboard/Card';
 import DashboardHeader from '../../components/Dashboard/DashboardHeader';
-import DashboardFooter from '../../components/Dashboard/DashboardFooter';
 import { useState, useEffect, Fragment } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { SkeletonPage } from "../../components/ui/Skeleton";
@@ -242,7 +241,6 @@ export default function Dashboard() {
           themeMode={themeMode}
           onToggleTheme={handleToggleTheme}
         />
-        <DashboardFooter />
         <div className="dl-main">
           <main className="dl-content" aria-label="Page content">
             {loading ? (

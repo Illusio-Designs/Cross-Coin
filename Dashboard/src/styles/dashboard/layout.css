@@ -1,12 +1,11 @@
 /* ── Dashboard Layout ───────────────────────────────────────────
    --sb-w is set via JS (document.documentElement.style) on every
-   sidebar toggle, so header/footer/main all react instantly.
+   sidebar toggle, so header and main content react instantly.
    Default 248px matches the full menu (72px when shrunk to icons).
 ──────────────────────────────────────────────────────────────── */
 :root {
   --sb-w: 248px;
   --dh-h: 64px;
-  --df-h: 44px;
 }
 
 /* ── Outer shell ────────────────────────────────────────────── */
@@ -305,26 +304,6 @@
   .dh-menu { width: 240px; }
 }
 
-/* ── Footer ─────────────────────────────────────────────────── */
-.df {
-  position: fixed;
-  bottom: 0;
-  left: var(--sb-w);
-  right: 0;
-  height: var(--df-h);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ds-color-surface);
-  border-top: 1px solid var(--ds-color-border);
-  font-size: 0.78rem;
-  color: var(--ds-color-text-faint);
-  font-family: 'DM Sans', sans-serif;
-  box-sizing: border-box;
-  transition: left 0.2s ease;
-}
-
 /* ── Main area (new class) ──────────────────────────────────── */
 .dl-main {
   margin-left: var(--sb-w);
@@ -339,10 +318,9 @@
 .dl-content {
   flex: 1;
   margin-top: var(--dh-h);
-  margin-bottom: var(--df-h);
   padding: 24px;
   box-sizing: border-box;
-  min-height: calc(100vh - var(--dh-h) - var(--df-h));
+  min-height: calc(100vh - var(--dh-h));
   overflow-x: hidden;
   background: var(--ds-color-bg);
 }
@@ -361,7 +339,6 @@
 .dashboard-content {
   flex: 1;
   margin-top: var(--dh-h);
-  margin-bottom: var(--df-h);
   padding: 24px;
   box-sizing: border-box;
   background: var(--ds-color-bg);
@@ -394,7 +371,6 @@
   .dh  { left: 0 !important; padding: 0 16px; height: 60px; gap: 8px; }
   .dh-right { gap: 4px; }
   .dh-divider { display: none; }
-  .df  { left: 0 !important; height: 40px; font-size: 0.74rem; }
 
   .dl-main,
   .dashboard-main {
@@ -406,7 +382,6 @@
   .dashboard-content {
     padding: 16px;
     margin-top: 60px;
-    margin-bottom: 40px;
   }
 
   .dh-title { font-size: 16px; }
@@ -414,13 +389,11 @@
 
 @media (max-width: 480px) {
   .dh  { height: 56px; }
-  .df  { height: 36px; }
 
   .dl-content,
   .dashboard-content {
     padding: 12px;
     margin-top: 56px;
-    margin-bottom: 36px;
   }
 
   .dh-title { font-size: 15px; }

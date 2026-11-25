@@ -323,24 +323,22 @@ function RecentChanges({ brandId, initial }) {
 
 // ── General · all stores ───────────────────────────────────────────────────
 // One place for what every store shares: Meta token, iThink account, Razorpay
-// account, the win-back coupon, and the shared WhatsApp number's status.
+// account, and the shared WhatsApp number's status.
 function GeneralSettings({ onDirty }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['brand-settings', 'general'], queryFn: () => brandSettingsService.getGeneral() });
   const [draft, setDraft] = useState({});
   const [secrets, setSecrets] = useState({});
   const [copyFrom, setCopyFrom] = useState({});
-  const [winback, setWinback] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const data = q.data;
   const fields = useMemo(() => data?.fields || [], [data]);
-  const winbackChanged = winback !== null && winback.trim().toUpperCase() !== (data?.winbackCoupon || '');
   const dirtyCount = Object.keys(draft).length + Object.values(secrets).filter((v) => v === 'remove').length
-    + Object.keys(copyFrom).length + (winbackChanged ? 1 : 0);
+    + Object.keys(copyFrom).length;
   useEffect(() => { onDirty?.(dirtyCount); }, [dirtyCount, onDirty]);
 
-  const reset = () => { setDraft({}); setSecrets({}); setCopyFrom({}); setWinback(null); setErrors({}); };
+  const reset = () => { setDraft({}); setSecrets({}); setCopyFrom({}); setErrors({}); };
   const groups = [];
   for (const f of fields) {
     let g = groups.find((x) => x.name === (f.group || ''));
@@ -359,7 +357,7 @@ function GeneralSettings({ onDirty }) {
     setSaving(true); setErrors({});
     try {
       const remove = Object.entries(secrets).filter(([, v]) => v === 'remove').map(([k]) => k);
-      const r = await brandSettingsService.saveGeneral({ values: draft, remove, copyFrom, ...(winbackChanged ? { winbackCoupon: winback } : {}) });
+      const r = await brandSettingsService.saveGeneral({ values: draft, remove, copyFrom });
       if (r && r.success === false) throw r;
       reset();
       qc.setQueryData(['brand-settings', 'general'], r);
@@ -391,10 +389,6 @@ function GeneralSettings({ onDirty }) {
           {/* full load so the WhatsApp page reads #profile on mount */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a className="oss-btn oss-btn--sm" href="/dashboard/whatsapp#profile">Open WhatsApp → Profile</a>
-        </div>
-        <div className="oss-grid">
-          <FieldInput f={{ key: 'WINBACK', label: 'Win-back coupon', guide: 'Sent 30 days after a customer’s last order, from every store. Each store needs an active coupon with this code in Growth → Coupons; a store without one is skipped.', hint: 'Same code for every store (default CART10).' }}
-            value={winback ?? data?.winbackCoupon ?? ''} onChange={(v) => setWinback(String(v).toUpperCase())} error={errors.winbackCoupon} />
         </div>
       </section>
 
