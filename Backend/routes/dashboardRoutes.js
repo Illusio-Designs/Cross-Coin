@@ -22,7 +22,7 @@ async function walletBalances(req, res) {
       await wallet.saveBalance(req.body || {}, req.user?.id);
       return res.json({ success: true });
     }
-    const balances = await wallet.listBalances(req.query.brandId);
+    const balances = await wallet.listWalletMonitor(req.query.brandId);
     res.json({ success: true, balances });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });

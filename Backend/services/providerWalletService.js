@@ -44,6 +44,19 @@ async function listBalances(brandId) {
   }));
 }
 
+async function listWalletMonitor(brandId) {
+  const balances = await listBalances(brandId);
+  if (!balances.length) return balances;
+  const spend = await require('./metaAdsService.js').getRecentDailySpend(parseBrandId(brandId)).catch((error) => {
+    require('../config/logging.js').logger.warn('Meta wallet monitor could not load cached ad spend', { message: error.message });
+    return [];
+  });
+  const byBrandCurrency = new Map(spend.map((row) => [`${row.brand_id}:${row.currency}`, Number(row.daily_spend)]));
+  return balances.map((entry) => ({
+    ...entry, dailySpend: byBrandCurrency.get(`${entry.brandId}:${entry.currency}`) ?? null,
+  }));
+}
+
 async function saveBalance({ provider, amount, currency, brandId }, actorId) {
   const value = String(amount ?? '').trim();
   const selectedBrand = provider === 'meta' ? parseBrandId(brandId) : null;
@@ -65,4 +78,4 @@ async function saveBalance({ provider, amount, currency, brandId }, actorId) {
   { replacements: { identity: selectedBrand, value, currency, actorId } });
 }
 
-module.exports = { listBalances, saveBalance };
+module.exports = { listBalances, listWalletMonitor, saveBalance };

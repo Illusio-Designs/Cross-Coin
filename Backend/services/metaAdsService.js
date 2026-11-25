@@ -131,6 +131,18 @@ const IST_MS = 330 * 60000;
 const ymdIst = (d = new Date()) => new Date(new Date(d).getTime() + IST_MS).toISOString().slice(0, 10);
 const addDays = (ymd, n) => { const d = new Date(`${ymd}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const dayStr = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v || '').slice(0, 10));
+
+// Use complete calendar days from the saved Meta insights. Days without ad
+// delivery contribute zero to the average.
+async function getRecentDailySpend(brandId) {
+  await ensureSchema();
+  const today = ymdIst();
+  return q(`SELECT brand_id, currency, SUM(spend) / 7 AS daily_spend
+    FROM ad_spend_daily
+    WHERE day >= :from AND day < :today AND brand_id IS NOT NULL AND currency IS NOT NULL
+      ${brandId ? 'AND brand_id = :brandId' : ''}
+    GROUP BY brand_id, currency`, { from: addDays(today, -7), today, ...(brandId ? { brandId } : {}) });
+}
 const digits = (v) => String(v ?? '').trim().replace(/^act_/i, '').replace(/\D/g, '');
 const num = (v) => Number(v) || 0;
 const mask = (t) => require('./settingsAuditService.js').maskValue(t);
@@ -646,7 +658,7 @@ async function syncAll(opts = {}) {
 
 module.exports = {
   GRAPH, GLOBAL_BRAND_ID, GLOBAL_TOKEN_KEY, AD_SPEND_DDL, AD_SYNC_DDL, AD_PLACEMENT_DDL, RATE_LIMIT_CODES,
-  ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping,
+  ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping, getRecentDailySpend,
   getConnection, saveToken, saveMapping, syncAll, syncAccount, syncPlacements, toRow, pickAction, rangeFor,
   GraphError,
 };

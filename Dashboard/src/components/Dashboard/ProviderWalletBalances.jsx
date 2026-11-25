@@ -3,18 +3,32 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, ErrorState, Input } from "../ui";
 import { dashboardService } from "../../services";
 
-const META_BILLING_URL = "https://business.facebook.com/billing_hub";
-const queryKey = ["dashboard", "wallet-balances"];
-const money = (amount, currency) => new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(amount);
+const BILLING_URL = "https://business.facebook.com/billing_hub";
+const WALLET_QUERY = ["dashboard", "wallet-balances"];
+const CURRENCIES = ["INR", "USD", "EUR"];
+const money = (amount, currency) => new Intl.NumberFormat("en-IN", {
+  style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 2,
+}).format(amount);
+
+function estimate(entry) {
+  const days = entry.amount != null && entry.dailySpend > 0 ? entry.amount / entry.dailySpend : null;
+  if (entry.amount === 0 || (days != null && days <= 0.5)) return { days, tone: "danger", label: "Critical" };
+  if (days == null) return { days, tone: "muted", label: entry.amount == null ? "Balance needed" : "Estimate unavailable" };
+  if (days < 1) return { days, tone: "danger", label: "Low balance" };
+  return { days, tone: "success", label: "Healthy" };
+}
+
 export default function ProviderWalletBalances({ brandId }) {
   const qc = useQueryClient();
   const { data, isLoading, error, isFetching, refetch } = useQuery({
-    queryKey: [...queryKey, brandId || "all"], queryFn: () => dashboardService.getWalletBalances(brandId),
+    queryKey: [...WALLET_QUERY, brandId || "all"],
+    queryFn: () => dashboardService.getWalletBalances(brandId),
     staleTime: 30000, retry: false,
   });
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+
   const save = async (event) => {
     event.preventDefault();
     if (saving) return;
@@ -22,41 +36,74 @@ export default function ProviderWalletBalances({ brandId }) {
     setSaveError("");
     try {
       await dashboardService.saveWalletBalance(draft);
+      await qc.invalidateQueries({ queryKey: WALLET_QUERY });
       setDraft(null);
-      qc.invalidateQueries({ queryKey });
-    } catch (e) { setSaveError(e.message); }
-    finally { setSaving(false); }
+    } catch (error) {
+      setSaveError(error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const wallets = (data || []).map((entry) => ({ ...entry, ...estimate(entry) }));
+  const inrWallets = wallets.filter((entry) => entry.currency === "INR" && entry.amount != null);
+  const inrTotal = inrWallets.reduce((sum, entry) => sum + Math.round(entry.amount * 100), 0) / 100;
+  const lowCount = wallets.filter((entry) => entry.tone === "danger").length;
+  const hasStatus = wallets.some((entry) => entry.tone !== "muted");
+
   return (
-    <section className="panel hm-wallets" aria-label="Meta Ads available funds">
+    <section className="panel hm-wallets" aria-labelledby="meta-wallet-heading">
       <div className="panel-h">
         <div>
-          <h3>Meta Ads available funds</h3>
-          <span className="h-hint">Balances recorded manually by brand.</span>
+          <h3 id="meta-wallet-heading">Meta Ads Wallet Monitor</h3>
+          <span className="h-hint">Recorded balances · Average spend over the last 7 days</span>
         </div>
+        <a href={BILLING_URL} target="_blank" rel="noreferrer">Open Billing &amp; payments</a>
       </div>
-      {isLoading && <div className="hm-cards"><p role="status">Loading wallet balances…</p></div>}
-      {error && <ErrorState message="Couldn’t load Meta Ads balances." onRetry={() => refetch()} retrying={isFetching} />}
-      {data && (
-        <div className="hm-cards">
-          {data.filter((entry) => entry.provider === "meta").map((entry) => {
-            const key = `meta-${entry.brandId}`;
+
+      {isLoading && <p role="status">Loading Meta wallet monitor…</p>}
+      {error && <ErrorState message="Couldn’t load Meta wallet balances." onRetry={() => refetch()} retrying={isFetching} />}
+      {data && <>
+        <dl className="hm-wallet-summary">
+          <div>
+            <dt>Total recorded INR funds</dt>
+            <dd className="hm-wallet-success">{inrWallets.length ? money(inrTotal, "INR") : "—"}</dd>
+          </div>
+          <div>
+            <dt>Low balance brands</dt>
+            <dd className={lowCount > 0 ? "hm-wallet-danger" : undefined}>{hasStatus ? lowCount : "—"}</dd>
+          </div>
+        </dl>
+
+        {wallets.length ? <ul className="hm-wallet-list">
+          {wallets.map((entry) => {
+            const key = `meta-wallet-${entry.brandId}`;
             const editing = draft?.brandId === entry.brandId;
-            const amount = entry.amount == null ? "No balance recorded"
-              : money(entry.amount, entry.currency);
+            const days = entry.days == null ? null : Math.round(entry.days * 10) / 10;
             return (
-              <div className="hm-card" key={key}>
-                <strong>{entry.brandName}</strong>
-                <div>Recorded available funds · {amount}</div>
-                {entry.recordedAt && <small>Recorded {new Date(entry.recordedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</small>}
+              <li key={key} className="hm-wallet-row">
+                <div className="hm-wallet-details">
+                  <strong>{entry.brandName}</strong>
+                  <span>{entry.dailySpend > 0 ? `${money(entry.dailySpend, entry.currency)}/day` : "Daily spend unavailable"}
+                    {days != null && ` · ${days} ${days === 1 ? "day" : "days"} remaining`}
+                  </span>
+                </div>
+                <div className="hm-wallet-value">
+                  <strong>{entry.amount == null ? "—" : money(entry.amount, entry.currency)}</strong>
+                  <span className={`hm-wallet-${entry.tone}`}>{entry.label}</span>
+                </div>
+                {days != null && (
+                  <div className={`hm-wallet-track hm-wallet-${entry.tone}`} aria-hidden="true">
+                    <span style={{ width: `${Math.min(100, entry.days * 20)}%` }} />
+                  </div>
+                )}
                 {editing ? (
                   <form onSubmit={save}>
-                    <Input label="Available balance" name={`${key}-wallet-amount`} inputMode="decimal" required
+                    <Input label="Available balance" name={`${key}-amount`} inputMode="decimal" required
                       pattern="[0-9]{1,12}([.][0-9]{1,2})?" value={draft.amount}
                       onChange={(event) => setDraft({ ...draft, amount: event.target.value })} />
                     <Input label="Currency" name={`${key}-currency`} type="select" value={draft.currency}
-                      options={["INR", "USD", "EUR"].map((value) => ({ value, label: value }))}
+                      options={CURRENCIES.map((value) => ({ value, label: value }))}
                       onChange={(event) => setDraft({ ...draft, currency: event.target.value })} />
                     {saveError && <p role="alert">{saveError}</p>}
                     <div className="hm-wallet-actions">
@@ -68,17 +115,16 @@ export default function ProviderWalletBalances({ brandId }) {
                   <div className="hm-wallet-actions">
                     <Button size="sm" variant="secondary" disabled={saving} onClick={() => {
                       setSaveError("");
-                      setDraft({ provider: entry.provider, brandId: entry.brandId, amount: entry.amount ?? "",
-                        currency: entry.currency });
-                    }}>Record balance</Button>
-                    <a href={META_BILLING_URL} target="_blank" rel="noreferrer">Open Billing &amp; payments</a>
+                      setDraft({ provider: entry.provider, brandId: entry.brandId, amount: entry.amount ?? "", currency: entry.currency });
+                    }}>{entry.amount == null ? "Record balance" : "Update balance"}</Button>
+                    {entry.recordedAt && <small>Recorded {new Date(entry.recordedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</small>}
                   </div>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
-      )}
+        </ul> : <p className="hm-empty">No active brands to show.</p>}
+      </>}
     </section>
   );
 }

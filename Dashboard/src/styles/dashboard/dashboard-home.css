@@ -128,9 +128,26 @@
 }
 .hm-card.p-urgent .go { background: var(--ds-color-brand); border-color: var(--ds-color-brand); color: var(--ds-color-bg); }
 .hm-card .go:hover { border-color: var(--ds-color-text-muted); }
-.hm-wallets form { display: grid; gap: 10px; }
-.hm-wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.hm-wallet-actions a { font-size: 13px; color: var(--ds-color-text); text-decoration: underline; }
+.hm-wallets { color: var(--ds-color-text); }
+.hm-wallets .panel-h a { font-size: 13px; color: inherit; text-underline-offset: 3px; }
+.hm-wallet-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 6px 0 18px; border-bottom: 1px solid var(--ds-color-border); }
+.hm-wallet-summary dt, .hm-wallet-details span, .hm-wallet-actions small { color: var(--ds-color-text-muted); font-size: 13px; }
+.hm-wallet-summary dd { margin: 4px 0 0; font-size: clamp(22px, 4vw, 32px); font-weight: 750; font-variant-numeric: tabular-nums; }
+.hm-wallet-list { list-style: none; margin: 0; padding: 0; }
+.hm-wallet-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 16px 0; border-bottom: 1px solid var(--ds-color-border-soft); }
+.hm-wallet-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.hm-wallet-details, .hm-wallet-value { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
+.hm-wallet-row strong { font-size: 16px; }
+.hm-wallet-value { text-align: right; font-variant-numeric: tabular-nums; }
+.hm-wallet-value span { font-size: 13px; }
+.hm-wallet-success { color: var(--ds-color-success-text); }
+.hm-wallet-danger { color: var(--ds-color-danger-text); }
+.hm-wallet-muted { color: var(--ds-color-text-muted); }
+.hm-wallet-track { grid-column: 1 / -1; height: 5px; border-radius: 999px; overflow: hidden; background: var(--ds-color-surface-soft); }
+.hm-wallet-track span { display: block; height: 100%; background: currentColor; border-radius: inherit; }
+.hm-wallet-row > form, .hm-wallet-row > .hm-wallet-actions { grid-column: 1 / -1; }
+.hm-wallet-row form { display: grid; gap: 10px; max-width: 320px; }
+.hm-wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .hm-empty { padding: 26px; text-align: center; color: var(--ds-color-text-muted); font-size: 14px; }
 
 .hm-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
