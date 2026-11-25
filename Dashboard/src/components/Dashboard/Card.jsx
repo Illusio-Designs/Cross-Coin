@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Skeleton, SkeletonList, SkeletonTableRows } from '../ui/Skeleton';
+import { ErrorState } from '../ui';
 import { useAuth } from '../../context/AuthContext';
 import { PageHeader } from './primitives';
 import { dashboardService, brandService } from '../../services';
@@ -54,13 +55,11 @@ function RoleHome() {
     <div className="obz-home">
       <PageHeader
         title={`${getGreeting()}, ${user?.username || 'there'}`}
-        subtitle="Here's your workspace"
       />
       {links.length > 0 ? (
         <div className="panel">
           <div className="panel-h">
             <h3>Quick access</h3>
-            <span className="h-hint">{links.length} {links.length === 1 ? 'section' : 'sections'} · tap to open</span>
           </div>
           <div className="inbox-grid">
             {links.map((l) => (
@@ -136,16 +135,11 @@ const timeAgo = (d) => {
   if (m < 24 * 60) return `${Math.floor(m / 60)} h`;
   return `${Math.floor(m / 1440)} d`;
 };
-const SearchIcon = () => (
-  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-);
-
 function TodayHome() {
   const { user, isAdmin } = useAuth();
   const [brandId, setBrandId] = useState('');
   const [brandList, setBrandList] = useState([]);
   const [tab, setTab] = useState('all');
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     let off = false;
@@ -153,28 +147,16 @@ function TodayHome() {
     return () => { off = true; };
   }, []);
 
-  const { data, isLoading, error, isFetching } = useQuery({
+  const { data, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['dashboard', 'today', brandId],
     queryFn: () => dashboardService.getToday(brandId || undefined),
-    placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,      // the queues should feel live
     refetchOnWindowFocus: true,
   });
 
-  const runSearch = (e) => {
-    e.preventDefault();
-    const q = search.trim();
-    if (!q) return;
-    try { sessionStorage.setItem('obz-orders-search', q); } catch { /* storage blocked */ }
-    goToView('orders');
-  };
-
-  // First load: the page keeps its layout and every block shimmers in place
-  // (a brand switch or the 60s refresh keeps the old numbers — keepPreviousData).
   const first = isLoading && !data;
   const num = (v, w = 56, h = 24) => (first ? <Skeleton w={w} h={h} /> : v);
-  if (error && !data) return <div className="obz-home"><div className="panel">Couldn’t load today’s dashboard: {error.message || 'try again'}</div></div>;
 
   const queues = (data?.queues || []).filter((q) => q.count > 0);
   const counts = { all: queues.length, urgent: 0, today: 0, later: 0 };
@@ -199,18 +181,15 @@ function TodayHome() {
           <h1>{getGreeting()}{user?.username ? `, ${user.username}` : ''}</h1>
           <p>
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' })}
-            {first ? '' : ' · '}{first ? '' : totalItems > 0 ? `${plural(totalItems, 'thing')} need you today${urgentItems ? `, ${urgentItems} urgent` : ''}.` : 'Nothing waiting — all clear.'}
-            {isFetching && data ? ' Updating…' : ''}
+            {data && (totalItems > 0
+              ? ` · ${plural(totalItems, 'item')} to review${urgentItems ? `, ${urgentItems} urgent` : ''}`
+              : ' · Nothing waiting')}
           </p>
         </div>
         <div className="hm-tools">
-          <form className="hm-search" onSubmit={runSearch} role="search">
-            <label htmlFor="hm-search-input" style={{ position: 'absolute', left: -9999 }}>Search orders</label>
-            <SearchIcon />
-            <input id="hm-search-input" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order no., phone, AWB or customer…" />
-          </form>
           <Dropdown
             value={brandId || 'all'}
+            ariaLabel="Filter by brand"
             onChange={(v) => setBrandId(v === 'all' ? '' : v)}
             options={[{ value: 'all', label: 'All brands' }, ...brandList.map((b) => ({ value: b.id, label: b.display_name || b.name }))]}
             className="bset-brand-select"
@@ -218,7 +197,8 @@ function TodayHome() {
         </div>
       </div>
 
-      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
+      {error && <ErrorState message={data ? "Couldn’t refresh today’s dashboard." : "Couldn’t load today’s dashboard."} onRetry={() => refetch()} retrying={isFetching} />}
+      {(data || !error) && <>
 
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">
@@ -264,7 +244,7 @@ function TodayHome() {
       </section>
 
       <section className="panel" aria-label="Orders right now">
-        <div className="panel-h"><h3>Orders right now</h3><span className="h-hint">click a stage to open it</span></div>
+        <div className="panel-h"><h3>Orders right now</h3></div>
         <div className="hm-flow">
           {[
             { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
@@ -370,6 +350,8 @@ function TodayHome() {
           )}
         </section>
       </div>
+      </>}
+      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
     </div>
   );
 }

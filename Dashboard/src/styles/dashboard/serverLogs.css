@@ -82,6 +82,7 @@
 .sl-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .sl-rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 .sl-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.sl-row .sl-hour-select { max-width: none; min-width: 0; }
 .sl-lbl { font-size: 12px; font-weight: 600; color: var(--ds-color-text); }
 .sl-input {
   height: 36px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--ds-color-border);

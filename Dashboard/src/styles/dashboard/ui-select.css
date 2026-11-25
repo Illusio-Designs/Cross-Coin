@@ -18,6 +18,7 @@
 
 /* ── Trigger ── */
 .sel-trigger {
+  position: relative;
   width: 100%;
   display: flex;
   align-items: center;
@@ -35,6 +36,9 @@
   padding: 6px 10px;
   box-sizing: border-box;
 }
+.sel-toggle { position: absolute; inset: 0; z-index: 1; border: 0; border-radius: inherit; background: transparent; cursor: inherit; }
+.sel-toggle:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
+.sel-chip-remove, .sel-clear-btn { position: relative; z-index: 2; }
 .sel-trigger:hover:not(.sel-trigger-disabled) { border-color: var(--ds-color-text); }
 .sel-trigger-open { border-color: var(--ds-color-text); box-shadow: 0 0 0 3px var(--ds-color-surface-soft); }
 .sel-trigger-error { border-color: var(--ds-color-danger) !important; }
@@ -168,6 +172,10 @@
 
 .sel-option {
   display: flex;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
@@ -177,6 +185,7 @@
   color: var(--ds-color-text);
   font-family: 'DM Sans', sans-serif;
 }
+.sel-option:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: -3px; }
 .sel-option:hover:not(.sel-option-disabled) { background: var(--ds-color-surface-soft); }
 .sel-option-selected { background: var(--ds-color-surface-soft); color: var(--ds-color-text); font-weight: 500; }
 .sel-option-selected:hover { background: var(--ds-color-border-soft); }

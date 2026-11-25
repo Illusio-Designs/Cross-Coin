@@ -255,7 +255,7 @@ export default function StaffUsers() {
                       <td className="r oss-nowrap">
                         <button type="button" className="oss-btn oss-btn--sm" onClick={() => setFormFor(u)}>Edit</button>
                         {!self && (
-                          <button type="button" className={`oss-btn oss-btn--sm${stale ? " oss-btn--danger" : " oss-btn--quiet"}`} onClick={() => setRemoving(u)}>Remove</button>
+                          <button type="button" className="oss-btn oss-btn--sm oss-btn--danger" onClick={() => setRemoving(u)}>Remove</button>
                         )}
                       </td>
                     </tr>

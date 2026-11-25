@@ -235,7 +235,7 @@ export default function Categories() {
       render: ({ id }) => (
         <div className="sl-actions">
           <button className="sl-btn-edit" title="Edit" disabled={editLoading} onClick={() => handleEdit(id)}>{IC.edit}</button>
-          <button className="sl-btn-delete" title="Delete" onClick={() => handleDelete(id)}>{IC.trash}</button>
+          <Button variant="danger" size="sm" title="Delete category" icon={IC.trash} onClick={() => handleDelete(id)} />
         </div>
       )
     }

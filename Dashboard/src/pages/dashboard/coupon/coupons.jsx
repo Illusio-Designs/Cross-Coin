@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Button, Pagination, PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, SidePanel,
-  ConfirmBar, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows,
+  ConfirmBar, DateRangePicker, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows,
 } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { couponService, brandService } from '../../../services';
@@ -506,13 +506,14 @@ function CouponPanel({ open, initial, brands, onClose, onSaved }) {
 
           <div className="cpn-field">
             <label htmlFor="cpn-start">Starts</label>
-            <input id="cpn-start" type="date" value={f.startDate} onChange={(e) => set('startDate', e.target.value)} aria-invalid={!!errors.startDate || undefined} />
+            <DateRangePicker id="cpn-start" label="" field single startDate={f.startDate}
+              onStartChange={(value) => set('startDate', value)} onClear={() => set('startDate', '')} invalid={!!errors.startDate} />
             {fieldErr('startDate')}
           </div>
           <div className="cpn-field">
             <label htmlFor="cpn-end">Ends</label>
-            <input id="cpn-end" type="date" value={f.noEnd ? '' : f.endDate} disabled={f.noEnd} min={f.startDate}
-              onChange={(e) => set('endDate', e.target.value)} aria-invalid={!!errors.endDate || undefined} />
+            <DateRangePicker id="cpn-end" label="" field single startDate={f.noEnd ? '' : f.endDate} disabled={f.noEnd} minDate={f.startDate}
+              onStartChange={(value) => set('endDate', value)} onClear={() => set('endDate', '')} invalid={!!errors.endDate} />
             <label className="cpn-check-row"><input type="checkbox" checked={f.noEnd} onChange={(e) => set('noEnd', e.target.checked)} /> No end date</label>
             {fieldErr('endDate')}
           </div>

@@ -422,3 +422,13 @@
     font-size: 13px;
   }
 }
+
+.drp.drp--field { display: grid; gap: 6px; padding: 0; min-width: 0; }
+.drp--field .drp-trigger-row { flex-direction: row; flex-wrap: nowrap; min-width: 0; }
+.drp--field .drp-trigger { flex: 1; min-width: 0; justify-content: flex-start; }
+.drp--field .drp-trigger[aria-invalid="true"] { border-color: var(--ds-color-danger); }
+.drp--field .drp-clear-btn { width: auto; }
+.drp--field .drp-dropdown { position: static; width: auto; max-height: none; box-shadow: none; }
+.drp--field .drp-cal-wrap { width: 100%; min-width: 0; padding: 10px; }
+.drp--field .drp-cal-cell { width: 100%; }
+.drp :is(.drp-trigger, .drp-cal-cell, .drp-cal-nav):focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }

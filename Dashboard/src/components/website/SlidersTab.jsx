@@ -6,7 +6,7 @@ import { sliderService, categoryService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { Select } from '../ui';
+import { DateRangePicker, Select } from '../ui';
 import { WebChips, WebBody, WebGridState, webStale, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks, Toggle } from './webParts';
 import { useLoad, useObjectUrl, errText, fmtDay, dayInputValue, dayStartIso, dayEndIso, siteUrl, brandLabel } from './webUtil';
 
@@ -182,16 +182,18 @@ export default function SlidersTab({ brands, brand, brandId, q, registerAction }
               <input id="sl-btn" className="web-input" value={form.buttonText} onChange={(e) => set('buttonText', e.target.value)} placeholder="Shop now" />
             </WebField>
             <WebField label="Button opens" htmlFor="sl-cat" hint="A category page">
-              <Select value={form.categoryId} onChange={(v) => set('categoryId', v ?? '')} searchable={categories.length > 8} placeholder="No link"
+              <Select id="sl-cat" value={form.categoryId} onChange={(v) => set('categoryId', v ?? '')} searchable={categories.length > 8} placeholder="No link"
                 options={[{ value: '', label: 'No link' }, ...categories.map((c) => ({ value: String(c.id), label: c.name }))]} />
             </WebField>
           </div>
           <div className="web-2col">
             <WebField label="Shows from" htmlFor="sl-from" hint="Empty = right away">
-              <input id="sl-from" type="date" className="web-input" value={form.from} onChange={(e) => set('from', e.target.value)} />
+              <DateRangePicker id="sl-from" label="" field single startDate={form.from}
+                onStartChange={(value) => set('from', value)} onClear={() => set('from', '')} />
             </WebField>
             <WebField label="Shows until" htmlFor="sl-to" hint="Empty = no end date">
-              <input id="sl-to" type="date" className="web-input" value={form.to} min={form.from || undefined} onChange={(e) => set('to', e.target.value)} />
+              <DateRangePicker id="sl-to" label="" field single startDate={form.to} minDate={form.from}
+                onStartChange={(value) => set('to', value)} onClear={() => set('to', '')} />
             </WebField>
           </div>
           <Toggle label="Show on the website" checked={form.active} onChange={(v) => set('active', v)} />

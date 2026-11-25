@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useId } from 'react';
 
 /* ── Icons ── */
 const CalendarIcon = () => (
@@ -96,6 +96,7 @@ const CalendarGrid = ({ year, month, onMonthChange, startDate, endDate, onSelect
           ].filter(Boolean).join(' ');
           return (
             <button key={dayStr} type="button" className={cls} disabled={disabled}
+              aria-label={formatDisplay(dayStr)} aria-pressed={isStart || isEnd} aria-current={isToday ? 'date' : undefined}
               onClick={disabled ? undefined : () => onSelect(dayStr)}>
               {day}
             </button>
@@ -135,6 +136,9 @@ const DateRangePicker = ({
   label = 'Date Range',
   showIcon = true,
   inline = false,
+  field = false, // expand within a form so scroll containers cannot clip the calendar
+  id,
+  invalid = false,
   single = false, // single-date mode: one click picks a date and closes
   minDate = '',   // 'YYYY-MM-DD' — dates before this are disabled
   maxDate = '',   // 'YYYY-MM-DD' — dates after this are disabled
@@ -147,7 +151,13 @@ const DateRangePicker = ({
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
   const [alignRight, setAlignRight] = useState(false); // flip open direction near the viewport's right edge
   const ref = useRef(null);
+  const triggerRef = useRef(null);
+  const calendarId = useId();
   const hasValue = startDate || endDate;
+  const closeAndFocus = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   // Approx. dropdown width (presets sidebar + calendar). Used to decide which
   // way to open so the calendar half never gets clipped off-screen.
@@ -165,7 +175,7 @@ const DateRangePicker = ({
   const handleToggle = () => {
     if (!open) {
       // Open calendar to the start date month, or current month
-      const d = parseDate(startDate) || { year: new Date().getFullYear(), month: new Date().getMonth() };
+      const d = parseDate(startDate || minDate || maxDate) || { year: new Date().getFullYear(), month: new Date().getMonth() };
       setCalYear(d.year);
       setCalMonth(d.month);
       setSelecting('start');
@@ -189,7 +199,7 @@ const DateRangePicker = ({
     if (single) {
       // One click picks the date and closes (unless an explicit Apply is used).
       onStartChange(dayStr);
-      if (!onApply) setOpen(false);
+      if (!onApply) closeAndFocus();
       setSelecting('start');
       return;
     }
@@ -209,10 +219,10 @@ const DateRangePicker = ({
         onEndChange(dayStr);
       }
       // With no explicit Apply button, auto-close once the range is complete.
-      if (!onApply) setOpen(false);
+      if (!onApply) closeAndFocus();
       setSelecting('start');
     }
-  }, [startDate, endDate, onStartChange, onEndChange, onApply, single]);
+  }, [startDate, endDate, onStartChange, onEndChange, onApply, single, closeAndFocus]);
 
   const handlePreset = (key) => {
     const range = getPresetRange(key);
@@ -223,19 +233,19 @@ const DateRangePicker = ({
       if (maxDate) { if (end > maxDate) end = maxDate; if (start > maxDate) start = maxDate; }
       onStartChange(start);
       onEndChange(end);
-      if (!onApply) setOpen(false);
+      if (!onApply) closeAndFocus();
       setSelecting('start');
     }
   };
 
   const handleApply = () => {
     onApply?.();
-    setOpen(false);
+    closeAndFocus();
   };
 
   const handleClear = () => {
     onClear?.();
-    setOpen(false);
+    closeAndFocus();
   };
 
   const Wrapper = onApply && !open ? 'form' : 'div';
@@ -245,7 +255,12 @@ const DateRangePicker = ({
     <Wrapper
       {...wrapperProps}
       ref={ref}
-      className={['drp', inline && 'drp--inline', className].filter(Boolean).join(' ')}
+      className={['drp', (inline || field) && 'drp--inline', field && 'drp--field', className].filter(Boolean).join(' ')}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !open) return;
+        event.stopPropagation();
+        closeAndFocus();
+      }}
     >
       {label && (
         <div className="drp-label">
@@ -256,6 +271,8 @@ const DateRangePicker = ({
 
       <div className="drp-trigger-row">
         <button type="button" className={`drp-trigger ${open ? 'drp-trigger--active' : ''}`} onClick={handleToggle}
+          id={id} ref={triggerRef} aria-invalid={invalid || undefined}
+          aria-controls={open && !disabled ? calendarId : undefined}
           disabled={disabled} aria-expanded={open && !disabled}
           aria-label={single && label ? `${label} ${startDate ? formatDisplay(startDate) : 'Select date'}` : undefined}>
           <CalendarIcon />
@@ -284,7 +301,7 @@ const DateRangePicker = ({
       </div>
 
       {open && !disabled && (
-        <div className={`drp-dropdown${alignRight ? ' drp-dropdown--right' : ''}`}>
+        <div className={`drp-dropdown${alignRight ? ' drp-dropdown--right' : ''}`} id={calendarId}>
           <div className="drp-dropdown-body">
             {/* Presets — range mode only */}
             {!single && (

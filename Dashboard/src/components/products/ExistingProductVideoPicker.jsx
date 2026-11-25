@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Dropdown from '../ui/Dropdown';
 import { productService } from '../../services';
 import { videosForProduct } from './productVideoData';
 
@@ -60,12 +61,12 @@ export default function ExistingProductVideoPicker({ productId, videos, onAdd, o
       <label className="pst-field">Search products
         <input className="pst-input" type="search" aria-label="Search products for videos" value={search} disabled={disabled} onChange={event => { setSearch(event.target.value); setPage(1); setSourceId(''); }} placeholder="Search by product name" />
       </label>
-      <label className="pst-field">Source product
-        <select aria-label="Source product" className="pst-input" value={sourceId} disabled={disabled || loading} onChange={event => setSourceId(event.target.value)}>
-          <option value="">{loading ? 'Loading products…' : 'Choose a product'}</option>
-          {products.map(product => <option key={product.id} value={product.id}>{product.name} (#{product.id})</option>)}
-        </select>
-      </label>
+      <Dropdown label="Source product" className="pst-source-product" value={sourceId} disabled={disabled || loading}
+        onChange={setSourceId} placeholder={loading ? 'Loading products…' : 'Choose a product'}
+        options={[
+          { value: '', label: loading ? 'Loading products…' : 'Choose a product' },
+          ...products.map(product => ({ value: String(product.id), label: `${product.name} (#${product.id})` })),
+        ]} />
       {pages > 1 && <div className="pst-video-actions">
         <button type="button" className="pst-btn pst-btn--sm" disabled={disabled || loading || page === 1} onClick={() => { setPage(value => value - 1); setSourceId(''); }}>Previous products</button>
         <span>Page {page} of {pages}</span>

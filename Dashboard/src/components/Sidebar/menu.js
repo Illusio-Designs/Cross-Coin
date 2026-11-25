@@ -58,7 +58,7 @@ export const MENU = [
         key: 'reports', label: 'Reports', icon: ChartLineData01Icon, roles: ORDERS, children: [
           // Two tabbed pages (pages/dashboard/reports/ReportHub.jsx); the old
           // single-report views open the matching tab.
-          { key: 'reports-sales', label: 'Sales', view: 'reports-sales', also: ['reports', 'revenue-profit', 'report-products', 'report-inventory', 'report-location'] },
+          { key: 'reports-sales', label: 'Sales', view: 'reports-sales', also: ['reports', 'report-marketing-orders', 'revenue-profit', 'report-products', 'report-inventory', 'report-location'] },
           { key: 'reports-marketing', label: 'Marketing', view: 'reports-marketing', also: ['traffic-report', 'report-ads', 'report-coupons', 'report-customers'] },
         ],
       },

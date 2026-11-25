@@ -24,6 +24,7 @@ export default function useFocusTrap(ref, active, { onEscape, initialFocus } = {
     (initialFocus?.current || items()[0] || node).focus?.();
 
     const onKey = (e) => {
+      if (e.defaultPrevented || !node.contains(e.target)) return;
       if (e.key === 'Escape' && escape.current) {
         e.stopPropagation();
         escape.current(e);
@@ -37,9 +38,10 @@ export default function useFocusTrap(ref, active, { onEscape, initialFocus } = {
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
-    node.addEventListener('keydown', onKey);
+    // Give nested controls first chance to handle Escape before closing the panel.
+    document.addEventListener('keydown', onKey);
     return () => {
-      node.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey);
       if (before && typeof before.focus === 'function' && document.contains(before)) before.focus();
     };
   }, [active]); // eslint-disable-line react-hooks/exhaustive-deps

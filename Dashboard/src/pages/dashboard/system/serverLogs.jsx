@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SkeletonKpis, SkeletonTableRows, Switch } from '../../../components/ui';
+import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { serverLogsService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -471,18 +472,12 @@ function SettingsTab({ data, onSaved }) {
             <TemplateStatus t={data.wa_template} />
           </label>
           <div className="sl-row">
-            <label className="sl-field">
-              <span className="sl-lbl">Send alerts from</span>
-              <select className="sl-input" value={f.hoursFrom} onChange={(e) => set('hoursFrom', Number(e.target.value))}>
-                {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
-              </select>
-            </label>
-            <label className="sl-field">
-              <span className="sl-lbl">until</span>
-              <select className="sl-input" value={f.hoursTo} onChange={(e) => set('hoursTo', Number(e.target.value))}>
-                {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}
-              </select>
-            </label>
+            <Dropdown label="Send alerts from" className="sl-hour-select" value={f.hoursFrom}
+              onChange={(hour) => set('hoursFrom', hour)}
+              options={Array.from({ length: 24 }, (_, hour) => ({ value: hour, label: hourLabel(hour) }))} />
+            <Dropdown label="Send alerts until" className="sl-hour-select" value={f.hoursTo}
+              onChange={(hour) => set('hoursTo', hour)}
+              options={Array.from({ length: 24 }, (_, index) => ({ value: index + 1, label: hourLabel(index + 1) }))} />
             <label className="sl-field">
               <span className="sl-lbl">Remind every (minutes)</span>
               <input className="sl-input" type="number" min="10" value={f.remindMinutes} onChange={(e) => set('remindMinutes', e.target.value)} />

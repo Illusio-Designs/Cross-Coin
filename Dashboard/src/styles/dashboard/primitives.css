@@ -458,6 +458,8 @@
 :root[data-theme] .dropdown-item { color: var(--ds-color-text); font-family: var(--ds-font-sans); }
 :root[data-theme] .dropdown-item:hover { background-color: var(--ds-color-surface-soft); color: var(--ds-color-text); }
 :root[data-theme] .dropdown-item.active { background-color: var(--ds-color-text); color: var(--ds-color-surface); }
+:root[data-theme] .dropdown-trigger:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
+:root[data-theme] .dropdown-item:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
 :root[data-theme] .dropdown-empty { color: var(--ds-color-text-faint); }
 :root[data-theme] .dropdown-menu::-webkit-scrollbar-thumb { background: var(--ds-color-text-faint); }
 

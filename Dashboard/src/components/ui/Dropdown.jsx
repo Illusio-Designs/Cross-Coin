@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 
 const Dropdown = ({ 
   options = [], 
@@ -6,11 +6,14 @@ const Dropdown = ({
   onChange, 
   placeholder = 'Select an option',
   label,
+  ariaLabel,
   disabled = false,
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const triggerRef = useRef(null);
+  const id = useId();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -32,13 +35,26 @@ const Dropdown = ({
   const handleSelect = (optionValue) => {
     onChange(optionValue);
     setIsOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
-    <div className={`dropdown-wrapper ${className}${isOpen ? ' open' : ''}`} ref={dropdownRef}>
-      {label && <label className="dropdown-label">{label}</label>}
+    <div className={`dropdown-wrapper ${className}${isOpen ? ' open' : ''}`} ref={dropdownRef}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false); }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !isOpen) return;
+        event.stopPropagation();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }}>
+      {label && <label className="dropdown-label" htmlFor={id}>{label}</label>}
       
       <button
+        id={id}
+        ref={triggerRef}
+        aria-label={ariaLabel ? `${ariaLabel}, ${displayLabel}` : undefined}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? `${id}-options` : undefined}
         className={`dropdown-trigger ${isOpen ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
@@ -47,6 +63,7 @@ const Dropdown = ({
         <span className="dropdown-value">{displayLabel}</span>
         <svg 
           className="dropdown-icon" 
+          aria-hidden="true"
           width="16" 
           height="16" 
           fill="none" 
@@ -59,7 +76,7 @@ const Dropdown = ({
       </button>
 
       {isOpen && (
-        <div className="dropdown-menu">
+        <div className="dropdown-menu" id={`${id}-options`}>
           {options.length === 0 ? (
             <div className="dropdown-empty">No options available</div>
           ) : (
@@ -67,6 +84,7 @@ const Dropdown = ({
               <button
                 key={option.value}
                 className={`dropdown-item ${same(value, option.value) ? 'active' : ''}`}
+                aria-pressed={same(value, option.value)}
                 onClick={() => handleSelect(option.value)}
                 type="button"
               >

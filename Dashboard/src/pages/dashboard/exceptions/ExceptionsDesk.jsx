@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Skeleton, SkeletonList, SkeletonText } from '../../../components/ui/Skeleton';
+import DateRangePicker from '../../../components/ui/DateRangePicker';
 import { EmptyState } from '../../../components/Dashboard/primitives';
 import { exceptionsService, ndrService, returnService, orderService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -418,9 +419,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
           <div className="exc-confirm" role="group" aria-label="Confirm">
             {open === 'reattempt' && (
               <>
-                <label className="exc-field">Deliver again on
-                  <input type="date" value={date} min={tomorrow()} onChange={(e) => setDate(e.target.value)} />
-                </label>
+                <DateRangePicker label="Deliver again on" field single startDate={date} minDate={tomorrow()} onStartChange={setDate} />
                 <ConfirmRow busy={busy} label="Ask the courier to reattempt" onCancel={() => setOpen(null)}
                   onConfirm={() => run(() => ndrService.sendToCourier(item.refId, 'reattempt', date), 'Reattempt requested.')} />
               </>
@@ -431,9 +430,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
                   <textarea rows={4} value={addr} onChange={(e) => setAddr(e.target.value)}
                     placeholder="House / flat, street, landmark, city, PIN code" />
                 </label>
-                <label className="exc-field">Deliver again on
-                  <input type="date" value={date} min={tomorrow()} onChange={(e) => setDate(e.target.value)} />
-                </label>
+                <DateRangePicker label="Deliver again on" field single startDate={date} minDate={tomorrow()} onStartChange={setDate} />
                 <p className="exc-hint">The address is saved on this order and sent to iThink with the reattempt request. The customer’s saved address and other orders stay unchanged.</p>
                 {(() => {
                   const useSaved = item.addresses.applied && addr.trim() === fromCustomer.trim();
