@@ -252,17 +252,30 @@ async function fetchProviderOrder(brandId, claimedId) {
     }
     return order;
   } catch (verifyErr) {
-    logger.warn(`[custom-checkout] webhook rejected — could not verify order ${claimedId} with provider: ${verifyErr.message}`);
-    const e = new Error('Order could not be verified with the checkout provider'); e.status = 401; throw e;
+    const providerStatus = verifyErr.response?.status;
+    const requestId = verifyErr.response?.headers?.['x-request-id'];
+    const trace = typeof requestId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(requestId) ? ` request ${requestId}` : '';
+    logger.warn(`[custom-checkout] could not verify order ${claimedId} for store ${brandId}: ${verifyErr.message}${trace}`);
+    const e = new Error('Order could not be verified with the checkout provider');
+    e.status = 401;
+    e.providerStatus = providerStatus;
+    throw e;
   }
 }
 
 async function verifyAndIngest(brandId, claimedId, expectedPayment, options) {
   const providerOrder = await fetchProviderOrder(brandId, claimedId);
+  if (String(providerOrder.platform_order_id || providerOrder.order_id || '').trim() === claimedId &&
+      !svc.isCodOrder(providerOrder, providerOrder.payments?.[0])) {
+    const { rememberCheckout } = require('../services/prepaidRecoveryStore.js');
+    const { referencesOf } = require('../services/prepaidOrderRecovery.js');
+    const refs = referencesOf(providerOrder);
+    await rememberCheckout(brandId, claimedId, refs, !!(refs.paymentId || refs.gatewayOrderId));
+  }
   return ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, options);
 }
 
-async function ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, { prepaidOnly = false, since } = {}) {
+async function ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, { prepaidOnly = false, since, recovery = false } = {}) {
   if (prepaidOnly) {
     const confirmedId = String(providerOrder.platform_order_id || providerOrder.order_id || '').trim();
     if (confirmedId !== claimedId) throw Object.assign(new Error('Shiprocket returned a different order reference.'), { status: 409 });
@@ -301,7 +314,7 @@ async function ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPa
       brandId = own.id;
     }
   }
-  return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId }, expectedPayment);
+  return svc.ingestCheckoutOrder(brandId, { ...providerOrder, platform_order_id: claimedId }, expectedPayment, { recovery });
 }
 
 exports.verifyAndIngest = verifyAndIngest;
@@ -322,6 +335,10 @@ exports.orderWebhook = async (req, res) => {
     // with our signed credentials before ingesting anything.
     const claimedId = String(req.body?.platform_order_id || req.body?.order_id || '').trim();
     if (!claimedId) return res.status(400).json({ ok: false, message: 'platform_order_id is required' });
+    if (!svc.isCodOrder(req.body, req.body.payments?.[0])) {
+      const hints = require('../services/prepaidOrderRecovery.js').referencesOf(req.body);
+      await require('../services/prepaidRecoveryStore.js').rememberCheckout(brandId, claimedId, hints);
+    }
     const result = await verifyAndIngest(brandId, claimedId);
     res.json({ ok: true, ...result });
   } catch (err) {

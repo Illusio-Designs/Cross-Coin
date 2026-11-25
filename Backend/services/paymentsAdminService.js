@@ -377,11 +377,11 @@ async function backfillMethods(brandId, since) {
 
 // Scan Razorpay directly. Starting from local payments cannot find a payment
 // that reached the gateway but never wrote a local record.
-async function findMissingRazorpayOrders({ period, offset, until }) {
+async function scanRazorpayCaptures({ period, from, offset, until }) {
   const razorpay = await require('./razorpayService.js').getInstance();
   const count = 100;
   const result = await razorpay.payments.all({
-    from: Math.floor(periodStart(period, until * 1000).getTime() / 1000), to: until, count, skip: offset,
+    from: from ?? Math.floor(periodStart(period, until * 1000).getTime() / 1000), to: until, count, skip: offset,
   });
   if (!Array.isArray(result?.items)) throw new Error('Razorpay returned an invalid payments list.');
 
@@ -390,9 +390,31 @@ async function findMissingRazorpayOrders({ period, offset, until }) {
     && Number(payment.amount) > Number(payment.amount_refunded || 0));
   const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
   const matches = await findRazorpayOrderMatches(captured);
+  return {
+    captured, matches, checked: result.items.length, until, nextOffset: result.items.length === count ? offset + count : null,
+    missing: captured.filter((payment) => {
+      const match = matches.get(payment.id);
+      return !match.linked && !match.pending && !match.issue;
+    }),
+  };
+}
+
+async function findMissingRazorpayOrders(params) {
+  const { captured, matches, checked, until, nextOffset } = await scanRazorpayCaptures(params);
+  const recoveryStore = require('./prepaidRecoveryStore.js');
+  const states = await recoveryStore.readRecoveries(captured.map(({ id }) => id));
+  const totals = { captured: captured.length, matched: 0, missing: 0, recovered: 0, pending: 0, failed: 0, conflicts: 0 };
   const items = captured.flatMap((payment) => {
-    const { linked, issue, hasLocalPayment, brandId } = matches.get(payment.id);
-    if (linked && !issue) return [];
+    const { linked, issue, hasLocalPayment, brandId, pending } = matches.get(payment.id);
+    const recovery = states.get(payment.id);
+    const retryState = ['pending', 'needs_manual_review'].includes(recovery?.state) ? recovery.state : 'missing';
+    const state = issue ? 'conflict' : linked ? (recovery?.state === 'recovered' ? 'recovered' : 'matched') : retryState;
+    if (linked && !issue) totals.matched++;
+    else totals.missing++;
+    if (state === 'recovered') totals.recovered++;
+    if (state === 'pending') totals.pending++;
+    if (state === 'needs_manual_review') totals.failed++;
+    if (issue) totals.conflicts++;
     return [{
       paymentId: payment.id,
       orderRef: payment.order_id || null,
@@ -402,9 +424,12 @@ async function findMissingRazorpayOrders({ period, offset, until }) {
       hasLocalPayment,
       brandId,
       matchIssue: issue,
+      state, recoveryReason: recovery?.reason || null, checkoutRef: recovery?.checkout_ref || null,
+      canVerify: !linked && !issue && !pending && recoveryStore.isCapture(payment),
+      orderNumber: linked?.order_number || null,
     }];
   });
-  return { items, checked: result.items.length, until, nextOffset: result.items.length === count ? offset + count : null };
+  return { items, checked, until, nextOffset, totals };
 }
 
 // ── "Doesn't match Razorpay" ───────────────────────────────────────────────
@@ -589,4 +614,4 @@ async function fixOrder(orderId, actor) {
   return { ok: true, changed: true, message: `${n} is marked paid.` };
 }
 
-module.exports = { ensureSchema, listPayments, summary, findMissingRazorpayOrders, mismatches, fixMismatch, failureReason, clearRecoveredMismatch };
+module.exports = { ensureSchema, listPayments, summary, scanRazorpayCaptures, findMissingRazorpayOrders, mismatches, fixMismatch, failureReason, clearRecoveredMismatch };

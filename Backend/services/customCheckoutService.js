@@ -541,7 +541,38 @@ async function purchasePayload(brandId, orderNumber) {
 // completes. Map it into a real Order (+ items, address, guest, payment) so
 // it shows in the Dashboard like any other order. Idempotent by
 // platform_order_id via the orders.idempotency_key column.
-async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
+async function readOrderPackQuote(brandId, order) {
+  const raw = parseAttrs(order.cart_data?.custom_attributes)[PACK_QUOTE_ATTRIBUTE]
+    ?? parseAttrs(order.custom_attributes)[PACK_QUOTE_ATTRIBUTE];
+  if (raw == null) return null;
+  const cfg = await getPushConfig(brandId);
+  if (!cfg) throw Object.assign(new Error('Could not verify the pack quote for this store.'), { status: 422 });
+  return readPackQuote(raw, order.cart_data.items, brandId, cfg.secret);
+}
+
+function originalItemPrice(item) {
+  const original = item.catalog_data?.price ?? item.price;
+  const price = Number(original);
+  if (original == null || original === '' || !Number.isFinite(price) || price < 0 ||
+      Math.abs(price * 100 - Math.round(price * 100)) > 1e-6) {
+    throw Object.assign(new Error('The verified checkout is missing an original item price.'), { status: 422 });
+  }
+  return price;
+}
+
+async function verifyRecoveryPrices(brandId, order, payment) {
+  const quote = await readOrderPackQuote(brandId, order);
+  const subtotal = quote ? [...quote.values()].reduce((sum, line) => sum + (line.subtotalPaise ?? line.paise * line.quantity), 0)
+    : order.cart_data.items.reduce((sum, item) => sum + Math.round(originalItemPrice(item) * 100) * Number(item.quantity), 0);
+  const discount = Math.round(Math.max(0, Number(order.total_discount) || 0) * 100);
+  const shipping = Math.round(Math.max(0, Number(order.shipping_charges) || 0) * 100);
+  if (discount > subtotal || subtotal - discount + shipping !== Number(payment.amount)) {
+    throw Object.assign(new Error('The original checkout prices do not add up to the exact captured amount.'), { status: 422 });
+  }
+  return quote;
+}
+
+async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recovery = false } = {}) {
   const status = String(p?.status || '').toUpperCase();
   if (status && status !== 'SUCCESS') return { skipped: `status_${status}` };
   const platformId = String(p?.platform_order_id || p?.order_id || '').trim();
@@ -561,6 +592,9 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
       .find((value) => typeof value === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(value)),
     razorpay_order_id: verifiedRazorpayPayment?.order_id ?? razorpayOrderReferences(pay)[0] ?? razorpayOrderReferences(p)[0],
   } : {};
+  const paymentRefs = [references.razorpay_payment_id, references.razorpay_order_id].filter(Boolean);
+  const recoveryStore = paymentRefs.length ? require('./prepaidRecoveryStore.js') : null;
+  if (recoveryStore) await recoveryStore.ensureSchema();
   const idemKey = `cco:${platformId}`.slice(0, 100);
   const already = await Order.findOne({ where: { idempotency_key: idemKey } });
   if (already) {
@@ -569,13 +603,22 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
     }
     // A verified duplicate delivery can fill references on a legacy order.
     // Match the original Shiprocket ledger row and only fill empty fields.
-    if (providerTransactionId) {
-      for (const [field, value] of Object.entries(references)) {
-        if (value) await Payment.update({ [field]: value }, { where: {
-          order_id: already.id, brand_id: brandId, payment_gateway: 'CustomCheckout',
-          transaction_id: providerTransactionId, [field]: null,
-        } });
-      }
+    if (recoveryStore) {
+      await sequelize.transaction(async (transaction) => {
+        const claim = await recoveryStore.claimOrder(paymentRefs, transaction);
+        if (claim.orderId && Number(claim.orderId) !== Number(already.id)) {
+          throw Object.assign(new Error('This checkout references a Razorpay payment saved on a different order.'), { status: 409 });
+        }
+        if (providerTransactionId) {
+          for (const [field, value] of Object.entries(references)) {
+            if (value) await Payment.update({ [field]: value }, { transaction, where: {
+              order_id: already.id, brand_id: brandId, payment_gateway: 'CustomCheckout',
+              transaction_id: providerTransactionId, [field]: null,
+            } });
+          }
+        }
+        await recoveryStore.bindOrder(claim.refs, already.id, transaction);
+      });
     }
     return { created: false, order_number: already.order_number };
   }
@@ -583,14 +626,8 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
   // A successful SDK return is not proof that a prepaid payment completed.
   if (!isCod && !paid) return { skipped: 'awaiting_payment' };
 
-  const rawPackQuote = parseAttrs(p.cart_data?.custom_attributes)[PACK_QUOTE_ATTRIBUTE]
-    ?? parseAttrs(p.custom_attributes)[PACK_QUOTE_ATTRIBUTE];
-  let packQuote;
-  if (rawPackQuote != null) {
-    const cfg = await getPushConfig(brandId);
-    if (!cfg) throw Object.assign(new Error('Could not verify the pack quote for this store.'), { status: 422 });
-    packQuote = readPackQuote(rawPackQuote, items, brandId, cfg.secret);
-  }
+  if (recovery && !verifiedRazorpayPayment) throw Object.assign(new Error('A verified Razorpay capture is required.'), { status: 422 });
+  const packQuote = recovery ? await verifyRecoveryPrices(brandId, p, verifiedRazorpayPayment) : await readOrderPackQuote(brandId, p);
 
   const { generateUniqueOrderNumber } = require('./orderCreationService.js');
   const { toSmallestUnit } = require('../utils/amountConverter.js');
@@ -598,9 +635,19 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
   const phone = String(p.phone || ship.phone || '').replace(/\D/g, '').slice(-10);
   const firstName = ship.first_name || 'Customer';
   const lastName = ship.last_name || '';
+  const checkoutCreated = recovery ? Date.parse(p.created_at || p.createdAt || p.order_date || '') : NaN;
 
   const utmTrackingId = await visitIdFor(p);
   return sequelize.transaction(async (t) => {
+    const claim = recoveryStore ? await recoveryStore.claimOrder(paymentRefs, t) : null;
+    if (claim?.orderId) {
+      const previous = await Order.findByPk(claim.orderId, { transaction: t });
+      if (!previous || Number(previous.brand_id) !== Number(brandId)) {
+        throw Object.assign(new Error('This Razorpay payment already belongs to another order or store.'), { status: 409 });
+      }
+      await recoveryStore.bindOrder(claim.refs, previous.id, t);
+      return { created: false, order_id: previous.id, order_number: previous.order_number };
+    }
     // Guest identity (custom-checkout shoppers have no local account).
     const hash = phoneHash(phone);
     let guest = phone ? await GuestUser.findOne({ where: hash ? { phoneHashValue: hash } : { phone }, transaction: t }) : null;
@@ -643,7 +690,7 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
         lines.push({ ...base, quantity: qty - extra, price: unitPaise / 100, subtotal: unitPaise * (qty - extra) / 100 });
         if (extra) lines.push({ ...base, quantity: extra, price: (unitPaise + 1) / 100, subtotal: (unitPaise + 1) * extra / 100 });
       } else {
-        const price = await sitePrice(v.productId, v.price);
+        const price = recovery ? originalItemPrice(it) : await sitePrice(v.productId, v.price);
         lines.push({ ...base, quantity: qty, price, subtotal: price * qty });
       }
     }
@@ -664,6 +711,9 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
       const e = new Error(`Amount mismatch for ${platformId}: provider says ₹${claimed}, items come to ₹${expected}`);
       e.status = 422; throw e;
     }
+    if (recovery && (!verifiedRazorpayPayment || Math.round(expected * 100) !== Number(verifiedRazorpayPayment.amount))) {
+      throw Object.assign(new Error('The original checkout prices do not add up to the exact captured amount.'), { status: 422 });
+    }
     if (discount > subtotal) { const e = new Error(`Discount larger than the order for ${platformId}`); e.status = 422; throw e; }
     const finalAmount = expected;
 
@@ -682,7 +732,7 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
       // COD order from our own checkout; prepaid is confirmed straight away.
       status: isCod ? 'awaiting_confirmation' : 'confirmed',
       ...(isCod ? { cod_address_confirmed: false } : {}),
-      notes: `Custom checkout order ${platformId}${p.fastrr_order_id ? ` / fastrr ${p.fastrr_order_id}` : ''}${(p.coupon_codes || []).length ? ` / coupon ${(p.coupon_codes || []).join(',')}` : ''}`,
+      notes: `Custom checkout order ${platformId}${p.fastrr_order_id ? ` / fastrr ${p.fastrr_order_id}` : ''}${(p.coupon_codes || []).length ? ` / coupon ${(p.coupon_codes || []).join(',')}` : ''}${Number.isFinite(checkoutCreated) ? ` / original checkout ${new Date(checkoutCreated).toISOString()}` : ''}`,
       shipping_address_id: address.id,
       brand_id: brandId,
       idempotency_key: idemKey,
@@ -704,7 +754,7 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
       payment_type: isCod ? 'cod' : 'razorpay',
       transaction_id: providerTransactionId,
       ...references,
-      amount_paid: toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
+      amount_paid: recovery ? Number(verifiedRazorpayPayment.amount) : toSmallestUnit(Number(pay.amount_received ?? pay.amount ?? finalAmount), 'INR'),
       status: paid ? 'successful' : 'pending',
       // Gateway marks the refund route: these payments refund via the
       // checkout provider's refund API, never our own Razorpay keys.
@@ -712,6 +762,7 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment) {
       notes: `Custom checkout: platform ${platformId}, cart_id ${p.cart_id || '-'}, type ${p.payment_type || '-'}, gateway ${pay.gateway || '-'}, method ${pay.payment_method || '-'}`,
       brand_id: brandId,
     }, { transaction: t });
+    if (claim) await recoveryStore.bindOrder(claim.refs, order.id, t);
 
     logger.info(`[custom-checkout] ingested order ${order.order_number} (platform ${platformId}, brand ${brandId})`);
     const track = {
@@ -817,7 +868,7 @@ module.exports = {
   mapProduct, mapProductStrict, mapCollection, productIncludes,
   pushProduct, pushCollection, pushProductAllBrands, pushCollectionAllBrands,
   createCheckoutToken, fetchCheckoutOrder, listCheckoutOrders,
-  initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured,
+  initiateRefund, refundReports, ingestCheckoutOrder, purchasePayload, isConfigured, verifyRecoveryPrices,
   trackingFromAttributes, visitIdFor, customerIdFor, parseAttrs,
   getPushConfig,
 };

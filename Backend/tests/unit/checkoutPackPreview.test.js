@@ -1,3 +1,4 @@
+jest.mock('../../services/prepaidRecoveryStore.js', () => ({ rememberCheckout: jest.fn(), validPaymentId: (id) => /^pay_/.test(id || '') }));
 jest.mock('../../model/associations.js', () => ({ Product: {}, Category: {}, Brand: {} }));
 jest.mock('../../model/bundleTierModel.js', () => ({ BundleTier: {} }));
 jest.mock('../../services/settingsHelper.js', () => ({}));
@@ -5,6 +6,7 @@ jest.mock('../../services/customCheckoutService.js', () => ({
   createCheckoutToken: jest.fn(),
   ensureProductsPushed: jest.fn(), fetchCheckoutOrder: jest.fn(), ingestCheckoutOrder: jest.fn(),
   parseAttrs: (attrs) => attrs || {},
+  isCodOrder: () => false,
 }));
 jest.mock('../../config/logging.js', () => ({ logger: { warn: jest.fn(), error: jest.fn() } }));
 

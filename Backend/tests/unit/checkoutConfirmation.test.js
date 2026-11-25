@@ -1,10 +1,11 @@
+jest.mock('../../services/prepaidRecoveryStore.js', () => ({ rememberCheckout: jest.fn(), validPaymentId: (id) => /^pay_/.test(id || '') }));
 jest.mock('../../model/associations.js', () => ({ Product: {}, Category: {}, Brand: {} }));
 jest.mock('../../services/settingsHelper.js', () => ({}));
 jest.mock('../../config/logging.js', () => ({ logger: { error: jest.fn(), warn: jest.fn() } }));
 jest.mock('../../services/customCheckoutService.js', () => ({ fetchCheckoutOrder: jest.fn(), ingestCheckoutOrder: jest.fn(), purchasePayload: jest.fn(), parseAttrs: (attrs) => attrs || {}, isCodOrder: (order) => order.payment_method === 'COD' }));
 jest.mock('../../integration/facebookPixel.js', () => ({ buyerMatchKeys: jest.fn(() => ({})), sendFacebookEvent: jest.fn() }));
 const svc = require('../../services/customCheckoutService');
-const { confirmReturn, verifyAndIngest } = require('../../controller/customCheckoutController');
+const { confirmReturn, verifyAndIngest, orderWebhook } = require('../../controller/customCheckoutController');
 let immediate;
 beforeEach(() => {
   jest.clearAllMocks(); immediate = jest.spyOn(global, 'setImmediate').mockImplementation(() => {});
@@ -41,4 +42,15 @@ test('scheduled recovery rejects details for a different order ID', async () => 
   svc.fetchCheckoutOrder.mockResolvedValue({ result: { platform_order_id: 'provider-2', payment_status: 'success' } });
   await expect(verifyAndIngest(1, 'provider-1', null, { prepaidOnly: true })).rejects.toThrow('different order reference');
   expect(svc.ingestCheckoutOrder).not.toHaveBeenCalled();
+});
+
+test('an authenticated callback saves the checkout reference before a provider outage is returned', async () => {
+  const { rememberCheckout } = require('../../services/prepaidRecoveryStore.js');
+  svc.fetchCheckoutOrder.mockRejectedValue(Error('unavailable'));
+  const response = res();
+  await orderWebhook({ brandId: 1, body: { order_id: 'provider-1' } }, response);
+
+  expect(rememberCheckout).toHaveBeenCalledWith(1, 'provider-1', { paymentId: null, gatewayOrderId: null });
+  expect(rememberCheckout.mock.invocationCallOrder[0]).toBeLessThan(svc.fetchCheckoutOrder.mock.invocationCallOrder[0]);
+  expect(response.status).toHaveBeenCalledWith(401);
 });

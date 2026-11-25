@@ -40,17 +40,32 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
+function captureDateRange(start, end, now) {
+    if (start == null && end == null) return {};
+    const date = (value) => {
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
+        const utc = new Date(`${value}T00:00:00Z`);
+        if (!Number.isFinite(utc.getTime()) || utc.toISOString().slice(0, 10) !== value) return NaN;
+        return Date.parse(`${value}T00:00:00+05:30`) / 1000;
+    };
+    const from = date(start);
+    const endDay = date(end);
+    if (!Number.isFinite(from) || !Number.isFinite(endDay) || from <= 0 || from > endDay || from > now) return null;
+    return { from, until: Math.min(now, endDay + 86399) };
+}
+
 module.exports.adminMissingRazorpayOrders = async (req, res) => {
     const period = Number(req.query.period || 7);
     const offset = Number(req.query.offset || 0);
     const now = Math.floor(Date.now() / 1000);
-    const until = Number(req.query.until || now);
+    const window = captureDateRange(req.query.start, req.query.end, now);
+    const until = Number(req.query.until || window?.until || now);
     if (![1, 7, 30].includes(period) || !Number.isSafeInteger(offset) || offset < 0 ||
-        !Number.isSafeInteger(until) || until > now || until <= 0) {
-        return res.status(400).json({ message: 'Start a new scan for Today, 7 days, or 30 days.' });
+        !Number.isSafeInteger(until) || !window || until > (window.until || now) || until < (window.from || 1)) {
+        return res.status(400).json({ message: 'Choose a valid payment date range and start a new scan.' });
     }
     try {
-        const result = await paymentsAdmin.findMissingRazorpayOrders({ period, offset, until });
+        const result = await paymentsAdmin.findMissingRazorpayOrders({ period, offset, until, from: window.from });
         return res.json({ success: true, ...result });
     } catch (error) {
         return adminFail(res, error, 'the Razorpay missing-order scan');
@@ -106,43 +121,44 @@ async function checkRazorpayReference(req, res, recover = false) {
 }
 
 async function recoverShiprocketOrder(req, res, paymentRef) {
-    const payment = await razorpayService.getPayment(paymentRef);
-    if (!payment || payment.id !== paymentRef || payment.status !== 'captured' || payment.currency !== 'INR' ||
-        !Number.isSafeInteger(Number(payment.amount)) || Number(payment.amount) <= 0 || Number(payment.amount_refunded) > 0) {
-        return res.status(409).json({ message: 'Use a captured INR Razorpay payment with no refunds.' });
+    const { manual } = require('../services/prepaidOrderRecovery.js');
+    const { validCheckoutRef, enabledBrands } = require('../services/prepaidRecoveryStore.js');
+    const ref = String(req.body?.shiprocket_order_id || '').trim();
+    const brandId = Number(req.body?.brand_id || req.brand?.id);
+    const verifyOnly = req.body?.verify_only === true;
+    let hint;
+    if (ref) {
+        if (!validCheckoutRef(ref) || !Number.isSafeInteger(brandId) || brandId <= 0) {
+            return res.status(400).json({ message: 'Choose a store and enter a valid Shiprocket checkout reference.' });
+        }
+        if (!(await enabledBrands()).some((brand) => Number(brand.id) === brandId)) {
+            return res.status(400).json({ message: 'Choose a store with Shiprocket Checkout enabled.' });
+        }
+        hint = { ref, brandId };
     }
-    const { findRazorpayOrderMatches } = require('../services/razorpayOrderMatching.js');
-    const match = (await findRazorpayOrderMatches([payment])).get(paymentRef);
-    if (match.issue || match.pending) {
-        return res.status(409).json({ message: match.issue || 'This payment belongs to a saved checkout. Review that checkout before importing a Shiprocket order.' });
-    }
-    if (match.linked) {
-        const { linked } = match;
-        return res.json({ success: true, order: { id: linked.linked_order_id, order_number: linked.order_number, brand_id: linked.order_brand_id }, message: 'The order already exists.' });
-    }
-
-    let result;
     try {
-        const { findShiprocketOrderForPayment } = require('../services/shiprocketOrderReconciliation.js');
-        const { ingestVerifiedOrder } = require('./customCheckoutController.js');
-        const checkout = await findShiprocketOrderForPayment(payment);
-        result = await ingestVerifiedOrder(checkout.brandId, checkout.id, checkout.details, payment, { prepaidOnly: true });
+        const result = await manual(paymentRef, { hint, actorId: req.user?.id, verifyOnly });
+        if (verifyOnly) return res.json({ success: true, order: result.existing, checkoutRef: result.checkoutRef, brandId: result.brandId });
+        if (!result.order) return res.status(409).json({ message: result.reason, recoveryState: result.state });
+        return res.json({ success: true, order: result.order, message: result.state === 'recovered'
+            ? `Order ${result.order.order_number} recovered from Shiprocket.` : 'The order already exists.' });
     } catch (error) {
-        if (error.status) return res.status(error.status === 401 ? 422 : error.status).json({ message: error.message });
+        if (error.status) return res.status(error.status).json({ message: error.message });
         throw error;
     }
-    if (!result.order_number) return res.status(409).json({ message: 'Shiprocket has no verified order ready to import.' });
-    const order = await Order.findOne({ where: { order_number: result.order_number }, attributes: ['id', 'order_number', 'brand_id', 'payment_status'] });
-    return res.json({ success: true, order, message: result.created ? `Order ${result.order_number} recovered from Shiprocket.` : 'The order already exists.' });
 }
 
 module.exports.adminShiprocketBackfill = async (req, res) => {
     try {
-        const backfill = require('../services/shiprocketOrderBackfill.js');
-        return res.json({ success: true, ...(req.method === 'POST' ? await backfill.start() : await backfill.status()) });
+        const recovery = require('../services/prepaidOrderRecovery.js');
+        const period = Number(req.body?.period || 30);
+        const window = captureDateRange(req.body?.start, req.body?.end, Math.floor(Date.now() / 1000));
+        if (req.method === 'POST' && (![1, 7, 30].includes(period) || !window)) {
+            return res.status(400).json({ message: 'Choose a valid payment date range.' });
+        }
+        return res.json({ success: true, ...(req.method === 'POST' ? await recovery.scheduleHistory(period, window) : await recovery.historyStatus()) });
     } catch (error) {
-        if (error.status) return res.status(error.status).json({ message: error.message });
-        return adminFail(res, error, 'the Shiprocket order backfill');
+        return adminFail(res, error, 'prepaid recovery history');
     }
 };
 
@@ -559,7 +575,11 @@ module.exports.razorpayWebhook = async (req, res) => {
 
         const stockReservation = require('../services/stockReservationService.js');
         const orderCreationService = require('../services/orderCreationService.js');
-        if (!rzpOrderId || !rzpPaymentId) return res.status(200).json({ status: 'ignored' });
+        if (!rzpPaymentId) return res.status(200).json({ status: 'ignored' });
+        if (!rzpOrderId) {
+          await require('../services/prepaidRecoveryStore.js').queueCaptures([payment]);
+          return res.status(200).json({ status: 'recorded' });
+        }
         const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
         if (paymentRecord?.payment_gateway === 'CustomCheckout') return res.status(200).json({ status: 'ignored' });
         const session = await stockReservation.getReservationByRazorpayOrder(rzpOrderId);
@@ -605,6 +625,9 @@ module.exports.razorpayWebhook = async (req, res) => {
               await paymentRecord.update({ status: 'successful', transaction_id: rzpPaymentId });
               logger.info(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);
             }
+          } else {
+            // Keep unmatched captures durable before acknowledging the event.
+            await require('../services/prepaidRecoveryStore.js').queueCaptures([payment]);
           }
         }
       }

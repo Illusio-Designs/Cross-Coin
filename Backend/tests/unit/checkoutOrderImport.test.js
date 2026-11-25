@@ -1,3 +1,6 @@
+jest.mock('../../services/prepaidRecoveryStore.js', () => ({
+  ensureSchema: jest.fn(), claimOrder: jest.fn(async (refs) => ({ refs })), bindOrder: jest.fn(),
+}));
 jest.mock('../../utils/encryption.js', () => ({ phoneHash: jest.fn(() => 'fixture-phone-hash') }));
 jest.mock('axios', () => ({ post: jest.fn() }), { virtual: true });
 jest.mock('sequelize', () => ({ QueryTypes: {} }), { virtual: true });
@@ -5,7 +8,7 @@ jest.mock('../../config/db.js', () => ({ sequelize: { transaction: jest.fn(async
 jest.mock('../../model/associations.js', () => ({
   Product: { addHook: jest.fn() }, Category: { addHook: jest.fn() },
   ProductVariation: { findByPk: jest.fn(), decrement: jest.fn() },
-  Order: { findOne: jest.fn(), create: jest.fn() }, OrderItem: { bulkCreate: jest.fn() },
+  Order: { findOne: jest.fn(), findByPk: jest.fn(), create: jest.fn() }, OrderItem: { bulkCreate: jest.fn() },
   GuestUser: { findOne: jest.fn(), create: jest.fn() }, ShippingAddress: { create: jest.fn() }, Payment: { create: jest.fn(), update: jest.fn() },
 }));
 jest.mock('../../model/productBrandModel.js', () => ({ ProductBrand: { findOne: jest.fn() } }));
@@ -74,7 +77,7 @@ test('a verified repeat can restore missing references on a legacy Shiprocket or
   await ingestCheckoutOrder(1, provider({ payments: [
     { txn_id: 'shiprocket-fixture-1', pg_transaction_id: 'pay_captured123', pg_order_id: 'order_fixture123' },
   ] }));
-  expect(models.Payment.update).toHaveBeenCalledWith({ razorpay_payment_id: 'pay_captured123' }, { where: {
+  expect(models.Payment.update).toHaveBeenCalledWith({ razorpay_payment_id: 'pay_captured123' }, { transaction: expect.anything(), where: {
     order_id: 42, brand_id: 1, payment_gateway: 'CustomCheckout',
     transaction_id: 'shiprocket-fixture-1', razorpay_payment_id: null,
   } });
@@ -170,4 +173,30 @@ test('COD saves an unpaid order awaiting address confirmation, with linked payme
   await ingestCheckoutOrder(1, provider({payment_type:'COD',payment_status:'pending'}));
   expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({payment_type:'cod',payment_status:'pending',status:'awaiting_confirmation',cod_address_confirmed:false}),expect.anything());
   expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({guest_user_id:9,payment_type:'cod',status:'pending'}),expect.anything());
+});
+
+test('a different checkout reference for the same captured payment returns the existing order without side effects', async () => {
+  const store = require('../../services/prepaidRecoveryStore.js');
+  store.claimOrder.mockResolvedValueOnce({ refs: ['pay_captured123'], orderId: 42 });
+  models.Order.findByPk.mockResolvedValueOnce({ id: 42, brand_id: 1, order_number: 'CC-TEST-42' });
+  const result = await ingestCheckoutOrder(1, provider({ payments: [{ pg_transaction_id: 'pay_captured123' }] }));
+  expect(result).toEqual({ created: false, order_id: 42, order_number: 'CC-TEST-42' });
+  expect(store.claimOrder).toHaveBeenCalledWith(['pay_captured123'], expect.anything());
+  expect(models.Order.create).not.toHaveBeenCalled();
+  expect(models.Payment.create).not.toHaveBeenCalled();
+  expect(scheduled).toHaveLength(0);
+});
+
+test('recovery preserves original prices even after a catalogue price change', async () => {
+  const payment = { id: 'pay_captured123', order_id: 'order_fixture123', amount: 69910 };
+  const item = { variant_id: 12, quantity: 1, catalog_data: { price: 699.10 } };
+  await ingestCheckoutOrder(1, provider({ cart_data: { items: [item] }, total_amount_payable: 699.10 }), payment, { recovery: true });
+  expect(models.OrderItem.bulkCreate).toHaveBeenCalledWith([expect.objectContaining({ price: 699.1 })], expect.anything());
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 69910 }), expect.anything());
+});
+
+test('recovery never substitutes the current catalogue price for a missing original price', async () => {
+  await expect(ingestCheckoutOrder(1, provider(), { id: 'pay_captured123', amount: 79900 }, { recovery: true }))
+    .rejects.toThrow('missing an original item price');
+  expect(models.Order.create).not.toHaveBeenCalled();
 });
