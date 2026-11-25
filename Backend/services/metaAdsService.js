@@ -294,11 +294,8 @@ async function getPrepaidFundingDisplay(brandId) {
   if (!mapping) throw Object.assign(new Error('Map this brand to a Meta ad account in Reports → Marketing → Ads.'), { status: 400 });
   const connection = await resolveToken();
   if (!connection) throw Object.assign(new Error('Connect a Meta Ads token in Reports → Marketing → Ads.'), { status: 400 });
-  let account;
   try {
-    account = await graphGet(`act_${mapping.accountId}`, {
-      fields: 'currency,is_prepay_account,funding_source_details',
-    }, connection.token);
+    return await readPrepaidFundingDisplay(mapping.accountId, connection.token);
   } catch (error) {
     const denied = [10, 200, 294].includes(Number(error.code)) || error.status === 403;
     const message = denied
@@ -306,16 +303,22 @@ async function getPrepaidFundingDisplay(brandId) {
       : 'Meta could not return funding details. Check the Meta Ads connection and try again.';
     throw Object.assign(new Error(message), { status: 502 });
   }
+}
+
+async function readPrepaidFundingDisplay(accountId, token) {
+  const account = await graphGet(`act_${accountId}`, {
+    fields: 'currency,is_prepay_account,funding_source_details',
+  }, token);
   const isPrepaid = account.is_prepay_account === true;
   const raw = account.funding_source_details?.display_string;
   // Avoid exposing postpaid payment-method labels or long payment identifiers.
   const displayString = isPrepaid && typeof raw === 'string'
-    ? scrub(raw, connection.token).replace(/(?:\d[ -]?){12,}\d/g, '••••').trim() || null
+    ? scrub(raw, token).replace(/(?:\d[ -]?){12,}\d/g, '••••').trim() || null
     : null;
   const currency = typeof account.currency === 'string' && /^[A-Z]{3}$/.test(account.currency) ? account.currency : null;
   const { parseAvailableFunds } = require('../utils/metaAvailableFunds.js');
   return {
-    accountId: mapping.accountId, isPrepaid, currency, displayString,
+    accountId, isPrepaid, currency, displayString,
     amount: displayString ? parseAvailableFunds(displayString, currency) : null,
   };
 }
@@ -653,6 +656,9 @@ async function syncAll(opts = {}) {
 
   const results = [];
   let stop = null;
+  let walletsUpdated = 0;
+  let walletRateLimited = false;
+  const { recordWalletCheck } = require('./providerWalletService.js');
   let i = 0;
   const work = async () => {
     while (i < mapping.length && !stop) {
@@ -666,6 +672,24 @@ async function syncAll(opts = {}) {
         if (e.rateLimited) stop = { code: e.code, message };
         logger.warn(`[meta-ads] account ${m.accountId}: ${message}`);
       }
+      if (!stop && !walletRateLimited) {
+        const checkedAt = new Date();
+        let funds;
+        let status;
+        try {
+          funds = await readPrepaidFundingDisplay(m.accountId, resolved.token);
+          status = funds.amount != null ? 'synced' : funds.isPrepaid ? 'unavailable' : 'not_prepaid';
+        } catch (error) {
+          status = 'failed';
+          if (error.rateLimited) walletRateLimited = true;
+        }
+        try {
+          await recordWalletCheck({ ...m, checkedAt, status, funds });
+          if (status === 'synced') walletsUpdated++;
+        } catch {
+          logger.warn(`[meta-ads] wallet check could not be saved for brand ${m.brandId}`);
+        }
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, mapping.length) }, work));
@@ -677,6 +701,7 @@ async function syncAll(opts = {}) {
   const spend = ok.reduce((s, r) => s + r.spend, 0);
   const parts = [`${ok.length} of ${mapping.length} ad account${mapping.length === 1 ? '' : 's'} synced · ${rows.toLocaleString('en-IN')} ad-day rows · ${Math.round(spend).toLocaleString('en-IN')} spend fetched`];
   if (failed.length) parts.push(`${failed.length} failed`);
+  if (walletsUpdated) parts.push(`${walletsUpdated} wallet balance${walletsUpdated === 1 ? '' : 's'} refreshed`);
   if (stop) parts.push(`stopped: Meta rate limit (code ${stop.code})${notRun ? `, ${notRun} left for the next run` : ''}`);
   return {
     status: failed.length || stop ? (ok.length ? 'partial' : 'failed') : 'ok',

@@ -28,6 +28,7 @@
 const crypto = require('crypto');
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/db.js');
+const { getJob } = require('../config/cronJobs.js');
 
 const BUCKET_MS = 5 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -35,6 +36,7 @@ const FLUSH_MS = 60 * 1000;
 const KEEP_DAYS = 30;
 const SLOW_MS = 3000;
 const IST = 'Asia/Kolkata';
+const JOB_FAILURE_PREFIX = 'job_failed:';
 
 const DEFAULTS = {
   enabled: true,
@@ -671,10 +673,10 @@ async function checkRules(s) {
                             JOIN (SELECT job_key, MAX(id) id FROM job_runs WHERE started_at >= :since GROUP BY job_key) l ON l.id = jr.id
                            WHERE jr.status = 'failed' AND jr.job_key NOT LIKE 'server-watch%'`,
     { since: new Date(Date.now() - 24 * HOUR_MS) });
-    let names = {};
-    try { names = Object.fromEntries(require('../config/cronJobs.js').JOBS.map((j) => [j.key, j.name])); } catch (_) { /* registry unavailable */ }
     for (const j of rows) {
-      add(`job_failed:${j.job_key}`, 'low', `Scheduled job failed: ${names[j.job_key] || j.job_key}`,
+      const job = getJob(j.job_key);
+      if (!job) continue; // History for retired jobs is retained for audit.
+      add(`${JOB_FAILURE_PREFIX}${j.job_key}`, 'low', `Scheduled job failed: ${job.name}`,
         `Last run at ${istTime(j.started_at)} failed: ${String(j.error || 'no error message').slice(0, 200)}`);
     }
   } catch (_) { /* job_runs not created yet */ }
@@ -719,7 +721,8 @@ async function watch() {
     await exec('UPDATE server_alerts SET resolved_at = :now WHERE id = :id', { now, id: a.id });
     resolved += 1;
     // Only say "resolved" for alerts someone was told about.
-    if (a.notified_count > 0 && hoursOk) {
+    const retiredJob = a.alert_key.startsWith(JOB_FAILURE_PREFIX) && !getJob(a.alert_key.slice(JOB_FAILURE_PREFIX.length));
+    if (a.notified_count > 0 && hoursOk && !retiredJob) {
       await notify(s, { title: `Resolved: ${a.title}`, detail: `This is back to normal (it started ${istTime(a.opened_at)}).`, subject: `[Obzus] ✅ Resolved: ${a.title}` });
     }
   }

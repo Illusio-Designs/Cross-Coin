@@ -131,21 +131,27 @@
 .hm-wallets { color: var(--ds-color-text); }
 .hm-wallets .panel-h a { font-size: 13px; color: inherit; text-underline-offset: 3px; }
 .hm-wallet-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 6px 0 18px; border-bottom: 1px solid var(--ds-color-border); }
-.hm-wallet-summary dt, .hm-wallet-details span, .hm-wallet-actions small { color: var(--ds-color-text-muted); font-size: 13px; }
+.hm-wallet-summary dt, .hm-wallet-context { color: var(--ds-color-text-muted); font-size: 13px; overflow-wrap: anywhere; }
 .hm-wallet-summary dd { margin: 4px 0 0; font-size: clamp(22px, 4vw, 32px); font-weight: 750; font-variant-numeric: tabular-nums; }
 .hm-wallet-list { list-style: none; margin: 0; padding: 0; }
-.hm-wallet-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 16px 0; border-bottom: 1px solid var(--ds-color-border-soft); }
-.hm-wallet-row:last-child { padding-bottom: 0; border-bottom: 0; }
-.hm-wallet-details, .hm-wallet-value { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
-.hm-wallet-row strong { font-size: 16px; }
-.hm-wallet-value { text-align: right; font-variant-numeric: tabular-nums; }
-.hm-wallet-value span { font-size: 13px; }
+.hm-wallet-group { margin-top: 16px; }
+.hm-wallet-group h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.hm-wallet-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--ds-color-border-soft); }
+.hm-wallet-row:last-child { border-bottom: 0; }
+.hm-wallet-priority h4 { color: var(--ds-color-danger-text); }
+.hm-wallet-priority .hm-wallet-list { display: grid; gap: 8px; }
+.hm-wallet-priority .hm-wallet-row { padding: 12px; border: 1px solid var(--ds-color-danger-bd); border-radius: 10px; background: var(--ds-color-danger-bg); }
+.hm-wallet-details { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }
+.hm-wallet-details span { font-size: 12px; }
+.hm-wallet-value { font-size: 16px; text-align: right; font-variant-numeric: tabular-nums; }
 .hm-wallet-success { color: var(--ds-color-success-text); }
 .hm-wallet-danger { color: var(--ds-color-danger-text); }
 .hm-wallet-muted { color: var(--ds-color-text-muted); }
 .hm-wallet-track { grid-column: 1 / -1; height: 5px; border-radius: 999px; overflow: hidden; background: var(--ds-color-surface-soft); }
 .hm-wallet-track span { display: block; height: 100%; background: currentColor; border-radius: inherit; }
-.hm-wallet-row > form, .hm-wallet-row > .hm-wallet-actions { grid-column: 1 / -1; }
+.hm-wallet-row > .hm-wallet-context, .hm-wallet-controls { grid-column: 1 / -1; }
+.hm-wallet-controls summary { width: fit-content; font-size: 12px; cursor: pointer; }
+.hm-wallet-controls[open] { display: grid; gap: 8px; }
 .hm-wallet-row form { display: grid; gap: 10px; max-width: 320px; }
 .hm-wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .hm-wallet-check { grid-column: 1 / -1; display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--ds-color-surface-soft); font-size: 13px; overflow-wrap: anywhere; }

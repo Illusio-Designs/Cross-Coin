@@ -2,7 +2,7 @@ jest.mock('../../config/db.js', () => ({ sequelize: { query: jest.fn() } }));
 jest.mock('../../services/metaAdsService.js', () => ({ getRecentDailySpend: jest.fn() }));
 
 const { sequelize } = require('../../config/db.js');
-const { listBalances, listWalletMonitor, saveBalance } = require('../../services/providerWalletService.js');
+const { listBalances, listWalletMonitor, recordWalletCheck, saveBalance } = require('../../services/providerWalletService.js');
 const { getRecentDailySpend } = require('../../services/metaAdsService.js');
 
 beforeEach(() => jest.clearAllMocks());
@@ -15,10 +15,32 @@ test('returns the selected brand’s recorded Meta funds', async () => {
     return [];
   });
   await expect(listBalances(8)).resolves.toEqual([
-    { provider: 'meta', brandId: 8, brandName: 'Morbix', amount: 0, currency: 'INR', recordedAt: '2026-11-25T09:00:00.000Z' },
+    { provider: 'meta', brandId: 8, brandName: 'Morbix', amount: 0, currency: 'INR', recordedAt: '2026-11-25T09:00:00.000Z',
+      source: 'manual', syncStatus: null, checkedAt: null },
   ]);
   expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('w.brand_id = b.id'),
     expect.objectContaining({ replacements: { brandId: 8 } }));
+});
+
+test('shows the last successful Meta amount when a later refresh fails', async () => {
+  const synced = new Date('2026-11-25T12:00:00Z');
+  const checked = new Date('2026-11-25T15:00:00Z');
+  sequelize.query.mockResolvedValue([{
+    id: 8, brand_name: 'Morbix', amount: '15500', currency: 'INR',
+    recorded_at: new Date('2026-11-25T09:00:00Z'), synced_amount: '15575.89',
+    synced_currency: 'INR', synced_at: synced, checked_at: checked, sync_status: 'failed',
+  }]);
+  await expect(listBalances(8)).resolves.toEqual([expect.objectContaining({
+    amount: 15575.89, source: 'meta', recordedAt: synced.toISOString(), checkedAt: checked.toISOString(), syncStatus: 'failed',
+  })]);
+});
+
+test('a missing funding amount records the failed check without supplying a new snapshot', async () => {
+  sequelize.query.mockResolvedValue([]);
+  const checkedAt = new Date('2026-11-25T15:00:00Z');
+  await recordWalletCheck({ brandId: 8, accountId: '805062759008052', checkedAt, status: 'unavailable', funds: { amount: null } });
+  expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('VALUES(synced_at) IS NOT NULL'),
+    { replacements: { brandId: 8, accountId: '805062759008052', checkedAt, status: 'unavailable', amount: null, currency: null, syncedAt: null } });
 });
 
 test('saves Meta funds by active brand', async () => {

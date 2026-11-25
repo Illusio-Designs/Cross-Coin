@@ -11,6 +11,16 @@ const ensureSchema = () => {
       recorded_at DATETIME NOT NULL,
       recorded_by INT NOT NULL
     ) ENGINE=InnoDB`);
+    await sequelize.query(`CREATE TABLE IF NOT EXISTS meta_wallet_account_sync (
+      brand_id INT NOT NULL,
+      account_id VARCHAR(32) NOT NULL,
+      amount DECIMAL(14,2) NULL,
+      currency CHAR(3) NULL,
+      synced_at DATETIME(3) NULL,
+      checked_at DATETIME(3) NOT NULL,
+      status VARCHAR(16) NOT NULL,
+      PRIMARY KEY (brand_id, account_id)
+    ) ENGINE=InnoDB`);
   })().catch((error) => { schema = null; throw error; });
   return schema;
 };
@@ -35,13 +45,45 @@ function snapshot(row) {
 async function listBalances(brandId) {
   const selectedBrand = parseBrandId(brandId);
   await ensureSchema();
-  const brands = await sequelize.query(`SELECT b.id, COALESCE(b.display_name, b.name) AS brand_name, w.amount, w.currency, w.recorded_at
+  const brands = await sequelize.query(`SELECT b.id, COALESCE(b.display_name, b.name) AS brand_name, w.amount, w.currency, w.recorded_at,
+      s.amount AS synced_amount, s.currency AS synced_currency, s.synced_at, s.checked_at, s.status AS sync_status
       FROM brands b LEFT JOIN meta_brand_wallet_snapshots w ON w.brand_id = b.id
+      LEFT JOIN brand_settings m ON m.brand_id = b.id AND m.\`key\` = 'META_AD_ACCOUNT_ID'
+      LEFT JOIN meta_wallet_account_sync s ON s.brand_id = b.id
+        AND BINARY LOWER(TRIM(m.value)) IN (BINARY s.account_id, BINARY CONCAT('act_', s.account_id))
       WHERE b.status = 'active' AND (:brandId IS NULL OR b.id = :brandId) ORDER BY b.id`,
   { replacements: { brandId: selectedBrand }, type: QueryTypes.SELECT });
-  return brands.map((brand) => ({
-    provider: 'meta', brandId: Number(brand.id), brandName: brand.brand_name, ...snapshot(brand),
-  }));
+  return brands.map((brand) => {
+    const syncedAt = brand.synced_at && new Date(brand.synced_at);
+    // Manual snapshots store whole seconds. Prefer the manual entry in a tie.
+    const synced = syncedAt && (!brand.recorded_at
+      || Math.floor(syncedAt.getTime() / 1000) * 1000 > new Date(brand.recorded_at).getTime());
+    const balance = synced
+      ? { amount: Number(brand.synced_amount), currency: brand.synced_currency, recordedAt: syncedAt.toISOString() }
+      : snapshot(brand);
+    return {
+      provider: 'meta', brandId: Number(brand.id), brandName: brand.brand_name, ...balance,
+      source: synced ? 'meta' : brand.recorded_at ? 'manual' : null,
+      syncStatus: brand.sync_status || null,
+      checkedAt: brand.checked_at ? new Date(brand.checked_at).toISOString() : null,
+    };
+  });
+}
+
+async function recordWalletCheck({ brandId, accountId, checkedAt, status, funds }) {
+  await ensureSchema();
+  const amount = funds?.amount ?? null;
+  const currency = amount == null ? null : funds.currency;
+  await sequelize.query(`INSERT INTO meta_wallet_account_sync
+      (brand_id, account_id, amount, currency, synced_at, checked_at, status)
+    VALUES (:brandId, :accountId, :amount, :currency, :syncedAt, :checkedAt, :status)
+    ON DUPLICATE KEY UPDATE
+      amount = IF(VALUES(synced_at) IS NOT NULL AND (synced_at IS NULL OR VALUES(synced_at) >= synced_at), VALUES(amount), amount),
+      currency = IF(VALUES(synced_at) IS NOT NULL AND (synced_at IS NULL OR VALUES(synced_at) >= synced_at), VALUES(currency), currency),
+      synced_at = COALESCE(GREATEST(synced_at, VALUES(synced_at)), synced_at, VALUES(synced_at)),
+      status = IF(VALUES(checked_at) >= checked_at, VALUES(status), status),
+      checked_at = GREATEST(checked_at, VALUES(checked_at))`,
+  { replacements: { brandId, accountId, amount, currency, checkedAt, syncedAt: amount == null ? null : checkedAt, status } });
 }
 
 async function listWalletMonitor(brandId) {
@@ -84,4 +126,4 @@ async function saveBalance({ provider, amount, currency, brandId }, actorId) {
   { replacements: { identity: selectedBrand, value, currency, actorId } });
 }
 
-module.exports = { listBalances, listWalletMonitor, checkWalletFunds, saveBalance };
+module.exports = { listBalances, listWalletMonitor, checkWalletFunds, recordWalletCheck, saveBalance };

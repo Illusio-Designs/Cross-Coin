@@ -6,7 +6,7 @@ jest.mock('../../services/settingsHelper.js', () => ({ getGlobal: jest.fn() }));
 const axios = require('axios');
 const { sequelize } = require('../../config/db.js');
 const { getGlobal } = require('../../services/settingsHelper.js');
-const { clearCaches, getPrepaidFundingDisplay } = require('../../services/metaAdsService.js');
+const { clearCaches, getPrepaidFundingDisplay, syncAll } = require('../../services/metaAdsService.js');
 const { parseAvailableFunds } = require('../../utils/metaAvailableFunds.js');
 
 test.each([
@@ -53,4 +53,22 @@ test('withholds postpaid labels and reports a missing wallet amount', async () =
 test('explains the account-level permission when Meta denies funding access', async () => {
   axios.get.mockResolvedValue({ status: 403, data: { error: { code: 200, message: 'Denied' } } });
   await expect(getPrepaidFundingDisplay(8)).rejects.toMatchObject({ status: 502, message: expect.stringContaining('MANAGE') });
+});
+
+test.each([
+  ['available', { status: 200, data: {
+    currency: 'INR', is_prepay_account: true, funding_source_details: { display_string: 'Available balance (₹33,007.25 INR)' },
+  } }, 'synced', '33007.25'],
+  ['unreadable', { status: 200, data: {
+    currency: 'INR', is_prepay_account: true, funding_source_details: { display_string: 'Prepaid wallet' },
+  } }, 'unavailable', null],
+  ['denied', { status: 403, data: { error: { code: 200 } } }, 'failed', null],
+])('records a %s wallet check alongside a successful spend sync', async (_, funding, status, amount) => {
+  sequelize.query.mockImplementation(async (sql) => sql.includes('SELECT brand_id, value')
+    ? [{ brand_id: 8, value: 'act_805062759008052' }] : []);
+  axios.get.mockImplementation(async (url) => url.endsWith('/insights') ? { status: 200, data: { data: [] } } : funding);
+  await expect(syncAll({ days: 7, today: '2026-11-25' })).resolves.toMatchObject({ status: 'ok' });
+  expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO meta_wallet_account_sync'),
+    { replacements: expect.objectContaining({ brandId: 8, accountId: '805062759008052', status, amount,
+      syncedAt: amount == null ? null : expect.any(Date) }) });
 });

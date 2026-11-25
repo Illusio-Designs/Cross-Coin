@@ -249,8 +249,9 @@ async function getNavCounts({ brandId = null, keys = [] } = {}) {
     products: () => queueCounts.stock(R).then((r) => num(r.out_n)),
     reviews: () => queueCounts.reviews(R).then((r) => num(r.n)),
     problems: () => require('./exceptionsService.js').listQueue({ brandId, limit: 1 }).then((r) => num(r.counts?.all)),
-    health: () => q(`SELECT COUNT(DISTINCT job_key) AS n FROM job_runs WHERE status = 'failed' AND started_at >= :since`,
-      { since: R.overdue }).then((r) => num(first(r).n)),
+    health: () => q(`SELECT COUNT(DISTINCT job_key) AS n FROM job_runs
+      WHERE status = 'failed' AND started_at >= :since AND job_key IN (:activeJobs)`,
+      { since: R.overdue, activeJobs: require('../config/cronJobs.js').JOBS.map(({ key }) => key) }).then((r) => num(first(r).n)),
   };
   const picked = Object.keys(jobs).filter((k) => want.has(k));
   // One slow or missing table must not hide the other badges.
