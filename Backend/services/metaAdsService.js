@@ -289,6 +289,37 @@ async function getMapping() {
   return rows.map((r) => ({ brandId: Number(r.brand_id), accountId: digits(r.value) })).filter((m) => m.accountId);
 }
 
+async function getPrepaidFundingDisplay(brandId) {
+  const mapping = (await getMapping()).find((entry) => entry.brandId === brandId);
+  if (!mapping) throw Object.assign(new Error('Map this brand to a Meta ad account in Reports → Marketing → Ads.'), { status: 400 });
+  const connection = await resolveToken();
+  if (!connection) throw Object.assign(new Error('Connect a Meta Ads token in Reports → Marketing → Ads.'), { status: 400 });
+  let account;
+  try {
+    account = await graphGet(`act_${mapping.accountId}`, {
+      fields: 'currency,is_prepay_account,funding_source_details',
+    }, connection.token);
+  } catch (error) {
+    const denied = [10, 200, 294].includes(Number(error.code)) || error.status === 403;
+    const message = denied
+      ? 'Meta denied access to funding details. The token’s user needs the MANAGE task on this ad account.'
+      : 'Meta could not return funding details. Check the Meta Ads connection and try again.';
+    throw Object.assign(new Error(message), { status: 502 });
+  }
+  const isPrepaid = account.is_prepay_account === true;
+  const raw = account.funding_source_details?.display_string;
+  // Avoid exposing postpaid payment-method labels or long payment identifiers.
+  const displayString = isPrepaid && typeof raw === 'string'
+    ? scrub(raw, connection.token).replace(/(?:\d[ -]?){12,}\d/g, '••••').trim() || null
+    : null;
+  const currency = typeof account.currency === 'string' && /^[A-Z]{3}$/.test(account.currency) ? account.currency : null;
+  const { parseAvailableFunds } = require('../utils/metaAvailableFunds.js');
+  return {
+    accountId: mapping.accountId, isPrepaid, currency, displayString,
+    amount: displayString ? parseAvailableFunds(displayString, currency) : null,
+  };
+}
+
 async function lastJobRun() {
   try {
     const { recentRuns } = require('./jobRunService.js');
@@ -658,7 +689,7 @@ async function syncAll(opts = {}) {
 
 module.exports = {
   GRAPH, GLOBAL_BRAND_ID, GLOBAL_TOKEN_KEY, AD_SPEND_DDL, AD_SYNC_DDL, AD_PLACEMENT_DDL, RATE_LIMIT_CODES,
-  ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping, getRecentDailySpend,
+  ensureSchema, normName, scrub, resolveToken, clearCaches, listAdAccounts, getMapping, getRecentDailySpend, getPrepaidFundingDisplay,
   getConnection, saveToken, saveMapping, syncAll, syncAccount, syncPlacements, toRow, pickAction, rangeFor,
   GraphError,
 };

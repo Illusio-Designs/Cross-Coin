@@ -57,6 +57,12 @@ async function listWalletMonitor(brandId) {
   }));
 }
 
+async function checkWalletFunds(brandId) {
+  const selectedBrand = parseBrandId(brandId);
+  if (!selectedBrand) throw Object.assign(new Error('Choose a valid brand.'), { status: 400 });
+  return require('./metaAdsService.js').getPrepaidFundingDisplay(selectedBrand);
+}
+
 async function saveBalance({ provider, amount, currency, brandId }, actorId) {
   const value = String(amount ?? '').trim();
   const selectedBrand = provider === 'meta' ? parseBrandId(brandId) : null;
@@ -78,4 +84,4 @@ async function saveBalance({ provider, amount, currency, brandId }, actorId) {
   { replacements: { identity: selectedBrand, value, currency, actorId } });
 }
 
-module.exports = { listBalances, listWalletMonitor, saveBalance };
+module.exports = { listBalances, listWalletMonitor, checkWalletFunds, saveBalance };

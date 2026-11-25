@@ -2187,6 +2187,10 @@ export const dashboardService = {
     try { return (await adminApi.get('/api/dashboard/wallet-balances', { params: brandId ? { brandId } : {} })).data.balances; }
     catch (error) { throw payErr(error); }
   },
+  checkWalletFunds: async (brandId) => {
+    try { return (await adminApi.get('/api/dashboard/wallet-balances/check', { params: { brandId }, timeout: 35000 })).data.funds; }
+    catch (error) { throw payErr(error); }
+  },
   saveWalletBalance: async (snapshot) => {
     try { return (await adminApi.put('/api/dashboard/wallet-balances', snapshot)).data; }
     catch (error) { throw payErr(error); }

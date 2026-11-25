@@ -32,5 +32,16 @@ async function walletBalances(req, res) {
 }
 
 router.route('/wallet-balances').all(authenticate, isAdmin).get(walletBalances).put(walletBalances);
+router.get('/wallet-balances/check', authenticate, isAdmin, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const funds = await require('../services/providerWalletService.js').checkWalletFunds(req.query.brandId);
+    return res.json({ success: true, funds });
+  } catch (error) {
+    if (error.status === 400 || error.status === 502) return res.status(error.status).json({ message: error.message });
+    require('../config/logging.js').logger.error('Meta wallet funding check failed');
+    return res.status(500).json({ message: 'Could not check Meta wallet funds.' });
+  }
+});
 
 module.exports = router;

@@ -28,6 +28,26 @@ export default function ProviderWalletBalances({ brandId }) {
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [checking, setChecking] = useState(null);
+  const [checkResult, setCheckResult] = useState(null);
+
+  const check = async (entry) => {
+    if (checking || draft) return;
+    setChecking(entry.brandId);
+    setCheckResult(null);
+    try {
+      const funds = await dashboardService.checkWalletFunds(entry.brandId);
+      setCheckResult({ brandId: entry.brandId, funds });
+      if (funds.amount != null) {
+        setSaveError("");
+        setDraft({ provider: entry.provider, brandId: entry.brandId, amount: funds.amount, currency: funds.currency });
+      }
+    } catch (error) {
+      setCheckResult({ brandId: entry.brandId, error: error.message });
+    } finally {
+      setChecking(null);
+    }
+  };
 
   const save = async (event) => {
     event.preventDefault();
@@ -79,6 +99,7 @@ export default function ProviderWalletBalances({ brandId }) {
           {wallets.map((entry) => {
             const key = `meta-wallet-${entry.brandId}`;
             const editing = draft?.brandId === entry.brandId;
+            const outcome = checkResult?.brandId === entry.brandId ? checkResult : null;
             const days = entry.days == null ? null : Math.round(entry.days * 10) / 10;
             return (
               <li key={key} className="hm-wallet-row">
@@ -97,6 +118,17 @@ export default function ProviderWalletBalances({ brandId }) {
                     <span style={{ width: `${Math.min(100, entry.days * 20)}%` }} />
                   </div>
                 )}
+                {outcome && (
+                  <div className="hm-wallet-check" role={outcome.error ? "alert" : "status"}>
+                    {outcome.error || <>
+                      <strong>Meta account {outcome.funds.accountId}</strong>
+                      {outcome.funds.displayString && <span>{outcome.funds.displayString}</span>}
+                      <span>{!outcome.funds.isPrepaid ? "Meta did not identify this account as prepaid."
+                        : outcome.funds.amount == null ? "Meta did not return a readable available-funds amount in a supported currency."
+                          : "Compare this amount with Billing & payments before saving."}</span>
+                    </>}
+                  </div>
+                )}
                 {editing ? (
                   <form onSubmit={save}>
                     <Input label="Available balance" name={`${key}-amount`} inputMode="decimal" required
@@ -113,10 +145,12 @@ export default function ProviderWalletBalances({ brandId }) {
                   </form>
                 ) : (
                   <div className="hm-wallet-actions">
-                    <Button size="sm" variant="secondary" disabled={saving} onClick={() => {
+                    <Button size="sm" variant="secondary" disabled={saving || !!checking || !!draft} onClick={() => {
                       setSaveError("");
                       setDraft({ provider: entry.provider, brandId: entry.brandId, amount: entry.amount ?? "", currency: entry.currency });
                     }}>{entry.amount == null ? "Record balance" : "Update balance"}</Button>
+                    <Button size="sm" variant="secondary" onClick={() => check(entry)}
+                      loading={checking === entry.brandId} disabled={!!checking || !!draft}>Check Meta funds</Button>
                     {entry.recordedAt && <small>Recorded {new Date(entry.recordedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</small>}
                   </div>
                 )}

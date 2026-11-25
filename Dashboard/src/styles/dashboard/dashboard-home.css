@@ -148,6 +148,9 @@
 .hm-wallet-row > form, .hm-wallet-row > .hm-wallet-actions { grid-column: 1 / -1; }
 .hm-wallet-row form { display: grid; gap: 10px; max-width: 320px; }
 .hm-wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.hm-wallet-check { grid-column: 1 / -1; display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--ds-color-surface-soft); font-size: 13px; overflow-wrap: anywhere; }
+.hm-wallet-check strong { font-size: inherit; }
+.hm-wallet-check[role="alert"] { color: var(--ds-color-danger-text); }
 .hm-empty { padding: 26px; text-align: center; color: var(--ds-color-text-muted); font-size: 14px; }
 
 .hm-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
