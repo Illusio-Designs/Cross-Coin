@@ -30,6 +30,12 @@ export function generateStaticParams() {
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 const stars = (r) => { const n = Math.round(Number(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
 const AV = ['#b85f6e', '#866027', '#7a3b3f', '#4a6b4f', '#9a6b2e', '#6e4a7a'];
+const OCCASIONS = {
+  aurum: ['Dinner', 'Date night'], azur: ['Daily wear', 'Vacation'], belle: ['Brunch', 'Date night'],
+  cipher: ['Dinner', 'Formal events'], ember: ['Evening events', 'Celebrations'], halva: ['Date night', 'Dinner'],
+  muse: ['Brunch', 'Date night'], pulse: ['Daily wear', 'Evening plans'], regal: ['Weddings', 'Evening events'],
+  velour: ['Daily wear', 'Dinner'], vice: ['Daily wear', 'Weekend outings'],
+};
 
 
 /* Pull an attribute from the default variation as a clean token list, splitting
@@ -38,6 +44,51 @@ function tokens(val) {
   if (!val) return [];
   const arr = Array.isArray(val) ? val : [val];
   return arr.flatMap((s) => String(s).split(',')).map((s) => s.trim()).filter(Boolean);
+}
+
+function attribute(variation, ...names) {
+  const entries = Object.entries(variation?.attributes || {});
+  for (const name of names) {
+    const values = tokens(entries.find(([key]) => noteKey(key.replace(/[_-]+/g, ' ')) === name)?.[1]);
+    if (values.length) return values;
+  }
+  return [];
+}
+
+function audienceOf(variation) {
+  const labels = new Set(attribute(variation, 'gender', 'target gender', 'audience').map((value) => {
+    const key = noteKey(value);
+    if (['unisex', 'all', 'for all', 'for everyone'].includes(key)) return 'Unisex';
+    if (['for him', 'man', 'men', 'male', 'masculine'].includes(key)) return 'For Him';
+    if (['for her', 'woman', 'women', 'female', 'feminine'].includes(key)) return 'For Her';
+    return null;
+  }).filter(Boolean));
+  return labels.has('Unisex') || labels.size === 2 ? 'Unisex' : [...labels][0];
+}
+
+function PdpFragranceProfile({ variation, slug }) {
+  const configured = attribute(variation, 'occasion', 'occasions', 'wear occasion');
+  const occasions = [...new Set(configured.length ? configured : OCCASIONS[slug] || [])];
+  const specs = [
+    ['Longevity', attribute(variation, 'longevity (hrs)', 'longevity').map((value) => /^\d+(?:\.\d+)?$/.test(value) ? `${value} hrs` : value).join(' · '), 'hourglass'],
+    ['Sillage', attribute(variation, 'sillage').join(' · '), 'sparkles'],
+    ['Best for', attribute(variation, 'best for').join(' · '), 'perfume'],
+    ['Season', attribute(variation, 'season').join(' · '), 'leaf'],
+  ].filter(([, value]) => value);
+  if (!specs.length && !occasions.length) return null;
+  return (
+    <section className="v-pdp-profile" aria-label="Fragrance profile">
+      {specs.length > 0 && <dl className="v-pdp-profile__stats">
+        {specs.map(([label, value, icon]) => <div key={label}>
+          <dt><BrandIcon name={icon} size={16} />{label}</dt><dd>{value}</dd>
+        </div>)}
+      </dl>}
+      {occasions.length > 0 && <div className="v-pdp-profile__occasions">
+        <h2>Suggested occasions</h2>
+        <ul>{occasions.map((occasion) => <li key={occasion}>{occasion}</li>)}</ul>
+      </div>}
+    </section>
+  );
 }
 
 export async function generateMetadata({ params }) {
@@ -81,6 +132,7 @@ export default async function MaisonProduct({ params }) {
   const scentRequest = catalogRequest.then((catalog) => getPdpScent(product, defVar, catalog));
   const stock = defVar?.stock;
   const inStock = product.inStock !== false && (stock == null || stock > 0);
+  const audience = audienceOf(defVar);
 
   const savePct = product.originalPrice && product.originalPrice > product.price
     ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
@@ -111,6 +163,7 @@ export default async function MaisonProduct({ params }) {
             <h1 className="m-pdp__title">{product.name}</h1>
             <p className="v-pdp-kind">
               Eau de Parfum {defVar?.size && <small className="v-pdp-volume">{defVar.size}</small>}
+              {audience && <small className="v-pdp-volume v-pdp-audience"><BrandIcon name="user" size={14} />{audience}</small>}
             </p>
             <Suspense fallback={<RatingLine rating={product.rating || 0} reviewCount={product.reviews || 0} />}>
               <PdpRating product={product} request={reviewsRequest} />
@@ -129,6 +182,7 @@ export default async function MaisonProduct({ params }) {
                 {inStock ? (stock != null && stock <= 5 ? `Only ${stock} left` : 'In stock') : 'Out of stock'}
               </span>
             </div>
+            <PdpFragranceProfile variation={defVar} slug={product.slug} />
             <Suspense fallback={
               <SkRegion label="Loading purchase options…" style={{ marginTop: 16 }}>
                 <Sk h={42} r={8} />
@@ -333,22 +387,12 @@ async function PdpScentStory({ product, defVar, scentRequest }) {
   const { phases } = await scentRequest;
   const attrs = defVar?.attributes || {};
   const attrImgs = defVar?.attrImages || {};
-  const spec = [
-    ['Longevity', tokens(attrs['longevity (hrs)'] || attrs['longevity']).map((h) => `${h} hrs`).join(', ')],
-    ['Sillage', tokens(attrs['sillage']).join(', ')],
-    ['Best for', tokens(attrs['best for']).join(', ')],
-    ['Season', tokens(attrs['season']).join(' · ')],
-    ['Gender', tokens(attrs['gender']).join(', ')],
-    ['Concentration', 'Eau de Parfum'],
-  ].filter(([, v]) => v);
-  if (defVar?.size) spec.push(['Size', defVar.size]);
-
   // Editorial sections (reference style) from any NEW attribute key the admin
   // adds — e.g. "Smells Like", "Makes You Feel", "Inspiration". A single long
   // value renders as prose over its image; short values render as word pills
   // (each with its uploaded image when one exists). Keys already shown in
   // their own sections are excluded.
-  const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'size', 'volume', 'color', 'material', 'concentration',
+  const KNOWN_ATTRS = new Set(['notes', 'main accords', 'accords', 'longevity (hrs)', 'longevity', 'sillage', 'best for', 'season', 'gender', 'target gender', 'audience', 'occasion', 'occasions', 'wear occasion', 'size', 'volume', 'color', 'material', 'concentration',
     'top notes', 'top note', 'top', 'heart notes', 'heart note', 'middle notes', 'middle note', 'heart', 'middle', 'base notes', 'base note', 'base']);
 
   const editorial = Object.entries(attrs)
@@ -368,8 +412,7 @@ async function PdpScentStory({ product, defVar, scentRequest }) {
   return (
     <div className="m-wrap v-product-story">
       <ScentExperience name={product.name} phases={phases}
-        accords={tokens(attrs['main accords'] || attrs.accords).slice(0, 3)}
-        spec={spec.filter(([key]) => ['Best for', 'Season', 'Sillage', 'Longevity'].includes(key))} />
+        accords={attribute(defVar, 'main accords', 'accords').slice(0, 3)} />
       {editorial.map((section) => (
         <section className="v-detail-section" key={section.key}>
           <h2>{section.key}</h2>
@@ -400,10 +443,16 @@ async function PdpReviews({ product, request }) {
   const { reviews, reviewCount, rating } = summarizeReviews(product, await request);
   const renderReview = (v, i) => {
     const name = v.reviewerName || v.guestName || v.name || 'Customer';
+    const photos = (v.ReviewImages || []).filter((photo) => photo.fileType === 'image' && /^https?:\/\//i.test(photo.url || '')).slice(0, 4);
     return (
       <div className="m-rev" key={v.id || i}>
         <div className="m-stars">{stars(v.rating)}</div>
         <q>{v.review || v.comment}</q>
+        {photos.length > 0 && <ul className="v-review-photos" aria-label="Customer photos">
+          {photos.map((photo, index) => <li key={photo.id || index}>
+            <NotePhoto image={photo.url} width={240} alt={`${product.name} in ${name}’s review, photo ${index + 1}`} natural={false} />
+          </li>)}
+        </ul>}
         <div className="m-rev__by">
           <span className="m-rev__av" style={{ background: AV[(typeof i === 'number' ? i : 0) % AV.length] }}>{name[0]}</span>
           <span><b>{name}</b>{v.verified_purchase ? <small><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>Verified Buyer</small> : null}</span>

@@ -424,23 +424,26 @@ async function findMissingRazorpayOrders({ from, until }) {
 
   const recoveryStore = require('./prepaidRecoveryStore.js');
   const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
-  const totals = { captured: captures.length, matched: 0, missing: 0 };
+  const totals = { captured: captures.length, matched: 0, missing: 0, conflicts: 0 };
   const items = [];
   for (let index = 0; index < captures.length; index += 400) {
     const batch = captures.slice(index, index + 400);
     const matches = await findRazorpayOrderMatches(batch);
-    const missing = batch.filter(({ id }) => {
+    const unmatched = batch.filter(({ id }) => {
       const match = matches.get(id);
-      return !match.linked && !match.hasExistingOrder;
+      return match.issue || (!match.linked && !match.hasExistingOrder);
     });
-    totals.matched += batch.length - missing.length;
-    const states = await recoveryStore.readRecoveries(missing.map(({ id }) => id));
-    for (const payment of missing) {
+    totals.matched += batch.length - unmatched.length;
+    const states = await recoveryStore.readRecoveries(unmatched.map(({ id }) => id));
+    for (const payment of unmatched) {
       const { issue, brandId, pending } = matches.get(payment.id);
       const recovery = states.get(payment.id);
       const canVerify = !issue && !pending && recoveryStore.isCapture(payment);
+      const kind = issue ? 'conflict' : 'missing';
+      totals[issue ? 'conflicts' : 'missing']++;
       items.push({
         paymentId: payment.id,
+        kind,
         amount: r2(Number(payment.amount) / 100),
         currency: payment.currency,
         method: normMethod(payment.method),
@@ -450,10 +453,15 @@ async function findMissingRazorpayOrders({ from, until }) {
         reason: canVerify ? null : issue || (pending ? 'Review the saved website checkout.' : 'This capture is refunded or ineligible for recovery.'),
         checkoutRef: recovery?.checkout_ref || null,
         checkoutBrandId: recovery?.brand_id || null,
+        recovery: recovery ? {
+          state: recovery.state,
+          reason: recovery.reason,
+          updatedAt: recovery.updated_at,
+          nextAttemptAt: !Number(recovery.historical) && recovery.state === 'pending' ? recovery.next_at : null,
+        } : null,
       });
     }
   }
-  totals.missing = items.length;
   return { items, totals };
 }
 

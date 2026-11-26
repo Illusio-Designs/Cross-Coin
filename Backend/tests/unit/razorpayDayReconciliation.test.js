@@ -14,7 +14,7 @@ const { getInstance } = require('../../services/razorpayService.js');
 const { findRazorpayOrderMatches } = require('../../services/razorpayOrderMatching.js');
 const { readRecoveries, queueCaptures } = require('../../services/prepaidRecoveryStore.js');
 
-test('reads the full selected day, counts unique captures and omits all payments with existing orders', async () => {
+test('counts unique captures on the selected day and separates verified matches from existing conflicts', async () => {
   const from = 1738341000;
   const until = from + 86399;
   const captured = (id, overrides) => ({
@@ -25,6 +25,12 @@ test('reads the full selected day, counts unique captures and omits all payments
   const conflictedExisting = captured('pay_conflict');
   const missingOnPageTwo = captured('pay_missing2', { created_at: until, method: 'card' });
   const refunded = captured('pay_refunded', { amount_refunded: 200 });
+  const updatedAt = new Date(from * 1000);
+  const retryAt = new Date((from + 120) * 1000);
+  readRecoveries.mockResolvedValue(new Map([[missing.id, {
+    historical: false, state: 'pending', reason: 'Waiting for Shiprocket',
+    updated_at: updatedAt, next_at: retryAt, checkout_ref: 'checkout-example', brand_id: 8,
+  }]]));
   const list = jest.fn().mockResolvedValueOnce({ items: [
     already, missing, conflictedExisting, refunded, ...Array.from({ length: 96 }, (_, index) =>
       captured(`pay_failed${index}`, { status: 'failed' })),
@@ -40,10 +46,15 @@ test('reads the full selected day, counts unique captures and omits all payments
   const result = await findMissingRazorpayOrders({ from, until });
 
   expect(list.mock.calls).toEqual([[{ from, to: until, count: 100, skip: 0 }], [{ from, to: until, count: 100, skip: 100 }]]);
-  expect(result.totals).toEqual({ captured: 5, matched: 2, missing: 3 });
-  expect(result.items.map(({ paymentId, canVerify, method }) => [paymentId, canVerify, method])).toEqual([
-    [missing.id, true, 'upi'], [refunded.id, false, 'upi'], [missingOnPageTwo.id, true, 'card'],
+  expect(result.totals).toEqual({ captured: 5, matched: 1, missing: 3, conflicts: 1 });
+  expect(result.items.map(({ paymentId, kind, canVerify, method }) => [paymentId, kind, canVerify, method])).toEqual([
+    [missing.id, 'missing', true, 'upi'], [conflictedExisting.id, 'conflict', false, 'upi'],
+    [refunded.id, 'missing', false, 'upi'], [missingOnPageTwo.id, 'missing', true, 'card'],
   ]);
-  expect(readRecoveries).toHaveBeenCalledWith([missing.id, refunded.id, missingOnPageTwo.id]);
+  expect(readRecoveries).toHaveBeenCalledWith([missing.id, conflictedExisting.id, refunded.id, missingOnPageTwo.id]);
+  expect(result.items.find(({ paymentId }) => paymentId === missing.id)).toMatchObject({
+    checkoutRef: 'checkout-example', checkoutBrandId: 8,
+    recovery: { state: 'pending', reason: 'Waiting for Shiprocket', updatedAt, nextAttemptAt: retryAt },
+  });
   expect(queueCaptures).not.toHaveBeenCalled();
 });

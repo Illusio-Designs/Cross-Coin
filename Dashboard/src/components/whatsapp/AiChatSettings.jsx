@@ -13,6 +13,13 @@ import { showSuccess, showError } from '../../utils/toastNotification';
 
 const API = '/api/whatsapp/settings/ai';
 const errText = (e, fallback) => e?.response?.data?.message || e?.message || fallback;
+function readSettings(data) {
+  const settings = data?.settings;
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings) || typeof settings.enabled !== 'boolean') {
+    throw new Error('The server returned incomplete AI settings.');
+  }
+  return settings;
+}
 
 export default function AiChatSettings({ awayHours = null }) {
   const [ready, setReady] = useState(true);
@@ -26,9 +33,10 @@ export default function AiChatSettings({ awayHours = null }) {
     setLoading(true); setErr('');
     try {
       const { data } = await adminApi.get(API);
+      const settings = readSettings(data);
       setReady(!!data?.ready);
-      setSaved(data.settings);
-      setDraft(data.settings);
+      setSaved(settings);
+      setDraft(settings);
     } catch (e) { setErr(errText(e, 'Could not load the AI settings.')); }
     finally { setLoading(false); }
   }, []);
@@ -38,9 +46,10 @@ export default function AiChatSettings({ awayHours = null }) {
     setSaving(key);
     try {
       const { data } = await adminApi.put(API, patch);
+      const settings = readSettings(data);
       setReady(!!data?.ready);
-      setSaved(data.settings);
-      setDraft((d) => ({ ...data.settings, ...(key === 'notes' ? {} : { instructions: d?.instructions ?? data.settings.instructions }) }));
+      setSaved(settings);
+      setDraft((d) => ({ ...settings, ...(key === 'notes' ? {} : { instructions: d?.instructions ?? settings.instructions }) }));
       if (okMsg) showSuccess('saved', okMsg);
     } catch (e) {
       showError('saveFailed', errText(e, 'Could not save.'));

@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import BrandIcon from '@/components/ui/BrandIcon';
 import NotePhoto from './NotePhoto';
 
-export default function ScentExperience({ name, phases = [], accords = [], spec = [] }) {
+export default function ScentExperience({ name, phases = [], accords = [] }) {
   const id = useId();
   const [selected, setSelected] = useState(null);
   const activePhase = phases.find(({ key }) => key === selected) || phases[0];
@@ -75,11 +75,6 @@ export default function ScentExperience({ name, phases = [], accords = [], spec 
         </section>
       )}
 
-      {spec.length > 0 && (
-        <div className="v-detail-specs">
-          {spec.map(([key, value]) => <div key={key}><b>{key}</b><span>{value}</span></div>)}
-        </div>
-      )}
     </div>
   );
 }

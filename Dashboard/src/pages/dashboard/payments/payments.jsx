@@ -93,6 +93,49 @@ const PAYMENT_METHOD_LABEL = {
 };
 const DIM = { opacity: 0.6, transition: "opacity .15s" };
 
+function PaymentRecoveryCard({ item, brand, isAdmin, busy, onCreate, onReview }) {
+  const [confirm, setConfirm] = useState(false);
+  const { verification, recovery } = item;
+  const [label, tone] = verification === "verified" ? ["Verified checkout", "done"]
+    : verification === "checking" ? ["Checking Shiprocket", "progress"]
+      : [item.kind === "conflict" ? "Payment conflict" : "Needs review", "needs"];
+  return (
+    <li className="pl-rzp__scan-card">
+      <div className="pl-rzp__scan-head">
+        <code>{item.paymentId}</code>
+        <strong>{paymentAmount(item)}</strong>
+      </div>
+      <p className="pl-small pl-faint">
+        {brand}{item.method && ` · ${PAYMENT_METHOD_LABEL[item.method] || "Other"}`} · {fullDate(item.at) || "Unknown time"}
+      </p>
+      <div className="pl-rzp__scan-status">
+        <StatusPill tone={tone} size="sm">{label}</StatusPill>
+        {verification === "verified" && (
+          <span className="pl-small">{plural(item.verified.itemCount, "item")} · <code>{item.verified.checkoutRef}</code></span>
+        )}
+      </div>
+      {item.reason && <p className="pl-small">{item.reason}</p>}
+      {item.checkoutRef && verification !== "verified" && (
+        <p className="pl-small pl-faint">Checkout <code>{item.checkoutRef}</code></p>
+      )}
+      {recovery?.updatedAt && (
+        <p className="pl-small pl-faint">
+          Recovery updated {fullDate(recovery.updatedAt)}
+          {recovery.nextAttemptAt && ` · Next retry ${fullDate(recovery.nextAttemptAt)}`}
+        </p>
+      )}
+      {recovery?.reason && verification !== "verified" && recovery.reason !== item.reason &&
+        <p className="pl-small pl-faint">{recovery.reason}</p>}
+      {isAdmin && verification === "verified" && (confirm
+        ? <ConfirmBar tone="primary" busy={!!busy} confirmLabel="Create order" message="Create the paid order from this verified checkout?"
+          onConfirm={() => onCreate(item).finally(() => setConfirm(false))} onCancel={() => setConfirm(false)} />
+        : <Button size="sm" disabled={!!busy} onClick={() => setConfirm(true)}>Create order</Button>)}
+      {verification === "review" &&
+        <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => onReview(item.paymentId)}>Review payment</Button>}
+    </li>
+  );
+}
+
 function RazorpayLookup({ brands, isAdmin }) {
   const qc = useQueryClient();
   const [reference, setReference] = useState("");
@@ -132,10 +175,12 @@ function RazorpayLookup({ brands, isAdmin }) {
   };
   const removeMatchedPayment = (paymentId, createdOrder) => {
     setScan((previous) => {
-      if (!previous?.items.some((item) => item.paymentId === paymentId)) return previous;
+      const matched = previous?.items.find((item) => item.paymentId === paymentId);
+      if (!matched) return previous;
       const items = previous.items.filter((item) => item.paymentId !== paymentId);
+      const counter = matched.kind === "conflict" ? "conflicts" : "missing";
       return { ...previous, items, lastCreatedOrder: createdOrder || previous.lastCreatedOrder,
-        totals: { ...previous.totals, matched: previous.totals.matched + 1, missing: items.length } };
+        totals: { ...previous.totals, matched: previous.totals.matched + 1, [counter]: previous.totals[counter] - 1 } };
     });
   };
   const updateScanItem = (paymentId, changes) => {
@@ -221,7 +266,7 @@ function RazorpayLookup({ brands, isAdmin }) {
   };
 
   const createVerifiedOrder = async (item) => {
-    if (busy || !item.verified?.checkoutRef) return;
+    if (!isAdmin || busy || !item.verified?.checkoutRef) return;
     setBusy(item.paymentId);
     setError("");
     try {
@@ -321,55 +366,26 @@ function RazorpayLookup({ brands, isAdmin }) {
       )}
       {currentScan && (
         <div className="pl-rzp__result">
-          <p role="status" className="pl-small">
-            {num(currentScan.totals.captured)} captured · {num(currentScan.totals.matched)} with orders
-            {" · "}{num(currentScan.totals.missing)} missing
-            {currentScan.items.some((item) => item.verification === "checking") && " · Checking Shiprocket"}
-          </p>
+          <div className="pl-rzp__scan-counts" role="status">
+            <span><b>{num(currentScan.totals.captured)}</b> Captured</span>
+            <span><b>{num(currentScan.totals.matched)}</b> Matched</span>
+            <span><b>{num(currentScan.totals.missing)}</b> Missing</span>
+            <span><b>{num(currentScan.totals.conflicts)}</b> Conflicts</span>
+          </div>
           {currentScan.lastCreatedOrder && (
             <Button size="sm" variant="secondary" onClick={() => openOrder(currentScan.lastCreatedOrder)}>
               Open order {currentScan.lastCreatedOrder}
             </Button>
           )}
-          {!currentScan.items.length && <p className="pl-small pl-faint">No captured payments without an order for this day.</p>}
+          {!currentScan.items.length && <p className="pl-small pl-faint">No missing orders or payment conflicts for this day.</p>}
           {currentScan.items.length > 0 && (
-            <div className="pl-scroll pl-rzp__scan-table">
-              <table className="pl-table" aria-label="Captured Razorpay payments without orders">
-                <thead><tr><th>Payment ID</th><th>Amount</th><th>When</th><th>Brand</th><th>Checkout</th><th aria-label="Actions" /></tr></thead>
-                <tbody>
-                  {currentScan.items.map((item) => (
-                    <tr key={item.paymentId}>
-                      <td><code>{item.paymentId}</code></td>
-                      <td className="pl-nowrap">{paymentAmount(item)}
-                        {item.method && <div className="pl-small pl-faint">{PAYMENT_METHOD_LABEL[item.method] || "Other"}</div>}
-                      </td>
-                      <td>{fullDate(item.at) || "—"}</td>
-                      <td>{brandName(item.verified?.orderBrandId ?? item.brandId)}</td>
-                      <td>
-                        {item.verification === "checking" && "Checking Shiprocket…"}
-                        {item.verification === "verified" && (
-                          <>Verified · {plural(item.verified.itemCount, "item")} <code>{item.verified.checkoutRef}</code></>
-                        )}
-                        {item.verification === "review" && (
-                          <>{isAdmin || item.reason ? "Needs review" : "Admin verification required"}
-                            {item.reason && <div className="pl-small pl-faint">{item.reason}</div>}
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        {item.verification === "verified" && (
-                          <Button size="sm" variant="primary" disabled={!!busy} loading={busy === item.paymentId}
-                            onClick={() => createVerifiedOrder(item)}>Create order</Button>
-                        )}
-                        {item.verification === "review" && (
-                          <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => check(item.paymentId)}>Review payment</Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="pl-rzp__scan-list" aria-label="Razorpay payments that need review">
+              {currentScan.items.map((item) => (
+                <PaymentRecoveryCard key={item.paymentId} item={item}
+                  brand={brandName(item.verified?.orderBrandId ?? item.brandId ?? item.checkoutBrandId)}
+                  isAdmin={isAdmin} busy={busy} onCreate={createVerifiedOrder} onReview={check} />
+              ))}
+            </ul>
           )}
         </div>
       )}
@@ -464,10 +480,12 @@ function Tiles({ s, error, onRetry, retrying, stale }) {
   if (!s) return <SkeletonKpis count={5} label="Loading payment totals…" className="pl-kpis" />;
   const pct = gatewayPct();
   const co = s?.collectedOnline;
+  const cod = s?.codToCollect;
+  const refunded = s?.refunded;
   let split = "";
   if (co) {
     if (!co.amount) split = "no online payments";
-    else if (!co.split.length) split = "UPI / card split not known yet";
+    else if (!co.split?.length) split = "UPI / card split not known yet";
     else {
       const top = co.split.slice(0, 2).map((m) => `${m.label} ${m.pct}%`);
       const rest = co.split.slice(2).reduce((t, m) => t + m.pct, 0);
@@ -480,10 +498,10 @@ function Tiles({ s, error, onRetry, retrying, stale }) {
     <div style={stale ? DIM : undefined} aria-busy={stale || undefined}>
     <KpiGrid className="pl-kpis">
       <KpiTile label="Collected online" value={co ? inr(co.amount) : "–"} sub={split} />
-      <KpiTile label="COD to collect" value={s ? inr(s.codToCollect.amount) : "–"}
-        sub={s ? `${plural(s.codToCollect.orders, "order")} with couriers right now` : ""} />
-      <KpiTile label="Refunded" value={s ? inr(s.refunded.amount) : "–"} tone="marketing"
-        sub={s ? `${plural(s.refunded.count, "refund")}${s.refunded.owed ? ` · ${num(s.refunded.owed)} still owed` : ""}` : ""} />
+      <KpiTile label="COD to collect" value={cod ? inr(cod.amount) : "–"}
+        sub={cod ? `${plural(cod.orders, "order")} with couriers right now` : ""} />
+      <KpiTile label="Refunded" value={refunded ? inr(refunded.amount) : "–"} tone="marketing"
+        sub={refunded ? `${plural(refunded.count, "refund")}${refunded.owed ? ` · ${num(refunded.owed)} still owed` : ""}` : ""} />
       <KpiTile label="Failed payments" value={f ? `${f.pct}%` : "–"} tone={f && f.pct >= 10 ? "problem" : "needs"}
         sub={f ? (f.attempts ? `${num(f.attempts)} ${f.attempts === 1 ? "try" : "tries"} · ${retried}% retried and paid` : "none in this period") : ""} />
       <KpiTile label="Gateway fees" value={co ? inr((co.amount * pct) / 100) : "–"}

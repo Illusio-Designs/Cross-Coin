@@ -355,17 +355,17 @@ export default function CartDrawer() {
   // lines sharing a pack_group count together and the highest store-wide tier
   // they reach applies to those lines. Checkout recomputes this server-side,
   // so these figures are display-only and can't be faked.
-  const [packTiers, setPackTiers] = useState([]);
+  const [packTiers, setPackTiers] = useState(null);
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/pack-tiers', { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : [])
+      .then((response) => response.ok ? response.json() : null)
       .then((tiers) => { if (Array.isArray(tiers)) setPackTiers(tiers); })
       .catch(() => {});
     return () => controller.abort();
   }, []);
   const packCalc = useMemo(() => {
-    if (!packTiers.length) return { off: 0, pctByGroup: {} };
+    if (!packTiers?.length) return { off: 0, pctByGroup: {} };
     const counts = new Map();
     for (const i of items) {
       if (!i.packGroup) continue;
@@ -383,6 +383,8 @@ export default function CartDrawer() {
   }, [items, packTiers]);
   const packOff = packCalc.off;
   const packCount = items.reduce((count, item) => count + (item.packGroup ? Number(item.quantity) || 1 : 0), 0);
+  const maxPackPercent = Math.max(0, ...(packTiers || []).map(({ off }) => Number(off) || 0));
+  const packPriceUnavailable = packCount > 0 && !packTiers;
 
   // ── Computed totals ────────────────────────────────────────────────────
   const subtotal       = cartTotal;
@@ -1100,12 +1102,16 @@ export default function CartDrawer() {
               )}
               {/* Bag items, pack and coupon controls. */}
               {coStep === 1 && (items.length === 0 || cartReady) && (<>
-              {/* ── Items ──────────────────────────────────────────────── */}
-              <div className="px-5 py-4 space-y-4 border-b border-[var(--m-line)]">
+              {(packCount > 0 || maxPackPercent > 0) && (
+                <div className="px-4 pt-4">
+                  <PackBagCard count={packCount} savings={Math.round(packOff)} maxPercent={maxPackPercent} onOpen={() => setCartOpen(false)} />
+                </div>
+              )}
+              <div className="v-cart-lines">
                 {items.map((item, i) => (
-                  <div key={`${item.id}-${i}`} className="flex gap-3 pb-4 border-b border-[var(--m-line)] last:border-0 last:pb-0">
-                    <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} className="shrink-0">
-                      <SkImg frameClassName="w-20 h-24" src={ik(item.image, 200)} alt={item.name} loading="lazy" />
+                  <div key={`${item.id}-${i}`} className="v-cart-line">
+                    <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} className="v-cart-line__photo" aria-label={item.name}>
+                      {item.image && <SkImg src={ik(item.image, 160)} alt="" loading="lazy" />}
                     </Link>
                     <div className="flex-1 min-w-0">
                       <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)}>
@@ -1116,13 +1122,11 @@ export default function CartDrawer() {
                           {[item.size, item.color].filter(Boolean).join(' · ')}
                         </p>
                       )}
-                      <div className="flex items-center justify-between mt-2.5">
-                        <div className="flex items-center border border-[var(--m-line)]  bg-[var(--m-surface)]">
-                          <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}
-                            className="px-2.5 py-1 text-[color:var(--m-ink-soft)] hover:text-[color:var(--m-accent-soft)]"><Minus size={12} /></button>
-                          <span className="px-2 text-[color:var(--m-ink)] text-sm font-body">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}
-                            className="px-2.5 py-1 text-[color:var(--m-ink-soft)] hover:text-[color:var(--m-accent-soft)]"><Plus size={12} /></button>
+                      <div className="v-cart-line__controls">
+                        <div className="v-cart-line__qty">
+                          <button type="button" aria-label={`Decrease quantity of ${item.name}`} onClick={() => updateQuantity(item.id, item.quantity - 1, item.size)}><Minus size={13} /></button>
+                          <span>{item.quantity}</span>
+                          <button type="button" aria-label={`Increase quantity of ${item.name}`} onClick={() => updateQuantity(item.id, item.quantity + 1, item.size)}><Plus size={13} /></button>
                         </div>
                         <span className="font-serif italic text-[color:var(--m-ink)] text-sm">
                           {(() => {
@@ -1134,16 +1138,12 @@ export default function CartDrawer() {
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => removeFromCart(item.id, item.size)}
-                      className="text-[color:var(--m-ink-faint)] hover:text-red-500 transition-colors self-start mt-1" aria-label="Remove">
+                    <button type="button" onClick={() => removeFromCart(item.id, item.size)}
+                      className="v-cart-line__remove" aria-label={`Remove ${item.name}`}>
                       <Trash2 size={14} />
                     </button>
                   </div>
                 ))}
-              </div>
-
-              <div className="px-5 py-4">
-                <PackBagCard count={packCount} savings={Math.round(packOff)} onOpen={() => setCartOpen(false)} />
               </div>
 
               </>)}
@@ -1258,7 +1258,7 @@ export default function CartDrawer() {
               </div>
               )}
 
-              {/* ── Summary — visible on both steps so pricing is always clear ─ */}
+              {coStep === 2 && (
               <div className="px-5 py-4 space-y-2">
                 <p className="text-[10px] tracking-[0.35em] uppercase text-[color:var(--m-ink-soft)] font-body mb-2">Order Summary</p>
                 <Row label="Subtotal" value={fmt(subtotal)} />
@@ -1277,6 +1277,7 @@ export default function CartDrawer() {
                   </p>
                 )}
               </div>
+              )}
 
               {/* ── Step 2: delivery + payment ──────────────────────────── */}
               {coStep === 2 && (<>
@@ -1423,12 +1424,16 @@ export default function CartDrawer() {
           <div className="border-t border-[var(--m-line)] px-5 py-4 bg-[var(--m-surface)] space-y-2">
             {coStep === 1 ? (
               <>
+                <div className="v-cart-estimate">
+                  <div><span>Estimated total</span><strong>{packPriceUnavailable ? 'At checkout' : fmt(netSub)}</strong></div>
+                  <p>{packOff > 0 ? `${fmt(packOff)} pack savings included. ` : ''}Shipping and coupons at checkout.</p>
+                </div>
                 {errorMsg && (
                   <div role="alert" className="text-[11px] font-body text-red-700 bg-red-50 border border-red-200 px-3 py-2">
                     {errorMsg}
                   </div>
                 )}
-                <ShiprocketButton label="BUY NOW" onClick={goToCheckout} busy={isProcessing} />
+                <ShiprocketButton label="CHECKOUT" onClick={goToCheckout} busy={isProcessing} />
                 <p className="text-center text-[10px] tracking-[0.3em] uppercase font-body text-[color:var(--m-ink-soft)]">
                   Secure checkout · 7-day returns
                 </p>

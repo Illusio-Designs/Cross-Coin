@@ -9,6 +9,8 @@ import { packDiscountPercent, packLineId, packUnitPrice } from '@/lib/packPricin
 import { openShiprocketCheckout, PACK_DISCOUNT_UNAVAILABLE, SHIPROCKET_RETRY_MESSAGE } from '@/lib/api/shiprocketCheckout';
 import { fbTrack } from '@/utils/pixel';
 import ProductCard from './ProductCard';
+import SkImg from './SkImg';
+import { ik } from '@/lib/imagekit';
 
 const inr = (paise) => '₹' + (paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
@@ -126,14 +128,14 @@ export default function PdpMixPack({ current, scents, tiers, placement = 'produc
   );
 
   return (
-    <section className={`m-opt v-pdp-pack${home ? ' v-home-pack' : ''}`} aria-label="Build your pack" data-layout={home ? 'quick-pick' : undefined}>
+    <section className={`m-opt v-pdp-pack ${home ? 'v-home-pack' : 'v-pdp-pack--compact'}`} aria-label="Build your pack" data-layout={home ? 'quick-pick' : undefined}>
       <div className="m-opt__h m-byph">
         <h2>Build Your Pack</h2>
         {home ? offers : fullBuilder}
       </div>
       {!home && offers}
       <div className="v-pdp-pack__rail-head">
-        {home ? fullBuilder : <p>Scroll and check the fragrances you want.</p>}
+        {home ? fullBuilder : <p>Choose your fragrances</p>}
         <div className="v-pdp-pack__arrows">
           <button type="button" aria-label="Previous fragrances" onClick={() => move(-1)} disabled={edges.start}>
             <BrandIcon name="previous" size={17} />
@@ -147,17 +149,18 @@ export default function PdpMixPack({ current, scents, tiers, placement = 'produc
         tabIndex={0} data-lenis-prevent-horizontal>
         {products.map((product) => {
           const checked = picked.has(product.id);
-          return (
-            <ProductCard key={product.id} product={product} selected={checked} showNotes={false} packPicker={home}
-              imageSizes={home ? '(max-width: 740px) 42vw, (max-width: 1280px) 30vw, 365px' : '(max-width: 820px) min(43vw, 180px), 180px'}
-              onImageClick={() => toggle(product.id)}
-              action={!home && (
-                <label className="m-card__addbody v-pdp-pack__check">
-                  <input type="checkbox" checked={checked} onChange={() => toggle(product.id)} aria-label={`Select ${product.name} for your pack`} />
-                  {checked ? 'Selected' : 'Select'}
-                </label>
-              )}
-            />
+          return home ? (
+            <ProductCard key={product.id} product={product} selected={checked} showNotes={false} packPicker
+              imageSizes="(max-width: 740px) 42vw, (max-width: 1280px) 30vw, 365px"
+              onImageClick={() => toggle(product.id)} />
+          ) : (
+            <label className="v-pack-choice" key={product.id} data-selected={checked || undefined}>
+              <span className="v-pack-choice__photo">
+                {product.images[0] ? <SkImg src={ik(product.images[0], 300)} alt="" loading="lazy" /> : <BrandIcon name="perfume" />}
+              </span>
+              <span className="v-pack-choice__text"><b>{product.name}</b><small>{inr(Math.round(product.price * 100))}</small></span>
+              <input type="checkbox" checked={checked} onChange={() => toggle(product.id)} aria-label={`Select ${product.name} for your pack`} />
+            </label>
           );
         })}
       </div>

@@ -14,9 +14,9 @@ export default function ShiprocketButton({ label = 'BUY NOW', onClick, busy = fa
         <div className="sr-d-flex full-width flex-center">
           <span className="sr-checkout-visible2">{busy ? 'OPENING…' : label}</span>
           {' '}
-          <img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/upi_options.svg" alt="Google Pay | Phone Pay | UPI" className="sr-pl-15 sr-checkout-visible" />
+          <img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/upi_options.svg" alt="" className="sr-pl-15 sr-checkout-visible" />
           <div className="loader5" />
-          <img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/right_arrow.svg" className="sr-pl-15 sr-checkout-visible1" alt="right_arrow" />
+          <img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/right_arrow.svg" className="sr-pl-15 sr-checkout-visible1" alt="" />
         </div>
         <div>
           <span className="sr-powered-by"><img src="https://fastrr-boost-ui.pickrr.com/assets/images/boost_button/powered_by.svg" alt="" /></span>

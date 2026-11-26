@@ -250,6 +250,8 @@ export default function SystemHealth() {
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['system-health'] });
+  const attention = (job) => job.last?.status === 'failed' ? 0 : job.late ? 1 : job.last?.status === 'partial' ? 2 : 3;
+  const jobs = [...(data?.jobs || [])].sort((a, b) => attention(a) - attention(b));
 
   return (
     <div className="dashboard-sections obz-rep sh">
@@ -300,14 +302,14 @@ export default function SystemHealth() {
               <h3>Scheduled jobs</h3>
               <span className="hint">India time · click a job for its last 10 runs</span>
             </div>
-            {data.jobs?.length ? (
+            {jobs.length ? (
               <div className="rep-tbl-wrap">
                 <table className="rep-table sh-table">
                   <thead>
                     <tr><th>Job</th><th>Runs</th><th>Last run</th><th>Result</th><th>Next</th><th><span className="sh-sr">Actions</span></th></tr>
                   </thead>
                   <tbody>
-                    {data.jobs.map((j) => (
+                    {jobs.map((j) => (
                       <JobRow
                         key={j.key}
                         job={j}
