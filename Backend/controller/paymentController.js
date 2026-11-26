@@ -568,7 +568,7 @@ module.exports.razorpayWebhook = async (req, res) => {
         const orderCreationService = require('../services/orderCreationService.js');
         if (!rzpPaymentId) return res.status(200).json({ status: 'ignored' });
         if (!rzpOrderId) {
-          await require('../services/prepaidRecoveryStore.js').queueCaptures([payment]);
+          await require('../services/prepaidOrderRecovery.js').handleCapture(payment);
           return res.status(200).json({ status: 'recorded' });
         }
         const paymentRecord = await Payment.findOne({ where: { razorpay_order_id: rzpOrderId } });
@@ -617,8 +617,7 @@ module.exports.razorpayWebhook = async (req, res) => {
               logger.info(`Webhook: order ${order.order_number} marked paid via payment.captured (legacy)`);
             }
           } else {
-            // Keep unmatched captures durable before acknowledging the event.
-            await require('../services/prepaidRecoveryStore.js').queueCaptures([payment]);
+            await require('../services/prepaidOrderRecovery.js').handleCapture(payment);
           }
         }
       }

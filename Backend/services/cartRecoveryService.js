@@ -139,12 +139,9 @@ async function findByToken(token) {
   return AbandonedCart.findOne({ where: { recoverToken: String(token) } });
 }
 
-// Logged-in shoppers' server carts (hourly cron) don't come through the capture
-// endpoint, so give them a capture row too — reusing the shopper's existing row
-// for this brand when there is one — so their WhatsApp link can restore the
-// cart on any device. The row is written as already-messaged so the 5-minute
-// capture cron never sends a second message for it.
-async function prepareServerCartRecovery({ phone, name, brandId, userId, cartItems, summary, value }) {
+// Give a saved cart a recovery link, reusing the checkout capture when one
+// exists. The sender marks the row after WhatsApp accepts the reminder.
+async function prepareServerCartRecovery({ phone, name, brandId, userId, cartItems, summary, value, leftAt }) {
   try {
     const { AbandonedCart } = require('../model/abandonedCartModel.js');
     const { phoneHash } = require('../utils/encryption.js');
@@ -159,13 +156,9 @@ async function prepareServerCartRecovery({ phone, name, brandId, userId, cartIte
         cartSummary: summary ? String(summary).slice(0, 250) : null,
         itemCount: (items || []).reduce((s, i) => s + i.quantity, 0),
         cartValue: Number(value) || 0, userId: userId || null,
-        items, recoverToken: newToken(), status: 'messaged', waSent: true,
+        items, recoverToken: newToken(), status: 'pending', waSent: false,
+        updatedAt: leftAt,
       });
-      try {
-        await require('./whatsappInsightsService.js').ensureSchema();
-        const { sequelize } = require('../config/db.js');
-        await sequelize.query('UPDATE abandoned_carts SET wa_sent_at = :now, updated_at = updated_at WHERE id = :id', { replacements: { id: row.id, now: new Date() } });
-      } catch (_) { /* optional */ }
       return { row, token: row.recoverToken };
     }
     // Keep a storefront-captured snapshot (richer — it carries the store's own
@@ -175,10 +168,6 @@ async function prepareServerCartRecovery({ phone, name, brandId, userId, cartIte
     const hasStoreSnapshot = (row.items || []).some((i) => i && i.line);
     if (items && !hasStoreSnapshot) await row.update({ items }, { silent: true });
     const token = await ensureToken(row);
-    // This is called right before the hourly cron messages the shopper, so
-    // mark the capture row messaged too — otherwise the 5-minute capture cron
-    // would send the same shopper a second cart message.
-    if (row.status === 'pending') await markMessaged(row).catch(() => {});
     return { row, token };
   } catch (e) {
     logger.warn('[cart-recover] server-cart token failed: ' + e.message);

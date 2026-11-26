@@ -121,6 +121,16 @@ async function readRecoveries(ids) {
   return new Map(records.map((row) => [row.payment_id, row]));
 }
 
+async function findPendingCapture({ paymentId, gatewayOrderId }) {
+  if (!paymentId && !gatewayOrderId) return null;
+  await ensureSchema();
+  const captures = await rows(`SELECT payment_id FROM prepaid_recovery
+    WHERE historical = FALSE AND state = 'pending'
+    AND (payment_id = :paymentId OR (:paymentId IS NULL AND gateway_order_id = :gatewayOrderId))
+    LIMIT 2`, { paymentId: paymentId || null, gatewayOrderId: gatewayOrderId || null });
+  return captures.length === 1 ? captures[0].payment_id : null;
+}
+
 async function claimOrder(references, transaction) {
   const refs = [...new Set(references.filter(Boolean))].sort();
   if (!refs.length) return { refs };
@@ -152,4 +162,4 @@ async function bindOrder(refs, orderId, transaction) {
 }
 
 module.exports = { ensureSchema, query, rows, isCapture, validPaymentId, validGatewayOrder, validCheckoutRef,
-  queueCaptures, rememberCheckout, enabledBrands, readCheckouts, readRecoveries, claimOrder, bindOrder };
+  queueCaptures, rememberCheckout, enabledBrands, readCheckouts, readRecoveries, findPendingCapture, claimOrder, bindOrder };

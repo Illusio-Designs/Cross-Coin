@@ -555,7 +555,7 @@ function originalItemPrice(item) {
   const price = Number(original);
   if (original == null || original === '' || !Number.isFinite(price) || price < 0 ||
       Math.abs(price * 100 - Math.round(price * 100)) > 1e-6) {
-    throw Object.assign(new Error('The verified checkout is missing an original item price.'), { status: 422 });
+    throw Object.assign(new Error('The verified checkout is missing an original item price.'), { status: 422, retryable: true });
   }
   return price;
 }
@@ -574,7 +574,9 @@ async function verifyRecoveryPrices(brandId, order, payment) {
 
 async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recovery = false } = {}) {
   const status = String(p?.status || '').toUpperCase();
-  if (status && status !== 'SUCCESS') return { skipped: `status_${status}` };
+  const { razorpayOrderReferences, canImportCapturedCheckout } = require('../utils/shiprocketPaymentRecovery.js');
+  if (recovery && !verifiedRazorpayPayment) throw Object.assign(new Error('A verified Razorpay capture is required.'), { status: 422 });
+  if (!canImportCapturedCheckout(p)) return { skipped: `status_${status}` };
   const platformId = String(p?.platform_order_id || p?.order_id || '').trim();
   const items = p?.cart_data?.items || [];
   if (!platformId || !items.length) { const e = new Error('platform_order_id and cart_data.items are required'); e.status = 400; throw e; }
@@ -584,13 +586,12 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recove
     ['captured', 'success', 'successful', 'paid', 'completed'].includes(String(payment?.status || payment?.payment_status || '').toLowerCase()));
   const pay = (successfulPayments.length === 1 ? successfulPayments[0] : payments[0]) || {};
   const isCod = isCodOrder(p, pay);
-  const paid = !isCod && String(p.payment_status || '').toLowerCase() === 'success';
+  const paid = !isCod && (recovery || ((!status || status === 'SUCCESS') && String(p.payment_status || '').toLowerCase() === 'success'));
   const providerTransactionId = pay.txn_id || pay.pg_transaction_id || null;
   const paymentMethod = [verifiedRazorpayPayment?.method, pay.payment_method, pay.method, p.payment_method]
     .map((value) => typeof value === 'string' ? value.trim().toLowerCase().replace(/\s+/g, '_') : '')
     .find((value) => /^[a-z][a-z0-9_-]{0,29}$/.test(value));
-  const { razorpayOrderReferences } = require('../utils/shiprocketPaymentRecovery.js');
-  const references = paid && (payments.length <= 1 || successfulPayments.length === 1) ? {
+  const references = paid && (recovery || payments.length <= 1 || successfulPayments.length === 1) ? {
     razorpay_payment_id: verifiedRazorpayPayment?.id ?? [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id, p.razorpay_payment_id]
       .find((value) => typeof value === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(value)),
     razorpay_order_id: verifiedRazorpayPayment?.order_id ?? razorpayOrderReferences(pay)[0] ?? razorpayOrderReferences(p)[0],
@@ -626,10 +627,10 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recove
     return { created: false, order_number: already.order_number };
   }
 
-  // A successful SDK return is not proof that a prepaid payment completed.
+  if (status && status !== 'SUCCESS' && !recovery) return { skipped: `status_${status}` };
+  // The SDK return alone does not confirm a prepaid payment.
   if (!isCod && !paid) return { skipped: 'awaiting_payment' };
 
-  if (recovery && !verifiedRazorpayPayment) throw Object.assign(new Error('A verified Razorpay capture is required.'), { status: 422 });
   const packQuote = recovery ? await verifyRecoveryPrices(brandId, p, verifiedRazorpayPayment) : await readOrderPackQuote(brandId, p);
 
   const { generateUniqueOrderNumber } = require('./orderCreationService.js');

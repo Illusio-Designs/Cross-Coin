@@ -34,6 +34,12 @@ test('rejects a different amount or Shiprocket order', () => {
   expect(() => verifyShiprocketRecovery({ ...correct, total_amount_payable: 449.11 }, 'platform-1', capture)).toThrow('amount');
 });
 
+test('uses Razorpay capture as payment proof for an open Shiprocket checkout', () => {
+  const pending = { ...order({ pg_transaction_id: capture.id }), status: 'PENDING', payment_status: 'pending' };
+  expect(() => verifyShiprocketRecovery(pending, 'platform-1', capture)).not.toThrow();
+  expect(() => verifyShiprocketRecovery({ ...pending, status: 'CANCELLED' }, 'platform-1', capture)).toThrow('checkout is closed');
+});
+
 test('rejects COD and ambiguous multiple payment attempts', () => {
   expect(() => verifyShiprocketRecovery(order({ pg_transaction_id: capture.id, payment_method: 'COD' }), 'platform-1', capture)).toThrow('does not match');
   const ambiguous = order({ pg_transaction_id: capture.id, status: 'captured' });

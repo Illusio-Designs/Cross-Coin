@@ -44,7 +44,7 @@ const DEFAULTS = {
   whatsapp: ['7600046416'],
   hoursFrom: 0, // alert hours, India time; 0–24 = all day
   hoursTo: 24,
-  dailySummary: true,
+  dailySummary: false,
   remindMinutes: 60,
   rules: {
     ordersStoppedHours: 2,
@@ -739,17 +739,19 @@ function istDayRange(daysAgo = 1) {
   return { from: new Date(startUtc), to: new Date(startUtc + 24 * HOUR_MS) };
 }
 
-async function dailySummary() {
+async function pruneHistory() {
   await ensureSchema();
-  await flush();
-  const s = await getSettings();
-  // Retention runs here too, once a day.
   const cutoff = new Date(Date.now() - KEEP_DAYS * 24 * HOUR_MS);
   await exec('DELETE FROM server_stats WHERE bucket < :cutoff', { cutoff });
   await exec('DELETE FROM server_log_events WHERE hour < :cutoff', { cutoff });
   await exec('DELETE FROM server_alerts WHERE resolved_at IS NOT NULL AND resolved_at < :cutoff', { cutoff });
   await exec('DELETE FROM server_memory WHERE at < :c', { c: new Date(Date.now() - 14 * 24 * HOUR_MS) });
+}
+
+async function dailySummary() {
+  const s = await getSettings();
   if (!s.enabled || !s.dailySummary) return { summary: 'Daily summary is turned off', status: 'skipped' };
+  await flush();
 
   const { from, to } = istDayRange(1);
   const [t] = await q(`SELECT COALESCE(SUM(requests),0) requests, COALESCE(SUM(fail5xx),0) fail5xx, COALESCE(SUM(rl429),0) rl429, COALESCE(SUM(cors),0) cors,
@@ -966,7 +968,7 @@ async function sendTest() {
 }
 
 module.exports = {
-  DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, start,
+  DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, pruneHistory, start,
   getSettings, saveSettings, overview, sendTest,
   _internal: { thisApp, memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
 };

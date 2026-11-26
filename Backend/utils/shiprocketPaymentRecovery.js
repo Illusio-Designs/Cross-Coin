@@ -3,15 +3,18 @@ function razorpayOrderReferences(entry) {
     .filter((id) => typeof id === 'string' && /^order_[a-zA-Z0-9]{6,64}$/.test(id));
 }
 
+function canImportCapturedCheckout(order) {
+  return ['', 'SUCCESS', 'PENDING', 'CREATED', 'INITIATED', 'PROCESSING']
+    .includes(String(order.status || '').trim().toUpperCase());
+}
+
 function verifyShiprocketRecovery(order, orderId, payment) {
   const fail = (message) => { throw Object.assign(new Error(message), { status: 409 }); };
   if (String(order.platform_order_id || order.order_id || '') !== orderId) {
     fail('Shiprocket returned a different order reference.');
   }
-  if (String(order.payment_status || '').toLowerCase() !== 'success' ||
-      String(order.payment_type || '').toLowerCase() === 'cod') {
-    fail('Shiprocket has not confirmed a prepaid payment for this order.');
-  }
+  if (!canImportCapturedCheckout(order)) fail('The original Shiprocket checkout is closed or unavailable for import.');
+  if (String(order.payment_type || '').toLowerCase() === 'cod') fail('The referenced checkout is cash on delivery.');
 
   const payments = Array.isArray(order.payments) ? order.payments.filter(Boolean) : [];
   const captured = payments.filter((entry) =>
@@ -34,4 +37,4 @@ function verifyShiprocketRecovery(order, orderId, payment) {
   }
 }
 
-module.exports = { razorpayOrderReferences, verifyShiprocketRecovery };
+module.exports = { razorpayOrderReferences, verifyShiprocketRecovery, canImportCapturedCheckout };

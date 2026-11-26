@@ -85,6 +85,7 @@ async function optedOut(phone) {
 
 async function notify(event) {
   const whatsappService = require('./whatsappService.js');
+  if (!await whatsappService.isAutomationEnabled(event.type)) return 0;
   const people = await sequelize.query(AUDIENCE_SQL, {
     replacements: { pid: event.product.id, type: event.type }, type: QueryTypes.SELECT,
   });
@@ -94,11 +95,10 @@ async function notify(event) {
     if (await optedOut(u.phone)) continue;
     try {
       const data = { customerName: u.username, productName: event.product.name, productSlug: event.product.slug };
-      if (event.type === 'back_in_stock') {
-        await whatsappService.sendBackInStock(u.phone, data, brandId);
-      } else {
-        await whatsappService.sendPriceDrop(u.phone, { ...data, newPrice: event.newPrice, oldPrice: event.oldPrice }, brandId);
-      }
+      const result = event.type === 'back_in_stock'
+        ? await whatsappService.sendBackInStock(u.phone, data, brandId)
+        : await whatsappService.sendPriceDrop(u.phone, { ...data, newPrice: event.newPrice, oldPrice: event.oldPrice }, brandId);
+      if (result?.skipped) continue;
       await sequelize.query(
         `INSERT INTO product_alert_log (user_id, product_id, type) VALUES (?, ?, ?)`,
         { replacements: [u.id, event.product.id, event.type] }

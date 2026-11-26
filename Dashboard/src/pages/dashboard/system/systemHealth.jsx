@@ -138,7 +138,7 @@ function JobRow({ job, open, onToggle, onRan }) {
       const r = await systemHealthService.runJob(job.key);
       if (r.finished) {
         setPhase('idle');
-        setMsg({ tone: STATUS[r.run?.status]?.tone || 'ok', text: `Done: ${r.run?.summary || 'finished'}` });
+        setMsg({ tone: STATUS[r.run?.status]?.tone || 'ok', text: r.run?.summary || 'Run finished' });
       } else {
         setMsg({ tone: 'muted', text: r.message || 'Still running…', waiting: true });
       }
@@ -169,6 +169,7 @@ function JobRow({ job, open, onToggle, onRan }) {
         </td>
         <td className="sh-when">
           {job.schedule}
+          {job.requirements && <div className="sh-small">{job.requirements}</div>}
           {job.clock_note && <div className="sh-small">{job.clock_note}</div>}
         </td>
         <td className="sh-when">

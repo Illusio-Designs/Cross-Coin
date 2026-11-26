@@ -1,4 +1,7 @@
 jest.mock('../../services/prepaidRecoveryStore.js', () => ({ rememberCheckout: jest.fn(), validPaymentId: (id) => /^pay_/.test(id || '') }));
+jest.mock('../../services/prepaidOrderRecovery.js', () => ({
+  ...jest.requireActual('../../services/prepaidOrderRecovery.js'), resumeCaptureForCheckout: jest.fn(),
+}));
 jest.mock('../../model/associations.js', () => ({ Product: {}, Category: {}, Brand: {} }));
 jest.mock('../../services/settingsHelper.js', () => ({}));
 jest.mock('../../config/logging.js', () => ({ logger: { error: jest.fn(), warn: jest.fn() } }));
@@ -53,4 +56,17 @@ test('an authenticated callback saves the checkout reference before a provider o
   expect(rememberCheckout).toHaveBeenCalledWith(1, 'provider-1', { paymentId: null, gatewayOrderId: null });
   expect(rememberCheckout.mock.invocationCallOrder[0]).toBeLessThan(svc.fetchCheckoutOrder.mock.invocationCallOrder[0]);
   expect(response.status).toHaveBeenCalledWith(401);
+});
+
+test('a checkout callback supplies original details to an earlier Razorpay capture', async () => {
+  const { resumeCaptureForCheckout } = require('../../services/prepaidOrderRecovery.js');
+  const details = { platform_order_id: 'provider-1', payment_status: 'pending', status: 'PENDING', pg_order_id: 'order_fixture123' };
+  svc.fetchCheckoutOrder.mockResolvedValue({ result: details });
+  resumeCaptureForCheckout.mockResolvedValueOnce({ state: 'recovered', order: { order_number: 'ORDER-1', brand_id: 1 } });
+  const response = res();
+  await confirmReturn(req(), response);
+  expect(resumeCaptureForCheckout).toHaveBeenCalledWith(1, 'provider-1', details,
+    { paymentId: null, gatewayOrderId: 'order_fixture123' });
+  expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, order_number: 'ORDER-1' }));
+  expect(svc.ingestCheckoutOrder).not.toHaveBeenCalled();
 });

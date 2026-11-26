@@ -39,7 +39,8 @@ async function providerAuth(req, res, next) {
   const headerNames = Object.keys(req.headers).filter((h) => h !== 'cookie' && h !== 'authorization');
   const path = (req.originalUrl || '').split('?')[0];
   const reject = (code, reason, message) => {
-    svc.noteProviderCall(req.brandId, { ok: false, method: req.method, path, status: code, reason, headers: headerNames });
+    svc.noteProviderCall(req.brandId, { abandoned: path.endsWith('/abandoned-webhook'), ok: false,
+      method: req.method, path, status: code, reason, headers: headerNames });
     console.warn(`[custom-checkout] rejected ${req.method} ${path} for ${req.brand?.slug || 'unknown store'}: ${reason}`);
     return res.status(code).json({ success: false, message });
   };

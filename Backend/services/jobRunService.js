@@ -160,7 +160,7 @@ async function recordRun(row) {
  * opts.rethrow — re-throw a thrown error after recording it (Bull jobs that
  * rely on Bull's retry). opts.triggeredBy — staff user id for "Run now".
  */
-async function executeLocked(jobKey, fn, lock, { rethrow = false, triggeredBy = null } = {}) {
+async function executeLocked(jobKey, fn, lock, { rethrow = false, triggeredBy = null, reportFailure = true } = {}) {
   const started = new Date(lock.startedAt);
   let outcome; let thrown = null;
   try {
@@ -168,15 +168,14 @@ async function executeLocked(jobKey, fn, lock, { rethrow = false, triggeredBy = 
   } catch (e) {
     thrown = e;
     outcome = { status: 'failed', summary: `Stopped with an error: ${String(e.message || e).slice(0, 180)}`, error: e.stack || String(e) };
-  } finally {
-    await releaseLock(lock);
   }
   const finished = new Date();
   const row = { job_key: jobKey, started_at: started, finished_at: finished, duration_ms: finished - started, triggered_by: triggeredBy, ...outcome };
+  try { await recordRun(row); } catch (e) { logger.warn(`[jobs] could not record run of ${jobKey}: ${e.message}`); }
+  finally { await releaseLock(lock); }
   const tag = outcome.status === 'failed' ? '❌' : outcome.status === 'partial' ? '⚠️' : '✅';
   (outcome.status === 'failed' ? console.error : console.log)(`${tag} [CRON] ${jobKey}: ${outcome.summary || outcome.status}${outcome.status === 'failed' && outcome.error ? ` — ${String(outcome.error).split('\n')[0]}` : ''}`);
-  try { await recordRun(row); } catch (e) { logger.warn(`[jobs] could not record run of ${jobKey}: ${e.message}`); }
-  if (outcome.status === 'failed') {
+  if (outcome.status === 'failed' && reportFailure) {
     // Same Telegram alert path as other server errors (deduped there).
     try {
       require('./errorReporter.js').report('Scheduled job failed', new Error(`${jobKey}: ${outcome.summary || ''}`), { job: jobKey }).catch(() => {});
@@ -192,13 +191,13 @@ async function executeLocked(jobKey, fn, lock, { rethrow = false, triggeredBy = 
  * another process) this run is dropped and returns { busy: true } — nothing
  * is recorded, the run in progress records its own result.
  */
-async function runLogged(jobKey, fn, { lockMinutes = 30, rethrow = false, triggeredBy = null } = {}) {
+async function runLogged(jobKey, fn, { lockMinutes = 30, rethrow = false, triggeredBy = null, reportFailure = true } = {}) {
   const lock = await acquireLock(jobKey, lockMinutes * 60);
   if (!lock) {
     console.log(`⏭️  [CRON] ${jobKey}: previous run still going — this run skipped`);
     return { busy: true };
   }
-  return executeLocked(jobKey, fn, lock, { rethrow, triggeredBy });
+  return executeLocked(jobKey, fn, lock, { rethrow, triggeredBy, reportFailure });
 }
 
 // ── Reading ─────────────────────────────────────────────────────────────────
@@ -231,6 +230,12 @@ async function ranSince(jobKey, since) {
   const rows = await q(`SELECT id FROM job_runs WHERE job_key = :k AND started_at >= :since AND status IN ('ok','partial') LIMIT 1`,
     { k: jobKey, since });
   return rows.length > 0;
+}
+
+function istDayStart(now = Date.now()) {
+  const offset = 330 * 60000;
+  const day = 24 * 3600 * 1000;
+  return new Date(Math.floor((now + offset) / day) * day - offset);
 }
 
 // ── Next run (tiny cron parser) ─────────────────────────────────────────────
@@ -300,5 +305,5 @@ function nextRunAt(expr, tz, from = new Date()) {
 
 module.exports = {
   ensureSchema, runLogged, executeLocked, acquireLock, releaseLock, runningJobs,
-  recentRuns, ranSince, nextRunAt, parseCron, tzOffsetMinutes, KEEP_DAYS,
+  recentRuns, ranSince, istDayStart, nextRunAt, parseCron, tzOffsetMinutes, KEEP_DAYS,
 };

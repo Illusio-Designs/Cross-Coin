@@ -268,9 +268,20 @@ async function verifyAndIngest(brandId, claimedId, expectedPayment, options) {
   if (String(providerOrder.platform_order_id || providerOrder.order_id || '').trim() === claimedId &&
       !svc.isCodOrder(providerOrder, providerOrder.payments?.[0])) {
     const { rememberCheckout } = require('../services/prepaidRecoveryStore.js');
-    const { referencesOf } = require('../services/prepaidOrderRecovery.js');
+    const { referencesOf, resumeCaptureForCheckout } = require('../services/prepaidOrderRecovery.js');
     const refs = referencesOf(providerOrder);
-    await rememberCheckout(brandId, claimedId, refs, !!(refs.paymentId || refs.gatewayOrderId));
+    const linked = !!(refs.paymentId || refs.gatewayOrderId);
+    await rememberCheckout(brandId, claimedId, refs, linked);
+    if (linked && !expectedPayment && !options?.prepaidOnly) {
+      const importable = require('../utils/shiprocketPaymentRecovery.js').canImportCapturedCheckout(providerOrder);
+      if (importable) {
+        const resumed = await resumeCaptureForCheckout(brandId, claimedId, providerOrder, refs);
+        if (resumed?.order && Number(resumed.order.brand_id) === Number(brandId)) {
+          return { created: resumed.state === 'recovered', order_number: resumed.order.order_number };
+        }
+        if (resumed) return { skipped: 'awaiting_payment' };
+      }
+    }
   }
   return ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPayment, options);
 }
@@ -282,7 +293,7 @@ async function ingestVerifiedOrder(brandId, claimedId, providerOrder, expectedPa
     const created = Date.parse(providerOrder.created_at || providerOrder.createdAt || providerOrder.order_date || '');
     if (Number.isFinite(created) && created < since) return { skipped: 'outside_recovery_window' };
     const payments = Array.isArray(providerOrder.payments) ? providerOrder.payments.filter(Boolean) : [];
-    if (String(providerOrder.payment_status || '').toLowerCase() !== 'success' ||
+    if ((!expectedPayment && String(providerOrder.payment_status || '').toLowerCase() !== 'success') ||
         svc.isCodOrder(providerOrder) || payments.some((payment) => svc.isCodOrder(providerOrder, payment))) {
       return { skipped: 'not_confirmed_prepaid' };
     }
@@ -353,16 +364,16 @@ exports.orderWebhook = async (req, res) => {
 // paying; we add/refresh their row in abandoned_carts so our WhatsApp cart
 // recovery (and the admin Abandoned carts list) picks it up. Shiprocket's
 // payload isn't documented, so fields are read from the usual names.
-const pick = (obj, re, depth = 0) => {
+const pick = (obj, re, depth = 0, accepts = (value) => String(value).trim()) => {
   if (!obj || typeof obj !== 'object' || depth > 6) return undefined;
-  for (const [k, v] of Object.entries(obj)) if (re.test(k) && v != null && typeof v !== 'object' && String(v).trim()) return v;
-  for (const v of Object.values(obj)) { const r = pick(v, re, depth + 1); if (r !== undefined) return r; }
+  for (const [k, v] of Object.entries(obj)) if (re.test(k) && v != null && typeof v !== 'object' && accepts(v)) return v;
+  for (const v of Object.values(obj)) { const r = pick(v, re, depth + 1, accepts); if (r !== undefined) return r; }
   return undefined;
 };
 const findItems = (obj, depth = 0) => {
   if (!obj || typeof obj !== 'object' || depth > 6) return null;
   for (const [k, v] of Object.entries(obj)) {
-    if (/^(items|line_items|cart_items|products)$/i.test(k) && Array.isArray(v) && v.length) return v;
+    if (/^(items|line_?items|cart_?items|products)$/i.test(k) && Array.isArray(v) && v.length) return v;
   }
   for (const v of Object.values(obj)) { const r = findItems(v, depth + 1); if (r) return r; }
   return null;
@@ -373,60 +384,101 @@ const keyShape = (obj, depth = 0) => {
   return Object.fromEntries(Object.entries(obj).slice(0, 60).map(([k, v]) => [k, keyShape(v, depth + 1)]));
 };
 
+function cartPhone(value) {
+  const phone = String(value).trim();
+  if (!/^[\d+()\s-]+$/.test(phone)) return '';
+  const digits = phone.replace(/\D/g, '');
+  return /^(?:0091|91|0)?\d{10}$/.test(digits) ? digits.slice(-10) : '';
+}
+
+async function abandonedCartLines(raw, brandId) {
+  const { Op } = require('sequelize');
+  const { ProductVariation } = require('../model/associations.js');
+  const candidates = raw.slice(0, 30).map((item) => {
+    const ref = String(item?.variant_id ?? item?.variantId ?? item?.variation_id ?? item?.variant?.id ?? item?.sku_id ?? item?.id ?? '');
+    const sku = String(item?.sku ?? item?.variant?.sku ?? '').trim().slice(0, 255);
+    const quantity = Number(item?.quantity ?? item?.qty ?? 1);
+    return { id: /^[1-9]\d{0,9}$/.test(ref) ? Number(ref) : null, sku, quantity, item };
+  }).filter(({ id, sku, quantity }) => (id || sku) && Number.isSafeInteger(quantity) && quantity > 0 && quantity <= 999);
+  if (!candidates.length) return [];
+  const ids = [...new Set(candidates.map(({ id }) => id).filter(Boolean))];
+  const skus = [...new Set(candidates.map(({ sku }) => sku).filter(Boolean))];
+  const variants = await ProductVariation.findAll({
+    where: { [Op.or]: [...(ids.length ? [{ id: ids }] : []), ...(skus.length ? [{ sku: skus }] : [])] },
+    attributes: ['id', 'productId', 'price', 'sku'],
+  });
+  const productIds = [...new Set(variants.map(({ productId }) => productId))];
+  if (!productIds.length) return [];
+  const products = await Product.findAll({
+    where: { id: productIds, status: 'active' },
+    include: [{ model: Brand, as: 'Brands', attributes: [], through: { attributes: [] }, required: true, where: { id: brandId } }],
+    attributes: ['id', 'name'],
+  });
+  const names = new Map(products.map(({ id, name }) => [Number(id), name]));
+  const scoped = variants.filter(({ productId }) => names.has(Number(productId)));
+  return candidates.flatMap(({ id, sku, quantity, item }) => {
+    const skuMatches = sku ? scoped.filter((v) => String(v.sku || '').toLowerCase() === sku.toLowerCase()) : [];
+    const variant = scoped.find((v) => Number(v.id) === id && (!sku || skuMatches.includes(v))) ||
+      (skuMatches.length === 1 ? skuMatches[0] : null);
+    if (!variant) return [];
+    const providerPrice = Number(item?.catalog_data?.price ?? item?.price ?? variant.price);
+    const price = Number.isFinite(providerPrice) && providerPrice >= 0 ? providerPrice : Number(variant.price) || 0;
+    return [{ productId: variant.productId, variationId: variant.id, name: names.get(Number(variant.productId)), quantity, price }];
+  });
+}
+
 exports.abandonedWebhook = async (req, res) => {
   const brandId = req.brandId || 1;
   const body = req.body || {};
   // Field names only (no values / personal data) for the staff test page.
   const note = (ok, reason) => svc.noteProviderCall(brandId, { push: false, abandoned: true, ok, method: 'POST', path: 'abandoned-webhook', reason, payloadKeys: keyShape(body) });
   try {
-    if (String(pick(body, /^velmique_pack_preview$/i)) === '1') return res.json({ ok: true, skipped: 'pack_preview' });
-    const digits = String(pick(body, /phone|mobile|contact/i) || '').replace(/\D/g, '').slice(-10);
+    const checkout = body.data ?? body.payload ?? body;
+    const attrs = svc.parseAttrs(checkout.cart_data?.custom_attributes ?? checkout.custom_attributes);
+    if (String(attrs[PACK_PREVIEW_ATTRIBUTE] ?? pick(body, /^velmique_pack_preview$/i)) === '1') {
+      return res.json({ ok: true, skipped: 'pack_preview' });
+    }
+    const digits = cartPhone(pick(body, /^(?:customer_?|shipping_?|billing_?)?(?:phone|mobile|contact)(?:_?(?:number|no))?$/i, 0, cartPhone) ?? '');
     if (digits.length !== 10) { note(false, 'no 10-digit phone in payload'); return res.json({ ok: true, skipped: 'no phone' }); }
     const first = pick(body, /^(first_?name|fname)$/i) || '';
     const last = pick(body, /^(last_?name|lname)$/i) || '';
     const name = String(`${first} ${last}`.trim() || pick(body, /^(name|full_?name|customer_?name)$/i) || '').slice(0, 120) || null;
 
-    const { ProductVariation } = require('../model/associations.js');
-    const raw = findItems(body) || [];
-    const lines = [];
-    for (const it of raw.slice(0, 30)) {
-      const vid = parseInt(it?.variant_id ?? it?.variantId ?? it?.sku_id ?? it?.id, 10);
-      if (!vid) continue;
-      const v = await ProductVariation.findByPk(vid, { attributes: ['id', 'productId', 'price'] });
-      if (!v) continue;
-      lines.push({ productId: v.productId, variationId: v.id, quantity: Math.max(1, parseInt(it.quantity ?? it.qty, 10) || 1), price: Number(v.price) || 0 });
-    }
-    const productIds = [...new Set(lines.map((l) => l.productId))];
-    const prods = productIds.length ? await Product.findAll({ where: { id: productIds }, attributes: ['id', 'name'] }) : [];
-    const names = new Map(prods.map((p) => [p.id, p.name]));
+    const raw = findItems(checkout.cart_data) || findItems(checkout) || [];
+    const lines = await abandonedCartLines(raw, brandId);
     const itemCount = lines.reduce((a, l) => a + l.quantity, 0);
-    const claimed = Number(pick(body, /^(total_amount_payable|total_price|cart_value|cart_total|total_amount|total|sub_?total)$/i));
-    const cartValue = Number.isFinite(claimed) && claimed > 0 ? claimed : lines.reduce((a, l) => a + l.price * l.quantity, 0);
-    const cartSummary = lines.map((l) => `${names.get(l.productId) || 'Item'} ×${l.quantity}`).join(', ').slice(0, 250) || null;
+    const claimed = Number(pick(checkout, /^total_amount_payable$/i) ?? pick(checkout, /^(total_price|cart_value|cart_total|total_amount|total|sub_?total)$/i));
+    const hasTotal = Number.isFinite(claimed) && claimed >= 0 && claimed <= 99999999.99;
+    const lineTotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+    const cartValue = hasTotal ? claimed : Math.min(99999999.99, Math.round(lineTotal * 100) / 100);
+    const cartSummary = lines.map((l) => `${l.name || 'Item'} ×${l.quantity}`).join(', ').slice(0, 250) || null;
 
     const { AbandonedCart } = require('../model/abandonedCartModel.js');
     const { phoneHash } = require('../utils/encryption.js');
     const recovery = require('../services/cartRecoveryService.js');
-    const items = recovery.sanitizeItems(lines.map(({ productId, variationId, quantity }) => ({ productId, variationId, quantity })));
+    const hash = phoneHash(digits);
+    if (!hash) throw new Error('Abandoned cart encryption key is unavailable');
+    const items = lines.length === raw.length ? recovery.sanitizeItems(lines) : null;
     const [row, created] = await AbandonedCart.findOrCreate({
-      where: { phoneHashValue: phoneHash(digits), brandId },
+      where: { phoneHashValue: hash, brandId },
       defaults: { phone: digits, customerName: name, cartSummary, itemCount, cartValue, status: 'pending', waSent: false, items, recoverToken: recovery.newToken() },
     });
     if (!created) {
       if (row.status === 'recovered' && Date.now() - new Date(row.updatedAt).getTime() < 10 * 60 * 1000) {
         note(true, 'order already placed'); return res.json({ ok: true, skipped: 'recovered' });
       }
-      const rearm = await recovery.canRearm(row);
-      await row.update({
-        phone: digits,
-        customerName: name || row.customerName,
-        cartSummary: cartSummary || row.cartSummary,
-        itemCount: itemCount || row.itemCount,
-        cartValue: cartValue || row.cartValue,
+      const rearm = (row.status !== 'pending' || row.waSent) && await recovery.canRearm(row);
+      const updates = {
+        ...(!row.phone ? { phone: digits } : {}),
+        ...(name && name !== row.customerName ? { customerName: name } : {}),
+        ...(items && cartSummary && cartSummary !== row.cartSummary ? { cartSummary } : {}),
+        ...(items && itemCount !== Number(row.itemCount) ? { itemCount } : {}),
+        ...((hasTotal || items) && cartValue !== Number(row.cartValue) ? { cartValue } : {}),
         ...(rearm ? { status: 'pending', waSent: false } : {}),
-        ...(items ? { items } : {}),
+        ...(items && JSON.stringify(items) !== JSON.stringify(row.items) ? { items } : {}),
         ...(recovery.isToken(row.recoverToken) ? {} : { recoverToken: recovery.newToken() }),
-      });
+      };
+      if (Object.keys(updates).length) await row.update(updates);
     }
     note(true, `${created ? 'added' : 'updated'} abandoned cart (${itemCount} item${itemCount === 1 ? '' : 's'})`);
 
@@ -443,19 +495,20 @@ exports.abandonedWebhook = async (req, res) => {
           brand_id: brandId, phone: digits, first_name: first || null, last_name: last || null, country: 'in',
           final_amount: cartValue, currency: 'INR',
           items: lines.map((l) => ({ product_id: l.productId, quantity: l.quantity })),
-          fbp: pick(body, /^fbp$/i) || null, fbc: pick(body, /^fbc$/i) || null,
+          fbp: attrs.fbp || pick(body, /^fbp$/i) || null, fbc: attrs.fbc || pick(body, /^fbc$/i) || null,
+          marketing_consent: attrs.marketing_consent,
           visitor_id: pick(body, /^visitor_id$/i) || null,
           ip_address: pick(body, /^client_ip$/i) || null, user_agent: ua,
         }, {
-          event_id: `CheckoutAbandoned_${phoneHash(digits).slice(0, 16)}_${day}`,
+          event_id: `CheckoutAbandoned_${hash.slice(0, 16)}_${day}`,
           action_source: ua ? 'website' : 'system_generated',
         });
       } catch (e) { logger.warn('[custom-checkout] CheckoutAbandoned to Meta failed: ' + e.message); }
     });
     return res.json({ ok: true, saved: true });
   } catch (err) {
-    logger.error('[custom-checkout] abandoned webhook failed: ' + err.message);
-    note(false, err.message);
+    logger.error('[custom-checkout] abandoned webhook failed: ' + err.name);
+    note(false, 'Could not save the abandoned cart');
     return res.status(500).json({ ok: false, message: 'Could not save the abandoned cart' });
   }
 };

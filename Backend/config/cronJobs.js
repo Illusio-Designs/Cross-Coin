@@ -179,6 +179,7 @@ async function paymentReconciliation() {
 async function dataRetention() {
   const { runRetention } = require('../services/dataRetentionService.js');
   const s = await runRetention();
+  await require('../services/serverWatchService.js').pruneHistory();
   const LABEL = { funnel_events: 'visit events', utm_tracking: 'ad-click records', lead_captures: 'leads', contact_messages: 'contact messages', guest_users: 'guest accounts' };
   const removed = Object.entries(s).filter(([, v]) => typeof v === 'number' && v > 0).map(([k, v]) => `${v} ${LABEL[k] || k}`);
   const errored = Object.entries(s).filter(([, v]) => v === 'error').map(([k]) => LABEL[k] || k);
@@ -263,7 +264,7 @@ async function abandonedCart() {
       const recovery = require('../services/cartRecoveryService.js');
       const capture = await recovery.prepareServerCartRecovery({
         phone: user.phone, name: user.username, brandId, userId: user.id,
-        cartItems: cart.CartItems, summary: productName + extra, value: cartTotal,
+        cartItems: cart.CartItems, summary: productName + extra, value: cartTotal, leftAt: cart.updatedAt,
       });
       const r = await whatsappService.sendAbandonedCart(user.phone, {
         customerName: user.username,
@@ -352,6 +353,31 @@ async function abandonedCheckout() {
   };
 }
 
+async function cartRecovery() {
+  // Process the checkout capture first. Its send marker also suppresses the
+  // reminder from a saved cart for the same shopper and store.
+  const runs = [];
+  try {
+    const capture = await abandonedCheckout();
+    runs.push(typeof capture === 'string' ? { summary: capture, status: 'ok' } : capture);
+  } catch (error) {
+    runs.push({ status: 'failed', summary: 'Checkout drop-offs could not be checked', error: error.message });
+  }
+  const { ranSince, runLogged } = require('../services/jobRunService.js');
+  const savedCartKey = 'abandoned-cart';
+  // Reuse the old run history and lock so deploys preserve the hourly cadence.
+  if (!await ranSince(savedCartKey, new Date(Date.now() - 60 * 60 * 1000))) {
+    const saved = await runLogged(savedCartKey, abandonedCart, { reportFailure: false });
+    if (!saved.busy) runs.push({ ...saved, summary: `Saved carts: ${saved.summary}` });
+  }
+  const problems = runs.filter(({ status }) => status === 'failed' || status === 'partial');
+  return {
+    status: runs.every(({ status }) => status === 'failed') ? 'failed' : problems.length ? 'partial' : 'ok',
+    summary: runs.map(({ summary }) => summary).join(' · '),
+    error: problems.map(({ error, summary }) => error || summary).join('\n') || null,
+  };
+}
+
 // ── Review Request ────────────────────────────────────────────────────────
 // Asks for a review 3 days after delivery — registered AND guest orders.
 // "Delivered" time = the latest 'delivered' row in order_status_history
@@ -430,8 +456,9 @@ async function reviewRequest() {
         productName: firstProduct.name,
         productSlug: firstProduct.slug,
       }, order.brand_id || 1);
+      if (r?.skipped) { switchedOff++; continue; }
       await reviewDb.query('UPDATE orders SET review_requested_at = ? WHERE id = ?', { replacements: [new Date(), order.id] });
-      if (r && r.skipped) switchedOff++; else sent++;
+      sent++;
     } catch (e) { failed++; console.warn('Review request WA failed:', e.message); }
   }
   return {
@@ -468,16 +495,16 @@ async function winback() {
   );
   if (!rows.length) return 'No customers due for a win-back message';
 
+  const code = await require('../services/cartRecoveryService.js').getWinbackCode();
   const couponByBrand = new Map();
   const blockedBrands = new Map(); // brandId -> coupon code that isn't active
   const couponFor = async (brandId) => {
     if (couponByBrand.has(brandId)) return couponByBrand.get(brandId);
-    const code = await require('../services/cartRecoveryService.js').getWinbackCode();
     // Any live coupon with this code that works on this store (every-store
     // coupons included) — the same rule checkout applies.
     const { status } = await require('../services/couponAdminService.js').couponForStore(code, brandId);
     const usable = status === 'live' ? code : null;
-    if (!usable) { console.warn(`⚠️ [CRON] Win-back: brand ${brandId} has no active coupon "${code}" — skipping its customers`); blockedBrands.set(brandId, code); }
+    if (!usable) blockedBrands.set(brandId, code);
     couponByBrand.set(brandId, usable);
     return usable;
   };
@@ -510,8 +537,7 @@ async function winback() {
   const summary = [countLine(`${sent} sent of ${rows.length} due`, [
     [noPhone, 'skipped (no number)'], [optedOut, 'skipped (opted out)'], [switchedOff, 'skipped (message switched off)'], [failed, 'failed'],
   ]), blockedNote].filter(Boolean).join(' · ');
-  let status = statusFor(sent, failed);
-  if (noCoupon) status = sent > 0 || rows.length > noCoupon ? 'partial' : 'failed';
+  const status = noCoupon === rows.length ? 'skipped' : statusFor(sent, failed);
   return { status, summary };
 }
 
@@ -567,8 +593,9 @@ async function upsell() {
         suggestedProduct: suggestedProduct.name,
         suggestedSlug: suggestedProduct.slug,
       }, order.brand_id || 1);
+      if (r?.skipped) { switchedOff++; continue; }
       await upsellDb.query('UPDATE orders SET upsell_sent_at = ? WHERE id = ?', { replacements: [new Date(), order.id] });
-      if (r && r.skipped) switchedOff++; else sent++;
+      sent++;
     } catch (e) { failed++; console.warn('Upsell WA failed:', e.message); }
   }
   return {
@@ -593,7 +620,8 @@ async function waBroadcasts() {
 // picked up by the first run of the morning, so nobody is messaged while
 // asleep. See services/productAlertService.js.
 async function productAlerts() {
-  const { runProductAlerts } = require('../services/productAlertService.js');
+  const { runProductAlerts, inSendingHours } = require('../services/productAlertService.js');
+  if (!inSendingHours()) return { status: 'skipped', summary: 'Product alerts send between 9 am and 9 pm IST' };
   const r = await runProductAlerts();
   if (!r.events) return 'No stock or price changes';
   return `${plural(r.sent, 'alert', 'alerts')} sent · ${plural(r.events, 'change', 'changes')} found`;
@@ -675,34 +703,41 @@ async function staleCleanup() {
 
 // ── Registry ───────────────────────────────────────────────────────────────
 // messagesCustomers: "Run now" warns that it sends WhatsApp messages.
-// oncePerDay: "Run now" is refused once it already ran today (IST) — a second
-// run the same day would message the same customers twice.
+// oncePerDay: scheduled and manual runs share the same India-date limit.
 const JOBS = [
   { key: 'shipping-status-refresh', name: 'Courier status refresh', schedule: '6 am & 6 pm',
     cron: '0 6,18 * * *', tz: IST, mode: 'queue', queue: 'retry', lockMinutes: 60, run: shippingStatusRefresh },
   { key: 'pickup-batch', name: 'Courier booking batch', schedule: '11 am, retry 3 pm',
+    requirements: 'Pickup hold due and no waybill assigned',
     cron: '0 11,15 * * *', tz: IST, mode: 'inline', run: releaseHeldPickups },
-  { key: 'abandoned-cart', name: 'Abandoned cart messages', schedule: 'Every hour at :15', messagesCustomers: true,
-    cron: '15 * * * *', tz: null, mode: 'queue', queue: 'once', run: abandonedCart },
-  { key: 'abandoned-checkout', name: 'Checkout drop-off messages', schedule: 'Every 5 min', messagesCustomers: true,
-    cron: '*/5 * * * *', tz: null, mode: 'queue', queue: 'once', run: abandonedCheckout },
+  { key: 'abandoned-checkout', name: 'Abandoned cart and checkout messages', schedule: 'Checkout every 5 min · saved carts hourly', messagesCustomers: true,
+    requirements: 'Abandoned cart automation enabled and Cart Rules met', automations: ['abandoned_cart'],
+    cron: '*/5 * * * *', tz: IST, mode: 'queue', queue: 'once', run: cartRecovery },
   { key: 'payment-reconciliation', name: 'Payment reconciliation', schedule: 'Daily 3 am',
     cron: '0 3 * * *', tz: IST, mode: 'inline', run: paymentReconciliation },
   { key: 'prepaid-recovery', name: 'Missing prepaid order recovery', schedule: 'Every minute', messagesCustomers: true,
+    requirements: 'Verified Razorpay capture and matching Shiprocket checkout',
     cron: '* * * * *', tz: IST, mode: 'inline', lockMinutes: 10, run: () => require('../services/prepaidOrderRecovery.js').run() },
   { key: 'stale-cleanup', name: 'Unpaid online order cleanup', schedule: 'Every 30 min (:10 and :40)',
+    requirements: 'Online payment pending or failed for an order older than 30 minutes',
     cron: '10,40 * * * *', tz: null, mode: 'queue', queue: 'once', run: staleCleanup },
   { key: 'product-alerts', name: 'Back in stock / price drop', schedule: 'Every 30 min, 9 am–9 pm', messagesCustomers: true,
+    requirements: 'Back in stock or price drop automation enabled', automations: ['back_in_stock', 'price_drop'],
     cron: '20,50 9-20 * * *', tz: IST, mode: 'queue', queue: 'once', run: productAlerts },
-  { key: 'wa-broadcasts', name: 'WhatsApp broadcasts', schedule: 'Every 5 min', messagesCustomers: true,
-    cron: '*/5 * * * *', tz: IST, mode: 'queue', queue: 'once', run: waBroadcasts },
+  { key: 'wa-broadcasts', name: 'WhatsApp broadcasts', schedule: 'Every 5 min, 10 am–8 pm', messagesCustomers: true,
+    requirements: 'Scheduled or paused broadcast due, or an interrupted broadcast to resume',
+    cron: '*/5 10-19 * * *', tz: IST, mode: 'queue', queue: 'once', run: waBroadcasts },
   { key: 'winback', name: 'Win-back offers', schedule: 'Daily 11 am', messagesCustomers: true, oncePerDay: true,
+    requirements: 'Win-back automation enabled and a live coupon for the store', automations: ['win_back'],
     cron: '0 11 * * *', tz: IST, mode: 'queue', queue: 'once', run: winback },
   { key: 'review-request', name: 'Review requests', schedule: 'Daily 10 am', messagesCustomers: true,
+    requirements: 'Review request automation enabled and order delivered 3 days ago', automations: ['review_request'],
     cron: '0 10 * * *', tz: IST, mode: 'queue', queue: 'once', run: reviewRequest },
   { key: 'upsell', name: 'After-delivery suggestions', schedule: 'Daily 3 pm', messagesCustomers: true,
+    requirements: 'Upsell automation enabled and order delivered 1 day ago', automations: ['upsell'],
     cron: '0 15 * * *', tz: IST, mode: 'queue', queue: 'once', run: upsell },
   { key: 'loyalty-expiry', name: 'Loyalty points expiry', schedule: 'Daily 2 am',
+    requirements: 'Unused points past their expiry date',
     cron: '0 2 * * *', tz: IST, mode: 'queue', queue: 'retry', run: loyaltyExpiry },
   { key: 'badge-refresh', name: 'Product badges refresh', schedule: 'Daily 2:30 am',
     cron: '30 2 * * *', tz: IST, mode: 'inline', run: badgeRefresh },
@@ -711,20 +746,35 @@ const JOBS = [
   { key: 'data-retention', name: 'Old data cleanup (privacy)', schedule: 'Daily 4 am',
     cron: '0 4 * * *', tz: IST, mode: 'inline', run: dataRetention },
   { key: 'meta-ads-sync', name: 'Meta ad spend sync', schedule: 'Every 3 hours (:25)',
+    requirements: 'Connected Meta token and at least one linked ad account',
     cron: '25 */3 * * *', tz: IST, mode: 'inline', lockMinutes: 30, run: metaAdsSync },
   { key: 'server-watch', name: 'Server Watch alerts', schedule: 'Every 10 min',
     cron: '*/10 * * * *', tz: IST, mode: 'inline', lockMinutes: 8, run: () => require('../services/serverWatchService.js').watch() },
   { key: 'server-watch-daily', name: 'Server daily summary', schedule: 'Daily 9 am', oncePerDay: true,
+    requirements: 'Daily summary enabled in Server Logs',
     cron: '0 9 * * *', tz: IST, mode: 'inline', lockMinutes: 20, run: () => require('../services/serverWatchService.js').dailySummary() },
 ];
 
 const getJob = (key) => JOBS.find((j) => j.key === key) || null;
 const queueName = (job) => `cron:${job.key}`;
 
+async function runJob(job) {
+  const { ranSince, istDayStart } = require('../services/jobRunService.js');
+  if (job.oncePerDay && await ranSince(job.key, istDayStart())) {
+    return { status: 'skipped', summary: 'Already ran today' };
+  }
+  if (job.automations) {
+    const { isAutomationEnabled } = require('../services/whatsappService.js');
+    const enabled = await Promise.all(job.automations.map(isAutomationEnabled));
+    if (!enabled.some(Boolean)) return { status: 'skipped', summary: 'WhatsApp automation is turned off' };
+  }
+  return job.run();
+}
+
 /** Run a job now, logged, with its lock (used by the cron tick and "Run now"). */
 function runJobLogged(job, opts = {}) {
   const { runLogged } = require('../services/jobRunService.js');
-  return runLogged(job.key, job.run, { lockMinutes: job.lockMinutes || 30, ...opts });
+  return runLogged(job.key, () => runJob(job), { lockMinutes: job.lockMinutes || 30, ...opts });
 }
 
 /**
@@ -734,6 +784,8 @@ function initializeCronJobs() {
   console.log('🕐 Initializing cron jobs (Bull-backed)...');
 
   const { enqueue, registerProcessor } = require('../services/integrationQueue.js');
+  // Drain messages queued under the retired key through the same recovery lock.
+  registerProcessor('cron:abandoned-cart', 1, () => runJobLogged(getJob('abandoned-checkout')));
 
   for (const job of JOBS) {
     const opts = job.tz ? { timezone: job.tz } : undefined;
@@ -764,4 +816,4 @@ function initializeCronJobs() {
   console.log(`✅ Cron jobs initialized: ${JOBS.length} jobs (see the dashboard's System health page)`);
 }
 
-module.exports = { initializeCronJobs, JOBS, getJob, runJobLogged };
+module.exports = { initializeCronJobs, JOBS, getJob, runJob, runJobLogged };

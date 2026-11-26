@@ -93,6 +93,7 @@ function jobRow(job, history, runningSince, now) {
     key: job.key,
     name: job.name,
     schedule: job.schedule,
+    requirements: job.requirements || null,
     clock_note: clockNote(job),
     cron: job.cron,
     timezone: job.tz || Intl.DateTimeFormat().resolvedOptions().timeZone || null,
@@ -144,12 +145,6 @@ async function getHealth() {
   };
 }
 
-/** Start of today in India, as a Date. */
-function istDayStart(now = Date.now()) {
-  const day = 24 * 3600 * 1000;
-  return new Date(Math.floor((now + IST_OFFSET_MIN * 60000) / day) * day - IST_OFFSET_MIN * 60000);
-}
-
 /**
  * "Run now". Returns { status: 404|409|200|202, body }.
  * Waits up to 20 s so a quick job answers with its result; a longer one
@@ -159,13 +154,13 @@ async function runJobNow(key, userId) {
   const job = registry().getJob(key);
   if (!job) return { status: 404, body: { success: false, message: 'No such job' } };
 
-  if (job.oncePerDay && await jobRuns.ranSince(job.key, istDayStart())) {
-    return { status: 409, body: { success: false, message: 'Already ran today. Running it again would message the same customers twice.' } };
+  if (job.oncePerDay && await jobRuns.ranSince(job.key, jobRuns.istDayStart())) {
+    return { status: 409, body: { success: false, message: 'Already ran today. This job runs once per day.' } };
   }
   const lock = await jobRuns.acquireLock(job.key, (job.lockMinutes || 30) * 60);
   if (!lock) return { status: 409, body: { success: false, message: 'This job is running right now. Wait for it to finish.' } };
 
-  const run = jobRuns.executeLocked(job.key, job.run, lock, { triggeredBy: userId || null });
+  const run = jobRuns.executeLocked(job.key, () => registry().runJob(job), lock, { triggeredBy: userId || null });
   const done = await Promise.race([run, new Promise((r) => setTimeout(() => r(null), RUN_NOW_WAIT_MS))]);
   if (!done) {
     run.catch(() => {});

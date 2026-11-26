@@ -26,12 +26,46 @@ async function discoverCheckout(payment, hint) {
   const candidates = new Map();
   function add(brandId, ref) {
     if (Number.isSafeInteger(Number(brandId)) && Number(brandId) > 0 && store.validCheckoutRef(ref)) {
-      candidates.set(`${brandId}:${ref}`, { brandId: Number(brandId), ref });
+      candidates.set(`${Number(brandId)}:${ref}`, { brandId: Number(brandId), ref });
     }
   }
   if (hint) add(hint.brandId, hint.ref);
   for (const row of await store.readCheckouts(payment)) add(row.brand_id, row.checkout_ref);
-  if (!candidates.size) {
+  const matches = new Map();
+  let rejected;
+  let unavailable = false;
+  const providerStatuses = new Set();
+  const checked = new Set();
+  async function checkCandidates() {
+    const results = await Promise.allSettled([...candidates].filter(([key]) => !checked.has(key)).map(async ([key, candidate]) => {
+      checked.add(key);
+      const details = hint?.details && Number(hint.brandId) === candidate.brandId && hint.ref === candidate.ref
+        ? hint.details : await fetchProviderOrder(candidate.brandId, candidate.ref);
+      return { ...candidate, details };
+    }));
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        unavailable = true;
+        if (Number.isInteger(result.reason?.providerStatus)) providerStatuses.add(result.reason.providerStatus);
+        continue;
+      }
+      const { details, ...candidate } = result.value;
+      try {
+        verifyShiprocketRecovery(details, candidate.ref, payment);
+        if (checkout.isCodOrder(details) || (Array.isArray(details.payments) && details.payments.some((entry) => checkout.isCodOrder(details, entry)))) {
+          throw message('The referenced checkout is cash on delivery.');
+        }
+        const attrs = checkout.parseAttrs(details.cart_data?.custom_attributes);
+        const stamped = String(attrs.store || checkout.parseAttrs(details.custom_attributes).store || candidate.brandId);
+        matches.set(`${stamped}:${candidate.ref}`, { ...candidate, details });
+      } catch (error) {
+        rejected = error;
+        if (String(details.payment_status || '').toLowerCase() !== 'success') unavailable = true;
+      }
+    }
+  }
+  await checkCandidates();
+  if (!matches.size) {
     const fromNotes = (notes) => [notes?.shiprocket_order_id, notes?.platform_order_id, notes?.checkout_order_id].find(store.validCheckoutRef);
     let ref = fromNotes(payment.notes);
     if (!ref && payment.order_id) {
@@ -42,41 +76,15 @@ async function discoverCheckout(payment, hint) {
       const brands = await store.enabledBrands();
       brands.forEach((brand) => add(brand.id, ref));
     }
+    await checkCandidates();
   }
   if (!candidates.size) throw message('No Shiprocket checkout reference was found for this payment.', 409, true);
-  const matches = new Map();
-  let rejected;
-  let unavailable = false;
-  const providerStatuses = new Set();
-  const results = await Promise.allSettled([...candidates.values()].map(async (candidate) => ({
-    ...candidate, details: await fetchProviderOrder(candidate.brandId, candidate.ref),
-  })));
-  for (const result of results) {
-    if (result.status === 'rejected') {
-      unavailable = true;
-      if (Number.isInteger(result.reason?.providerStatus)) providerStatuses.add(result.reason.providerStatus);
-      continue;
-    }
-    const { details, ...candidate } = result.value;
-    if (String(details.payment_status || '').toLowerCase() !== 'success' &&
-        String(details.platform_order_id || details.order_id || '') === candidate.ref) {
-      unavailable = true;
-      continue;
-    }
-    try {
-      verifyShiprocketRecovery(details, candidate.ref, payment);
-      if (checkout.isCodOrder(details)) throw message('The referenced checkout is cash on delivery.');
-      const attrs = checkout.parseAttrs(details.cart_data?.custom_attributes);
-      const stamped = String(attrs.store || checkout.parseAttrs(details.custom_attributes).store || candidate.brandId);
-      matches.set(`${stamped}:${candidate.ref}`, { ...candidate, details });
-    } catch (error) { rejected = error; }
-  }
   if (matches.size > 1) throw message('Multiple Shiprocket checkouts match the captured payment.');
   if (matches.size === 1) return matches.values().next().value;
   if (unavailable) {
     const codes = [...providerStatuses].join(', ');
     throw message(codes ? `Shiprocket could not verify the checkout details (HTTP ${codes}). Check the store and checkout reference.`
-      : 'Shiprocket checkout details are unavailable or payment confirmation is pending.', 502, true);
+      : 'Waiting for verifiable Shiprocket checkout details for this Razorpay capture.', 502, true);
   }
   throw rejected || message('The Shiprocket checkout could not be matched to this payment.');
 }
@@ -141,7 +149,7 @@ async function recover(row, { hint, actorId = null, verified } = {}) {
     if (Number(payment.amount) !== Number(row.amount_paise) || (row.gateway_order_id && row.gateway_order_id !== payment.order_id)) {
       throw message('The captured amount or gateway order differs from the recorded payment.');
     }
-    const { existing, candidate } = await resolvePayment(payment, checkoutRef && brandId ? { ref: checkoutRef, brandId } : null);
+    const { existing, candidate } = await resolvePayment(payment, hint || (checkoutRef && brandId ? { ref: checkoutRef, brandId } : null));
     if (existing) {
       order = existing;
       state = row.state === 'recovered' && Number(row.order_id) === Number(existing.id) ? 'recovered' : 'matched';
@@ -182,14 +190,34 @@ async function recover(row, { hint, actorId = null, verified } = {}) {
   return { state, reason, order };
 }
 
-async function claimPayment(id) {
+async function claimPayment(id, { liveOnly = false } = {}) {
   const lease = randomUUID();
-  const filter = id ? "payment_id = :id AND state IN ('pending','needs_manual_review','recovered','matched')" : "historical = FALSE AND state = 'pending' AND next_at <= UTC_TIMESTAMP()";
+  const pending = "historical = FALSE AND state = 'pending'";
+  const filter = !id ? `${pending} AND next_at <= UTC_TIMESTAMP()`
+    : liveOnly ? `payment_id = :id AND ${pending}`
+      : "payment_id = :id AND state IN ('pending','needs_manual_review','recovered','matched')";
   await store.query(`UPDATE prepaid_recovery SET lease = :lease, lease_until = UTC_TIMESTAMP() + INTERVAL 10 MINUTE
     WHERE ${filter} AND (lease_until IS NULL OR lease_until <= UTC_TIMESTAMP())
     ORDER BY historical ASC, next_at, payment_id LIMIT 1`, { lease, id });
   const [row] = await store.rows('SELECT * FROM prepaid_recovery WHERE lease = :lease LIMIT 1', { lease });
   return row;
+}
+
+// Called only after the Razorpay webhook signature was checked. Persist the
+// capture before attempting the import so provider and database errors can retry.
+async function handleCapture(payment) {
+  if (!store.isCapture(payment)) return;
+  await store.queueCaptures([payment]);
+  const row = await claimPayment(payment.id, { liveOnly: true });
+  if (row) return recover(row);
+}
+
+async function resumeCaptureForCheckout(brandId, ref, details, references) {
+  const paymentId = await store.findPendingCapture(references);
+  if (!paymentId) return;
+  const row = await claimPayment(paymentId, { liveOnly: true });
+  if (row) return recover(row, { hint: { ref, brandId, details } });
+  return { state: 'pending' };
 }
 
 async function manual(paymentId, { hint, actorId, verifyOnly = false } = {}) {
@@ -287,4 +315,4 @@ async function run() {
   }
 }
 
-module.exports = { manual, run, requireOriginalCheckout, referencesOf };
+module.exports = { manual, run, handleCapture, resumeCaptureForCheckout, requireOriginalCheckout, referencesOf };

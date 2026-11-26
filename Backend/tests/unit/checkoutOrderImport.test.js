@@ -190,11 +190,24 @@ test('a different checkout reference for the same captured payment returns the e
 test.each(['upi', 'card'])('recovery preserves original prices and the verified %s payment method', async (method) => {
   const payment = { id: 'pay_captured123', order_id: 'order_fixture123', amount: 69910, method };
   const item = { variant_id: 12, quantity: 1, catalog_data: { price: 699.10 } };
-  await ingestCheckoutOrder(1, provider({ cart_data: { items: [item] }, total_amount_payable: 699.10,
+  await ingestCheckoutOrder(1, provider({ status: 'PENDING', payment_status: 'pending',
+    cart_data: { items: [item] }, total_amount_payable: 699.10,
     payments: [{ payment_method: 'online' }] }), payment, { recovery: true });
   expect(models.OrderItem.bulkCreate).toHaveBeenCalledWith([expect.objectContaining({ price: 699.1 })], expect.anything());
-  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 69910,
+  expect(models.Order.create).toHaveBeenCalledWith(expect.objectContaining({ payment_status: 'paid', status: 'confirmed' }), expect.anything());
+  expect(models.Payment.create).toHaveBeenCalledWith(expect.objectContaining({ amount_paid: 69910, status: 'successful',
+    razorpay_payment_id: payment.id, razorpay_order_id: payment.order_id,
     notes: expect.stringContaining(`method ${method}`) }), expect.anything());
+  await Promise.all(scheduled.map((fn) => fn()));
+  expect(sendFacebookEvent).toHaveBeenCalledTimes(1);
+});
+
+test('a pending confirmation can return the order already created by Razorpay', async () => {
+  models.Order.findOne.mockResolvedValue({ order_number: 'CC-EXISTING', brand_id: 1 });
+  const result = await ingestCheckoutOrder(1, provider({ status: 'PENDING', payment_status: 'pending' }));
+  expect(result).toEqual({ created: false, order_number: 'CC-EXISTING' });
+  expect(models.Order.create).not.toHaveBeenCalled();
+  expect(scheduled).toHaveLength(0);
 });
 
 test('recovery never substitutes the current catalogue price for a missing original price', async () => {

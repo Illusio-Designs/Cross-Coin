@@ -1,5 +1,6 @@
 jest.mock('../../services/prepaidRecoveryStore.js', () => ({
   ensureSchema: jest.fn(), query: jest.fn(), rows: jest.fn(), queueCaptures: jest.fn(), readCheckouts: jest.fn(),
+  findPendingCapture: jest.fn(), enabledBrands: jest.fn(),
   validCheckoutRef: (ref) => typeof ref === 'string' && /^[a-zA-Z0-9_-]+$/.test(ref),
   isCapture: (payment) => payment?.status === 'captured' && !payment.amount_refunded,
 }));
@@ -54,16 +55,42 @@ beforeEach(() => {
   });
 });
 
-test('an early capture remains retryable and imports once verified checkout data becomes available', async () => {
-  fetchProviderOrder.mockResolvedValueOnce({ ...details, payment_status: 'pending' });
-  await expect(recovery.manual(payment.id)).resolves.toMatchObject({ state: 'pending' });
+test('an early capture remains retryable and imports as soon as the original checkout details arrive', async () => {
+  const early = { ...details, status: 'PENDING', payment_status: 'pending' };
+  fetchProviderOrder.mockResolvedValueOnce({ ...early, shipping_address: {} });
+  await expect(recovery.handleCapture(payment)).resolves.toMatchObject({ state: 'pending' });
+  expect(store.queueCaptures).toHaveBeenCalledWith([payment]);
   expect(ingestVerifiedOrder).not.toHaveBeenCalled();
-  await expect(recovery.manual(payment.id)).resolves.toMatchObject({ state: 'recovered', order: { id: 42 } });
-  expect(ingestVerifiedOrder).toHaveBeenCalledWith(8, details.platform_order_id, details, payment, { prepaidOnly: true, recovery: true });
+  store.findPendingCapture.mockResolvedValue(payment.id);
+  await expect(recovery.resumeCaptureForCheckout(8, details.platform_order_id, early, { gatewayOrderId: payment.order_id }))
+    .resolves.toMatchObject({ state: 'recovered', order: { id: 42 } });
+  expect(fetchProviderOrder).toHaveBeenCalledTimes(1);
+  expect(ingestVerifiedOrder).toHaveBeenCalledWith(8, details.platform_order_id, early, payment, { prepaidOnly: true, recovery: true });
   expect(store.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO prepaid_recovery_attempts'),
     expect.objectContaining({ state: 'recovered', orderId: 42, checkoutRef: details.platform_order_id }), expect.anything());
 });
 
+test('a capture creates the paid order immediately while Shiprocket still shows payment pending', async () => {
+  const early = { ...details, status: 'PENDING', payment_status: 'pending' };
+  fetchProviderOrder.mockResolvedValue(early);
+  await expect(recovery.handleCapture(payment)).resolves.toMatchObject({ state: 'recovered' });
+  expect(ingestVerifiedOrder).toHaveBeenCalledWith(8, details.platform_order_id, early, payment, { prepaidOnly: true, recovery: true });
+});
+
+test('Razorpay notes can resolve a capture when the saved checkout reference is stale', async () => {
+  store.readCheckouts.mockResolvedValue([{ brand_id: 8, checkout_ref: 'stale-checkout' }]);
+  store.enabledBrands.mockResolvedValue([{ id: 8 }]);
+  razorpay.getOrder.mockResolvedValue({ id: payment.order_id, notes: { platform_order_id: details.platform_order_id } });
+  fetchProviderOrder.mockRejectedValueOnce(new Error('old reference is not usable')).mockResolvedValueOnce(details);
+  await expect(recovery.handleCapture(payment)).resolves.toMatchObject({ state: 'recovered' });
+  expect(ingestVerifiedOrder).toHaveBeenCalledWith(8, details.platform_order_id, details, payment, { prepaidOnly: true, recovery: true });
+});
+
+test('a replayed capture does not create an order if Razorpay already refunded it', async () => {
+  razorpay.getPayment.mockResolvedValue({ ...payment, amount_refunded: 44910 });
+  await expect(recovery.handleCapture(payment)).resolves.toMatchObject({ state: 'needs_manual_review' });
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
+});
 test('exhausted checkout retries leave a review record and alert the administrator', async () => {
   current.attempts = 6;
   store.readCheckouts.mockResolvedValue([]);
@@ -71,6 +98,15 @@ test('exhausted checkout retries leave a review record and alert the administrat
   expect(ingestVerifiedOrder).not.toHaveBeenCalled();
   expect(notify).toHaveBeenCalledWith('Prepaid order needs review', expect.arrayContaining([payment.id]),
     { dedupeKey: `prepaid-recovery:${payment.id}` });
+});
+
+test('a capture with an active recovery lease leaves order creation to the claimant', async () => {
+  store.rows.mockResolvedValue([]);
+  store.findPendingCapture.mockResolvedValue(payment.id);
+  await expect(recovery.handleCapture(payment)).resolves.toBeUndefined();
+  await expect(recovery.resumeCaptureForCheckout(8, details.platform_order_id, details, { paymentId: payment.id }))
+    .resolves.toEqual({ state: 'pending' });
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
 });
 
 test('verification rejects missing customer data before creating an order', async () => {
