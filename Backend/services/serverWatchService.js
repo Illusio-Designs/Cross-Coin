@@ -38,6 +38,10 @@ const SLOW_MS = 3000;
 const IST = 'Asia/Kolkata';
 const JOB_FAILURE_PREFIX = 'job_failed:';
 
+function isRetiredJobAlert(key) {
+  return key?.startsWith(JOB_FAILURE_PREFIX) && !getJob(key.slice(JOB_FAILURE_PREFIX.length));
+}
+
 const DEFAULTS = {
   enabled: true,
   emails: ['info@illusiodesigns.agency'],
@@ -437,7 +441,7 @@ async function sendEmail(to, subject, lines) {
   if (!t) throw new Error('Email is not set up on the server (EMAIL_USER / EMAIL_APP_PASSWORD)');
   if (!to.length) return;
   const html = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${lines.map((l) => `<p style="margin:0 0 10px">${esc(l)}</p>`).join('')}
-    <p style="margin:16px 0 0;color:#666;font-size:12px">Obzus Server Watch · admin panel → Settings → Server logs</p></div>`;
+    <p style="margin:16px 0 0;color:#666;font-size:12px">Obzus Server Watch · admin panel → Settings → System → Server logs</p></div>`;
   await t.sendMail({ from: `"Obzus Server Watch" <${process.env.EMAIL_USER}>`, to: to.join(', '), subject, html, text: lines.join('\n\n') });
 }
 
@@ -518,7 +522,8 @@ async function deliveryOf(results) {
 }
 
 /** Email + WhatsApp to every recipient. Never throws; returns what happened. */
-async function notify(settings, { title, detail, subject }) {
+async function notify(settings, { key, title, detail, subject }) {
+  if (isRetiredJobAlert(key)) return { skipped: true, email: null, whatsapp: [] };
   const when = istTime();
   const out = { email: null, whatsapp: [] };
   try {
@@ -708,7 +713,8 @@ async function watch() {
     const due = !row.last_notified_at || now - new Date(row.last_notified_at) >= s.remindMinutes * 60 * 1000;
     if (hoursOk && due) {
       const again = row.notified_count > 0 ? ' (still happening)' : '';
-      await notify(s, { title: `${f.title}${again}`, detail: f.detail, subject: `[Obzus] ${f.severity === 'high' ? '🔴' : '🟠'} ${f.title}${again}` });
+      const delivery = await notify(s, { key: f.key, title: `${f.title}${again}`, detail: f.detail, subject: `[Obzus] ${f.severity === 'high' ? '🔴' : '🟠'} ${f.title}${again}` });
+      if (delivery.skipped) continue;
       await exec('UPDATE server_alerts SET last_notified_at = :now, notified_count = notified_count + 1 WHERE id = :id', { now, id: row.id });
       sent += 1;
     }
@@ -721,9 +727,8 @@ async function watch() {
     await exec('UPDATE server_alerts SET resolved_at = :now WHERE id = :id', { now, id: a.id });
     resolved += 1;
     // Only say "resolved" for alerts someone was told about.
-    const retiredJob = a.alert_key.startsWith(JOB_FAILURE_PREFIX) && !getJob(a.alert_key.slice(JOB_FAILURE_PREFIX.length));
-    if (a.notified_count > 0 && hoursOk && !retiredJob) {
-      await notify(s, { title: `Resolved: ${a.title}`, detail: `This is back to normal (it started ${istTime(a.opened_at)}).`, subject: `[Obzus] ✅ Resolved: ${a.title}` });
+    if (a.notified_count > 0 && hoursOk) {
+      await notify(s, { key: a.alert_key, title: `Resolved: ${a.title}`, detail: `This is back to normal (it started ${istTime(a.opened_at)}).`, subject: `[Obzus] ✅ Resolved: ${a.title}` });
     }
   }
 
@@ -889,7 +894,8 @@ async function overview({ hours = 24, level = '', search = '', brand = '', app =
   const alertRows = await q(`SELECT id, alert_key, severity, title, detail, opened_at, last_seen_at, last_notified_at, notified_count, resolved_at
                             FROM server_alerts WHERE resolved_at IS NULL OR opened_at >= :old ORDER BY resolved_at IS NULL DESC, opened_at DESC LIMIT 60`,
   { old: new Date(Date.now() - 7 * 24 * HOUR_MS) });
-  const alerts = alertRows.map((a) => ({ ...a, app: /:admin$/.test(a.alert_key) ? 'admin' : 'store' }));
+  const alerts = alertRows.filter((a) => a.resolved_at || !isRetiredJobAlert(a.alert_key))
+    .map((a) => ({ ...a, app: /:admin$/.test(a.alert_key) ? 'admin' : 'store' }));
 
   // Memory: every live process now, and per India-time hour the highest
   // total held / app heap in use (across processes) and how many ran.
@@ -970,5 +976,5 @@ async function sendTest() {
 module.exports = {
   DEFAULTS, recorder, noteLog, noteCors, noteEvent, flush, watch, dailySummary, pruneHistory, start,
   getSettings, saveSettings, overview, sendTest,
-  _internal: { thisApp, memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange },
+  _internal: { thisApp, memNow, sampleMemory, dbPing, brandOf, sourceOf, groupOf, normPath, cleanSettings, inAlertHours, checkRules, stats, events, istDayRange, notify },
 };

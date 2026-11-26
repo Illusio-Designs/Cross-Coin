@@ -67,6 +67,15 @@ export const handleViewChange = (view, setCurrentView) => {
 
 export const getViewFromPath = () => {
   const path = window.location.pathname;
+  const redirects = {
+    '/dashboard/consumers/abandoned-carts': ['whatsapp', 'carts'],
+    ...(window.location.hash === '#marketing-orders' ? { '/dashboard/reports-sales': ['reports-marketing', 'marketing-orders'] } : {}),
+  };
+  if (redirects[path]) {
+    const [view, tab] = redirects[path];
+    window.history.replaceState(window.history.state, '', `/dashboard/${view}#${tab}`);
+    return view;
+  }
   if (path === '/dashboard') {
     return 'main';
   } else if (path.startsWith('/dashboard/')) {

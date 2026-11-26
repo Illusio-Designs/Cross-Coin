@@ -210,3 +210,30 @@
 .tbl-row[style*="border-left"] {
   border-left: 2px solid var(--ds-color-border);
 }
+
+.ds-mobile-only { display: none; }
+
+@media (max-width: 740px) {
+  .ds-mobile-only { display: inline-flex; }
+  table.ds-mobile-rows[class], table.ds-mobile-rows > tbody { display: block; width: 100%; min-width: 0; }
+  table.ds-mobile-rows > thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+  }
+  table.ds-mobile-rows > tbody > tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px;
+    padding: 12px; border-bottom: 1px solid var(--ds-color-border);
+  }
+  table.ds-mobile-rows > tbody > tr:last-child { border-bottom: 0; }
+  table.ds-mobile-rows > tbody > tr > td {
+    width: auto; min-width: 0; max-width: none; padding: 0; border: 0;
+    text-align: left; white-space: normal; overflow-wrap: anywhere;
+  }
+  table.ds-mobile-rows > tbody > tr > td[data-mobile-label]::before {
+    content: attr(data-mobile-label); display: block; font-size: 11px; color: var(--ds-color-text-muted);
+  }
+  table.ds-mobile-rows > tbody > tr > td.ds-mobile-span, table.ds-mobile-rows > tbody > tr > td:only-child {
+    grid-column: 1 / -1;
+  }
+  table.ds-mobile-rows > tbody > tr > td:empty { display: none; }
+  table.ds-mobile-rows > tbody > tr > td.ds-mobile-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+}

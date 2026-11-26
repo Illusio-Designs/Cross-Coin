@@ -31,6 +31,7 @@
 
 /* Toolbar + search */
 .pl-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.pl-section-title { margin: 0; font-size: 16px; font-weight: 700; }
 .pl-search {
   display: flex; align-items: center; gap: 8px; flex: 0 1 280px; min-width: 0; height: 38px; padding: 0 12px; box-sizing: border-box;
   border: 1px solid var(--ds-color-border); border-radius: 10px; background: var(--ds-color-surface); color: var(--ds-color-text-muted);

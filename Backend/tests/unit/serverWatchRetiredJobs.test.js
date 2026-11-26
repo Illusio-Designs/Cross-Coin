@@ -5,6 +5,11 @@ const { sequelize } = require('../../config/db.js');
 const whatsapp = require('../../services/whatsappService.js');
 const { watch, _internal } = require('../../services/serverWatchService.js');
 
+test('skips notification delivery for a retired job even when passed directly', async () => {
+  await expect(_internal.notify({}, { key: 'job_failed:shiprocket-order-reconciliation' }))
+    .resolves.toEqual({ skipped: true, email: null, whatsapp: [] });
+});
+
 test('closes retired job alerts quietly and keeps failures from active jobs', async () => {
   const now = new Date();
   const obsolete = { id: 1, alert_key: 'job_failed:shiprocket-order-reconciliation', notified_count: 2 };

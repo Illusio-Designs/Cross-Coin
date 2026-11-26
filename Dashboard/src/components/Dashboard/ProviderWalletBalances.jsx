@@ -13,7 +13,7 @@ const formatTime = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
 });
 const REFRESH_STATUS = { failed: "Refresh failed", unavailable: "Balance unavailable from Meta", not_prepaid: "Prepaid funds unavailable" };
-const needsAttention = (wallet) => wallet.tone === "danger" || ["failed", "unavailable"].includes(wallet.syncStatus);
+const needsAttention = (wallet) => wallet.tone === "danger" || !!REFRESH_STATUS[wallet.syncStatus];
 
 function estimate(entry) {
   const days = entry.amount != null && entry.dailySpend > 0 ? entry.amount / entry.dailySpend : null;
@@ -83,24 +83,25 @@ export default function ProviderWalletBalances({ brandId }) {
     const editing = draft?.brandId === entry.brandId;
     const outcome = checkResult?.brandId === entry.brandId ? checkResult : null;
     const days = entry.days == null ? null : Math.round(entry.days * 10) / 10;
+    const refreshStatus = REFRESH_STATUS[entry.syncStatus];
+    const stale = !!refreshStatus;
     return (
       <li key={key} className="hm-wallet-card">
         <div className="hm-wallet-details">
           <strong>{entry.brandName}</strong>
-          <span className={`hm-wallet-${entry.tone}`}>{entry.label}</span>
+          <span className={`hm-wallet-${stale ? "danger" : entry.tone}`}>{refreshStatus || entry.label}</span>
         </div>
         <strong className="hm-wallet-value">{entry.amount == null ? "—" : money(entry.amount, entry.currency)}</strong>
-        <span className="hm-wallet-context">{days == null ? "Days remaining unavailable"
+        <span className="hm-wallet-context">{stale ? (entry.amount == null ? "Balance unavailable" : "Last known balance") : days == null ? "Days remaining unavailable"
           : `${days} ${days === 1 ? "day" : "days"} remaining`}</span>
-        {days != null && (
+        {!stale && days != null && (
           <div className={`hm-wallet-track hm-wallet-${entry.tone}`} aria-hidden="true">
             <span style={{ width: `${Math.min(100, entry.days * 20)}%` }} />
           </div>
         )}
         <small className="hm-wallet-context">
-          {REFRESH_STATUS[entry.syncStatus] && <>{REFRESH_STATUS[entry.syncStatus]}{entry.recordedAt ? " · " : ""}</>}
           {entry.recordedAt ? `${entry.source === "meta" ? "Synced" : "Recorded"} ${formatTime.format(new Date(entry.recordedAt))}`
-            : !REFRESH_STATUS[entry.syncStatus] && "Balance pending"}
+            : !stale && "Balance pending"}
         </small>
         <details className="hm-wallet-controls">
           <summary>Balance actions</summary>
@@ -168,17 +169,14 @@ export default function ProviderWalletBalances({ brandId }) {
           </div>
         </dl>
 
-        {wallets.length ? [
-          { label: "Needs attention", entries: attention, priority: true },
-          { label: attention.length ? "Other brands" : "Brands", entries: otherWallets },
-        ].filter(({ entries }) => entries.length).map(({ label, entries, priority }) => (
-          <section key={label} className={`hm-wallet-group${priority ? " hm-wallet-priority" : ""}`} aria-label={label}>
-            <h4>{label}</h4>
-            <ul className="hm-wallet-list">
-              {entries.map(renderWallet)}
-            </ul>
-          </section>
-        )) : <p className="hm-empty">No active brands to show.</p>}
+        {attention.length > 0 && <section className="hm-wallet-group hm-wallet-priority" aria-label="Needs attention">
+          <h4>Needs attention</h4><ul className="hm-wallet-list">{attention.map(renderWallet)}</ul>
+        </section>}
+        {otherWallets.length > 0 && <details className="hm-wallet-group hm-wallet-controls">
+          <summary>{attention.length ? "Other brands" : "Wallet balances"} ({otherWallets.length})</summary>
+          <ul className="hm-wallet-list">{otherWallets.map(renderWallet)}</ul>
+        </details>}
+        {!wallets.length && <p className="hm-empty">No active brands to show.</p>}
       </>}
     </section>
   );

@@ -342,7 +342,7 @@ export default function ProductsPage() {
         ) : firstLoad ? (
           <div className="pst-scroll" role="status" aria-busy="true">
             <span className="ds-sr-only">Loading products…</span>
-            <table className="pst-table" aria-hidden="true">
+            <table className="pst-table ds-mobile-rows" aria-hidden="true">
               {thead}
               <tbody><SkeletonTableRows rows={8} cols={10} /></tbody>
             </table>
@@ -353,7 +353,11 @@ export default function ProductsPage() {
           </div>
         ) : (
           <div className={`pst-scroll${loading ? ' is-busy' : ''}`} aria-busy={loading || undefined}>
-            <table className="pst-table">
+            <label className="ds-mobile-only pst-mobile-select">
+              <input type="checkbox" checked={allOnPageSelected} onChange={togglePage} disabled={deletingSelected} />
+              Select all products on this page
+            </label>
+            <table className="pst-table ds-mobile-rows" role="table">
               {thead}
               <tbody>
                 {data.items.map((p) => (
@@ -452,21 +456,21 @@ function ProductRow({ p, selected, selectDisabled, onSelect, onPatch, onSaved, o
             </div>
           </div>
         </td>
-        <td className="pst-brands">
+        <td className="pst-brands ds-mobile-span" data-mobile-label="Brand">
           {p.brands.length === 0 ? <span className="muted">—</span> : p.brands.map((b) => (
             <span key={b.id} className={b.live ? '' : 'is-off'} title={b.live ? undefined : 'Hidden on this site'}>{b.name}</span>
           ))}
         </td>
-        <td className="r">{priceRange(p.minPrice, p.maxPrice)}</td>
-        <td className="r"><b className={`pst-stock ${sTone ? `tone-${sTone}` : ''}`}>{p.totalStock.toLocaleString('en-IN')}</b></td>
-        <td className="r">{p.sold30.toLocaleString('en-IN')}</td>
-        <td className={`r tone-${lastsTone(p.daysLeft) || 'none'}`}>{lastsText(p.daysLeft)}</td>
-        <td>
+        <td className="r" data-mobile-label="Price">{priceRange(p.minPrice, p.maxPrice)}</td>
+        <td className="r" data-mobile-label="In stock"><b className={`pst-stock ${sTone ? `tone-${sTone}` : ''}`}>{p.totalStock.toLocaleString('en-IN')}</b></td>
+        <td className="r" data-mobile-label="Sold · 30 days">{p.sold30.toLocaleString('en-IN')}</td>
+        <td className={`r tone-${lastsTone(p.daysLeft) || 'none'}`} data-mobile-label="Lasts">{lastsText(p.daysLeft)}</td>
+        <td data-mobile-label="Badge">
           <span className="pst-badge" title={p.badgeReason}>{p.badge === 'none' ? '—' : BADGE_LABEL[p.badge] || p.badge}</span>
           <span className="pst-badge-how">{p.badgeLocked ? 'Fixed' : 'Auto'}</span>
         </td>
-        <td><span className={`pst-live ${p.visibility === 'live' ? 'is-live' : ''}`}>{VISIBILITY[p.visibility] || 'Hidden'}</span></td>
-        <td className="r pst-acts">
+        <td data-mobile-label="Shows on site"><span className={`pst-live ${p.visibility === 'live' ? 'is-live' : ''}`}>{VISIBILITY[p.visibility] || 'Hidden'}</span></td>
+        <td className="r pst-acts ds-mobile-span ds-mobile-actions">
           <button type="button" className="pst-btn pst-btn--sm" onClick={toggle} aria-expanded={open} disabled={!p.variationCount}>
             {open ? 'Hide sizes' : 'Edit stock'}
           </button>
@@ -579,12 +583,12 @@ function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
   return (
     <tr className="pst-sub">
       <td />
-      <td className="pst-col-prod pst-var">
+      <td className="pst-col-prod pst-var ds-mobile-span">
         {v.label} <span className="pst-sku">{v.sku}</span>
       </td>
       <td />
-      <td className="r">{v.price != null ? inr(v.price) : '—'}</td>
-      <td className="r">
+      <td className="r" data-mobile-label="Price">{v.price != null ? inr(v.price) : '—'}</td>
+      <td className="r" data-mobile-label="Edit stock">
         <input
           className={`pst-qty${state.error ? ' is-error' : ''}`}
           type="text"
@@ -598,9 +602,9 @@ function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
           aria-invalid={!!state.error}
         />
       </td>
-      <td className="r">{v.sold30.toLocaleString('en-IN')}</td>
-      <td className={`r tone-${dTone || 'none'}`}>{lastsText(v.daysLeft)}</td>
-      <td colSpan={3} className="pst-note">
+      <td className="r" data-mobile-label="Sold · 30 days">{v.sold30.toLocaleString('en-IN')}</td>
+      <td className={`r tone-${dTone || 'none'}`} data-mobile-label="Lasts">{lastsText(v.daysLeft)}</td>
+      <td colSpan={3} className="pst-note ds-mobile-span">
         {state.error ? <span className="pst-err" role="alert">{state.error}</span>
           : state.saving ? <span className="muted">Saving…</span>
           : state.saved ? <span className="pst-ok"><HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2.5} /> Saved</span>

@@ -17,7 +17,7 @@ import {
   UserMultiple02Icon, Target02Icon, GiftIcon, Package01Icon, Folder01Icon,
   Tag01Icon, Layers01Icon, Image01Icon, Discount01Icon, StarIcon,
   ChartLineData01Icon, SlidersHorizontalIcon, News01Icon, Search01Icon,
-  File01Icon, Store01Icon, DeliveryTruck01Icon, UserCheck01Icon, Activity01Icon, ServerStack01Icon,
+  File01Icon, Store01Icon, DeliveryTruck01Icon, UserCheck01Icon, ServerStack01Icon,
 } from '@hugeicons/core-free-icons';
 
 const ORDERS = ['admin', 'order_manager'];
@@ -58,8 +58,8 @@ export const MENU = [
         key: 'reports', label: 'Reports', icon: ChartLineData01Icon, roles: ORDERS, children: [
           // Two tabbed pages (pages/dashboard/reports/ReportHub.jsx); the old
           // single-report views open the matching tab.
-          { key: 'reports-sales', label: 'Sales', view: 'reports-sales', also: ['reports', 'report-marketing-orders', 'revenue-profit', 'report-products', 'report-inventory', 'report-location'] },
-          { key: 'reports-marketing', label: 'Marketing', view: 'reports-marketing', also: ['traffic-report', 'report-ads', 'report-coupons', 'report-customers'] },
+          { key: 'reports-sales', label: 'Sales', view: 'reports-sales', also: ['reports', 'revenue-profit', 'report-products', 'report-inventory', 'report-location'] },
+          { key: 'reports-marketing', label: 'Marketing', view: 'reports-marketing', also: ['traffic-report', 'report-ads', 'report-coupons', 'report-customers', 'report-marketing-orders'] },
         ],
       },
     ],
@@ -78,8 +78,10 @@ export const MENU = [
       // Courier updates (the old 'webhook-events' view) live on the Shipping page.
       { key: 'shipping', label: 'Shipping & courier', view: 'shippingFees', also: ['webhook-events'], icon: DeliveryTruck01Icon, roles: ADMIN },
       { key: 'staff', label: 'Staff', view: 'staff-users', icon: UserCheck01Icon, roles: ADMIN },
-      { key: 'health', label: 'System health', view: 'system-health', icon: Activity01Icon, roles: ADMIN, count: 'health', countText: 'failed job in the last 24 hours', alert: true },
-      { key: 'server-logs', label: 'Server logs', view: 'server-logs', icon: ServerStack01Icon, roles: ADMIN },
+      { key: 'system', label: 'System', icon: ServerStack01Icon, roles: ADMIN, count: 'health', countText: 'failed job in the last 24 hours', alert: true, children: [
+        { key: 'health', label: 'System health', view: 'system-health' },
+        { key: 'server-logs', label: 'Server logs', view: 'server-logs' },
+      ] },
     ],
   },
 ];

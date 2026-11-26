@@ -725,6 +725,7 @@ export default function Payments() {
       <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
       <CodRemittance />
 
+      <h2 className="pl-section-title" id="pl-pay-title">Payment activity</h2>
       <div className="pl-toolbar">
         <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />
         <label className="pl-search">
@@ -734,11 +735,11 @@ export default function Payments() {
         </label>
       </div>
 
-      <section id="pl-pay-list" className="pl-card" aria-busy={list.isFetching || undefined}>
+      <section id="pl-pay-list" className="pl-card" aria-labelledby="pl-pay-title" aria-busy={list.isFetching || undefined}>
         {list.isLoading ? (
           <div className="pl-scroll" role="status" aria-busy="true">
             <span className="ds-sr-only">Loading payments…</span>
-            <table className="pl-table pl-table--pay" aria-hidden="true">
+            <table className="pl-table pl-table--pay ds-mobile-rows" aria-hidden="true">
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th /></tr>
               </thead>
@@ -753,7 +754,7 @@ export default function Payments() {
             description={q ? "Try the full order number, a Razorpay payment ID (pay_…) or a 10-digit phone number." : EMPTY[tab]} />
         ) : (
           <div className="pl-scroll" style={list.isFetching ? DIM : undefined}>
-            <table className="pl-table pl-table--pay">
+            <table className="pl-table pl-table--pay ds-mobile-rows" role="table">
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th aria-label="Actions" /></tr>
               </thead>
@@ -762,17 +763,17 @@ export default function Payments() {
                   const [label, tone] = KIND[r.kind] || [r.kind, "neutral"];
                   return (
                     <tr key={r.key}>
-                      <td>
+                      <td className="ds-mobile-span">
                         <b>{r.orderNumber || <span className="pl-faint">No order yet</span>}</b>
                         {r.ref && <div className="pl-mono pl-faint" title={r.ref}>{r.ref}</div>}
                       </td>
-                      <td>{r.customer || <span className="pl-faint">—</span>}{r.brand && !brandId && <div className="pl-faint pl-small">{r.brand}</div>}</td>
-                      <td className="pl-nowrap">{r.methodLabel}</td>
-                      <td className={`r pl-nowrap pl-amt${r.amount < 0 ? " is-out" : ""}`}><b>{r.amount < 0 ? `−${inr(r.amount)}` : inr(r.amount)}</b></td>
-                      <td><StatusPill tone={tone} size="sm">{label}</StatusPill></td>
-                      <td className="pl-why">{r.why || <span className="pl-faint">—</span>}</td>
-                      <td className="pl-nowrap pl-faint" title={fullDate(r.at)}>{when(r.at)}</td>
-                      <td className="r">
+                      <td data-mobile-label="Customer">{r.customer || <span className="pl-faint">—</span>}{r.brand && !brandId && <div className="pl-faint pl-small">{r.brand}</div>}</td>
+                      <td data-mobile-label="Method" className="pl-nowrap">{r.methodLabel}</td>
+                      <td data-mobile-label="Amount" className={`r pl-nowrap pl-amt${r.amount < 0 ? " is-out" : ""}`}><b>{r.amount < 0 ? `−${inr(r.amount)}` : inr(r.amount)}</b></td>
+                      <td data-mobile-label="Status"><StatusPill tone={tone} size="sm">{label}</StatusPill></td>
+                      <td className="pl-why" data-mobile-label="Details">{r.why || <span className="pl-faint">—</span>}</td>
+                      <td className="pl-nowrap pl-faint" data-mobile-label="When" title={fullDate(r.at)}>{when(r.at)}</td>
+                      <td className="r ds-mobile-span ds-mobile-actions">
                         {r.orderNumber && <Button size="sm" variant="secondary" onClick={() => openOrder(r.orderNumber)}>Open order</Button>}
                       </td>
                     </tr>

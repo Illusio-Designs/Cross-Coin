@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { Skeleton, SkeletonTableRows } from '../ui';
+import { FilterChips, Skeleton, SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Abandoned carts — shoppers who added items and left, and what the
@@ -261,19 +261,14 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
         ))}
       </section>
 
+      <h2 className="wpb-section-title" id="wa-carts-list-title">Cart activity</h2>
       <div className="wpb-bar-row">
-        <div className="wpb-chips" role="tablist" aria-label="Status">
-          {TABS.map((t) => (
-            <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
-              className={`wpb-chip${tab === t.key ? ' is-on' : ''}`} onClick={() => setTab(t.key)}>
-              {t.label}{counts && counts[t.key] !== undefined && <span className="wpb-chip-n">{num(counts[t.key])}</span>}
-            </button>
-          ))}
-        </div>
+        <FilterChips className="wpb-chips" itemClassName="wpb-chip" ariaLabel="Status" controls="wa-carts-list"
+          items={TABS.map(({ key, label }) => ({ value: key, label, count: counts?.[key] }))} value={tab} onChange={setTab} />
         <span className="wpb-hint">No phone number = can’t message. Those show as “No number”.</span>
       </div>
 
-      <section className="wpb-card wpb-card--flush" aria-busy={loading}>
+      <section id="wa-carts-list" className="wpb-card wpb-card--flush" aria-labelledby="wa-carts-list-title" aria-busy={loading}>
         {error ? (
           <div className="wpb-state wpb-state--error" role="alert">
             <b>Couldn’t load abandoned carts</b>
@@ -286,7 +281,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
           // First load, or a tab with nothing cached yet: header + placeholder rows.
           <div className="wpb-tbl-wrap" role="status">
             <span className="wpb-sr">Loading carts…</span>
-            <table className="wpb-tbl wpb-tbl--carts" aria-hidden="true">
+            <table className="wpb-tbl wpb-tbl--carts ds-mobile-rows" aria-hidden="true">
               {TABLE_HEAD}
               <tbody><SkeletonTableRows rows={6} cols={7} /></tbody>
             </table>
@@ -298,23 +293,23 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
           </div>
         ) : (
           <div className={`wpb-tbl-wrap${loading ? ' is-stale' : ''}`}>
-            <table className="wpb-tbl wpb-tbl--carts">
+            <table className="wpb-tbl wpb-tbl--carts ds-mobile-rows" role="table">
               {TABLE_HEAD}
               <tbody>
                 {rows.map((r) => {
                   const wa = WA[r.wa] || { label: r.wa || '—', tone: 'muted' };
                   return (
                     <tr key={r.id}>
-                      <td>
+                      <td className="ds-mobile-span">
                         <b className="wpb-strong">{r.name || 'Guest shopper'}</b>
                         <div className="wpb-cell-sub">{[r.phone_masked || '—', r.brand].filter(Boolean).join(' · ')}</div>
                       </td>
-                      <td className="wpb-wrap">{r.items_label || '—'}</td>
-                      <td className="r"><b className="wpb-strong">{inr(r.value)}</b></td>
-                      <td className="wpb-nowrap">{ago(r.left_at)}</td>
-                      <td><span className={`wpb-badge t-${wa.tone}`}>{r.wa === 'wait' ? sendsAt(r.wa_send_at) : wa.label}</span></td>
-                      <td className="wpb-wrap">{r.result || '—'}</td>
-                      <td className="r">{action(r)}</td>
+                      <td className="wpb-wrap ds-mobile-span" data-mobile-label="Cart">{r.items_label || '—'}</td>
+                      <td className="r" data-mobile-label="Value"><b className="wpb-strong">{inr(r.value)}</b></td>
+                      <td className="wpb-nowrap" data-mobile-label="Left">{ago(r.left_at)}</td>
+                      <td data-mobile-label="WhatsApp"><span className={`wpb-badge t-${wa.tone}`}>{r.wa === 'wait' ? sendsAt(r.wa_send_at) : wa.label}</span></td>
+                      <td className="wpb-wrap" data-mobile-label="Result">{r.result || '—'}</td>
+                      <td className="r ds-mobile-span">{action(r)}</td>
                     </tr>
                   );
                 })}
@@ -328,7 +323,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
         {!editRules ? (
           <>
             <div className="wpb-rules-text">
-              <b>Rules</b>
+              <b>Reminder rules</b>
               {rules ? (
                 <span>
                   Wait <b>{waitLabel(rules.waitHours)}</b> · one message per cart

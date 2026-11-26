@@ -160,28 +160,28 @@ function JobRow({ job, open, onToggle, onRan }) {
   return (
     <>
       <tr className={`sh-row${open ? ' is-open' : ''}`}>
-        <td className="sh-job">
+        <td className="sh-job ds-mobile-span">
           <button type="button" className="sh-name" onClick={onToggle} aria-expanded={open} aria-controls={`sh-h-${job.key}`}>
             <HugeiconsIcon icon={open ? ArrowDown01Icon : ArrowRight01Icon} size={14} strokeWidth={2} aria-hidden="true" />
             <span>{job.name}</span>
           </button>
           {job.messages_customers && <div className="sh-tag">Messages customers</div>}
         </td>
-        <td className="sh-when">
+        <td className="sh-when ds-mobile-span" data-mobile-label="Schedule">
           {job.schedule}
           {job.requirements && <div className="sh-small">{job.requirements}</div>}
           {job.clock_note && <div className="sh-small">{job.clock_note}</div>}
         </td>
-        <td className="sh-when">
+        <td className="sh-when" data-mobile-label="Last run">
           {last ? when(last.started_at) : '—'}
           {last?.manual && <div className="sh-small">run by hand</div>}
         </td>
-        <td className="sh-result">
+        <td className="sh-result ds-mobile-span" data-mobile-label="Result">
           <div className="sh-result-in">{result}</div>
           {job.late && <div className="sh-late">Missed its last scheduled run</div>}
         </td>
-        <td className="sh-when mut">{job.next_at ? when(job.next_at) : '—'}</td>
-        <td className="sh-act">
+        <td className="sh-when mut" data-mobile-label="Next run">{job.next_at ? when(job.next_at) : '—'}</td>
+        <td className="sh-act ds-mobile-span">
           {phase === 'confirm' ? (
             <div className="sh-confirm" role="group" aria-label={`Run ${job.name} now?`}>
               <span className="sh-confirm-q">
@@ -278,7 +278,7 @@ export default function SystemHealth() {
               <span className="hint">India time · click a job for its last 10 runs</span>
             </div>
             <div className="rep-tbl-wrap">
-              <table className="rep-table sh-table">
+              <table className="rep-table sh-table ds-mobile-rows">
                 <thead><tr><th>Job</th><th>Runs</th><th>Last run</th><th>Result</th><th>Next</th><th /></tr></thead>
                 <tbody><SkeletonTableRows rows={8} cols={6} /></tbody>
               </table>
@@ -304,7 +304,7 @@ export default function SystemHealth() {
             </div>
             {jobs.length ? (
               <div className="rep-tbl-wrap">
-                <table className="rep-table sh-table">
+                <table className="rep-table sh-table ds-mobile-rows" role="table">
                   <thead>
                     <tr><th>Job</th><th>Runs</th><th>Last run</th><th>Result</th><th>Next</th><th><span className="sh-sr">Actions</span></th></tr>
                   </thead>

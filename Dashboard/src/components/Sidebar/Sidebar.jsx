@@ -121,7 +121,7 @@ export default function Sidebar({
             className={cx('sb-link', active && 'is-active')}
             aria-expanded={open}
             aria-controls={open ? subId : undefined}
-            aria-label={rail ? item.label : undefined}
+            aria-label={rail || badge ? name : undefined}
             onClick={(e) => {
               if (!rail) { toggleOpen(item.key); return; }
               const r = e.currentTarget.getBoundingClientRect();
@@ -130,8 +130,11 @@ export default function Sidebar({
             }}
             {...tipProps(item.label)}
           >
-            <span className="sb-ico"><Icon icon={item.icon} /></span>
+            <span className="sb-ico"><Icon icon={item.icon} />
+              {rail && badge && <span className={cx('sb-dot', badge.alert && 'is-alert')} aria-hidden="true" />}
+            </span>
             {!rail && <span className="sb-label">{item.label}</span>}
+            {!rail && badge && <span className={cx('sb-count', badge.alert && 'is-alert')} aria-hidden="true">{badge.text}</span>}
             {!rail && <span className={cx('sb-chev', open && 'is-open')}><Icon icon={ArrowDown01Icon} size={15} /></span>}
           </button>
           {!rail && open && (

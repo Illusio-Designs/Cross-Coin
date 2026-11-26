@@ -16,7 +16,7 @@ import CustomerReport from './customerReport';
 /* ──────────────────────────────────────────────────────────────
    Two report pages, each a row of tabs over the existing reports:
      Sales     — Overview · Revenue & profit · Products · Inventory · Location
-     Marketing — Traffic · Ads · Coupons · Customers
+     Marketing — Traffic · Ads · Marketing Orders · Coupons · Customers
    The open tab lives in the address (#inventory) so it can be bookmarked;
    the store + period are shared by every tab (reportFilters.js). A tab only
    shows when the person may open its report view.
@@ -28,7 +28,6 @@ export const REPORT_GROUPS = {
     title: 'Sales reports',
     tabs: [
       { key: 'overview', label: 'Overview', view: 'reports', Component: Reports },
-      { key: 'marketing-orders', label: 'Marketing Orders', view: 'report-marketing-orders', Component: MarketingOrdersReport },
       { key: 'profit', label: 'Revenue & profit', view: 'revenue-profit', Component: RevenueProfitReport },
       { key: 'products', label: 'Products', view: 'report-products', Component: ProductReport },
       { key: 'inventory', label: 'Inventory', view: 'report-inventory', Component: InventoryReport },
@@ -41,6 +40,7 @@ export const REPORT_GROUPS = {
     tabs: [
       { key: 'traffic', label: 'Traffic', view: 'traffic-report', Component: TrafficReport },
       { key: 'ads', label: 'Ads', view: 'report-ads', Component: AdsReport },
+      { key: 'marketing-orders', label: 'Marketing Orders', view: 'report-marketing-orders', Component: MarketingOrdersReport },
       { key: 'coupons', label: 'Coupons', view: 'report-coupons', Component: CouponReport },
       { key: 'customers', label: 'Customers', view: 'report-customers', Component: CustomerReport },
     ],
@@ -52,7 +52,10 @@ export const LEGACY_REPORT_VIEWS = Object.fromEntries(
   Object.entries(REPORT_GROUPS).flatMap(([group, g]) => g.tabs.map((t) => [t.view, { group, tab: t.key }]))
 );
 
-const hashTab = () => (typeof window === 'undefined' ? '' : decodeURIComponent(window.location.hash.replace(/^#/, '')));
+function hashTab() {
+  if (typeof window === 'undefined') return '';
+  try { return decodeURIComponent(window.location.hash.slice(1)); } catch { return ''; }
+}
 
 export default function ReportHub({ group = 'sales', initialTab = null }) {
   const { canAccessView } = useAuth();

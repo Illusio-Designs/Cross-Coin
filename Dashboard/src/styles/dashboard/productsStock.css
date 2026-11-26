@@ -92,6 +92,12 @@
 .pst-state { padding: 40px 16px; text-align: center; color: var(--ds-color-text-muted); font-size: 13.5px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .pst-state p { margin: 0; }
 .pst-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pst-mobile-select { align-items: center; gap: 8px; padding: 10px 12px; }
+@media (max-width: 740px) {
+  .pst-table > thead input { display: none; }
+  .pst-table.ds-mobile-rows > tbody > tr:not(.pst-sub) > td.pst-col-prod { grid-column: 1 / -1; grid-row: 1; padding-right: 28px; }
+  .pst-table.ds-mobile-rows > tbody > tr:not(.pst-sub) > td.pst-select-col { grid-column: 2; grid-row: 1; justify-self: end; z-index: 1; }
+}
 .pst-scroll.is-busy { opacity: .6; transition: opacity .15s; }
 
 /* Main table */

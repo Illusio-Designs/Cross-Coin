@@ -50,7 +50,6 @@
   width: 50px; height: 50px; border-radius: 50%; background: var(--ds-color-surface);
   display: grid; place-items: center; font-size: 17px; color: var(--ds-color-text); font-variant-numeric: tabular-nums;
 }
-.seo .seo-tab-count { margin-left: 6px; opacity: .7; font-variant-numeric: tabular-nums; }
 
 /* Cards and the "To fix" table */
 .seo .seo-card { background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); border-radius: 16px; overflow: hidden; min-width: 0; }

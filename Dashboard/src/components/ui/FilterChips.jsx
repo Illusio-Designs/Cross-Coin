@@ -15,7 +15,7 @@ const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
  * Keyboard: ←/→ (and Home/End) move between chips and pick them; only the
  * picked chip is in the Tab order. `controls` = id of the list it filters.
  */
-export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className }) {
+export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className, itemClassName }) {
   const refs = useRef([]);
   const pick = (i) => {
     const it = items[i];
@@ -46,7 +46,7 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
             aria-controls={controls}
             tabIndex={i === selectedIndex ? 0 : -1}
             disabled={it.disabled}
-            className={clsx('ui-chip', on && 'is-on')}
+            className={clsx('ui-chip', itemClassName, on && 'is-on')}
             onClick={() => pick(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
           >

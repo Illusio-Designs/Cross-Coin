@@ -32,14 +32,14 @@ const PAGE_GROUPS = [
   ["Payments", ["payments"]],
   ["Customers & leads", ["consumers", "customer", "leads"]],
   ["Coupons, reviews & loyalty", ["coupons", "reviews", "loyalty"]],
-  ["Reports", ["reports-sales", "reports-marketing", "reports", "revenue-profit", "traffic-report", "report-ads", "report-location", "report-products", "report-customers", "report-inventory", "report-coupons"]],
+  ["Reports", ["reports-sales", "reports-marketing", "reports", "revenue-profit", "traffic-report", "report-ads", "report-marketing-orders", "report-location", "report-products", "report-customers", "report-inventory", "report-coupons"]],
   ["Products & stock", ["products", "categories", "attributes", "pack-pricing", "media-gallery"]],
   ["Website content & SEO", ["slider", "blogs", "seo", "seo-health", "seo-bulk", "seo-pages", "faqs", "seo-global", "policies"]],
   ["WhatsApp", ["whatsapp", "whatsapp-chat"]],
   ["Brands", ["brands", "brand-settings"]],
   ["Shipping & courier", ["shippingFees", "webhook-events"]],
   ["Staff", ["staff-users"]],
-  ["System health", ["system-health"]],
+  ["System", ["system-health", "server-logs"]],
 ];
 const EMPTY_FORM = { username: "", email: "", password: "", roles: ["order_manager"] };
 
@@ -268,8 +268,8 @@ export default function StaffUsers() {
         <div className="oss-foot"><span className="mut">“Did this week” counts order actions, WhatsApp replies, Problems-desk actions, returns reviewed, jobs run and settings changed in the last 7 days.</span></div>
       </section>
 
-      <section className="rep-panel oss-access" aria-label="What each role can open">
-        <b className="oss-h2">What each role can open</b>
+      <details className="rep-panel oss-access">
+        <summary className="oss-h2">What each role can open</summary>
         <div className="rep-tbl-wrap">
           <table className="rep-table oss-grid-table">
             <thead><tr><th>Page</th>{STAFF_ROLES.map((r) => <th key={r} className="c">{ROLE_LABELS[r]}</th>)}</tr></thead>
@@ -284,7 +284,7 @@ export default function StaffUsers() {
           </table>
         </div>
         <span className="mut oss-small">✓ can open · Some = only part of it (hover to see which) · — hidden. Read from the dashboard’s own access rules.</span>
-      </section>
+      </details>
     </div>
   );
 }

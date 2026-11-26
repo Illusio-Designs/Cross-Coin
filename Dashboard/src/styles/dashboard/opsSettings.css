@@ -211,7 +211,8 @@
 .oss .oss-role b { display: block; font-size: 13px; color: var(--ds-color-text); }
 .oss .oss-role small { font-size: 11.5px; color: var(--ds-color-text-muted); }
 .oss .oss-roles.is-bad .oss-role { border-color: var(--ds-color-warn-bd); }
-.oss .oss-access { display: flex; flex-direction: column; gap: 10px; }
+.oss .oss-access > summary { cursor: pointer; }
+.oss .oss-access[open] > summary { margin-bottom: 10px; }
 .oss .oss-grid-table { min-width: 560px; }
 .oss .oss-grid-table th.c, .oss .oss-grid-table td.c { text-align: center; }
 .oss .oss-grid-table td:first-child { color: var(--ds-color-text); }

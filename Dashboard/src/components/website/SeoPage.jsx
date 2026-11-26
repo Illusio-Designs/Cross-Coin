@@ -22,7 +22,7 @@ import StatusPill from '../ui/StatusPill';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
 import ErrorState from '../ui/ErrorState';
-import { Select, Skeleton, SkeletonForm, SkeletonList, SkeletonTableRows } from '../ui';
+import { FilterChips, Select, Skeleton, SkeletonForm, SkeletonList, SkeletonTableRows } from '../ui';
 import SerpPreview, { brandSiteName } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
 import { richHtml } from '../../utils/sanitizeHtml';
@@ -71,6 +71,7 @@ export default function SeoPage({ initialTab = 'fix' }) {
   const refresh = () => ov.reload(true);
 
   const pickTab = (id) => {
+    if (id === tab) return;
     setTab(id); setSearch(''); setOpenPage(null);
     const t = TABS.find((x) => x.id === id);
     try { window.history.replaceState({}, '', `/dashboard/${t.view}`); } catch { /* ignore */ }
@@ -119,13 +120,9 @@ export default function SeoPage({ initialTab = 'fix' }) {
       <Score o={o} loading={ov.loading || !brandId} error={ov.error} onRetry={() => ov.reload()} onGo={pickTab} />
 
       <div className="web-bar">
-        <div role="tablist" aria-label="SEO section" className="web-tabs">
-          {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={t.id === current.id} className={`web-tab${t.id === current.id ? ' is-on' : ''}`} onClick={() => { if (t.id !== current.id) pickTab(t.id); }}>
-              {t.label}{counts[t.id] != null && <span className="seo-tab-count">{n(counts[t.id])}</span>}
-            </button>
-          ))}
-        </div>
+        <FilterChips ariaLabel="SEO section" controls="seo-tab-content" className="web-tabs" itemClassName="web-tab"
+          items={TABS.map(({ id, label }) => ({ value: id, label, count: counts[id] }))}
+          value={current.id} onChange={pickTab} />
         {current.search && (
           <label className="web-search">
             <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
@@ -135,10 +132,12 @@ export default function SeoPage({ initialTab = 'fix' }) {
         )}
       </div>
 
-      {current.id === 'fix' && <ToFix o={o} loading={ov.loading || !brandId} error={ov.error} q={q} onRetry={() => ov.reload()} onFixPage={fixPage} />}
-      {current.id === 'pages' && <Pages key={brandId} brand={brand} brandId={brandId} q={q} openName={openPage} onOpened={() => setOpenPage(null)} onChanged={refresh} />}
-      {current.id === 'faqs' && <Faqs key={brandId} brand={brand} brandId={brandId} q={q} onChanged={refresh} />}
-      {current.id === 'store' && <StoreDetails key={brandId} brand={brand} brandId={brandId} />}
+      <div id="seo-tab-content" role="tabpanel" aria-label={current.label}>
+        {current.id === 'fix' && <ToFix o={o} loading={ov.loading || !brandId} error={ov.error} q={q} onRetry={() => ov.reload()} onFixPage={fixPage} />}
+        {current.id === 'pages' && <Pages key={brandId} brand={brand} brandId={brandId} q={q} openName={openPage} onOpened={() => setOpenPage(null)} onChanged={refresh} />}
+        {current.id === 'faqs' && <Faqs key={brandId} brand={brand} brandId={brandId} q={q} onChanged={refresh} />}
+        {current.id === 'store' && <StoreDetails key={brandId} brand={brand} brandId={brandId} />}
+      </div>
     </div>
   );
 }

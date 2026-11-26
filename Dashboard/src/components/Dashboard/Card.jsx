@@ -17,9 +17,9 @@ import {
    notification bell): push the path and fire popstate so index.jsx swaps
    the mounted view without any prop threading. An optional order-status
    hint is stashed in sessionStorage so the Orders page lands pre-filtered. */
-function goToView(view, orderStatus) {
+function goToView(view, orderStatus, brandId) {
   if (orderStatus) { try { sessionStorage.setItem('obz-orders-status', orderStatus); } catch {} }
-  const url = view === 'main' ? '/dashboard' : `/dashboard/${view}`;
+  const url = view === 'main' ? '/dashboard' : `/dashboard/${view}${view === 'orders' && brandId ? `?brandId=${encodeURIComponent(brandId)}` : ''}`;
   window.history.pushState({}, '', url);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
@@ -126,7 +126,7 @@ const openQueue = (q, brandId) => {
   if (q.view) return goToView(q.view);
   // Delivery problems / returns to refund / failed refunds open Orders → Problems on that filter.
   const problems = { ndr: 'problems:ndr', returns_refund: 'problems:refund', refund_failed: 'problems:refund' }[q.key];
-  return goToView('orders', problems || q.tab);
+  return goToView('orders', problems || q.tab, brandId);
 };
 const timeAgo = (d) => {
   const m = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60000));
@@ -246,6 +246,8 @@ function TodayHome() {
         )}
       </section>
 
+      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
+
       <section className="panel" aria-label="Orders right now">
         <div className="panel-h"><h3>Orders right now</h3></div>
         <div className="hm-flow">
@@ -256,7 +258,7 @@ function TodayHome() {
             { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
           ].map((s, i, arr) => (
             <div className="step" key={s.l}>
-              <button type="button" onClick={() => goToView('orders', s.tab)}>
+              <button type="button" onClick={() => goToView('orders', s.tab, brandId)}>
                 <span className="l">{s.l}</span>
                 <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
                 {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
@@ -266,9 +268,9 @@ function TodayHome() {
           ))}
         </div>
         <div className="hm-chips">
-          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems')}>Delivery problems · {first ? '–' : p.problems || 0}</button>
-          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns')}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
-          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto')}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
+          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
+          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
+          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto', brandId)}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
         </div>
       </section>
 
@@ -375,7 +377,6 @@ function TodayHome() {
         </section>
       </div>
       </>}
-      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
     </div>
   );
 }

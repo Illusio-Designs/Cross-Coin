@@ -160,6 +160,12 @@ function OverflowMenu({ items = [] }) {
     </>;
 }
 
+function linkedBrand() {
+    if (typeof window === 'undefined') return 'all';
+    const brandId = new URLSearchParams(window.location.search).get('brandId') || '';
+    return /^[1-9]\d*$/.test(brandId) ? brandId : 'all';
+}
+
 const Orders = ({ initialTab } = {}) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -205,7 +211,7 @@ const Orders = ({ initialTab } = {}) => {
     const [labelStats, setLabelStats] = useState({ totalLabels: 0, downloadedLabels: 0, pendingLabels: 0, downloadRate: 0 });
     const [statsStartDate, setStatsStartDate] = useState('');
     const [statsEndDate, setStatsEndDate] = useState('');
-    const [brandFilter, setBrandFilter] = useState('all');
+    const [brandFilter, setBrandFilter] = useState(linkedBrand);
     const [brands, setBrands] = useState([]);
     const [generatingLabel, setGeneratingLabel] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
