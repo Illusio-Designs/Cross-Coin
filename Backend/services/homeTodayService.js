@@ -49,15 +49,16 @@ async function getToday({ brandId = null } = {}) {
   const now = new Date();
   const today = istYmd(now);
   const todayStart = dayStartTZ(today);
+  const weekStart = dayStartTZ(shiftYmd(today, -6));
   const yStart = dayStartTZ(shiftYmd(today, -1));
   const yNow = new Date(now.getTime() - 24 * 3600 * 1000);
   const b = brandId ? ' AND o.brand_id = :brandId' : '';
   const bPlain = brandId ? ' AND brand_id = :brandId' : '';
-  const R = { brandId, todayStart, yStart, yNow, now, overdue: new Date(now.getTime() - 24 * 3600 * 1000) };
+  const R = { brandId, todayStart, weekStart, yStart, yNow, now, overdue: new Date(now.getTime() - 24 * 3600 * 1000) };
 
   const [
     confirm, [ship], [transit], [deliveredToday], [closedToday],
-    [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews,
+    [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews, deliveryRows,
   ] = await Promise.all([
     queueCounts.toConfirm(R),
     q(`SELECT COUNT(*) AS n,
@@ -88,6 +89,16 @@ async function getToday({ brandId = null } = {}) {
     queueCounts.whatsapp(R),
     queueCounts.stock(R),
     queueCounts.reviews(R),
+    safe(q(`SELECT DATE(CONVERT_TZ(delivery.first_at, '+00:00', '+05:30')) AS day, COUNT(*) AS n
+         FROM (
+           SELECT h.order_id, MIN(h.created_at) AS first_at
+             FROM order_status_history h JOIN orders o ON o.id = h.order_id
+            WHERE h.status = 'delivered' AND h.created_at >= :weekStart AND h.created_at <= :now${b}
+              AND NOT EXISTS (SELECT 1 FROM order_status_history prior
+                               WHERE prior.order_id = h.order_id AND prior.status = 'delivered' AND prior.created_at < :weekStart)
+            GROUP BY h.order_id
+         ) delivery
+        GROUP BY day`, R), null),
   ]);
 
   const hoursSince = (d) => (d ? Math.floor((now - new Date(d)) / 3600000) : null);
@@ -143,8 +154,10 @@ async function getToday({ brandId = null } = {}) {
   const weekRows = await q(
     `SELECT DATE(CONVERT_TZ(o.created_at, '+00:00', '+05:30')) AS day, COALESCE(SUM(o.final_amount), 0) AS value, COUNT(*) AS n
        FROM orders o WHERE o.created_at >= :weekStart AND ${NOT_CANCELLED}${b}
-      GROUP BY day`, { ...R, weekStart: dayStartTZ(shiftYmd(today, -6)) });
-  const byDay = new Map(weekRows.map((r) => [String(r.day instanceof Date ? r.day.toISOString() : r.day).slice(0, 10), r]));
+      GROUP BY day`, R);
+  const rowsByDay = (rows) => new Map(rows.map((r) => [String(r.day instanceof Date ? r.day.toISOString() : r.day).slice(0, 10), r]));
+  const byDay = rowsByDay(weekRows);
+  const deliveredByDay = deliveryRows && rowsByDay(deliveryRows);
   const week = [];
   for (let i = 6; i >= 0; i--) {
     const d = shiftYmd(today, -i);
@@ -222,6 +235,7 @@ async function getToday({ brandId = null } = {}) {
     pipeline,
     kpis,
     week,
+    deliveredWeek: deliveredByDay && week.map(({ day }) => ({ day, orders: num(deliveredByDay.get(day)?.n) })),
     brands: brands.map((r) => ({ brandId: r.brand_id, brand: r.brand, orders: num(r.orders), booked: Math.round(num(r.booked)), toConfirm: num(r.to_confirm) })),
     feed,
   };

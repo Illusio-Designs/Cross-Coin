@@ -51,6 +51,7 @@ const OrderStatusHistory = sequelize.define(
       {
         fields: ["updated_by"],
       },
+      { name: "idx_osh_status_created_order", fields: ["status", "created_at", "order_id"] },
     ],
   }
 );

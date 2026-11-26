@@ -235,6 +235,8 @@ const formatProductResponse = (product) => {
   return productData;
 };
 
+const { variationAttributesWithScentCopy, KEY: SCENT_COPY_KEY } = require('../utils/scentDescriptions.js');
+
 // Helper function to handle product attributes
 const handleProductAttributes = async (variation, transaction) => {
   const productAttributes = [];
@@ -247,7 +249,7 @@ const handleProductAttributes = async (variation, transaction) => {
       // AttributeValue catalog (otherwise it would appear as a selectable
       // attribute group in the admin's AttributeSelector). The URL map is still
       // persisted verbatim in the variation `attributes` JSON column below.
-      if (normalizedAttributeName === '_images') continue;
+      if (normalizedAttributeName === '_images' || normalizedAttributeName === SCENT_COPY_KEY) continue;
       let attributeValues = variation.attributes[attributeName];
 
       // Ensure attributeValues is an array
@@ -478,7 +480,7 @@ module.exports.createProduct = async (req, res) => {
                 ? Number(variation.cost_price)
                 : null,
             stock: Number(variation.stock || 0),
-            attributes: variation.attributes || {},
+            attributes: variationAttributesWithScentCopy(variation.attributes),
           },
           { transaction }
         );
@@ -1047,7 +1049,7 @@ module.exports.updateProduct = async (req, res) => {
                 ? Number(variation.cost_price)
                 : null,
             stock: Number(variation.stock || 0),
-            attributes: variation.attributes || {},
+            attributes: variationAttributesWithScentCopy(variation.attributes, dbVariation.attributes),
           },
           { transaction }
         );
@@ -1073,7 +1075,7 @@ module.exports.updateProduct = async (req, res) => {
                 ? Number(variation.cost_price)
                 : null,
             stock: Number(variation.stock || 0),
-            attributes: variation.attributes || {},
+            attributes: variationAttributesWithScentCopy(variation.attributes),
           },
           { transaction }
         );

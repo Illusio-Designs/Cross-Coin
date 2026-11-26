@@ -169,6 +169,9 @@ function TodayHome() {
   const week = data?.week || [];
   const weekMax = Math.max(1, ...week.map((w) => w.value));
   const weekTotal = week.reduce((n, w) => n + w.value, 0);
+  const deliveries = data?.deliveredWeek;
+  const deliveryTotal = (deliveries || []).reduce((total, day) => total + day.orders, 0);
+  const deliveryMax = Math.max(1, ...(deliveries || []).map((day) => day.orders));
   const todayYmd = week.length ? week[week.length - 1].day : '';
   const dayName = (ymd) => (ymd === todayYmd ? 'Today' : new Date(ymd + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }));
   const Delta = ({ v, suffix = '%' }) => (v == null ? null : <b className={v >= 0 ? 'up' : 'down'}>{v >= 0 ? '▲' : '▼'} {Math.abs(v)}{suffix}</b>);
@@ -304,6 +307,27 @@ function TodayHome() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="panel" aria-labelledby="hm-deliveries-title">
+          <div className="panel-h">
+            <h3 id="hm-deliveries-title">Delivered orders · last 7 days</h3>
+            <span className="h-hint">{first ? <Skeleton w={48} h={11} /> : deliveries && plural(deliveryTotal, 'order')}</span>
+          </div>
+          {first ? <Skeleton w="100%" h={138} /> : !deliveries ? (
+            <p className="h-hint">Delivery history is unavailable.</p>
+          ) : (
+            <ul className="hm-week hm-delivery-bars" aria-label="Orders by delivery date in India">
+              {deliveries.map(({ day, orders }) => (
+                <li className="col" key={day}>
+                  <span className="amt">{orders.toLocaleString('en-IN')}</span>
+                  <div className={`bar${day === todayYmd ? ' today' : ''}`}
+                    style={{ height: `${Math.max(2, Math.round(orders / deliveryMax * 120))}px` }} aria-hidden="true" />
+                  <span className={`day${day === todayYmd ? ' today' : ''}`}>{dayName(day)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {!brandId && (

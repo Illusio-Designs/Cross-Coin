@@ -170,6 +170,10 @@
 
 /* ── Editor ── */
 .pst-secnav { display: flex; gap: 6px; overflow-x: auto; position: sticky; top: 0; z-index: 5; padding: 6px 0; background: var(--ds-color-bg); }
+.pst-scent-copy { margin-top: 10px; padding: 10px; border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-md); }
+.pst-scent-copy summary { cursor: pointer; font-weight: 650; }
+.pst-scent-copy label { display: grid; gap: 5px; margin-top: 8px; }
+.pst-scent-copy textarea { width: 100%; resize: vertical; }
 .pst-secnav button {
   flex: none; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--ds-color-border);
   background: var(--ds-color-surface); color: var(--ds-color-text-muted); font: 600 12.5px var(--ds-font-sans); cursor: pointer;

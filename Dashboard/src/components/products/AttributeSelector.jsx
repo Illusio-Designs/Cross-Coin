@@ -31,6 +31,8 @@ function extractUploadedUrl(result) {
 // so storefront parsing of those arrays is unaffected and products with no
 // images keep working unchanged.
 const IMAGES_KEY = '_images';
+const DESCRIPTION_KEY = '_scent_descriptions';
+const SCENT_PHASES = [['top', 'First Impression'], ['heart', 'Scent Character'], ['base', 'Lingering Impression']];
 
 // Explicit react-select styling driven by the admin theme tokens, so the
 // control, menu and options follow light/dark mode instead of react-select's
@@ -101,19 +103,24 @@ const AttributeSelector = ({
     emit(newAttributes);
   };
 
-  const setValueImage = (keyLower, value, url) => {
-    const nextImages = { ...(selectedAttributes[IMAGES_KEY] || {}) };
+  const setValueImage = (keyLower, value, url) => emit((current = {}) => {
+    if (url && !current[keyLower]?.includes(value)) return current;
+    const nextImages = { ...(current[IMAGES_KEY] || {}) };
     const group = { ...(nextImages[keyLower] || {}) };
     if (url) group[value] = url;
     else delete group[value];
     if (Object.keys(group).length) nextImages[keyLower] = group;
     else delete nextImages[keyLower];
 
-    const newAttributes = { ...selectedAttributes };
+    const newAttributes = { ...current };
     if (Object.keys(nextImages).length) newAttributes[IMAGES_KEY] = nextImages;
     else delete newAttributes[IMAGES_KEY];
-    emit(newAttributes);
-  };
+    return newAttributes;
+  });
+
+  const setPhaseDescription = (phase, description) => emit((current = {}) => ({
+    ...current, [DESCRIPTION_KEY]: { ...(current[DESCRIPTION_KEY] || {}), [phase]: description },
+  }));
 
   const handleUpload = async (keyLower, value, file) => {
     if (!file) return;
@@ -161,6 +168,9 @@ const AttributeSelector = ({
         const normalizedAttributeName = attributeName.toLowerCase();
         const selectedValues = selectedAttributes[normalizedAttributeName] || [];
         const groupImages = selectedAttributes[IMAGES_KEY]?.[normalizedAttributeName] || {};
+        const scentKey = normalizedAttributeName.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const showScentCopy = ['scent experience', 'the scent experience'].includes(scentKey) &&
+          (selectedValues.length > 0 || selectedAttributes[DESCRIPTION_KEY]);
 
         return (
           <div key={attributeName} className="attribute-group">
@@ -225,6 +235,20 @@ const AttributeSelector = ({
                   );
                 })}
               </div>
+            )}
+            {showScentCopy && (
+              <details className="pst-scent-copy" open>
+                <summary>Fragrance phase descriptions</summary>
+                {SCENT_PHASES.map(([key, label]) => (
+                  <label key={key}>
+                    {label}
+                    <textarea className="web-input" aria-label={`${label} description`} rows={3} maxLength={600}
+                      placeholder="Leave blank to use the storefront description"
+                      value={selectedAttributes[DESCRIPTION_KEY]?.[key] || ''}
+                      onChange={(event) => setPhaseDescription(key, event.target.value)} />
+                  </label>
+                ))}
+              </details>
             )}
           </div>
         );

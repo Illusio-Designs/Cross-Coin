@@ -113,7 +113,7 @@ function mapVariation(v) {
 
   const norm = {};
   Object.entries(attrs).forEach(([k, val]) => {
-    if (String(k).toLowerCase() === '_images') return;
+    if (['_images', '_scent_descriptions'].includes(k.toLowerCase())) return;
     norm[k] = Array.isArray(val) ? val : (val == null ? [] : [val]);
   });
 
@@ -153,6 +153,7 @@ function mapVariation(v) {
     inStock:       Number(v.stock ?? 0) > 0,
     attributes:    norm,
     attrImages,                        // reserved value→image map (not a displayed attribute)
+    scentDescriptions: attrs._scent_descriptions || {},
     // [{name, image}] fragrance notes: the flat `notes` attribute merged with
     // the tiered Top/Heart/Base note attributes (deduped by name), so cards,
     // the home notes section and the shop note filter see every note.

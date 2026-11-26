@@ -17,18 +17,20 @@ function matchNote(name) {
   return key === 'venilla' ? 'vanilla' : key;
 }
 
-export function buildScentExperience({ slug, tiers, notes, attrImages }) {
+export function buildScentExperience({ slug, tiers, notes, attrImages, descriptions = {} }) {
   const groupKey = Object.keys(attrImages).find(isScentExperienceAttribute);
   const photos = Object.entries(attrImages[groupKey] || {}).filter(([, image]) => typeof image === 'string' && image.trim());
   const byName = new Map(notes.map((note) => [matchNote(note.name), note]));
   const fragranceNotes = new Map();
   const phases = PHASES.flatMap(({ aliases, caption, ...phase }) => {
     const copy = scentExperienceCopy[slug]?.[phase.key];
+    const entered = descriptions[phase.key.toLowerCase()];
+    const description = typeof entered === 'string' ? entered.trim() : '';
     const names = [phaseKey(phase.label), ...aliases];
     const uploaded = photos.find(([title]) => names.includes(phaseKey(title)))?.[1].trim();
     const tier = tiers.find(({ label }) => label === phase.key);
     const items = tier?.items.length ? tier.items : (copy?.notes || []).map((name) => byName.get(matchNote(name))).filter(Boolean);
-    if (!items.length && !uploaded) return [];
+    if (!items.length && !uploaded && !description) return [];
 
     const keys = items.map(({ name }) => matchNote(name));
     const matchesCopy = copy && copy.notes.every((name) => keys.includes(matchNote(name)));
@@ -38,7 +40,7 @@ export function buildScentExperience({ slug, tiers, notes, attrImages }) {
       ...phase,
       time: (matchesCopy && copy.time) || phase.time,
       title: matchesCopy ? copy.title : phase.label,
-      description: matchesCopy ? copy.description : noteNames.length ? `${caption} Featuring ${listNotes.format(noteNames)}.` : caption,
+      description: description || (matchesCopy ? copy.description : noteNames.length ? `${caption} Featuring ${listNotes.format(noteNames)}.` : caption),
       image: uploaded || items.find((item) => item.image)?.image || '',
       artwork: Boolean(uploaded),
     }];

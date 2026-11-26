@@ -195,6 +195,7 @@
 
 .hm-grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
 .hm-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; }
+.hm-delivery-bars { list-style: none; margin: 0; padding: 0; }
 .hm-week .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; min-width: 0; }
 .hm-week .bar { width: 100%; max-width: 44px; border-radius: 6px 6px 2px 2px; background: var(--ds-color-border); }
 .hm-week .bar.today { background: var(--ds-color-brand); }

@@ -360,7 +360,7 @@ function getPdpScent(product, defVar, catalog) {
       || product.noteTiers.find((group) => group.label === label);
     return { label, items: (tier?.items || []).map(withPhoto) };
   }).filter(({ items }) => items.length);
-  return buildScentExperience({ slug: product.slug, tiers: noteTiers, notes, attrImages: attrImgs });
+  return buildScentExperience({ slug: product.slug, tiers: noteTiers, notes, attrImages: attrImgs, descriptions: defVar?.scentDescriptions });
 }
 
 function PdpFragranceNotes({ notes }) {

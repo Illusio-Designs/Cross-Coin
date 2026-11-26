@@ -97,7 +97,10 @@ function parseVariationAttributes(raw) {
   const out = {};
   Object.entries(a || {}).forEach(([key, value]) => {
     const k = key.toLowerCase();
-    if (k === '_images') { out._images = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {}; return; }
+    if (k === '_images' || k === '_scent_descriptions') {
+      out[k] = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+      return;
+    }
     out[k] = Array.isArray(value) ? value : [String(value)];
   });
   return out;
@@ -153,7 +156,7 @@ function productToForm(product, admin = null) {
 // "Black · M" from a variation's attributes, else its SKU, else "Variation 2".
 function sizeLabel(v, index) {
   const attrs = Object.entries(v?.attributes || {})
-    .filter(([k, val]) => k !== '_images' && (Array.isArray(val) ? val.join('') : String(val || '')).trim())
+    .filter(([k, val]) => k !== '_images' && k !== '_scent_descriptions' && (Array.isArray(val) ? val.join('') : String(val || '')).trim())
     .map(([, val]) => (Array.isArray(val) ? val.join(', ') : val)).join(' · ');
   return { attrs, label: attrs || v?.sku || `Variation ${index + 1}` };
 }
@@ -269,7 +272,8 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
   const setDim = (key, value) => edit((f) => ({ ...f, dimensions: { ...f.dimensions, [key]: value } }));
   const setVar = (index, key, value) => edit((f) => {
     const variations = [...f.variations];
-    variations[index] = { ...variations[index], [key]: value };
+    if (!variations[index]) return f;
+    variations[index] = { ...variations[index], [key]: typeof value === 'function' ? value(variations[index][key]) : value };
     return { ...f, variations };
   });
   const onAttrChange = (index, attrs) => setVar(index, 'attributes', attrs);
@@ -326,6 +330,10 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       const processed = {};
       Object.entries(variation.attributes || {}).forEach(([key, value]) => {
         const k = key.toLowerCase();
+        if (k === '_scent_descriptions') {
+          processed[k] = value;
+          return;
+        }
         if (k === '_images') {
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const imgMap = {};

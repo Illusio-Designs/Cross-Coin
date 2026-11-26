@@ -1478,6 +1478,7 @@ const startServer = async () => {
         // The catalog listing batch-loads variation images by product_variation_id;
         // without this index that WHERE … IN (…) was a full product_images scan.
         await ensureIndex('product_images', 'idx_pi_variation_id', 'product_variation_id');
+        await ensureIndex('order_status_history', 'idx_osh_status_created_order', 'status, created_at, order_id');
 
         // ── Storefront catalog listing (GET /api/products/catalog) ──
         // ProductService.getProductsList() runs:

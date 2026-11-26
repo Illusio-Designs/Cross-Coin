@@ -41,7 +41,7 @@ async function usageIndex(brandId) {
     const attrs = parseAttrs(r.attributes);
     for (const [key, val] of Object.entries(attrs)) {
       const k = lc(key);
-      if (!k || k === '_images') continue;
+      if (!k || k === '_images' || k === '_scent_descriptions') continue;
       const e = byKey.get(k) || { products: new Set(), variations: 0, values: new Map() };
       e.products.add(r.product_id);
       e.variations += 1;

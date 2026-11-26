@@ -571,7 +571,7 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
 }
 .v-scent__body { padding: clamp(12px, 2vw, 20px); }
 .v-scent__body h3 { color: var(--m-ink); font-style: italic; font-size: clamp(1.125rem, 2.3vw, 1.75rem); line-height: 1.2; }
-.m-root .v-scent__body p { margin-top: 8px; font-size: var(--v-text-label); line-height: 1.55; }
+.m-root .v-scent__body p { margin-top: 8px; font-size: var(--v-text-label); line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
 .v-scent__gallery { min-width: 0; margin-top: 18px; }
 .m-root .v-scent__gallery h2 { color: var(--m-ink); font-size: 1.25rem; line-height: 1.2; }
 .v-scent__notes {
