@@ -9,6 +9,18 @@ router.get('/brand-traffic', isAuthenticated, isAdmin, reportsController.getBran
 // Admin — revenue & gross-profit (COGS + per-order shipping/service/CPP)
 router.get('/revenue-profit', isAuthenticated, isAdmin, reportsController.getRevenueProfit);
 
+const reportCosts = require('../services/reportCostSettingsService.js');
+router.get('/cost-rates', isAuthenticated, isAdmin, async (req, res, next) => {
+  try { res.json({ success: true, rates: await reportCosts.readRates() }); }
+  catch (error) { next(error); }
+});
+router.put('/cost-rates', isAuthenticated, isAdmin, async (req, res, next) => {
+  const rates = reportCosts.validateRates(req.body);
+  if (!rates) return res.status(400).json({ success: false, message: 'Enter valid rates with up to two decimal places. Percentages must be 0–100.' });
+  try { res.json({ success: true, rates: await reportCosts.saveRates(rates) }); }
+  catch (error) { next(error); }
+});
+
 // Admin — active variations missing a cost price (feeds the profit report)
 router.get('/missing-cost-prices', isAuthenticated, isAdmin, reportsController.getMissingCostPrices);
 

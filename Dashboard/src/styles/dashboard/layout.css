@@ -479,3 +479,11 @@
   }
 }
 
+
+.dl-pwa-update {
+  position: fixed; z-index: 75; inset-inline-end: 16px; bottom: max(16px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 32px); display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+  padding: 10px 12px; border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-lg);
+  background: var(--ds-color-surface); color: var(--ds-color-text); box-shadow: var(--ds-shadow-lg);
+  font-size: 13px;
+}

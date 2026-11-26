@@ -9,10 +9,24 @@
   max-width: 1280px; margin-inline: auto;
 }
 .pl-page .ds-pageheader { margin-bottom: 0; }
+.pl-main-tabs {
+  align-self: start; padding: 4px; background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius-lg);
+}
+.pl-main-tabs .ui-chip { border-radius: var(--ds-radius-md); }
+.pl-main-tabs .ui-chip:not(.is-on) { border-color: transparent; }
+.pl-view:not([hidden]) { display: grid; gap: 12px; min-width: 0; }
 .pl-head-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pl-head-tools .pl-dd { min-width: 150px; }
 .pl-head-tools .pl-dd .dropdown-trigger { height: 38px; border-radius: 10px; background: var(--ds-color-surface); }
 .pl-kpis { margin: 0; }
+@media (max-width: 640px) {
+  .ui-chips.pl-main-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: stretch; gap: 4px; }
+  .pl-main-tabs .ui-chip { min-width: 0; justify-content: center; white-space: normal; text-align: center; line-height: 1.2; padding: 6px; }
+  .ds-stat-grid.pl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .pl-kpis .ds-stat { padding: 10px; }
+  .pl-kpis .ds-stat__value { font-size: clamp(16px, 5.2vw, 21px); overflow-wrap: anywhere; }
+}
 .pl-nightly { margin: 6px 0 0; }
 
 .pl-faint { color: var(--ds-color-text-muted); }

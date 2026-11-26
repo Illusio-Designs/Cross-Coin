@@ -324,7 +324,7 @@ export default function CouponReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Coupon performance"
-        subtitle={`Whether each code brings new buyers or just gives away margin. ${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}`}
+        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <>
             <Dropdown

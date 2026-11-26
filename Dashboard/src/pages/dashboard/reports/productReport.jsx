@@ -331,7 +331,7 @@ export default function ProductReport() {
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Products"
-        subtitle={`${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. What each product sells, how shoppers move from viewing to buying, and which sizes and colours come back.`}
+        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown

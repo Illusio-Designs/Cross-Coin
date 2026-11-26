@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useId, useLayoutEffect
 import { createPortal } from 'react-dom';
 import { orderService, brandService, trafficReportService, exceptionsService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
+import FilterChips from "../../../components/ui/FilterChips";
+import DeliverySummary from "../../../components/orders/DeliverySummary";
 import PickupScheduleModal from "../../../components/orders/PickupScheduleModal";
 import ManualOrderModal from "../../../components/orders/ManualOrderModal";
 import Tooltip from "../../../components/ui/Tooltip";
@@ -75,12 +77,17 @@ function OverflowMenu({ items = [] }) {
     useLayoutEffect(() => {
         if (!open || !menu.current) return;
         const place = () => {
+            if (!trigger.current || !menu.current) return;
             const anchor = trigger.current.getBoundingClientRect();
             const viewport = window.visualViewport;
             const topEdge = (viewport?.offsetTop || 0) + 8;
             const bottomEdge = (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight) - 8;
             const leftEdge = (viewport?.offsetLeft || 0) + 8;
             const rightEdge = (viewport?.offsetLeft || 0) + (viewport?.width || document.documentElement.clientWidth) - 8;
+            if (anchor.bottom < topEdge || anchor.top > bottomEdge || anchor.right < leftEdge || anchor.left > rightEdge) {
+                close();
+                return;
+            }
             const width = Math.min(220, rightEdge - leftEdge);
             const below = Math.max(0, bottomEdge - anchor.bottom - 6);
             const above = Math.max(0, anchor.top - topEdge - 6);
@@ -101,8 +108,7 @@ function OverflowMenu({ items = [] }) {
             if (!trigger.current?.contains(event.target) && !menu.current?.contains(event.target)) close();
         };
         const scroll = event => {
-            // Scrolling the action list must not dismiss a constrained menu.
-            if (!menu.current?.contains(event.target)) close();
+            if (!menu.current?.contains(event.target)) place();
         };
         document.addEventListener('pointerdown', outside);
         window.addEventListener('scroll', scroll, true);
@@ -160,6 +166,59 @@ function OverflowMenu({ items = [] }) {
     </>;
 }
 
+function OrderDelivery({ order, preparingLabel, onDownloadLabel }) {
+    const shipment = order.Shipment || {};
+    const providerOrderId = shipment.provider_order_id || order.shipping_order_id;
+    const waybill = shipment.waybill || order.shipping_waybill;
+    const route = shipment.route_code || order.shipping_route_code;
+    const tracking = shipment.tracking_number || order.tracking_number;
+    const courier = shipment.courier_name || order.courier_name;
+    const provider = shipment.provider || (order.shipping_order_id || order.shipping_waybill ? 'ithink' : null);
+    const labelUrl = shipment.label_url || order.shipping_label_url;
+    const syncError = shipment.sync_error || order.shipping_sync_error;
+    const fields = [
+        ['Courier', courier],
+        ['AWB', waybill],
+        ['Tracking number', tracking !== waybill && tracking],
+        ['Provider', provider?.toLowerCase() === 'ithink' ? 'iThink Logistics' : provider],
+        ['Provider order ID', providerOrderId],
+        ['Route', route],
+    ].filter(([, value]) => !!value);
+    if (!fields.length && !labelUrl && !syncError) return null;
+
+    return (
+        <section className="odm-card odm-delivery" aria-label="Delivery details">
+            <h3 className="odm-card-title">
+                <HugeiconsIcon icon={DeliveryTruck01Icon} size={16} strokeWidth={2} aria-hidden="true" />
+                Delivery details
+            </h3>
+            {fields.length > 0 && <dl className="odm-info-grid">
+                {fields.map(([label, value]) => (
+                    <div key={label} className="odm-field">
+                        <dt className="odm-label">{label}</dt><dd className="odm-value">{value}</dd>
+                    </div>
+                ))}
+            </dl>}
+            {(waybill || labelUrl) && <div className="odm-delivery-actions">
+                {waybill && <Button size="sm" variant="secondary" disabled={preparingLabel} onClick={onDownloadLabel}>
+                    {preparingLabel ? 'Preparing…' : 'Download shipping label'}
+                </Button>}
+                {labelUrl && <a href={labelUrl} target="_blank" rel="noopener noreferrer" className="odm-label-link">
+                    <HugeiconsIcon icon={LinkSquare02Icon} size={14} strokeWidth={2} aria-hidden="true" /> Open label PDF
+                </a>}
+            </div>}
+            {typeof syncError === 'string' && syncError && <div className="odm-sync-error" role="status">
+                <div className="odm-sync-error-title">
+                    <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} /> Courier sync issue
+                </div>
+                <ul className="odm-sync-error-list">
+                    {syncError.split('; ').map((issue, index) => <li key={index}>{issue}</li>)}
+                </ul>
+            </div>}
+        </section>
+    );
+}
+
 function linkedBrand() {
     if (typeof window === 'undefined') return 'all';
     const brandId = new URLSearchParams(window.location.search).get('brandId') || '';
@@ -186,7 +245,7 @@ const Orders = ({ initialTab } = {}) => {
         setStatusFilter('problems');
         setCurrentPage(1);
     };
-    const [deskCounts, setDeskCounts] = useState({});
+    const [deskSnapshot, setDeskSnapshot] = useState(null);
     const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
     const [refundDueFilter, setRefundDueFilter] = useState(false);
     const [sortBy, setSortBy] = useState("createdAt");
@@ -197,7 +256,7 @@ const Orders = ({ initialTab } = {}) => {
     const [refundPrompt, setRefundPrompt] = useState(null);
     // Summary tiles — same numbers as Reports › Overview for the picked range
     // (last 30 days when no range is picked).
-    // undefined = not loaded yet (tiles shimmer); null = failed (tiles show 0).
+    // Undefined is the initial load. Null indicates unavailable figures.
     const [allOrdersStats, setAllOrdersStats] = useState(undefined);
     const [syncingOrders, setSyncingOrders] = useState(new Set());
     const [pickupOpen, setPickupOpen] = useState(false);
@@ -213,6 +272,7 @@ const Orders = ({ initialTab } = {}) => {
     const [statsEndDate, setStatsEndDate] = useState('');
     const [brandFilter, setBrandFilter] = useState(linkedBrand);
     const [brands, setBrands] = useState([]);
+    const deskCounts = deskSnapshot?.brand === brandFilter ? deskSnapshot.counts : {};
     const [generatingLabel, setGeneratingLabel] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
     const [labelPollTimer, setLabelPollTimer] = useState(null);
@@ -339,12 +399,15 @@ const Orders = ({ initialTab } = {}) => {
     }, [currentPage, itemsPerPage, statusFilter, paymentTypeFilter, paymentStatusFilter, refundDueFilter, brandFilter, debouncedSearch, statsStartDate, statsEndDate, sortBy, sortOrder]);
 
     // Live tab counts (refreshed with every list load).
+    const deskRequest = useRef(0);
     const fetchDeskCounts = useCallback(async () => {
+        const request = ++deskRequest.current;
         try {
-            const r = await orderService.getDeskCounts(brandFilter);
-            const c = r?.counts || {};
-            const p = await exceptionsService.list({ limit: 1, brandId: brandFilter !== 'all' ? brandFilter : undefined }).catch(() => null);
-            setDeskCounts({ ...c, problems_total: p?.counts?.all || 0 });
+            const [r, p] = await Promise.all([
+                orderService.getDeskCounts(brandFilter),
+                exceptionsService.list({ limit: 1, brandId: brandFilter !== 'all' ? brandFilter : undefined }).catch(() => null),
+            ]);
+            if (request === deskRequest.current) setDeskSnapshot({ brand: brandFilter, counts: { ...r?.counts, problems_total: p?.counts?.all } });
         } catch { /* counts are optional */ }
     }, [brandFilter]);
     useEffect(() => { fetchDeskCounts(); }, [fetchDeskCounts, orders]);
@@ -1040,40 +1103,25 @@ const Orders = ({ initialTab } = {}) => {
                     </div>
                 )}
                 <div className="orders-header-container">
-                    {/* ── Page Header: Title + actions (search + sync buttons) ── */}
                     <PageHeader
                         title="Orders"
-                        subtitle={loading && orders.length === 0 ? <Skeleton w={110} h={12} style={{ display: 'inline-block' }} /> : `${totalOrders} order${totalOrders !== 1 ? 's' : ''} total`}
                         actions={
                             <>
                                 <Button icon={<HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />}
                                     onClick={() => setManualOrderOpen(true)}>New order</Button>
-                                <Button variant="secondary" onClick={() => {
-                                    window.history.pushState({}, '', '/dashboard/payments');
-                                    window.dispatchEvent(new PopStateEvent('popstate'));
-                                }}>Check Razorpay payment</Button>
-                                <div className="sl-search-wrap">
-                                    <span className="sl-search-icon">
-                                        <HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} />
-                                    </span>
-                                    <input type="text" className="sl-search-input" placeholder="Order, customer, AWB or payment ID"
-                                        value={filterValue} onChange={handleSearchChange} />
-                                </div>
-                                <button className="order-sync-main-btn" type="button"
-                                    title="Set no-pickup days and blocked date ranges (shared across all stores)"
-                                    onClick={() => setPickupOpen(true)}>
-                                    <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />
-                                    Pickup Schedule
-                                </button>
-                                <DateRangePicker
-                                    label=""
-                                    startDate={statsStartDate}
-                                    endDate={statsEndDate}
-                                    onStartChange={setStatsStartDate}
-                                    onEndChange={setStatsEndDate}
-                                    onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }}
-                                    inline
-                                />
+                                <details className="ord-tools">
+                                    <summary className="order-sync-main-btn">Order tools</summary>
+                                    <div className="ord-tools-menu">
+                                        <Button variant="secondary" onClick={() => setPickupOpen(true)}>
+                                            <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />
+                                            Pickup schedule
+                                        </Button>
+                                        <Button variant="secondary" onClick={() => {
+                                            window.history.pushState({}, '', '/dashboard/payments#razorpay-check');
+                                            window.dispatchEvent(new PopStateEvent('popstate'));
+                                        }}>Check Razorpay payment</Button>
+                                    </div>
+                                </details>
                             </>
                         }
                     />
@@ -1082,66 +1130,62 @@ const Orders = ({ initialTab } = {}) => {
                     <ManualOrderModal open={manualOrderOpen} brands={brands} initialBrandId={brandFilter}
                         onClose={() => setManualOrderOpen(false)} onCreated={onManualOrderCreated} />
 
-                    {/* ── KPI Strip — one clean row (prototype style) ── */}
-                    <StatGrid className="orders-kpi-grid" style={{ marginBottom: 'var(--ds-space-4)' }}
-                        {...(statsPending ? { role: 'status', 'aria-busy': true, 'aria-label': 'Loading order figures' } : {})}>
-                        <StatTile label={statsStartDate && statsEndDate ? 'Placed' : 'Placed · 30 days'} value={statVal((allOrdersStats?.placed ?? 0).toLocaleString('en-IN'))} />
-                        <StatTile label="Booked value" value={statVal(Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                        <StatTile label="Prepaid"   value={statVal(allOrdersStats?.prepaid?.orders ?? 0)} />
-                        <StatTile label="COD"       value={statVal(allOrdersStats?.cod?.orders ?? 0)} />
-                        <StatTile label="Delivered" value={statVal(allOrdersStats?.delivered ?? 0)} />
-                        <StatTile label="Cancelled" value={statVal(allOrdersStats?.cancelled ?? 0)} />
-                        <StatTile label="Net sales" value={statVal(Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                        <StatTile label="Avg order" value={statVal(Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                    </StatGrid>
+                    {['all', 'in_transit', 'delivered', 'to_ship'].includes(statusFilter) && (
+                        <DeliverySummary title="Delivery status" metrics={[
+                            { label: 'To ship', value: deskCounts.to_ship },
+                            { label: 'In transit', value: deskCounts.in_transit },
+                            { label: 'Open failed deliveries', value: deskCounts.ndr_open, attention: true },
+                        ]} action={<Button size="sm" variant="secondary" onClick={() => openDesk('ndr')}>Review failed deliveries</Button>} />
+                    )}
 
-                    {/* ── Status tabs (left) + Filter drawer trigger (right), one line ── */}
-                    <div className="ord-toolbar">
-                        <div className="ord-tabs" role="tablist" aria-label="Order pipeline stages">
-                            {DESK_TABS.map((t) => (
-                                <button key={t.v} type="button" role="tab"
-                                    aria-selected={statusFilter === t.v}
-                                    className={`ord-tab${statusFilter === t.v ? ' on' : ''}`}
-                                    onClick={() => { setStatusFilter(t.v); setCurrentPage(1); }}>
-                                    {t.l}
-                                    {t.count && deskCounts[t.count] > 0 && (
-                                        <span className="ord-tab-count" style={{ marginLeft: 6, padding: '0 7px', borderRadius: 999, fontSize: '.72rem', fontWeight: 700, background: statusFilter === t.v ? 'var(--ds-color-surface)' : 'var(--ds-color-surface-soft)', color: 'var(--ds-color-text)' }}>
-                                            {deskCounts[t.count]}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                    <FilterChips className="ord-tabs" ariaLabel="Order pipeline stages"
+                        items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] || undefined }))}
+                        value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
+
+                    {statusFilter === 'problems' && <div className="ord-problems-brand">
+                        <Select label="Brand" value={brandFilter} onChange={(v) => setBrandFilter(v || 'all')}
+                            options={[{ value: 'all', label: 'All brands' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))]} />
+                    </div>}
+                    {statusFilter !== 'problems' && <div className="ord-toolbar" role="group" aria-label="Order list filters">
+                        <div className="sl-search-wrap">
+                            <span className="sl-search-icon" aria-hidden="true"><HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} /></span>
+                            <input type="search" className="sl-search-input" placeholder="Order, customer, AWB, payment ID" aria-label="Search orders"
+                                value={filterValue} onChange={handleSearchChange} />
                         </div>
                         <div className="ord-toolbar-right">
+                            <DateRangePicker label="" startDate={statsStartDate} endDate={statsEndDate}
+                                onStartChange={setStatsStartDate} onEndChange={setStatsEndDate}
+                                onClear={() => { setStatsStartDate(''); setStatsEndDate(''); }} inline />
                             <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost"
                                 onClick={() => setLiveUpdates((v) => !v)}
+                                aria-pressed={liveUpdates} aria-label="Live updates"
                                 title={liveUpdates ? 'Live updates on — the table auto-refreshes' : 'Live updates paused — the table won’t move under you'}>
                                 <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: liveUpdates ? 'var(--ds-color-success)' : 'var(--ds-color-text-faint)' }} />
                                 {liveUpdates ? 'Live' : 'Paused'}
                             </button>
-                            {selectedOrders.size > 0 && (
-                                <>
-                                    <span style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--ds-color-text-muted)' }}>{selectedOrders.size} selected</span>
-                                    <button type="button" className="order-sync-main-btn" onClick={handleBulkDownload}
-                                        disabled={isDownloadingBulk || !selectedWithLabel.length}
-                                        title={selectedWithLabel.length ? 'One PDF with every selected label' : 'None of the selected orders has a label yet'}>
-                                        <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
-                                        {isDownloadingBulk ? 'Downloading…' : `Labels (${selectedWithLabel.length})`}
-                                    </button>
-                                    {selectedToConfirm.length > 0 && (
-                                        <button type="button" className="order-sync-main-btn order-sync-main-btn--primary" onClick={handleBulkConfirm} disabled={bulkConfirming}>
-                                            {bulkConfirming ? 'Confirming…' : `Confirm ${selectedToConfirm.length}`}
-                                        </button>
-                                    )}
-                                    <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setSelectedOrders(new Set())}>Clear</button>
-                                </>
-                            )}
                             <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setFilterOpen(true)}>
                                 <HugeiconsIcon icon={FilterIcon} size={16} strokeWidth={2} />
                                 Filter
                             </button>
                         </div>
-                    </div>
+                        {selectedOrders.size > 0 && (
+                            <div className="ord-selection" role="group" aria-label="Selected order actions">
+                                <span style={{ fontSize: '.8rem', fontWeight: 600, color: 'var(--ds-color-text-muted)' }}>{selectedOrders.size} selected</span>
+                                <button type="button" className="order-sync-main-btn" onClick={handleBulkDownload}
+                                    disabled={isDownloadingBulk || !selectedWithLabel.length}
+                                    title={selectedWithLabel.length ? 'One PDF with every selected label' : 'None of the selected orders has a label yet'}>
+                                    <HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={2} />
+                                    {isDownloadingBulk ? 'Downloading…' : `Labels (${selectedWithLabel.length})`}
+                                </button>
+                                {selectedToConfirm.length > 0 && (
+                                    <button type="button" className="order-sync-main-btn order-sync-main-btn--primary" onClick={handleBulkConfirm} disabled={bulkConfirming}>
+                                        {bulkConfirming ? 'Confirming…' : `Confirm ${selectedToConfirm.length}`}
+                                    </button>
+                                )}
+                                <button type="button" className="order-sync-main-btn order-sync-main-btn--ghost" onClick={() => setSelectedOrders(new Set())}>Clear</button>
+                            </div>
+                        )}
+                    </div>}
 
                 </div>{/* end orders-header-container */}
 
@@ -1206,6 +1250,9 @@ const Orders = ({ initialTab } = {}) => {
                 ) : (
                 /* Table Section */
                 <section className="sl-table-wrap" aria-label="Orders table">
+                    {!loading && totalOrders > 0 && (
+                        <p className="ord-results-count">{totalOrders.toLocaleString('en-IN')} matching {totalOrders === 1 ? 'order' : 'orders'}</p>
+                    )}
                     {/* First load (no rows yet): the shared Table draws the real
                         column headers + shimmer rows. Page / tab / filter changes
                         keep the current rows on screen, dimmed, until the new
@@ -1255,6 +1302,25 @@ const Orders = ({ initialTab } = {}) => {
                     )}
                 </section>
                 )}
+
+                {statusFilter !== 'problems' && <details className="ord-overview">
+                    <summary>Order overview <span>{statsStartDate || statsEndDate ? 'Selected dates' : 'Last 30 days'}</span></summary>
+                    {allOrdersStats === null ? (
+                        <p className="ord-overview-error">Order figures are unavailable. <button type="button" onClick={fetchAllOrdersForStats}>Try again</button></p>
+                    ) : (
+                        <StatGrid className="orders-kpi-grid"
+                            {...(statsPending ? { role: 'status', 'aria-busy': true, 'aria-label': 'Loading order figures' } : {})}>
+                            <StatTile label="Placed" value={statVal((allOrdersStats?.placed ?? 0).toLocaleString('en-IN'))} />
+                            <StatTile label="Booked value" value={statVal(Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                            <StatTile label="Prepaid"   value={statVal(allOrdersStats?.prepaid?.orders ?? 0)} />
+                            <StatTile label="COD"       value={statVal(allOrdersStats?.cod?.orders ?? 0)} />
+                            <StatTile label="Delivered" value={statVal(allOrdersStats?.delivered ?? 0)} />
+                            <StatTile label="Cancelled" value={statVal(allOrdersStats?.cancelled ?? 0)} />
+                            <StatTile label="Net sales" value={statVal(Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                            <StatTile label="Avg order" value={statVal(Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                        </StatGrid>
+                    )}
+                </details>}
             </div>
 
             {/* Order Details Modal */}
@@ -1270,6 +1336,10 @@ const Orders = ({ initialTab } = {}) => {
             >
                 {selectedOrder && (
                     <div className="odm-body">
+
+                        <OrderDelivery order={selectedOrder}
+                            preparingLabel={generatingLabel.has(selectedOrder.id)}
+                            onDownloadLabel={() => generateLabelForOrder(selectedOrder.id)} />
 
                         {/* ── Row 1: Customer + Shipping ── */}
                         <div className={`odm-row-2${editingAddress ? ' odm-row-2--stack' : ''}`}>
@@ -1420,63 +1490,6 @@ const Orders = ({ initialTab } = {}) => {
                                 )}
                             </div>
 
-                            {/* Shipping tracking block — provider-aware */}
-                            {(() => {
-                                const s = selectedOrder.Shipment || {};
-                                const providerKey = s.provider || (selectedOrder.shipping_order_id || selectedOrder.shipping_waybill ? 'ithink' : null);
-                                const providerLabel = providerKey ? 'iThink Logistics' : null;
-                                const providerOrderId = s.provider_order_id || selectedOrder.shipping_order_id;
-                                const waybill = s.waybill || selectedOrder.shipping_waybill;
-                                const routeCode = s.route_code || selectedOrder.shipping_route_code;
-                                const trackingNo = s.tracking_number || selectedOrder.tracking_number;
-                                const courier = s.courier_name || selectedOrder.courier_name;
-                                const labelUrl = s.label_url || selectedOrder.shipping_label_url;
-                                const syncErr = s.sync_error || selectedOrder.shipping_sync_error;
-                                const showBlock = providerOrderId || waybill || trackingNo;
-                                return (
-                                    <>
-                                        {showBlock && (
-                                            <div className="odm-fship">
-                                                <div className="odm-fship-title">
-                                                    <HugeiconsIcon icon={DeliveryTruck01Icon} size={13} strokeWidth={2} />
-                                                    {providerLabel ? `${providerLabel} Tracking` : 'Shipping Tracking'}
-                                                </div>
-                                                <div className="odm-info-grid">
-                                                    {providerLabel && <div className="odm-field"><span className="odm-label">Provider</span><span className="odm-value">{providerLabel}</span></div>}
-                                                    {providerOrderId && <div className="odm-field"><span className="odm-label">Provider Order ID</span><span className="odm-value odm-mono">{providerOrderId}</span></div>}
-                                                    {waybill && <div className="odm-field"><span className="odm-label">AWB Number</span><span className="odm-value odm-mono">{waybill}</span></div>}
-                                                    {routeCode && <div className="odm-field"><span className="odm-label">Route Code</span><span className="odm-value odm-mono">{routeCode}</span></div>}
-                                                    {trackingNo && trackingNo !== waybill && <div className="odm-field"><span className="odm-label">Tracking No.</span><span className="odm-value odm-mono">{trackingNo}</span></div>}
-                                                    {courier && <div className="odm-field"><span className="odm-label">Courier</span><span className="odm-value">{courier}</span></div>}
-                                                    {labelUrl && (
-                                                        <div className="odm-field">
-                                                            <span className="odm-label">Shipping Label</span>
-                                                            <a href={labelUrl} target="_blank" rel="noopener noreferrer" className="odm-label-link">
-                                                                <HugeiconsIcon icon={Download04Icon} size={12} strokeWidth={2} />
-                                                                Download PDF
-                                                            </a>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {syncErr && typeof syncErr === 'string' && (
-                                            <div className="odm-sync-error">
-                                                <div className="odm-sync-error-title">
-                                                    <HugeiconsIcon icon={Alert02Icon} size={14} strokeWidth={2} />
-                                                    {providerLabel ? `${providerLabel} Sync Issues` : 'Sync Issues'}
-                                                </div>
-                                                <ul className="odm-sync-error-list">
-                                                    {syncErr.split('; ').map((issue, i) => (
-                                                        <li key={i}>{issue}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </>
-                                );
-                            })()}
                         </div>
 
                         {/* ── Products Ordered — card rows, no scroll ── */}
@@ -1558,44 +1571,6 @@ const Orders = ({ initialTab } = {}) => {
                         {/* Timeline, payments & refunds, return, failed delivery */}
                         <OrderStory orderId={selectedOrder.id} />
 
-                        {/* Manifest Section */}
-                        {(selectedOrder.Shipment?.waybill || selectedOrder.shipping_waybill) && (
-                            <div className="odm-card">
-                                <div className="odm-card-title">
-                                    <HugeiconsIcon icon={File01Icon} size={14} strokeWidth={2} />
-                                    Shipping Label
-                                </div>
-                                <div style={{ padding: '14px' }}>
-                                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--ds-color-text-muted)' }}>
-                                        Download the shipping label for this order.
-                                    </p>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            type="button"
-                                            className="btn btn-primary btn-md"
-                                            onClick={() => generateLabelForOrder(selectedOrder.id)}
-                                            disabled={generatingLabel.has(selectedOrder.id)}
-                                            style={{ flex: 1 }}
-                                        >
-                                            <HugeiconsIcon icon={Download04Icon} size={15} strokeWidth={2} />
-                                            {generatingLabel.has(selectedOrder.id) ? 'Preparing…' : 'Download Label'}
-                                        </button>
-                                        {selectedOrder.shipping_label_url && (
-                                            <a
-                                                href={selectedOrder.shipping_label_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="btn btn-outline btn-md"
-                                                style={{ flex: 1, justifyContent: 'center' }}
-                                            >
-                                                <HugeiconsIcon icon={LinkSquare02Icon} size={15} strokeWidth={2} />
-                                                Open Label
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
             </Modal>

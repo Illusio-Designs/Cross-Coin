@@ -478,7 +478,7 @@ function CodRemittance() {
 function Tiles({ s, error, onRetry, retrying, stale }) {
   if (error && !s) return <ErrorState message={`Couldn’t load the payment totals — ${error.message}`} onRetry={onRetry} retrying={retrying} />;
   if (!s) return <SkeletonKpis count={5} label="Loading payment totals…" className="pl-kpis" />;
-  const pct = gatewayPct();
+  const pct = s.gatewayPct ?? gatewayPct();
   const co = s?.collectedOnline;
   const cod = s?.codToCollect;
   const refunded = s?.refunded;
@@ -493,6 +493,7 @@ function Tiles({ s, error, onRetry, retrying, stale }) {
     }
   }
   const f = s?.failed;
+  const failedPct = Number.isFinite(f?.pct) ? f.pct : null;
   const retried = f && f.orders ? Math.round((f.retriedPaid / f.orders) * 100) : 0;
   return (
     <div style={stale ? DIM : undefined} aria-busy={stale || undefined}>
@@ -502,10 +503,11 @@ function Tiles({ s, error, onRetry, retrying, stale }) {
         sub={cod ? `${plural(cod.orders, "order")} with couriers right now` : ""} />
       <KpiTile label="Refunded" value={refunded ? inr(refunded.amount) : "–"} tone="marketing"
         sub={refunded ? `${plural(refunded.count, "refund")}${refunded.owed ? ` · ${num(refunded.owed)} still owed` : ""}` : ""} />
-      <KpiTile label="Failed payments" value={f ? `${f.pct}%` : "–"} tone={f && f.pct >= 10 ? "problem" : "needs"}
+      <KpiTile label="Failed payments" value={failedPct == null ? "–" : `${failedPct}%`}
+        tone={failedPct >= 10 ? "problem" : failedPct > 0 ? "needs" : undefined}
         sub={f ? (f.attempts ? `${num(f.attempts)} ${f.attempts === 1 ? "try" : "tries"} · ${retried}% retried and paid` : "none in this period") : ""} />
       <KpiTile label="Gateway fees" value={co ? inr((co.amount * pct) / 100) : "–"}
-        sub={`about ${pct}% of online · from Revenue & Profit`} />
+        sub={`Estimated at ${pct}% of online payments`} />
     </KpiGrid>
     </div>
   );
@@ -658,8 +660,17 @@ function Mismatches({ isAdmin }) {
 }
 
 // ── Page ─────────────────────────────────────────────────────────
+const PAYMENT_VIEWS = [
+  { value: "activity", label: "Payment activity", hash: "#payment-activity" },
+  { value: "prepaid", label: "Prepaid reconciliation", hash: "#razorpay-check" },
+  { value: "cod", label: "COD reconciliation", hash: "#cod-reconciliation" },
+];
+const viewFromLocation = () => typeof window === "undefined" ? "activity"
+  : PAYMENT_VIEWS.find(({ hash }) => hash === window.location.hash)?.value || "activity";
+
 export default function Payments() {
   const { isAdmin } = useAuth() || {};
+  const [view, setView] = useState(viewFromLocation);
   const [period, setPeriod] = useState(7);
   const [tab, setTab] = useState("all");
   const [brandId, setBrandId] = useState("");
@@ -675,6 +686,21 @@ export default function Payments() {
   }, []);
   useEffect(() => { const t = setTimeout(() => setQ(search.trim()), 350); return () => clearTimeout(t); }, [search]);
   useEffect(() => { setPage(1); }, [period, tab, brandId, q]);
+
+  useEffect(() => {
+    const syncView = () => setView(viewFromLocation());
+    window.addEventListener("hashchange", syncView);
+    window.addEventListener("popstate", syncView);
+    return () => {
+      window.removeEventListener("hashchange", syncView);
+      window.removeEventListener("popstate", syncView);
+    };
+  }, []);
+  const changeView = (value) => {
+    setView(value);
+    const hash = PAYMENT_VIEWS.find((item) => item.value === value).hash;
+    window.history.replaceState(window.history.state, "", hash);
+  };
 
   // Period / brand change keeps the old totals on screen (dimmed) until the new ones land.
   const summary = useQuery({
@@ -705,98 +731,103 @@ export default function Payments() {
     <div className="dashboard-sections pl-page">
       <PageHeader
         title="Payments"
-        description="Money in and out, checked against Razorpay every night at 3 am."
-        actions={(
-          <div className="pl-head-tools">
-            <Dropdown value={brandId} onChange={(v) => setBrandId(String(v))} options={brandOpts} className="pl-dd" />
+      />
+      <FilterChips className="pl-main-tabs" ariaLabel="Payments view" items={PAYMENT_VIEWS}
+        value={view} onChange={changeView} controls="pl-workspace" />
+
+      <div id="pl-workspace" role="tabpanel" aria-label={PAYMENT_VIEWS.find((item) => item.value === view)?.label}>
+        <div className="pl-view" hidden={view !== "prepaid"}>
+          <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
+          <p className="pl-faint pl-small pl-nightly">
+            {nightly
+              ? <>Last Razorpay check ({fullDate(nightly.at)}): {nightly.summary || (nightly.status === "failed" ? "didn’t finish" : "done")}{nightly.status === "failed" && nightly.error ? ` — ${nightly.error.split("\n")[0]}` : ""}.{s.fixedThisWeek ? ` ${plural(s.fixedThisWeek, "order")} fixed from Razorpay this week.` : ""}</>
+              : s ? "The nightly Razorpay check hasn’t run yet." : null}
+          </p>
+        </div>
+        <div className="pl-view" hidden={view !== "cod"}>
+          <CodRemittance />
+        </div>
+        <div className="pl-view" hidden={view !== "activity"}>
+          <div className="pl-head-tools" role="group" aria-label="Payment activity filters">
+            <Dropdown ariaLabel="Brand" value={brandId} onChange={(v) => setBrandId(String(v))} options={brandOpts} className="pl-dd" />
             <FilterChips ariaLabel="Period" items={PERIODS} value={period} onChange={setPeriod} />
           </div>
-        )}
-      >
-        <p className="pl-faint pl-small pl-nightly">
-          {!s ? <Skeleton w="min(420px, 80%)" h={11} style={{ display: "inline-block", verticalAlign: "middle" }} /> : nightly
-            ? <>Last Razorpay check ({fullDate(nightly.at)}): {nightly.summary || (nightly.status === "failed" ? "didn’t finish" : "done")}{nightly.status === "failed" && nightly.error ? ` — ${nightly.error.split("\n")[0]}` : ""}.{s.fixedThisWeek ? ` ${plural(s.fixedThisWeek, "order")} fixed from Razorpay this week.` : ""}</>
-            : "The nightly Razorpay check hasn’t run yet."}
-        </p>
-      </PageHeader>
+          <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
 
-      <Tiles s={s} error={summary.error} onRetry={() => summary.refetch()} retrying={summary.isFetching} stale={summary.isPlaceholderData} />
-
-      <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
-      <CodRemittance />
-
-      <h2 className="pl-section-title" id="pl-pay-title">Payment activity</h2>
-      <div className="pl-toolbar">
-        <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />
-        <label className="pl-search">
-          {ic(Search01Icon)}
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Order, payment ID or phone" aria-label="Search payments" />
-        </label>
-      </div>
-
-      <section id="pl-pay-list" className="pl-card" aria-labelledby="pl-pay-title" aria-busy={list.isFetching || undefined}>
-        {list.isLoading ? (
-          <div className="pl-scroll" role="status" aria-busy="true">
-            <span className="ds-sr-only">Loading payments…</span>
-            <table className="pl-table pl-table--pay ds-mobile-rows" aria-hidden="true">
-              <thead>
-                <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th /></tr>
-              </thead>
-              <tbody><SkeletonTableRows rows={8} cols={8} /></tbody>
-            </table>
+          <h2 className="pl-section-title" id="pl-pay-title">Transactions</h2>
+          <div className="pl-toolbar">
+            <FilterChips ariaLabel="Payment status" items={TABS} value={tab} onChange={setTab} controls="pl-pay-list" />
+            <label className="pl-search">
+              {ic(Search01Icon)}
+              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Order, payment ID or phone" aria-label="Search payments" />
+            </label>
           </div>
-        ) : list.error && !list.data ? (
-          <ErrorState message={`Couldn’t load payments — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
-        ) : rows.length === 0 ? (
-          <EmptyState compact icon={ic(CreditCardIcon, 22)}
-            title={q ? "No payments match your search" : "Nothing here"}
-            description={q ? "Try the full order number, a Razorpay payment ID (pay_…) or a 10-digit phone number." : EMPTY[tab]} />
-        ) : (
-          <div className="pl-scroll" style={list.isFetching ? DIM : undefined}>
-            <table className="pl-table pl-table--pay ds-mobile-rows" role="table">
-              <thead>
-                <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th aria-label="Actions" /></tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => {
-                  const [label, tone] = KIND[r.kind] || [r.kind, "neutral"];
-                  return (
-                    <tr key={r.key}>
-                      <td className="ds-mobile-span">
-                        <b>{r.orderNumber || <span className="pl-faint">No order yet</span>}</b>
-                        {r.ref && <div className="pl-mono pl-faint" title={r.ref}>{r.ref}</div>}
-                      </td>
-                      <td data-mobile-label="Customer">{r.customer || <span className="pl-faint">—</span>}{r.brand && !brandId && <div className="pl-faint pl-small">{r.brand}</div>}</td>
-                      <td data-mobile-label="Method" className="pl-nowrap">{r.methodLabel}</td>
-                      <td data-mobile-label="Amount" className={`r pl-nowrap pl-amt${r.amount < 0 ? " is-out" : ""}`}><b>{r.amount < 0 ? `−${inr(r.amount)}` : inr(r.amount)}</b></td>
-                      <td data-mobile-label="Status"><StatusPill tone={tone} size="sm">{label}</StatusPill></td>
-                      <td className="pl-why" data-mobile-label="Details">{r.why || <span className="pl-faint">—</span>}</td>
-                      <td className="pl-nowrap pl-faint" data-mobile-label="When" title={fullDate(r.at)}>{when(r.at)}</td>
-                      <td className="r ds-mobile-span ds-mobile-actions">
-                        {r.orderNumber && <Button size="sm" variant="secondary" onClick={() => openOrder(r.orderNumber)}>Open order</Button>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="pl-foot">
-          <span className="pl-faint">
-            {list.error && list.data ? "Couldn’t refresh — showing the last list. " : ""}
-            {list.data?.searchedAllDates ? "Searching all dates." : `${period === 1 ? "Today" : `Last ${period} days`}${brandId ? "" : ", all brands"}.`}
-          </span>
-          {total > 0 && (
-            <span className="pl-pager">
-              <span className="pl-num">{num(from)}–{num(to)} of {num(total)}</span>
-              <Button size="sm" variant="secondary" disabled={page <= 1 || list.isFetching} onClick={() => setPage((p) => p - 1)}>← Prev</Button>
-              <Button size="sm" variant="secondary" disabled={to >= total || list.isFetching} onClick={() => setPage((p) => p + 1)}>Next →</Button>
-            </span>
-          )}
+
+          <section id="pl-pay-list" className="pl-card" aria-labelledby="pl-pay-title" aria-busy={list.isFetching || undefined}>
+            {list.isLoading ? (
+              <div className="pl-scroll" role="status" aria-busy="true">
+                <span className="ds-sr-only">Loading payments…</span>
+                <table className="pl-table pl-table--pay ds-mobile-rows" aria-hidden="true">
+                  <thead>
+                    <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th /></tr>
+                  </thead>
+                  <tbody><SkeletonTableRows rows={8} cols={8} /></tbody>
+                </table>
+              </div>
+            ) : list.error && !list.data ? (
+              <ErrorState message={`Couldn’t load payments — ${list.error.message}`} onRetry={() => list.refetch()} retrying={list.isFetching} />
+            ) : rows.length === 0 ? (
+              <EmptyState compact icon={ic(CreditCardIcon, 22)}
+                title={q ? "No payments match your search" : "Nothing here"}
+                description={q ? "Try the full order number, a Razorpay payment ID (pay_…) or a 10-digit phone number." : EMPTY[tab]} />
+            ) : (
+              <div className="pl-scroll" style={list.isFetching ? DIM : undefined}>
+                <table className="pl-table pl-table--pay ds-mobile-rows" role="table">
+                  <thead>
+                    <tr><th>Order</th><th>Customer</th><th>Method</th><th className="r">Amount</th><th>Status</th><th>Why</th><th>When</th><th aria-label="Actions" /></tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => {
+                      const [label, tone] = KIND[r.kind] || [r.kind, "neutral"];
+                      return (
+                        <tr key={r.key}>
+                          <td className="ds-mobile-span">
+                            <b>{r.orderNumber || <span className="pl-faint">No order yet</span>}</b>
+                            {r.ref && <div className="pl-mono pl-faint" title={r.ref}>{r.ref}</div>}
+                          </td>
+                          <td data-mobile-label="Customer">{r.customer || <span className="pl-faint">—</span>}{r.brand && !brandId && <div className="pl-faint pl-small">{r.brand}</div>}</td>
+                          <td data-mobile-label="Method" className="pl-nowrap">{r.methodLabel}</td>
+                          <td data-mobile-label="Amount" className={`r pl-nowrap pl-amt${r.amount < 0 ? " is-out" : ""}`}><b>{r.amount < 0 ? `−${inr(r.amount)}` : inr(r.amount)}</b></td>
+                          <td data-mobile-label="Status"><StatusPill tone={tone} size="sm">{label}</StatusPill></td>
+                          <td className="pl-why" data-mobile-label="Details">{r.why || <span className="pl-faint">—</span>}</td>
+                          <td className="pl-nowrap pl-faint" data-mobile-label="When" title={fullDate(r.at)}>{when(r.at)}</td>
+                          <td className="r ds-mobile-span ds-mobile-actions">
+                            {r.orderNumber && <Button size="sm" variant="secondary" onClick={() => openOrder(r.orderNumber)}>Open order</Button>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="pl-foot">
+              <span className="pl-faint">
+                {list.error && list.data ? "Couldn’t refresh — showing the last list. " : ""}
+                {list.data?.searchedAllDates ? "Searching all dates." : `${period === 1 ? "Today" : `Last ${period} days`}${brandId ? "" : ", all brands"}.`}
+              </span>
+              {total > 0 && (
+                <span className="pl-pager">
+                  <span className="pl-num">{num(from)}–{num(to)} of {num(total)}</span>
+                  <Button size="sm" variant="secondary" disabled={page <= 1 || list.isFetching} onClick={() => setPage((p) => p - 1)}>← Prev</Button>
+                  <Button size="sm" variant="secondary" disabled={to >= total || list.isFetching} onClick={() => setPage((p) => p + 1)}>Next →</Button>
+                </span>
+              )}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

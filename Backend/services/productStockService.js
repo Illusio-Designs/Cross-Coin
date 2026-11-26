@@ -153,6 +153,7 @@ const FILTERS = {
   low: `t.status = 'active' AND t.low_n > 0`,
   slow: `t.status = 'active' AND t.total_stock >= ${SLOW_MIN_STOCK} AND (t.sold30 = 0 OR t.total_stock * ${SOLD_WINDOW_DAYS} / t.sold30 > ${SLOW_DAYS})`,
   hidden: `t.visible = 0`,
+  missing_cost: `t.status = 'active' AND t.missing_cost_n > 0`,
 };
 const DAYS_SQL = `CASE WHEN t.total_stock <= 0 THEN 0 WHEN t.sold30 > 0 THEN t.total_stock * ${SOLD_WINDOW_DAYS} / t.sold30 ELSE NULL END`;
 const SORTS = {
@@ -180,13 +181,14 @@ function baseSql({ brandId, search }, R) {
     SELECT p.id, p.name, p.slug, p.status, p.badge, ${columnKnown ? 'p.badge_locked' : '0'} AS badge_locked,
            p.created_at, c.name AS category,
            COALESCE(v.total_stock, 0) AS total_stock, v.min_price, v.max_price,
-           COALESCE(v.var_n, 0) AS var_n, COALESCE(v.out_n, 0) AS out_n, COALESCE(v.low_n, 0) AS low_n,
+           COALESCE(v.var_n, 0) AS var_n, COALESCE(v.out_n, 0) AS out_n, COALESCE(v.low_n, 0) AS low_n, COALESCE(v.missing_cost_n, 0) AS missing_cost_n,
            COALESCE(s.sold30, 0) AS sold30,
            (${visible}) AS visible
       FROM products p
       LEFT JOIN categories c ON c.id = p.categoryId
       LEFT JOIN (SELECT productId, SUM(GREATEST(stock, 0)) AS total_stock, MIN(price) AS min_price, MAX(price) AS max_price,
-                        COUNT(*) AS var_n, SUM(stock <= 0) AS out_n, SUM(stock > 0 AND stock < :low) AS low_n
+                        COUNT(*) AS var_n, SUM(stock <= 0) AS out_n, SUM(stock > 0 AND stock < :low) AS low_n,
+                        SUM(CASE WHEN status = 'active' AND (cost_price IS NULL OR cost_price <= 0) THEN 1 ELSE 0 END) AS missing_cost_n
                    FROM product_variations GROUP BY productId) v ON v.productId = p.id
       LEFT JOIN (SELECT oi.product_id, SUM(oi.quantity) AS sold30
                    FROM order_items oi JOIN orders o ON o.id = oi.order_id
@@ -237,7 +239,8 @@ async function listStock({ search = '', brandId = null, stock = 'all', sort = 'a
               COALESCE(SUM(${FILTERS.low}), 0) AS low_n,
               COALESCE(SUM(CASE WHEN t.status = 'active' THEN t.low_n ELSE 0 END), 0) AS low_sizes,
               COALESCE(SUM(${FILTERS.slow}), 0) AS slow_n,
-              COALESCE(SUM(${FILTERS.hidden}), 0) AS hidden_n
+              COALESCE(SUM(${FILTERS.hidden}), 0) AS hidden_n,
+              COALESCE(SUM(${FILTERS.missing_cost}), 0) AS missing_cost_products
          FROM (${tileBase}) t`, tileR),
   ]);
 
@@ -288,7 +291,7 @@ async function listStock({ search = '', brandId = null, stock = 'all', sort = 'a
       thumb: thumbnails[0] || null,
       thumbnails,
       brands,
-      variationCount: num(r.var_n), outSizes: num(r.out_n), lowSizes: num(r.low_n),
+      variationCount: num(r.var_n), missingCostCount: r.status === 'active' ? num(r.missing_cost_n) : 0, outSizes: num(r.out_n), lowSizes: num(r.low_n),
       totalStock, minPrice: r.min_price != null ? Number(r.min_price) : null, maxPrice: r.max_price != null ? Number(r.max_price) : null,
       sold30, daysLeft: daysLeft(totalStock, sold30),
       waiting: waiting.get(id) || 0,
@@ -303,7 +306,7 @@ async function listStock({ search = '', brandId = null, stock = 'all', sort = 'a
     counts: {
       all: num(tiles?.all_n), out: num(tiles?.out_n), outSizes: num(tiles?.out_sizes),
       low: num(tiles?.low_n), lowSizes: num(tiles?.low_sizes),
-      slow: num(tiles?.slow_n), hidden: num(tiles?.hidden_n), waitingOut,
+      slow: num(tiles?.slow_n), hidden: num(tiles?.hidden_n), missingCost: num(tiles?.missing_cost_products), waitingOut,
     },
     rules: { lowStock: LOW_STOCK, slowMinStock: SLOW_MIN_STOCK, slowDays: SLOW_DAYS, soldWindowDays: SOLD_WINDOW_DAYS },
   };
@@ -317,7 +320,7 @@ async function getVariations(productId) {
   const since = new Date(Date.now() - SOLD_WINDOW_DAYS * 86400000);
   const [[product], vars, inCart, waiting] = await Promise.all([
     q(`SELECT id, name, status, badge${columnKnown ? ', badge_locked' : ''} FROM products WHERE id = :pid`, { pid }),
-    q(`SELECT v.id, v.sku, v.price, v.comparePrice, v.stock, v.status, v.attributes, COALESCE(s.sold30, 0) AS sold30
+    q(`SELECT v.id, v.sku, v.price, v.cost_price, v.comparePrice, v.stock, v.status, v.attributes, COALESCE(s.sold30, 0) AS sold30
          FROM product_variations v
          LEFT JOIN (SELECT oi.variation_id, SUM(oi.quantity) AS sold30
                       FROM order_items oi JOIN orders o ON o.id = oi.order_id
@@ -338,6 +341,7 @@ async function getVariations(productId) {
     return {
       id: num(v.id), sku: v.sku, label: variationLabel(v.attributes, v.sku),
       price: v.price != null ? Number(v.price) : null, comparePrice: v.comparePrice != null ? Number(v.comparePrice) : null,
+      costPrice: v.cost_price == null ? null : Number(v.cost_price),
       stock, sold30, daysLeft: daysLeft(stock, sold30), active: v.status !== 'inactive',
       inCarts: cartBy.get(num(v.id)) || 0,
     };

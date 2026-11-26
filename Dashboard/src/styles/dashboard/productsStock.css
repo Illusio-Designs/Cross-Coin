@@ -321,3 +321,5 @@
 .pst-detail-image { display: grid; gap: 12px; margin-top: 12px; }
 .pst-detail-image img { width: min(100%, 360px); height: auto; border-radius: 10px; }
 .pst-detail-image label { display: grid; gap: 6px; }
+
+.pst .pst-missing-cost { color: var(--ds-color-warn-text); font-weight: 600; }

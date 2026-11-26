@@ -212,7 +212,7 @@ export default function LocationReport() {
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Orders by location"
-        subtitle={`Where orders ship to: share by state, city and pincode, with COD, delivery and RTO for each place. ${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}`}
+        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown

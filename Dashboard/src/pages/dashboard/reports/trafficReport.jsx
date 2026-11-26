@@ -257,7 +257,7 @@ export default function TrafficReport() {
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Traffic & Conversion"
-        subtitle={`${brandName} · ${shownFrom} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Where visitors come from and how many of them order.${dataFromLabel ? ` Data from ${dataFromLabel} IST onwards.` : ''}`}
+        subtitle={`${brandName} · ${shownFrom} → ${to} IST${isFetching && data ? ' · updating…' : ''}${dataFromLabel ? ` · Tracking since ${dataFromLabel} IST` : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown

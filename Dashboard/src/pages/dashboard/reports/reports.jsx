@@ -391,7 +391,7 @@ export default function Reports() {
     <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Reports"
-        subtitle={`${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}. Net sales = delivered orders minus refunds.`}
+        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <div className="obz-rep-head">
             <Dropdown

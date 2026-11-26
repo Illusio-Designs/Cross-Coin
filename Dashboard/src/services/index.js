@@ -340,9 +340,13 @@ export const trafficReportService = {
     const { data } = await adminApi.get('/api/reports/revenue-profit', { params: { startDate, endDate, basis } });
     return data;
   },
-  getMissingCostPrices: async () => {
-    const { data } = await adminApi.get('/api/reports/missing-cost-prices');
-    return data;
+  getCostRates: async () => {
+    const { data } = await adminApi.get('/api/reports/cost-rates');
+    return data.rates;
+  },
+  saveCostRates: async (rates) => {
+    const { data } = await adminApi.put('/api/reports/cost-rates', rates);
+    return data.rates;
   },
 };
 

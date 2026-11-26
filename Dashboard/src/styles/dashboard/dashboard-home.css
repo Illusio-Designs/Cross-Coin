@@ -160,7 +160,20 @@
 .hm-wallet-muted { color: var(--ds-color-text-muted); }
 .hm-wallet-track { height: 4px; margin: 2px 0; border-radius: 999px; overflow: hidden; background: var(--ds-color-border); }
 .hm-wallet-track span { display: block; height: 100%; background: currentColor; border-radius: inherit; }
-.hm-wallet-controls summary { width: fit-content; font-size: 12px; cursor: pointer; }
+.hm-wallet-controls .hm-wallet-toggle {
+  display: flex; width: fit-content; max-width: 100%; min-height: 34px; box-sizing: border-box;
+  list-style: none; text-align: left; white-space: normal;
+}
+.hm-wallet-toggle::-webkit-details-marker { display: none; }
+.hm-wallet-group > .hm-wallet-toggle { width: 100%; min-height: 40px; justify-content: flex-start; }
+.hm-wallet-toggle-count {
+  min-width: 22px; padding: 2px 6px; border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-surface-soft); color: var(--ds-color-text-muted); text-align: center;
+  font-size: 11px; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.hm-wallet-chevron { margin-inline-start: auto; flex-shrink: 0; }
+.hm-wallet-controls[open] > .hm-wallet-toggle .hm-wallet-chevron { transform: rotate(180deg); }
+.hm-wallet-toggle:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
 .hm-wallet-controls[open] { display: grid; gap: 8px; }
 .hm-wallet-card form { display: grid; gap: 10px; max-width: 320px; }
 .hm-wallet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
@@ -169,17 +182,16 @@
 .hm-wallet-check[role="alert"] { color: var(--ds-color-danger-text); }
 .hm-empty { padding: 26px; text-align: center; color: var(--ds-color-text-muted); font-size: 14px; }
 
-.hm-flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
-.hm-flow .step { display: flex; align-items: center; gap: 8px; flex: 1 1 170px; min-width: 0; }
+.hm-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.hm-flow .step { display: flex; min-width: 0; }
 .hm-flow button {
   flex: 1; min-width: 0; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 3px;
-  padding: 13px 14px; border-radius: 12px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft);
+  padding: 11px 12px; border-radius: var(--ds-radius-md); border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft);
   color: var(--ds-color-text); font: inherit;
 }
 .hm-flow button:hover { border-color: var(--ds-color-text-muted); }
 .hm-flow .l { font-size: 12px; color: var(--ds-color-text-muted); }
-.hm-flow .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.hm-flow .arrow { color: var(--ds-color-text-faint); font-size: 18px; }
+.hm-flow .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .hm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .hm-chip { font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; border: 0; cursor: pointer; background: var(--ds-color-surface-soft); color: var(--ds-color-text); }
 .hm-chip.bad { background: var(--ds-color-danger-bg); color: var(--ds-color-danger); }
@@ -193,6 +205,9 @@
 .hm-kpi .up { color: var(--ds-color-success); font-weight: 700; }
 .hm-kpi .down { color: var(--ds-color-danger); font-weight: 700; }
 
+.hm-operations { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1080px) { .hm-operations { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .hm-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hm-grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
 .hm-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; }
 .hm-delivery-bars { list-style: none; margin: 0; padding: 0; }

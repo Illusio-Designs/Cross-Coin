@@ -199,7 +199,7 @@ export default function InventoryReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Inventory"
-        subtitle={`Days of stock left for every variant, what to reorder, and stock that is not selling. ${brandName} · sales from the last ${w} days, up to today (India time)${isFetching && data ? ' · updating…' : ''}.`}
+        subtitle={`${brandName} · Last ${w} days IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ minWidth: 160 }}>

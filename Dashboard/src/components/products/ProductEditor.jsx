@@ -128,6 +128,7 @@ function productToForm(product, admin = null) {
       id: v.id,
       price: v.price ?? '',
       comparePrice: v.comparePrice ?? '',
+      active: v.status !== 'inactive',
       cost_price: v.cost_price != null ? String(v.cost_price) : '',
       stock: v.stock ?? '',
       sku: v.sku || '',
@@ -179,7 +180,7 @@ function ImageThumb({ img, alt, onRemove, tag = null }) {
   );
 }
 
-export default function ProductEditor({ productId, onClose, onSaved, onDeleted }) {
+export default function ProductEditor({ productId, focusCosts, onClose, onSaved, onDeleted }) {
   const isNew = !productId;
   const [form, setForm] = useState(emptyForm);
   const [brandRows, setBrandRows] = useState([]);
@@ -248,6 +249,17 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [productId, isNew, reloadKey]);
+
+  const focusedCosts = useRef(false);
+  useEffect(() => {
+    if (!focusCosts || loading || loadError || focusedCosts.current) return;
+    const section = document.getElementById('pst-sec-sizes');
+    if (!section) return;
+    focusedCosts.current = true;
+    const first = form.variations.findIndex((v) => v.active && !(Number(v.cost_price) > 0));
+    if (first >= 0) setOpenVar((previous) => ({ ...previous, [first]: true }));
+    section.scrollIntoView({ block: 'start' });
+  }, [focusCosts, form.variations, loading, loadError]);
 
   // One row per brand: linked brands (with their settings) + every other active brand.
   useEffect(() => {
@@ -667,7 +679,6 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
           {/* ── Variations & stock ── */}
           <section id="pst-sec-sizes" className="pst-panel pst-sec">
             <h2>Variations &amp; stock</h2>
-            <p className="pst-help">Each variation (size, colour…) has its own SKU, price and stock. Stock can also be changed straight from the products list.</p>
             {form.variations.map((v, index) => {
               const isOpen = !!openVar[index];
               const { attrs } = sizeLabel(v, index);
@@ -676,7 +687,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                   <div className="pst-var-head">
                     <button type="button" className="pst-var-toggle" onClick={() => setOpenVar((o) => ({ ...o, [index]: !o[index] }))} aria-expanded={isOpen}>
                       <b>{attrs || v.sku || `Variation ${index + 1}`}</b>
-                      <span>{[v.sku && attrs ? v.sku : null, v.price ? `₹${Number(v.price).toLocaleString('en-IN')}` : 'No price yet', v.stock !== '' && v.stock != null ? `${v.stock} in stock` : null].filter(Boolean).join(' · ')}</span>
+                      <span>{[v.sku && attrs ? v.sku : null, focusCosts && v.active && !(Number(v.cost_price) > 0) ? 'Cost price missing' : null, v.price ? `₹${Number(v.price).toLocaleString('en-IN')}` : 'No price yet', v.stock !== '' && v.stock != null ? `${v.stock} in stock` : null].filter(Boolean).join(' · ')}</span>
                       <HugeiconsIcon icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon} size={14} strokeWidth={2} />
                     </button>
                     {!v.id && form.variations.length > 1 && (
@@ -691,7 +702,7 @@ export default function ProductEditor({ productId, onClose, onSaved, onDeleted }
                         <Input label="Compare-at price (₹)" type="number" name={`variations.${index}.comparePrice`} value={v.comparePrice || ''} onChange={(e) => setVar(index, 'comparePrice', e.target.value)} placeholder="Optional — shown struck out" />
                       </div>
                       <div className="pst-grid3">
-                        <Input label="Cost price (₹)" type="number" name={`variations.${index}.cost_price`} value={v.cost_price || ''} onChange={(e) => setVar(index, 'cost_price', e.target.value)} placeholder="Only for your reports" />
+                        <Input label="Cost price (₹)" type="number" name={`variations.${index}.cost_price`} min={0} step={0.01} value={v.cost_price || ''} onChange={(e) => setVar(index, 'cost_price', e.target.value)} placeholder="Only for your reports" />
                         <Input label="Stock" type="number" name={`variations.${index}.stock`} value={v.stock} onChange={(e) => setVar(index, 'stock', e.target.value)} required />
                       </div>
                       <AttributeSelector variationIndex={index} attributes={attributes} loading={!attrsLoaded} selectedAttributes={v.attributes || {}} onChange={onAttrChange} />

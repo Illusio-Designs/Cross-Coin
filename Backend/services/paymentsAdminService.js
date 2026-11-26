@@ -292,7 +292,7 @@ async function summary(query = {}) {
   const bP = brandId ? 'AND p.brand_id = :brandId' : '';
   const bO = brandId ? 'AND o.brand_id = :brandId' : '';
 
-  const [methods, [cod], [ref], [fail], [due], runs, [fixed]] = await Promise.all([
+  const [methods, [cod], [ref], [fail], [due], runs, [fixed], costRates] = await Promise.all([
     q(`SELECT CASE WHEN p.pay_method IS NOT NULL THEN p.pay_method
                    WHEN p.payment_gateway = 'CustomCheckout' AND p.notes LIKE '%method %' THEN TRIM(SUBSTRING_INDEX(p.notes, 'method ', -1))
                    WHEN p.payment_type IN ('upi','credit_card','debit_card','wallet') THEN p.payment_type
@@ -313,6 +313,7 @@ async function summary(query = {}) {
     require('./jobRunService.js').recentRuns(['payment-reconciliation'], 1).catch(() => ({ 'payment-reconciliation': [] })),
     q(`SELECT COUNT(DISTINCT a.order_id) AS n FROM order_audit_logs a JOIN orders o ON o.id = a.order_id
         WHERE a.action = 'payment_reconciled' AND a.created_at >= :week ${bO}`, { ...repl, week: new Date(Date.now() - 7 * 86400000) }).catch(() => [{ n: 0 }]),
+    require('./reportCostSettingsService.js').readRates().catch(() => null),
   ]);
 
   const split = {};
@@ -342,6 +343,7 @@ async function summary(query = {}) {
       orders: num(fail.orders),
       retriedPaid: num(fail.retried_paid),
     },
+    gatewayPct: costRates?.gatewayPct ?? null,
     nightlyCheck: lastRun ? { at: lastRun.started_at, status: lastRun.status, summary: lastRun.summary, error: lastRun.error } : null,
     fixedThisWeek: num(fixed && fixed.n),
   };

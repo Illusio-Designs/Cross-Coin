@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button, ErrorState, Input } from "../ui";
 import { dashboardService } from "../../services";
 
@@ -104,7 +106,7 @@ export default function ProviderWalletBalances({ brandId }) {
             : !stale && "Balance pending"}
         </small>
         <details className="hm-wallet-controls">
-          <summary>Balance actions</summary>
+          <WalletToggle>Balance actions</WalletToggle>
           {outcome && (
             <div className="hm-wallet-check" role={outcome.error ? "alert" : "status"}>
               {outcome.error || <>
@@ -173,11 +175,21 @@ export default function ProviderWalletBalances({ brandId }) {
           <h4>Needs attention</h4><ul className="hm-wallet-list">{attention.map(renderWallet)}</ul>
         </section>}
         {otherWallets.length > 0 && <details className="hm-wallet-group hm-wallet-controls">
-          <summary>{attention.length ? "Other brands" : "Wallet balances"} ({otherWallets.length})</summary>
+          <WalletToggle count={otherWallets.length}>{attention.length ? "Other brands" : "Wallet balances"}</WalletToggle>
           <ul className="hm-wallet-list">{otherWallets.map(renderWallet)}</ul>
         </details>}
         {!wallets.length && <p className="hm-empty">No active brands to show.</p>}
       </>}
     </section>
+  );
+}
+
+function WalletToggle({ children, count }) {
+  return (
+    <summary className="btn btn-secondary btn-sm hm-wallet-toggle">
+      <span>{children}</span>
+      {count != null && <span className="hm-wallet-toggle-count">{count}</span>}
+      <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={2} className="hm-wallet-chevron" aria-hidden="true" />
+    </summary>
   );
 }

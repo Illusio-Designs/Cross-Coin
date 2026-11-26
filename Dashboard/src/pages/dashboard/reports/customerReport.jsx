@@ -251,7 +251,7 @@ export default function CustomerReport() {
     <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PageHeader
         title="Customers"
-        subtitle={`New vs returning buyers, whether first-time buyers come back, and who to reward or win back. ${brandName} · ${from} → ${to} (India time)${sumQ.isFetching && data ? ' · updating…' : ''}.`}
+        subtitle={`${brandName} · ${from} → ${to} IST${sumQ.isFetching && data ? ' · updating…' : ''}`}
         actions={
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <Dropdown

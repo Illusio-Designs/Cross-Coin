@@ -62,7 +62,7 @@ const VISIBILITY = {
 function readMode() {
   if (typeof window === 'undefined') return { mode: 'list' };
   const sp = new URLSearchParams(window.location.search);
-  if (sp.get('edit')) return { mode: 'edit', id: sp.get('edit') };
+  if (sp.get('edit')) return { mode: 'edit', id: sp.get('edit'), focusCosts: sp.get('costs') === '1' };
   if (sp.get('new')) return { mode: 'new' };
   if (sp.get('seo')) return { mode: 'seo' };
   return { mode: 'list' };
@@ -81,7 +81,7 @@ export default function ProductsPage() {
   const [route, setRoute] = useState({ mode: 'list' });
   const [brands, setBrands] = useState([]);
   const [brandId, setBrandId] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('filter') === 'missing_cost' ? 'missing_cost' : 'all');
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('attention');
@@ -104,7 +104,7 @@ export default function ProductsPage() {
     } catch { /* storage blocked */ }
     const sync = () => setRoute((r) => {
       const m = readMode();
-      return m.mode === r.mode && m.id === r.id ? r : m;
+      return m.mode === r.mode && m.id === r.id && m.focusCosts === r.focusCosts ? r : m;
     });
     // The sidebar changes the URL without a popstate when you're already on
     // this view (e.g. "Products" clicked from inside the editor) — re-read
@@ -229,6 +229,7 @@ export default function ProductsPage() {
       <ProductEditor
         key={route.mode === 'edit' ? `e${route.id}` : 'new'}
         productId={route.mode === 'edit' ? route.id : null}
+        focusCosts={route.focusCosts}
         onClose={backToList}
         onSaved={(id) => { if (route.mode === 'new' && id) pushMode(`edit=${id}`); }}
         onDeleted={backToList}
@@ -248,6 +249,7 @@ export default function ProductsPage() {
     { key: 'low', label: 'Running low', value: counts.low, note: `a size has fewer than ${rules.lowStock} left`, tone: 'low' },
     { key: 'slow', label: 'Slow movers', value: counts.slow, note: `${rules.slowMinStock}+ in stock, over ${Math.round(rules.slowDays / 30)} months to sell`, tone: 'slow' },
     { key: 'hidden', label: 'Hidden on site', value: counts.hidden, note: 'not shown to shoppers', tone: 'muted' },
+    { key: 'missing_cost', label: 'Missing cost price', value: counts.missingCost, note: 'products with uncosted variations', tone: 'low' },
   ];
   const total = data?.total ?? 0;
   const pages = Math.max(1, data?.pages || 1);
@@ -349,7 +351,7 @@ export default function ProductsPage() {
           </div>
         ) : !data?.items?.length ? (
           <div className="pst-state">
-            {search ? `No products match “${search}”.` : filter === 'all' ? 'No products yet. Add your first one with “New product”.' : 'Nothing here — good news.'}
+            {search ? `No products match “${search}”.` : filter === 'missing_cost' ? 'Every active variation has a cost price.' : filter === 'all' ? 'No products yet. Add your first one with “New product”.' : 'Nothing here — good news.'}
           </div>
         ) : (
           <div className={`pst-scroll${loading ? ' is-busy' : ''}`} aria-busy={loading || undefined}>
@@ -361,7 +363,7 @@ export default function ProductsPage() {
               {thead}
               <tbody>
                 {data.items.map((p) => (
-                  <ProductRow key={p.id} p={p} selected={selectedIds.has(String(p.id))} selectDisabled={deletingSelected} onSelect={() => toggleProduct(p.id)} onPatch={patchRow} onSaved={refreshCounts} onOpen={() => pushMode(`edit=${p.id}`)} />
+                  <ProductRow key={p.id} p={p} selected={selectedIds.has(String(p.id))} selectDisabled={deletingSelected} onSelect={() => toggleProduct(p.id)} onPatch={patchRow} onSaved={refreshCounts} onOpen={(costs = false) => pushMode(`edit=${p.id}${costs ? '&costs=1' : ''}`)} />
                 ))}
               </tbody>
             </table>
@@ -451,8 +453,9 @@ function ProductRow({ p, selected, selectDisabled, onSelect, onPatch, onSaved, o
           <div className="pst-prod">
             <ProductThumbnail key={JSON.stringify(p.thumbnails || p.thumb)} product={p} />
             <div className="pst-prod-text">
-              <button type="button" className="pst-name" onClick={onOpen} title="Edit details">{p.name}</button>
+              <button type="button" className="pst-name" onClick={() => onOpen()} title="Edit details">{p.name}</button>
               <div className="pst-meta">{meta}</div>
+              {p.missingCostCount > 0 && <div className="pst-meta pst-missing-cost">{plural(p.missingCostCount, 'variation')} missing cost price</div>}
             </div>
           </div>
         </td>
@@ -474,7 +477,7 @@ function ProductRow({ p, selected, selectDisabled, onSelect, onPatch, onSaved, o
           <button type="button" className="pst-btn pst-btn--sm" onClick={toggle} aria-expanded={open} disabled={!p.variationCount}>
             {open ? 'Hide sizes' : 'Edit stock'}
           </button>
-          <button type="button" className="pst-btn pst-btn--sm pst-btn--ghost" onClick={onOpen}>Open</button>
+          <button type="button" className="pst-btn pst-btn--sm pst-btn--ghost" onClick={() => onOpen(p.missingCostCount > 0)}>{p.missingCostCount > 0 ? 'Edit costs' : 'Open'}</button>
         </td>
       </tr>
       {open && (varsLoading && !vars ? (
@@ -587,7 +590,12 @@ function VariationRow({ v, waiting, productOut, onApply, onSaved }) {
         {v.label} <span className="pst-sku">{v.sku}</span>
       </td>
       <td />
-      <td className="r" data-mobile-label="Price">{v.price != null ? inr(v.price) : '—'}</td>
+      <td className="r" data-mobile-label="Price">
+        {v.price != null ? inr(v.price) : '—'}
+        <div className={`pst-meta${v.active && !(v.costPrice > 0) ? ' pst-missing-cost' : ''}`}>
+          {v.costPrice > 0 ? `Cost ${inr(v.costPrice)}` : v.active ? 'Cost missing' : '—'}
+        </div>
+      </td>
       <td className="r" data-mobile-label="Edit stock">
         <input
           className={`pst-qty${state.error ? ' is-error' : ''}`}

@@ -1,32 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { browserCostRates, REPORT_COST_RATES_QUERY } from '../../../lib/reportCostRates';
 import { trafficReportService } from '../../../services';
-import { Button, DateRangePicker, Input, Table, SkeletonKpis } from '../../../components/ui';
+import { Button, DateRangePicker, Table, SkeletonKpis } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
 import Dropdown from '../../../components/ui/Dropdown';
 import { useReportState } from '../../../lib/reportFilters';
-
-/**
- * Revenue & Gross Profit — per brand, on the Shopify basis: a sale counts when
- * the order is PLACED in the period (cancelled and RTO orders left out, refunds
- * subtracted), so revenue lines up with the period's shipping and ad spend.
- *
- *   Revenue        = value of orders sold − refunds paid
- *   Revenue ex-GST = revenue ÷ (1 + brand GST %)   ← GST isn't your money
- *   Costs          = COGS (cost price × units sold)
- *                  + shipping × shipped orders + return shipping × RTO orders
- *                  + service charge × delivered orders
- *                  + gateway % of prepaid revenue + COD fee % of COD revenue
- *   Profit before ads = revenue ex-GST − costs;  after ads = − ad spend/unit × units
- *
- * Orders received / units ordered count every order PLACED in the period
- * (all but cancelled), whatever happened to it later — and "Orders by source"
- * splits them by the channel the order came from (same channels as Traffic).
- *
- * Ad spend: when Meta spend is synced for a brand (Reports → Ads), the
- * backend sends it as `adSpend` for the period and it is used as is ("from
- * Meta"). Brands with no synced spend keep the manual ad spend per unit.
- * Every cost knob and each manual ad spend is remembered in this browser.
- */
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v).toLocaleString('en-IN') : '—');
 const inr = (v) => `₹${num(Math.round(Number(v) || 0))}`;
@@ -46,14 +25,6 @@ function exportCsv(filename, columns, rows) {
   URL.revokeObjectURL(url);
 }
 
-const MISSING_COLUMNS = [
-  { header: 'Brand', accessor: 'brand', align: 'left', cell: ({ brand }) => brand || '—' },
-  { header: 'Product', accessor: 'productName', align: 'left', cell: ({ productName }) => <strong>{productName}</strong> },
-  { header: 'Variant', accessor: 'variant', align: 'left', cell: ({ variant }) => variant || '—' },
-  { header: 'SKU', accessor: 'sku', align: 'left', cell: ({ sku }) => sku || '—' },
-  { header: 'Price', accessor: 'price', align: 'right', cell: ({ value }) => inr(value) },
-];
-
 // Small label under the ad spend figures: "from Meta" / "manual".
 const adTagStyle = { fontSize: 10.5, fontWeight: 600, color: 'var(--ds-color-text-faint)', whiteSpace: 'nowrap' };
 
@@ -71,19 +42,13 @@ export default function RevenueProfitReport() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  // Cost knobs, remembered in this browser between visits.
-  const [knobs, setKnobs] = useState(() => {
-    const base = { shipping: '90', service: '30', gatewayPct: '2', codPct: '2' };
-    // rtoShipping was a separate knob earlier; the shipping rate already covers
-    // the RTO return leg, so drop any saved value instead of charging twice.
-    try { const { rtoShipping, ...saved } = JSON.parse(localStorage.getItem('rp_knobs') || '{}'); void rtoShipping; return { ...base, ...saved }; } catch { return base; }
-  });
-  const setKnob = (k) => (e) => setKnobs((m) => ({ ...m, [k]: e.target.value }));
+  const rates = useQuery({ queryKey: REPORT_COST_RATES_QUERY, queryFn: trafficReportService.getCostRates });
+  const [legacyRates] = useState(browserCostRates);
+  const knobs = rates.data ?? legacyRates;
   // Ad spend per UNIT, per brand (each brand runs its own ads). Keyed by brandId.
   const [cppByBrand, setCppByBrand] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rp_cpp') || '{}'); } catch { return {}; }
   });
-  useEffect(() => { try { localStorage.setItem('rp_knobs', JSON.stringify(knobs)); } catch { /* private mode */ } }, [knobs]);
   useEffect(() => { try { localStorage.setItem('rp_cpp', JSON.stringify(cppByBrand)); } catch { /* private mode */ } }, [cppByBrand]);
   // Revenue basis: 'placed' (Shopify — sale counts when ordered) or
   // 'delivered' (cash in hand — only orders that reached the customer).
@@ -91,21 +56,6 @@ export default function RevenueProfitReport() {
     try { return localStorage.getItem('rp_basis') === 'delivered' ? 'delivered' : 'placed'; } catch { return 'placed'; }
   });
   useEffect(() => { try { localStorage.setItem('rp_basis', basis); } catch { /* private mode */ } }, [basis]);
-
-  // "Missing cost price" finder (loaded on demand).
-  const [missing, setMissing] = useState(null);
-  const [missingLoading, setMissingLoading] = useState(false);
-  const [missingError, setMissingError] = useState('');
-
-  const loadMissing = useCallback(async () => {
-    setMissingLoading(true); setMissingError('');
-    try {
-      const res = await trafficReportService.getMissingCostPrices();
-      if (res?.success) setMissing(res); else setMissingError(res?.message || 'Failed to load');
-    } catch (e) {
-      setMissingError(e?.response?.data?.message || e.message || 'Failed to load');
-    } finally { setMissingLoading(false); }
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -260,12 +210,9 @@ export default function RevenueProfitReport() {
   ], brands);
 
   return (
-    <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="dashboard-sections obz-rep rp-profit">
       <PageHeader
         title="Revenue & Gross Profit"
-        subtitle={`Orders received and units ordered count every order placed in this period. ${basis === 'delivered'
-          ? 'Revenue counts only the orders from this period that were delivered (cash in hand), minus refunds, GST taken out.'
-          : 'Revenue counts orders placed in this period (as Shopify does), less cancelled and RTO orders and refunds, GST taken out.'} Profit = ex-GST revenue − cost price − shipping (once per shipped order, RTO included) − service − payment fees − ad spend. Ad spend comes from Meta for brands whose ad account is linked on Reports → Ads; for the others type an ad spend per unit. Your cost numbers and manual ad spend are remembered on this browser.`}
         actions={
           <>
             <div style={{ minWidth: 190 }}>
@@ -277,35 +224,22 @@ export default function RevenueProfitReport() {
             </div>
             <DateRangePicker label="Period" inline startDate={from} endDate={to}
               onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
-            <Button variant="secondary" onClick={doExport} disabled={!brands.length || loading}>Export CSV</Button>
+            <a className="btn btn-secondary btn-md" href="/dashboard/shippingFees#profit-rates">Cost settings</a>
+            <Button variant="secondary" onClick={doExport} disabled={!brands.length || loading || rates.isPending}>Export CSV</Button>
           </>
         }
       />
 
       {error ? <Panel><span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{error}</span></Panel> : null}
 
-      {/* ── Cost knobs ── */}
-      <Panel title="Cost assumptions" subtitle="Shipping is charged once per shipped order — the rate already includes the RTO return, so RTO orders aren't charged again. Fees are a % of prepaid and COD revenue.">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Shipping / shipped order, incl. RTO (₹)" type="number" min="0" value={knobs.shipping} onChange={setKnob('shipping')} /></div>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Service charge / order (₹)" type="number" min="0" value={knobs.service} onChange={setKnob('service')} /></div>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="Payment gateway % (prepaid)" type="number" min="0" step="0.1" value={knobs.gatewayPct} onChange={setKnob('gatewayPct')} /></div>
-          <div style={{ flex: '1 1 170px', maxWidth: 230 }}><Input label="COD fee % (courier)" type="number" min="0" step="0.1" value={knobs.codPct} onChange={setKnob('codPct')} /></div>
-        </div>
-      </Panel>
-
-      {unitsWithoutCost > 0 ? (
-        <Panel>
-          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
-            ⚠️ {num(unitsWithoutCost)} unit{unitsWithoutCost === 1 ? '' : 's'} sold in this period have no cost price set
-            (counted as ₹0 COGS). Add cost prices on those product variations for an accurate gross profit — the figures
-            below are an upper bound until then.
-          </span>
-        </Panel>
-      ) : null}
+      {rates.error && <p role="status" className="rep-muted">Shared cost rates are unavailable. Showing this browser’s rates.</p>}
+      {unitsWithoutCost > 0 && <p className="rep-muted">
+        {num(unitsWithoutCost)} sold {unitsWithoutCost === 1 ? 'unit is' : 'units are'} missing cost prices.{' '}
+        <a href="/dashboard/products?filter=missing_cost">Review in Products</a>
+      </p>}
 
       {/* ── KPI tiles ── */}
-      {loading && !data ? (
+      {rates.isPending || (loading && !data) ? (
         <SkeletonKpis count={11} label="Loading revenue and profit…" />
       ) : totals ? (
         <div style={loading ? { opacity: 0.6, transition: 'opacity .15s' } : undefined} aria-busy={loading || undefined}>
@@ -329,12 +263,12 @@ export default function RevenueProfitReport() {
       ) : null}
 
       {/* ── Per-brand table ── */}
-      <Panel title="By brand" subtitle="Brands marked “from Meta” use the real spend synced from their ad account for this period. For the rest, type the ad spend per unit — total spend (per-unit × units sold) and after-ads profit recalculate instantly.">
+      <Panel title="By brand">
         <Table
           columns={columns}
-          data={tableData}
+          data={rates.isPending ? [] : tableData}
           sortable={false}
-          loading={loading}
+          loading={loading || rates.isPending}
           emptyMessage="No sales in this period."
           getRowStyle={(row) => (row._isTotal ? { fontWeight: 800, background: 'var(--ds-color-surface-soft, rgba(0,0,0,0.03))' } : {})}
         />
@@ -343,7 +277,6 @@ export default function RevenueProfitReport() {
       {/* ── Orders by source ── */}
       <Panel
         title="Orders by source"
-        subtitle="Every order received in this period (cancelled ones left out), by where the shopper came from — the same channels as the Traffic report. Delivered shows how many have reached the customer; revenue leaves out cancelled and RTO orders and refunds."
         actions={sourceBrandOptions.length > 2 ? <div style={{ minWidth: 180 }}><Dropdown value={sourceBrand} onChange={(v) => setSourceBrand(String(v))} options={sourceBrandOptions} /></div> : null}
       >
         <Table
@@ -364,44 +297,6 @@ export default function RevenueProfitReport() {
         />
       </Panel>
 
-      {/* ── Missing cost-price finder ── */}
-      <Panel
-        title="Variations missing a cost price"
-        subtitle="Active variations with no cost price set — these count as ₹0 COGS and inflate the profit above. Fill their cost in Products → edit the product."
-        actions={
-          <Button variant="secondary" onClick={loadMissing} disabled={missingLoading}>
-            {missingLoading ? 'Checking…' : (missing ? 'Refresh' : 'Find missing cost prices')}
-          </Button>
-        }
-      >
-        {missingError ? (
-          <span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{missingError}</span>
-        ) : missingLoading && !missing ? (
-          <Table columns={MISSING_COLUMNS} data={[]} loading sortable={false} />
-        ) : !missing ? (
-          <span style={{ fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
-            Click “Find missing cost prices” to list every active variation that still needs a cost price.
-          </span>
-        ) : missing.count === 0 ? (
-          <span style={{ fontSize: 13, color: 'var(--ds-color-success, #12b76a)', fontWeight: 600 }}>
-            ✅ Every active variation has a cost price. Gross profit above is fully costed.
-          </span>
-        ) : (
-          <>
-            <div style={{ marginBottom: 10, fontSize: 13, color: 'var(--ds-color-text-muted)' }}>
-              {num(missing.count)}{missing.limited ? '+' : ''} variation{missing.count === 1 ? '' : 's'} need a cost price.
-              Search the SKU in <strong>Products</strong> to edit it.
-            </div>
-            <Table
-              columns={MISSING_COLUMNS}
-              data={missing.items}
-              loading={missingLoading}
-              sortable={false}
-              emptyMessage="None — all variations are costed."
-            />
-          </>
-        )}
-      </Panel>
     </div>
   );
 }

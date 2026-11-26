@@ -59,6 +59,7 @@ const nextConfig = {
   
   async headers() {
     return [
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
       {
         source: '/:all*(svg|jpg|jpeg|png|webp|avif|gif)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
@@ -191,6 +192,7 @@ const nextConfig = {
   // stores stay on api.crosscoin.in. NEXT_PUBLIC_ADMIN_API_URL overrides it
   // (e.g. back to https://api.crosscoin.in if the admin app is down).
   env: {
+    NEXT_PUBLIC_OBZUS_RELEASE: process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || process.env.OBZUS_RELEASE || '',
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL || 'https://admin-api.crosscoin.in',
   },
 

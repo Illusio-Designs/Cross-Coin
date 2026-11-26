@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Skeleton, SkeletonList, SkeletonText } from '../../../components/ui/Skeleton';
 import DateRangePicker from '../../../components/ui/DateRangePicker';
+import FilterChips from '../../../components/ui/FilterChips';
+import DeliverySummary from '../../../components/orders/DeliverySummary';
 import { EmptyState } from '../../../components/Dashboard/primitives';
 import { exceptionsService, ndrService, returnService, orderService } from '../../../services';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -89,6 +91,8 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
   });
   const items = list.data?.items || [];
   const counts = list.data?.counts || {};
+  const deliveryCount = counts.ndr;
+  const deliveryActions = list.data?.needsYou?.ndr;
   const totalPages = list.data?.totalPages || 1;
 
   // Keep something open on the right: the first item when nothing is picked.
@@ -123,20 +127,23 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
     <div className="exc">
       <header className="exc-head">
         <div>
-          <h2 className="exc-h">Problems to sort out</h2>
-          <p className="exc-sub">Failed deliveries, returns and refunds in one queue — the ones that need you first, oldest at the top.</p>
-        </div>
-        <div className="exc-tabs" role="tablist" aria-label="Type">
-          {TABS.map(([v, label]) => (
-            <button key={v} type="button" role="tab" aria-selected={type === v}
-              className={`exc-tab${type === v ? ' on' : ''}`} onClick={() => setType(v)}>
-              {label}{list.data ? <span className="exc-tab-n">{counts[v] || 0}</span> : null}
-            </button>
-          ))}
+          <h2 className="exc-h">Order problems</h2>
+          <p className="exc-sub">Cases that need action appear first, oldest to newest.</p>
         </div>
       </header>
 
-      <div className="exc-body">
+      {type === 'ndr' && (
+        <DeliverySummary title={q ? 'Matching failed deliveries' : 'Failed delivery queue'} loading={list.isFetching}
+          metrics={[
+            { label: 'Needs action', value: list.isPlaceholderData ? null : deliveryActions, attention: true },
+            { label: 'Waiting', value: list.isPlaceholderData || deliveryCount == null || deliveryActions == null ? null : Math.max(0, deliveryCount - deliveryActions) },
+          ]} />
+      )}
+      <FilterChips ariaLabel="Problem type" controls="exc-workspace"
+        items={TABS.map(([value, label]) => ({ value, label, count: list.isPlaceholderData ? undefined : counts[value] }))}
+        value={type} onChange={setType} />
+
+      <div className="exc-body" id="exc-workspace" role="tabpanel" aria-label={TABS.find(([value]) => value === type)?.[1]}>
         <section className="exc-list" aria-label="Queue">
           <div className="exc-search">
             <span className="exc-search-ic" aria-hidden="true">{ic(Search01Icon)}</span>

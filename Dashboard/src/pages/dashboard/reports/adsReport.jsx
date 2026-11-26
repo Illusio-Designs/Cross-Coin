@@ -441,10 +441,10 @@ export default function AdsReport() {
   const crumbs = [{ label: 'All campaigns' }, ...path];
 
   return (
-    <div className="dashboard-sections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="dashboard-sections obz-rep">
       <PageHeader
         title="Ads"
-        subtitle={`What Meta charged, and the orders it actually brought in. ${brandName} · ${from} → ${to} (India time)${isFetching && data ? ' · updating…' : ''}`}
+        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
         actions={
           <>
             <Dropdown
@@ -575,7 +575,8 @@ export default function AdsReport() {
         </div>
       </div>
 
-      <Panel title="How to read this">
+      <details className="rep-notes">
+        <summary>How Ads figures are calculated</summary>
         <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, ...muted }}>
           <li><b>Spend</b>, impressions, link clicks and <b>Meta purchases</b> come from Meta, by the day in your ad account’s time zone. They are synced every 3 hours; Meta keeps revising the last few days.</li>
           <li><b>Our orders</b> are orders placed in this period (cancelled left out) whose visit came from a Meta link carrying this campaign / ad set / ad name, in the same store. Names are matched ignoring capital letters, extra spaces and link encoding.</li>
@@ -585,7 +586,7 @@ export default function AdsReport() {
           {canSeeCost ? <li><b>Profit after ads</b> = delivered sales − cost price of the goods kept − spend. It is before GST, shipping and payment fees; Revenue &amp; Profit has the full picture and now uses this real spend.</li> : null}
           <li>Orders from ads that don’t carry the URL parameters can’t be matched — they are listed under <b>Needs tracking tags</b>.</li>
         </ul>
-      </Panel>
+      </details>
     </div>
   );
 }

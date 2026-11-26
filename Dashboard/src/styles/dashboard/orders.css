@@ -3048,33 +3048,9 @@
 .odm-info-grid .odm-value,
 .odm-summary-row .odm-value { overflow-wrap: anywhere; word-break: break-word; }
 
-/* FShip block */
-.odm-fship {
-  margin: 0 14px 12px;
-  border: 1px solid var(--ds-color-border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--ds-color-surface-soft);
-}
-
-.odm-fship-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ds-color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  border-bottom: 1px solid var(--ds-color-border);
-  background: var(--ds-color-surface-soft);
-}
-
-.odm-fship .odm-info-grid {
-  padding: 10px 12px;
-  background: transparent;
-}
+/* Delivery details in the order drawer */
+.odm-delivery .odm-card-title, .odm-delivery .odm-info-grid, .odm-delivery dd { margin: 0; }
+.odm-delivery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 0 14px 14px; }
 
 .odm-label-link {
   display: inline-flex;
@@ -3322,11 +3298,11 @@
 .pay-chip.pay-cod     { color: var(--ds-color-warn);  background: var(--ds-color-warn-bg); }
 
 /* ── Orders KPI strip — one clean row like the prototype ──────────────── */
-.orders-kpi-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.ds-stat-grid.orders-kpi-grid { margin-bottom: 0; grid-template-columns: repeat(8, minmax(0, 1fr)); }
 .orders-kpi-grid .ds-stat { padding: 12px 14px; }
 .orders-kpi-grid .ds-stat__value { font-size: 20px; }
-@media (max-width: 1200px) { .orders-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@media (max-width: 560px)  { .orders-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1200px) { .ds-stat-grid.orders-kpi-grid { margin-bottom: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px)  { .ds-stat-grid.orders-kpi-grid { margin-bottom: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ── Header button variants (monochrome, prototype style) ────────────── */
 .order-sync-main-btn--primary {
@@ -3348,65 +3324,35 @@
 }
 .order-sync-main-btn--ghost:hover:not(:disabled) { color: var(--ds-color-bg); border-color: var(--ds-color-brand); background: var(--ds-color-brand); }
 
-/* ── Status tabs — segmented control like the prototype ──────────────── */
-.ord-tabs {
-  display: flex;
-  flex-wrap: nowrap;
-  background: var(--ds-color-bg);
-  border: 1px solid var(--ds-color-border);
-  border-radius: 9px;
-  padding: 3px;
-  gap: 2px;
-  margin-bottom: var(--ds-space-3);
-  /* Scroll horizontally on one line instead of wrapping onto multiple rows. */
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Order navigation, search and actions */
+.orders-header-container .ds-pageheader { margin-bottom: 0; }
+.ui-chips.ord-tabs { flex-wrap: wrap; }
+.ord-tools summary { list-style: none; justify-content: center; min-height: 40px; }
+.ord-tools summary:focus-visible, .ord-overview summary:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }
+.ord-tools summary::-webkit-details-marker { display: none; }
+.ord-tools summary::after { content: "▾"; }
+.ord-tools[open] summary::after { content: "▴"; }
+.ord-tools-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ord-overview {
+  margin-top: 16px; padding: 12px 16px; border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg); background: var(--ds-color-surface);
 }
-.ord-tabs::-webkit-scrollbar { display: none; }
-.ord-tab {
-  padding: 6px 14px;
-  border-radius: 7px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ds-color-text-muted);
-  cursor: pointer;
-  border: none;
-  background: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-family: 'DM Sans', sans-serif;
-  transition: background 0.15s, color 0.15s;
-}
-.ord-tab:hover { color: var(--ds-color-text); }
-.ord-tab.on {
-  background: var(--ds-color-surface);
-  color: var(--ds-color-text);
-  box-shadow: 0 1px 2px rgba(10, 10, 10, 0.08);
-}
-
-/* ── Orders toolbar row: tabs left, filter trigger right ─────────────── */
-.ord-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: var(--ds-space-4);
-}
-.ord-toolbar .ord-tabs { margin-bottom: 0; flex: 1 1 100%; } /* the pipeline tabs get their own line */
-/* flex-wrap so the New order / Live / bulk / Filter buttons drop to a second
-   line on narrow phones instead of overflowing the toolbar. */
-.ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-/* On phones give the button group its own full-width line so the scrollable
-   status-tab strip keeps the whole row (otherwise the flex algorithm shrinks
-   .ord-tabs to a ~50px sliver to keep the buttons alongside it). */
+.ord-overview summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.ord-overview summary span { margin-left: 6px; color: var(--ds-color-text-muted); font-size: 12px; font-weight: 500; }
+.ord-overview > .orders-kpi-grid, .ord-overview-error { margin-top: 12px; }
+.ord-overview-error { font-size: 13px; margin-bottom: 0; }
+.ord-overview-error button { color: var(--ds-color-link); cursor: pointer; }
+.ord-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ord-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ord-toolbar .sl-search-wrap { flex: 1 1 240px; min-width: 0; }
+.ord-toolbar .sl-search-input { width: 100%; }
+.ord-toolbar .drp { padding: 0; }
+.ord-toolbar-right .order-sync-main-btn, .ord-toolbar-right .drp-trigger { min-height: 38px; }
+.ord-problems-brand { max-width: 250px; }
+.ord-results-count { padding: 9px 12px; margin: 0; color: var(--ds-color-text-muted); font-size: 12px; }
+.ord-selection { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 @media (max-width: 640px) {
-  .ord-toolbar-right { flex-basis: 100%; justify-content: flex-start; }
+  .ord-toolbar .sl-search-wrap, .ord-toolbar-right { flex-basis: 100%; }
 }
 
 /* Filters drawer body */

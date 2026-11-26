@@ -172,7 +172,7 @@ function TodayHome() {
   const deliveries = data?.deliveredWeek;
   const deliveryTotal = (deliveries || []).reduce((total, day) => total + day.orders, 0);
   const deliveryMax = Math.max(1, ...(deliveries || []).map((day) => day.orders));
-  const todayYmd = week.length ? week[week.length - 1].day : '';
+  const todayYmd = week.at(-1)?.day || deliveries?.at(-1)?.day;
   const dayName = (ymd) => (ymd === todayYmd ? 'Today' : new Date(ymd + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' }));
   const Delta = ({ v, suffix = '%' }) => (v == null ? null : <b className={v >= 0 ? 'up' : 'down'}>{v >= 0 ? '▲' : '▼'} {Math.abs(v)}{suffix}</b>);
   const rtoDelta = k.rto30 != null && k.rto30Prev ? Math.round((k.rto30 - k.rto30Prev) * 10) / 10 : null;
@@ -205,10 +205,7 @@ function TodayHome() {
 
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">
-          <div>
-            <h3>Today’s work</h3>
-            <span className="h-hint">Most urgent first. Each button opens the right page.</span>
-          </div>
+          <h3>Today’s work</h3>
           <div className="hm-tabs" role="tablist" aria-label="Filter work">
             {['all', 'urgent', 'today', 'later'].map((t) => (
               <button key={t} type="button" role="tab" aria-selected={tab === t} className={`hm-tab${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
@@ -246,33 +243,54 @@ function TodayHome() {
         )}
       </section>
 
-      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
+      <div className="hm-operations">
+        <section className="panel" aria-label="Orders right now">
+          <div className="panel-h"><h3>Orders right now</h3></div>
+          <div className="hm-flow">
+            {[
+              { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
+              { l: 'To ship', v: p.toShip, tab: 'to_ship' },
+              { l: 'In transit', v: p.inTransit, tab: 'in_transit' },
+              { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
+            ].map((s) => (
+              <div className="step" key={s.l}>
+                <button type="button" onClick={() => goToView('orders', s.tab, brandId)}>
+                  <span className="l">{s.l}</span>
+                  <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
+                  {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="hm-chips">
+            <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
+            <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
+            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto', brandId)}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
+          </div>
+        </section>
+        <section className="panel" aria-labelledby="hm-deliveries-title">
+          <div className="panel-h">
+            <h3 id="hm-deliveries-title">Delivered orders · last 7 days</h3>
+            <span className="h-hint">{first ? <Skeleton w={48} h={11} /> : deliveries && plural(deliveryTotal, 'order')}</span>
+          </div>
+          {first ? <Skeleton w="100%" h={138} /> : !deliveries ? (
+            <p className="h-hint">Delivery history is unavailable.</p>
+          ) : (
+            <ul className="hm-week hm-delivery-bars" aria-label="Orders by delivery date in India">
+              {deliveries.map(({ day, orders }) => (
+                <li className="col" key={day}>
+                  <span className="amt">{orders.toLocaleString('en-IN')}</span>
+                  <div className={`bar${day === todayYmd ? ' today' : ''}`}
+                    style={{ height: `${Math.max(2, Math.round(orders / deliveryMax * 120))}px` }} aria-hidden="true" />
+                  <span className={`day${day === todayYmd ? ' today' : ''}`}>{dayName(day)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
-      <section className="panel" aria-label="Orders right now">
-        <div className="panel-h"><h3>Orders right now</h3></div>
-        <div className="hm-flow">
-          {[
-            { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
-            { l: 'To ship', v: p.toShip, tab: 'to_ship' },
-            { l: 'In transit', v: p.inTransit, tab: 'in_transit' },
-            { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
-          ].map((s, i, arr) => (
-            <div className="step" key={s.l}>
-              <button type="button" onClick={() => goToView('orders', s.tab, brandId)}>
-                <span className="l">{s.l}</span>
-                <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
-                {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
-              </button>
-              {i < arr.length - 1 && <span className="arrow" aria-hidden="true">→</span>}
-            </div>
-          ))}
-        </div>
-        <div className="hm-chips">
-          <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
-          <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
-          <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto', brandId)}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
-        </div>
-      </section>
+      {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
 
       {first ? (
         <section className="hm-kpis" aria-label="Numbers" role="status" aria-busy="true">
@@ -309,27 +327,6 @@ function TodayHome() {
               </div>
             ))}
           </div>
-        </section>
-
-        <section className="panel" aria-labelledby="hm-deliveries-title">
-          <div className="panel-h">
-            <h3 id="hm-deliveries-title">Delivered orders · last 7 days</h3>
-            <span className="h-hint">{first ? <Skeleton w={48} h={11} /> : deliveries && plural(deliveryTotal, 'order')}</span>
-          </div>
-          {first ? <Skeleton w="100%" h={138} /> : !deliveries ? (
-            <p className="h-hint">Delivery history is unavailable.</p>
-          ) : (
-            <ul className="hm-week hm-delivery-bars" aria-label="Orders by delivery date in India">
-              {deliveries.map(({ day, orders }) => (
-                <li className="col" key={day}>
-                  <span className="amt">{orders.toLocaleString('en-IN')}</span>
-                  <div className={`bar${day === todayYmd ? ' today' : ''}`}
-                    style={{ height: `${Math.max(2, Math.round(orders / deliveryMax * 120))}px` }} aria-hidden="true" />
-                  <span className={`day${day === todayYmd ? ' today' : ''}`}>{dayName(day)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
 
         {!brandId && (

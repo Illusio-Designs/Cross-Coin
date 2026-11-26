@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows } from "../../../components/ui";
+import { PageHeader, StatusPill, KpiTile, KpiGrid, FilterChips, EmptyState, ErrorState, Skeleton, SkeletonKpis, SkeletonTableRows, Button, Input } from "../../../components/ui";
 import Dropdown from "../../../components/ui/Dropdown";
-import { shippingFeeService, orderService } from "../../../services";
+import { shippingFeeService, orderService, trafficReportService } from "../../../services";
+import { browserCostRates, REPORT_COST_RATES_QUERY } from "../../../lib/reportCostRates";
 import { showSuccess, showError } from "../../../utils/toastNotification";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, DeliveryTruck01Icon } from "@hugeicons/core-free-icons";
@@ -269,8 +270,8 @@ function CourierLog({ summary, brands, logRef }) {
       {isLoading ? (
         <div className="rep-tbl-wrap oss-tbl" role="status" aria-busy="true">
           <span className="ds-sr-only">Loading courier updates…</span>
-          <table className="rep-table" aria-hidden="true">
-            <thead><tr><th>When</th><th>AWB · order</th><th>Courier said</th><th>We did</th><th /></tr></thead>
+          <table className="rep-table ds-mobile-rows" aria-hidden="true">
+            <thead><tr><th>AWB · order</th><th>When</th><th>Courier said</th><th>We did</th><th /></tr></thead>
             <tbody><SkeletonTableRows rows={8} cols={5} /></tbody>
           </table>
         </div>
@@ -285,15 +286,14 @@ function CourierLog({ summary, brands, logRef }) {
         />
       ) : (
         <div className={`rep-tbl-wrap oss-tbl${isFetching ? " is-busy" : ""}`} id="courier-updates-table" aria-busy={isFetching || undefined}>
-          <table className="rep-table">
-            <thead><tr><th>When</th><th>AWB · order</th><th>Courier said</th><th>We did</th><th aria-label="Actions" /></tr></thead>
+          <table className="rep-table ds-mobile-rows" role="table">
+            <thead><tr><th>AWB · order</th><th>When</th><th>Courier said</th><th>We did</th><th aria-label="Actions" /></tr></thead>
             <tbody>
               {rows.map((e) => {
                 const o = outcome(e);
                 return (
                   <tr key={e.id}>
-                    <td className="oss-nowrap mut" title={new Date(e.createdAt).toLocaleString("en-IN")}>{when(e.createdAt)}</td>
-                    <td>
+                    <td className="ds-mobile-span" data-mobile-label="AWB and order">
                       <b className="oss-mono">{e.waybill || "—"}</b>
                       <div className="oss-sub">
                         {e.order_number
@@ -301,9 +301,10 @@ function CourierLog({ summary, brands, logRef }) {
                           : e.return_number ? `Return ${e.return_number}` : (e.order_ref || "no order")}
                       </div>
                     </td>
-                    <td>{e.courier_status || "—"}</td>
-                    <td><StatusPill tone={o.tone} size="sm">{o.text}</StatusPill></td>
-                    <td className="r">
+                    <td className="oss-nowrap mut" data-mobile-label="Received" title={new Date(e.createdAt).toLocaleString("en-IN")}>{when(e.createdAt)}</td>
+                    <td data-mobile-label="Courier status">{e.courier_status || "—"}</td>
+                    <td data-mobile-label="Result"><StatusPill tone={o.tone} size="sm">{o.text}</StatusPill></td>
+                    <td className="r ds-mobile-span ds-mobile-actions">
                       {o.retry && (
                         <button type="button" className="oss-btn oss-btn--sm" disabled={replaying === e.id}
                           title="Run this update through again, e.g. after fixing the order’s AWB"
@@ -319,7 +320,7 @@ function CourierLog({ summary, brands, logRef }) {
       )}
 
       <div className="oss-foot">
-        <span className="mut">{error && data ? "Couldn’t refresh — showing the last list. " : ""}Searched on the server.</span>
+        {error && data && <span className="mut" role="status">Couldn’t refresh. Showing the last list.</span>}
         {total > 0 && (
           <span className="oss-pager">
             <span className="num">{num(from)}–{num(to)} of {num(total)}</span>
@@ -340,6 +341,77 @@ function CourierLog({ summary, brands, logRef }) {
   );
 }
 
+const RATE_FIELDS = [
+  { key: "shipping", label: "Shipping per shipped order (₹)" },
+  { key: "service", label: "Service per order (₹)" },
+  { key: "gatewayPct", label: "Prepaid gateway fee (%)", max: 100 },
+  { key: "codPct", label: "COD courier fee (%)", max: 100 },
+];
+
+function ProfitRates() {
+  const client = useQueryClient();
+  const target = useRef(null);
+  const rates = useQuery({ queryKey: REPORT_COST_RATES_QUERY, queryFn: trafficReportService.getCostRates });
+  const [legacyRates] = useState(browserCostRates);
+  const [draft, setDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const current = draft ?? rates.data ?? legacyRates;
+
+  useEffect(() => {
+    const reveal = () => {
+      if (window.location.hash !== "#profit-rates" || !target.current) return;
+      target.current.open = true;
+      target.current.scrollIntoView({ block: "start" });
+    };
+    reveal();
+    window.addEventListener("hashchange", reveal);
+    return () => window.removeEventListener("hashchange", reveal);
+  }, []);
+
+  async function save(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await trafficReportService.saveCostRates(current);
+      client.setQueryData(REPORT_COST_RATES_QUERY, saved);
+      client.invalidateQueries({ queryKey: ["payments", "summary"] });
+      setDraft(null);
+      showSuccess("saved", "Profit report rates saved");
+    } catch (e) {
+      setError(e.response?.data?.message || e.message || "Couldn’t save rates.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <details className="oss-card oss-profit-rates" id="profit-rates" ref={target}>
+      <summary className="oss-h2">Profit report rates</summary>
+      {rates.isPending ? <p role="status">Loading rates…</p> : rates.error ? (
+        <ErrorState message="Couldn’t load shared rates." onRetry={rates.refetch} retrying={rates.isFetching} />
+      ) : (
+        <form onSubmit={save}>
+          <p className="oss-sub">Shared across all brands. The shipping rate includes RTO.</p>
+          <div className="oss-grid">
+            {RATE_FIELDS.map(({ key, label, max }) => (
+              <Input key={key} label={label} name={key} type="number" min={0} max={max ?? 9999999999.99} step={0.01}
+                required disabled={saving} value={current[key]}
+                onChange={(e) => setDraft({ ...current, [key]: e.target.value })} />
+            ))}
+          </div>
+          {error && <p role="alert" className="oss-bad">{error}</p>}
+          <div className="oss-row-end">
+            {draft && <Button variant="secondary" disabled={saving} onClick={() => { setDraft(null); setError(""); }}>Cancel</Button>}
+            <Button type="submit" disabled={!!rates.data && !draft} loading={saving}>Save rates</Button>
+          </div>
+        </form>
+      )}
+    </details>
+  );
+}
+
 export default function ShippingFees({ focus }) {
   const queryClient = useQueryClient();
   const logRef = useRef(null);
@@ -356,15 +428,51 @@ export default function ShippingFees({ focus }) {
 
   const brands = data?.brands || [];
   const wh = data?.webhooks || {};
-  const connected = brands.filter((b) => b.courier.connected);
-  const missing = brands.filter((b) => !b.courier.connected && b.status === "active");
+  const activeBrands = brands.filter((b) => b.status === "active");
+  const connected = activeBrands.filter((b) => b.courier.connected);
+  const missing = activeBrands.filter((b) => !b.courier.connected);
 
   return (
     <div className="dashboard-sections obz-rep oss">
-      <PageHeader title="Shipping & courier" description="What shoppers pay for delivery on each store, and what the courier is telling us." />
+      <PageHeader title="Shipping & courier" />
 
-      {isLoading ? (
-        <>
+      <section className="oss-workspace" aria-labelledby="courier-monitoring">
+        <div className="oss-section-heading">
+          <h2 id="courier-monitoring">Courier monitoring</h2>
+          <div className="oss-inline oss-inline--wrap">
+            <a className="oss-btn oss-btn--sm" href="#delivery-fees">Jump to delivery fees</a>
+            <a className="oss-btn oss-btn--sm" href="#profit-rates">Profit report rates</a>
+          </div>
+        </div>
+        {isLoading ? (
+          <SkeletonKpis count={3} label="Loading courier status…" className="oss-tiles" />
+        ) : data && (
+          <KpiGrid className="oss-tiles">
+            <KpiTile
+              label="Courier account"
+              value={activeBrands.length ? <span className="oss-dotline"><span className={`oss-dot ${missing.length ? "is-warn" : "is-ok"}`} aria-hidden="true" />iThink · {connected.length} of {activeBrands.length} stores connected</span> : "No active stores"}
+              sub={missing.length ? `Set up iThink in Brands → Store for ${missing.map((b) => b.name).join(", ")}.` : undefined}
+            />
+            <KpiTile
+              label="Last update from courier"
+              value={wh.lastReceivedAt ? timeAgo(wh.lastReceivedAt) : "Never"}
+              tone={wh.lastReceivedAt ? undefined : "needs"}
+              sub={wh.lastReceivedAt ? `${num(wh.today)} update${wh.today === 1 ? "" : "s"} today` : "iThink hasn’t sent anything yet — see the address below"}
+            />
+            <KpiTile
+              label="Couldn’t match"
+              value={`${num(wh.unmatched7d)} update${wh.unmatched7d === 1 ? "" : "s"}`}
+              tone={wh.unmatched7d ? "needs" : undefined}
+              sub="last 7 days · AWB not found on any order"
+            />
+          </KpiGrid>
+        )}
+        <CourierLog summary={wh} brands={brands} logRef={logRef} />
+      </section>
+
+      <section className="oss-workspace" id="delivery-fees" aria-labelledby="delivery-fees-heading">
+        <h2 id="delivery-fees-heading">Delivery fees by store</h2>
+        {isLoading ? (
           <section className="oss-cards" role="status" aria-busy="true">
             <span className="ds-sr-only">Loading delivery fees…</span>
             {[0, 1, 2].map((i) => (
@@ -382,42 +490,18 @@ export default function ShippingFees({ focus }) {
               </article>
             ))}
           </section>
-          <SkeletonKpis count={3} label="Loading courier status…" className="oss-tiles" />
-        </>
-      ) : error && !data ? (
-        <ErrorState message={`Couldn’t load delivery fees — ${error?.message || "the server didn’t answer"}.`} onRetry={refetch} retrying={isFetching} />
-      ) : (
-        <>
+        ) : error && !data ? (
+          <ErrorState message={`Couldn’t load delivery fees — ${error?.message || "the server didn’t answer"}.`} onRetry={refetch} retrying={isFetching} />
+        ) : (
           <section className="oss-cards" aria-label="Delivery fees per store">
             {brands.map((b) => (
               <FeeCard key={b.id} b={b} onSaved={(res) => queryClient.setQueryData(["shippingOverview"], res)} />
             ))}
             {brands.length === 0 && <EmptyState title="No stores yet" description="Add a brand on the Brands page first." />}
           </section>
-
-          <KpiGrid className="oss-tiles">
-            <KpiTile
-              label="Courier account"
-              value={<span className="oss-dotline"><span className={`oss-dot ${missing.length ? "is-warn" : "is-ok"}`} aria-hidden="true" />iThink · {missing.length ? `${connected.length} of ${brands.length} stores connected` : "connected"}</span>}
-              sub={missing.length ? `Not connected: ${missing.map((b) => b.name).join(", ")} — add keys on Brands → Store` : `${brands.length} store${brands.length === 1 ? "" : "s"} can book pickups`}
-            />
-            <KpiTile
-              label="Last update from courier"
-              value={wh.lastReceivedAt ? timeAgo(wh.lastReceivedAt) : "Never"}
-              tone={wh.lastReceivedAt ? undefined : "needs"}
-              sub={wh.lastReceivedAt ? `${num(wh.today)} update${wh.today === 1 ? "" : "s"} today` : "iThink hasn’t sent anything yet — see the address below"}
-            />
-            <KpiTile
-              label="Couldn’t match"
-              value={`${num(wh.unmatched7d)} update${wh.unmatched7d === 1 ? "" : "s"}`}
-              tone={wh.unmatched7d ? "needs" : undefined}
-              sub="last 7 days · AWB not found on any order"
-            />
-          </KpiGrid>
-        </>
-      )}
-
-      <CourierLog summary={wh} brands={brands} logRef={logRef} />
+        )}
+      </section>
+      <ProfitRates />
     </div>
   );
 }
