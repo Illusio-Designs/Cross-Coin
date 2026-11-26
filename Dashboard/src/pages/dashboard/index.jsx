@@ -202,13 +202,13 @@ export default function Dashboard() {
       case 'media-gallery':   return <MediaGallery />;
       // Reports: two tabbed pages. The old single-report views (bookmarks,
       // links) open the page and tab that now hold them.
-      case 'reports-sales':     return <ReportHub group="sales" />;
-      case 'reports-marketing': return <ReportHub group="marketing" />;
+      case 'reports-sales':     return <ReportHub key="sales" group="sales" />;
+      case 'reports-marketing': return <ReportHub key="marketing" group="marketing" />;
       case 'reports': case 'traffic-report': case 'revenue-profit': case 'report-location':
       case 'report-products': case 'report-customers': case 'report-inventory': case 'report-coupons':
       case 'report-marketing-orders':
       case 'report-ads':
-        return <ReportHub group={LEGACY_REPORT_VIEWS[currentView].group} initialTab={LEGACY_REPORT_VIEWS[currentView].tab} />;
+        return <ReportHub key={currentView} group={LEGACY_REPORT_VIEWS[currentView].group} initialTab={LEGACY_REPORT_VIEWS[currentView].tab} />;
       case 'leads':           return <Leads />;
       case 'loyalty':         return <Loyalty />;
       case 'staff-users':     return <StaffUsers />;

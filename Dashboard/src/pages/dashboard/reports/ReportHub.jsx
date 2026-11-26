@@ -73,10 +73,18 @@ export default function ReportHub({ group = 'sales', initialTab = null }) {
     if (window.location.pathname + window.location.hash !== url) window.history.replaceState(window.history.state, '', url);
   }, [tab, g.view]);
   useEffect(() => {
-    const onHash = () => { const k = hashTab(); if (k && tabs.some((t) => t.key === k)) setTab(k); };
+    const onHash = () => {
+      if (window.location.pathname !== `/dashboard/${g.view}`) return;
+      const key = hashTab();
+      if (tabs.some((t) => t.key === key)) setTab(key);
+    };
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, [tabs]);
+    window.addEventListener('popstate', onHash);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener('popstate', onHash);
+    };
+  }, [g.view, tabs]);
 
   const current = tabs.find((t) => t.key === tab) || tabs[0];
   if (!current) return null;

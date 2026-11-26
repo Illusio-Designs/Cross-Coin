@@ -1,3 +1,4 @@
+import { browserCostRates } from "../../../lib/reportCostRates";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
@@ -19,7 +20,7 @@ import { Search01Icon, CreditCardIcon } from "@hugeicons/core-free-icons";
      GET  /api/payments/admin/mismatches  pending/failed here but captured at Razorpay
      POST /api/payments/admin/mismatches/fix   "Mark paid & confirm" (admin)
    Gateway fees use the "Payment gateway %" from Revenue & Profit
-   (saved in this browser as rp_knobs.gatewayPct; 2% if never set).
+   (shared profit rates, with the legacy browser rate as a fallback).
    Styles: payLoyalty.css (.pl-*).
    ────────────────────────────────────────────────────────────── */
 
@@ -68,12 +69,6 @@ function when(d) {
   if (istDay(d) === today) return `Today ${clock(d)}`;
   if (istDay(d) === istDay(Date.now() - 86400000)) return `Yesterday ${clock(d)}`;
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
-}
-function gatewayPct() {
-  try {
-    const v = Number(JSON.parse(localStorage.getItem("rp_knobs") || "{}").gatewayPct);
-    return Number.isFinite(v) && v >= 0 && v <= 10 ? v : 2;
-  } catch { return 2; }
 }
 function goToView(view) {
   window.history.pushState({}, "", `/dashboard/${view}`);
@@ -478,7 +473,7 @@ function CodRemittance() {
 function Tiles({ s, error, onRetry, retrying, stale }) {
   if (error && !s) return <ErrorState message={`Couldn’t load the payment totals — ${error.message}`} onRetry={onRetry} retrying={retrying} />;
   if (!s) return <SkeletonKpis count={5} label="Loading payment totals…" className="pl-kpis" />;
-  const pct = s.gatewayPct ?? gatewayPct();
+  const pct = s.gatewayPct ?? browserCostRates().gatewayPct;
   const co = s?.collectedOnline;
   const cod = s?.codToCollect;
   const refunded = s?.refunded;
