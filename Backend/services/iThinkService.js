@@ -81,16 +81,31 @@ class IThinkService {
     await this.initialize();
     const payload = { data: { ...this._authData(), remittance_date: date } };
     const read = async (endpoint) => {
-      const { data } = await this.axiosInstance.post(`/api_v3/remittance/${endpoint}.json`, payload, {
-        timeout: 12000,
-        validateStatus: (status) => status === 200 || status === 404,
-      });
-      if (data?.status === 'success' && Array.isArray(data.data)) return data.data;
-      if (/^(?:no (?:remittance )?data found|no records found)\.?$/i.test(String(data?.message || '').trim())) return [];
-      throw new Error('iThink did not return a valid COD remittance report.');
+      try {
+        const { data, status } = await this.axiosInstance.post(`/api_v3/remittance/${endpoint}.json`, payload, {
+          timeout: 12000,
+          validateStatus: (code) => [200, 400, 401, 403, 404].includes(code),
+        });
+        const messages = [data?.html_message, data?.message, data?.error]
+          .filter((value) => typeof value === 'string')
+          .map((value) => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
+        if ([401, 403].includes(status) || [401, 403].includes(Number(data?.status_code)) ||
+            messages.some((value) => /invalid (?:access token|secret key)|unauthori[sz]ed|access denied/i.test(value))) {
+          return { rows: null, issue: 'access_denied' };
+        }
+        if (status === 200 && String(data?.status).toLowerCase() === 'success' && Array.isArray(data.data)) {
+          return { rows: data.data };
+        }
+        if (messages.some((value) => /^(?:no (?:remittance )?(?:data|records|remittances?) found|(?:remittance )?data not found)(?: for (?:this|the (?:selected|given)) (?:remittance )?date)?\.?$/i.test(value))) {
+          return { rows: [] };
+        }
+      } catch (error) {
+        if (['ECONNABORTED', 'ETIMEDOUT'].includes(error.code)) return { rows: null, issue: 'timeout' };
+      }
+      return { rows: null, issue: 'provider_error' };
     };
     const [summary, shipments] = await Promise.all([read('get'), read('get_details')]);
-    return { summary, shipments };
+    return { summary: summary.rows, shipments: shipments.rows, issues: [summary.issue, shipments.issue].filter(Boolean) };
   }
 
   /** Redact PII before logging */

@@ -131,9 +131,8 @@ function PaymentRecoveryCard({ item, brand, isAdmin, busy, onCreate, onReview })
   );
 }
 
-function RazorpayLookup({ brands, isAdmin }) {
+function MissingRazorpayOrders({ brands, isAdmin }) {
   const qc = useQueryClient();
-  const [reference, setReference] = useState("");
   const [result, setResult] = useState(null);
   const resultRef = useRef(null);
   const [error, setError] = useState("");
@@ -159,7 +158,6 @@ function RazorpayLookup({ brands, isAdmin }) {
   };
   const check = async (paymentId) => {
     if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(paymentId) || busy) return;
-    setReference(paymentId);
     resetResult();
     setBusy("check");
     try {
@@ -201,7 +199,7 @@ function RazorpayLookup({ brands, isAdmin }) {
     const request = new AbortController();
     scanRequest.current = request;
     setBusy("scan");
-    setError("");
+    resetResult();
     setScan(null);
     let eligible = [];
     try {
@@ -281,31 +279,48 @@ function RazorpayLookup({ brands, isAdmin }) {
   return (
     <section className="pl-card pl-rzp" id="razorpay-check" aria-labelledby="pl-rzp-title">
       <header className="pl-rzp__heading">
-        <h2 id="pl-rzp-title">Prepaid reconciliation · Razorpay</h2>
-        <p className="pl-faint pl-small">Check the shared Razorpay account against orders from all brands.</p>
+        <h2 id="pl-rzp-title">Missing Razorpay orders</h2>
+        <p className="pl-faint pl-small">Find captured payments with missing orders across all brands.</p>
       </header>
-      <div className="pl-rzp__tools">
-        <form className="pl-rzp__form pl-rzp__lookup" onSubmit={(event) => { event.preventDefault(); check(reference.trim()); }}>
-          <Input label="Payment ID" name="rzp-lookup-reference" value={reference} placeholder="pay_…" maxLength={68}
-            autoComplete="off" spellCheck={false} disabled={!!busy} required pattern="pay_[a-zA-Z0-9]{6,64}"
-            onChange={(event) => { setReference(event.target.value); resetResult(); }} />
-          <Button type="submit" loading={busy === "check"} loadingText="Checking…" disabled={!reference.trim() || !!busy}>Check payment</Button>
-        </form>
-        <form className="pl-rzp__form pl-rzp__day" onSubmit={(event) => { event.preventDefault(); scanForMissingOrders(); }}>
-          <DateRangePicker label="Missing orders date (IST)" inline single showIcon={false} startDate={date}
-            maxDate={istDay(Date.now())} disabled={!!busy} className="pl-rzp__date"
-            onStartChange={(selectedDate) => {
-              if (selectedDate === date) return;
-              scanRequest.current?.abort();
-              setDate(selectedDate);
-              setScan(null);
-              setError("");
-            }} />
-          <Button type="submit" variant="secondary" disabled={!!busy || !date}
-            loading={busy === "scan"} loadingText="Checking Razorpay…">Find missing orders</Button>
-        </form>
-      </div>
+      <form className="pl-rzp__form" onSubmit={(event) => { event.preventDefault(); scanForMissingOrders(); }}>
+        <DateRangePicker label="Missing orders date (IST)" inline single showIcon={false} startDate={date}
+          maxDate={istDay(Date.now())} disabled={!!busy} className="pl-rzp__date"
+          onStartChange={(selectedDate) => {
+            if (selectedDate === date) return;
+            scanRequest.current?.abort();
+            setDate(selectedDate);
+            setScan(null);
+            resetResult();
+          }} />
+        <Button type="submit" disabled={!!busy || !date}
+          loading={busy === "scan"} loadingText="Checking Razorpay…">Find missing orders</Button>
+      </form>
       {error && <p role="alert" className="pl-rzp__error">{error}</p>}
+      {currentScan && (
+        <div className="pl-rzp__result">
+          <div className="pl-rzp__scan-counts" role="status">
+            <span><b>{num(currentScan.totals.captured)}</b> Captured</span>
+            <span><b>{num(currentScan.totals.matched)}</b> Matched</span>
+            <span className={currentScan.totals.missing > 0 ? "needs-review" : undefined}><b>{num(currentScan.totals.missing)}</b> Missing</span>
+            <span className={currentScan.totals.conflicts > 0 ? "has-conflicts" : undefined}><b>{num(currentScan.totals.conflicts)}</b> Conflicts</span>
+          </div>
+          {currentScan.lastCreatedOrder && (
+            <Button size="sm" variant="secondary" onClick={() => openOrder(currentScan.lastCreatedOrder)}>
+              Open order {currentScan.lastCreatedOrder}
+            </Button>
+          )}
+          {!currentScan.items.length && <p className="pl-small pl-faint">No missing orders or payment conflicts for this day.</p>}
+          {currentScan.items.length > 0 && (
+            <ul className="pl-rzp__scan-list" aria-label="Razorpay payments that need review">
+              {currentScan.items.map((item) => (
+                <PaymentRecoveryCard key={item.paymentId} item={item}
+                  brand={brandName(item.verified?.orderBrandId ?? item.brandId ?? item.checkoutBrandId)}
+                  isAdmin={isAdmin} busy={busy} onCreate={createVerifiedOrder} onReview={check} />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {result && (
         <div className="pl-rzp__result" ref={resultRef} tabIndex={-1}>
           <strong>{result.order ? `Order #${result.order.order_number}` : "No order found"}</strong>
@@ -361,32 +376,6 @@ function RazorpayLookup({ brands, isAdmin }) {
           )}
         </div>
       )}
-      {currentScan && (
-        <div className="pl-rzp__result">
-          <div className="pl-rzp__scan-counts" role="status">
-            <span><b>{num(currentScan.totals.captured)}</b> Captured</span>
-            <span><b>{num(currentScan.totals.matched)}</b> Matched</span>
-            <span className={currentScan.totals.missing > 0 ? "needs-review" : undefined}><b>{num(currentScan.totals.missing)}</b> Missing</span>
-            <span className={currentScan.totals.conflicts > 0 ? "has-conflicts" : undefined}><b>{num(currentScan.totals.conflicts)}</b> Conflicts</span>
-          </div>
-          {currentScan.lastCreatedOrder && (
-            <Button size="sm" variant="secondary" onClick={() => openOrder(currentScan.lastCreatedOrder)}>
-              Open order {currentScan.lastCreatedOrder}
-            </Button>
-          )}
-          {!currentScan.items.length && <p className="pl-small pl-faint">No missing orders or payment conflicts for this day.</p>}
-          {currentScan.items.length > 0 && (
-            <ul className="pl-rzp__scan-list" aria-label="Razorpay payments that need review">
-              {currentScan.items.map((item) => (
-                <PaymentRecoveryCard key={item.paymentId} item={item}
-                  brand={brandName(item.verified?.orderBrandId ?? item.brandId ?? item.checkoutBrandId)}
-                  isAdmin={isAdmin} busy={busy} onCreate={createVerifiedOrder} onReview={check} />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      <DesktopMismatches isAdmin={isAdmin} />
     </section>
   );
 }
@@ -400,13 +389,19 @@ function DesktopMismatches({ isAdmin }) {
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
-  return desktop && <div className="pl-rzp__recent"><Mismatches isAdmin={isAdmin} /></div>;
+  return desktop && <Mismatches isAdmin={isAdmin} />;
 }
 
 const COD_REMITTANCE_LABEL = {
   matched: "Matched", missing: "Order missing", conflict: "Conflicting records",
   not_cod: "Order is prepaid", amount_mismatch: "Amount mismatch",
 };
+
+function codRemittanceIssue(report) {
+  if (report?.issues?.includes("access_denied")) return "iThink denied access to the remittance. Check the account credentials and remittance access.";
+  if (report?.issues?.includes("timeout")) return "iThink took too long to respond. Try checking the remittance again.";
+  return null;
+}
 
 function CodRemittance() {
   const [date, setDate] = useState(() => istDay(Date.now()));
@@ -441,12 +436,15 @@ function CodRemittance() {
       </form>
       {error && <p role="alert" className="pl-rzp__error">{error}</p>}
       {report?.status === "not_configured" && <p role="status">Connect iThink credentials in Brand settings to check remittances.</p>}
-      {report?.status === "unavailable" && <p role="alert">iThink could not load this remittance. Try again.</p>}
+      {report?.status === "unavailable" && <p role="alert">{codRemittanceIssue(report) || "iThink could not load this remittance. Try again."}</p>}
       {(report?.status === "ok" || report?.status === "partial") && (
         <div className="pl-rzp__result">
-          {report.status === "partial" && <p role="alert">Some iThink accounts could not be checked. The results are partial.</p>}
+          {report.status === "partial" && <p role="alert">
+            Showing partial remittance data. {codRemittanceIssue(report) || "Some iThink reports could not be loaded."}
+          </p>}
           <p className="pl-small" role="status">
-            {plural(report.rows.length, "shipment")} · {num(report.matched)} matched · {num(report.rows.length - report.matched)} need review
+            {report.shipmentsAvailable === false ? "Shipment details unavailable"
+              : `${plural(report.rows.length, "shipment")} · ${num(report.matched)} matched · ${num(report.rows.length - report.matched)} need review`}
             {report.netRemittedPaise != null && ` · Net remitted ${rupees.format(report.netRemittedPaise / 100)}`}
           </p>
           {!report.rows.length && report.status === "ok" && <p className="pl-small">No shipments reported for this remittance date.</p>}
@@ -659,7 +657,7 @@ function Mismatches({ isAdmin }) {
 // ── Page ─────────────────────────────────────────────────────────
 const PAYMENT_VIEWS = [
   { value: "activity", label: "Payment activity", hash: "#payment-activity" },
-  { value: "prepaid", label: "Prepaid reconciliation", hash: "#razorpay-check" },
+  { value: "prepaid", label: "Missing orders", hash: "#razorpay-check" },
   { value: "cod", label: "COD reconciliation", hash: "#cod-reconciliation" },
 ];
 const viewFromLocation = () => typeof window === "undefined" ? "activity"
@@ -734,7 +732,8 @@ export default function Payments() {
 
       <div id="pl-workspace" role="tabpanel" aria-label={PAYMENT_VIEWS.find((item) => item.value === view)?.label}>
         <div className="pl-view" hidden={view !== "prepaid"}>
-          <RazorpayLookup brands={brands} isAdmin={!!isAdmin} />
+          <MissingRazorpayOrders brands={brands} isAdmin={!!isAdmin} />
+          <DesktopMismatches isAdmin={!!isAdmin} />
           <p className="pl-faint pl-small pl-nightly">
             {nightly
               ? <>Last Razorpay check ({fullDate(nightly.at)}): {nightly.summary || (nightly.status === "failed" ? "didn’t finish" : "done")}{nightly.status === "failed" && nightly.error ? ` — ${nightly.error.split("\n")[0]}` : ""}.{s.fixedThisWeek ? ` ${plural(s.fixedThisWeek, "order")} fixed from Razorpay this week.` : ""}</>

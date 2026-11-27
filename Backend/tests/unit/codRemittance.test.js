@@ -36,3 +36,26 @@ test('keeps a provider failure separate from an empty remittance report', async 
     accessToken: 'fixture', secretKey: 'fixture', getCodRemittance: async () => { throw new Error('fixture timeout'); } });
   await expect(reconcileCod('2026-11-25')).resolves.toEqual({ status: 'unavailable', rows: [] });
 });
+
+test('keeps the net payout available when shipment details fail', async () => {
+  Brand.findAll.mockResolvedValue([{ id: 1 }]);
+  getShippingProvider.mockResolvedValue({ initialize: async () => {}, env: 'production',
+    accessToken: 'fixture', secretKey: 'fixture', getCodRemittance: async () => ({
+      summary: [{ cod_remitted: '400.00' }], shipments: null, issues: ['timeout'],
+    }) });
+  await expect(reconcileCod('2026-11-25')).resolves.toMatchObject({
+    status: 'partial', netRemittedPaise: 40000, rows: [], shipmentsAvailable: false, issues: ['timeout'],
+  });
+});
+
+test('reconciles shipment details while leaving the unavailable net remittance blank', async () => {
+  Brand.findAll.mockResolvedValue([{ id: 1 }]);
+  getShippingProvider.mockResolvedValue({ initialize: async () => {}, env: 'production',
+    accessToken: 'fixture', secretKey: 'fixture', getCodRemittance: async () => ({
+      summary: null, shipments: [{ airway_bill_no: 'AWB1', price: '449.10' }], issues: ['timeout'],
+    }) });
+  sequelize.query.mockResolvedValue([{ waybill: 'AWB1', order_number: 'MX-1', payment_type: 'cod', final_amount: '449.10' }]);
+  await expect(reconcileCod('2026-11-25')).resolves.toMatchObject({
+    status: 'partial', netRemittedPaise: null, matched: 1, rows: [{ awb: 'AWB1', status: 'matched' }],
+  });
+});

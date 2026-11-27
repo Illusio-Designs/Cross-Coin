@@ -237,7 +237,7 @@ function TodayHome() {
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">
           <h3>Today’s work</h3>
-          <FilterChips className="hm-work-tabs" ariaLabel="Filter work" value={tab} onChange={setTab}
+          <FilterChips ariaLabel="Filter work" value={tab} onChange={setTab}
             items={['all', 'urgent', 'today', 'later'].map((value) => ({
               value, label: value === 'all' ? 'All' : PRIORITY_LABEL[value], count: first ? undefined : counts[value],
             }))} />

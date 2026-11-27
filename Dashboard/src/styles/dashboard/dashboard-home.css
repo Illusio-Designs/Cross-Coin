@@ -103,27 +103,6 @@
 .hm-head p { margin: 3px 0 0; font-size: 13.5px; color: var(--ds-color-text-muted); }
 .hm-tools { width: min(100%, 200px); }
 
-.obz-home .hm-work-tabs {
-  flex-wrap: nowrap; gap: 4px; padding: 3px; border-radius: 10px;
-  border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft); overflow-x: auto;
-}
-.obz-home .hm-work-tabs .ui-chip {
-  flex: 0 0 auto; gap: 4px; min-height: 34px; padding: 0 12px; border: 0;
-  border-radius: 8px; font-weight: 600;
-}
-.obz-home .hm-work-tabs .ui-chip__count {
-  padding: 0 6px; font-size: 11px; border-radius: var(--ds-radius-pill);
-  background: var(--ds-color-border); color: var(--ds-color-text);
-}
-.obz-home .hm-work-tabs .ui-chip.is-on,
-.obz-home .hm-work-tabs .ui-chip.is-on:hover {
-  background: var(--ds-color-brand); color: var(--ds-color-bg);
-}
-.obz-home .hm-work-tabs .ui-chip.is-on .ui-chip__count { background: var(--ds-color-bg); }
-@media (max-width: 900px) {
-  .obz-home .hm-work-tabs .ui-chip { min-height: 44px; }
-}
-
 .hm-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .hm-card {
   --t: var(--ds-color-info); --tb: var(--ds-color-info-bg); --tbd: var(--ds-color-info-bd, var(--ds-color-border));

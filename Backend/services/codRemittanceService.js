@@ -33,10 +33,14 @@ async function reconcileCod(date) {
   if (!accounts.length) return { status: 'not_configured', rows: [] };
   const checks = await Promise.allSettled(accounts.map((provider) => provider.getCodRemittance(date)));
   const reports = checks.flatMap((check) => check.status === 'fulfilled' ? [check.value] : []);
-  if (!reports.length) return { status: 'unavailable', rows: [] };
+  const issues = [...new Set(reports.flatMap((report) => report.issues || []))];
+  const summariesComplete = reports.length === accounts.length && reports.every((report) => Array.isArray(report.summary));
+  const shipmentsComplete = reports.length === accounts.length && reports.every((report) => Array.isArray(report.shipments));
+  const shipmentsAvailable = reports.some((report) => Array.isArray(report.shipments));
+  if (!shipmentsAvailable && !reports.some((report) => Array.isArray(report.summary))) return { status: 'unavailable', rows: [], ...(issues.length ? { issues } : {}) };
 
   const byAwb = new Map();
-  for (const entry of reports.flatMap((report) => report.shipments)) {
+  for (const entry of reports.flatMap((report) => report.shipments || [])) {
     const awb = String(entry?.airway_bill_no || '').trim().toUpperCase();
     if (!/^[A-Z0-9_-]{1,100}$/.test(awb)) continue;
     const amountPaise = parseRupees(entry.price);
@@ -69,12 +73,13 @@ async function reconcileCod(date) {
       : amountPaise != null && amountPaise === expectedPaise ? 'matched' : 'amount_mismatch';
     return { awb, amountPaise, status, orderNumber: order?.order_number || null, expectedPaise };
   });
-  const remittances = reports.flatMap((report) => report.summary);
+  const remittances = reports.flatMap((report) => report.summary || []);
   const amounts = remittances.map((entry) => parseRupees(entry.cod_remitted));
-  const complete = reports.length === accounts.length;
-  const netRemittedPaise = complete && (amounts.length || !rows.length) && amounts.every((value) => value != null)
+  const complete = summariesComplete && shipmentsComplete;
+  const netRemittedPaise = summariesComplete && (amounts.length || (shipmentsComplete && !rows.length)) && amounts.every((value) => value != null)
     ? amounts.reduce((sum, value) => sum + value, 0) : null;
-  return { status: complete ? 'ok' : 'partial', netRemittedPaise, rows,
+  return { status: complete ? 'ok' : 'partial', netRemittedPaise, rows, shipmentsAvailable,
+    ...(issues.length ? { issues } : {}),
     matched: rows.filter((row) => row.status === 'matched').length };
 }
 

@@ -4,7 +4,7 @@ import clsx from '../Dashboard/primitives/_clsx';
 const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
 
 /**
- * FilterChips — tabs as pills, each with an optional count.
+ * FilterChips — dashboard tabs with optional counts.
  *
  *   <FilterChips
  *     ariaLabel="Review status"
@@ -12,8 +12,8 @@ const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
  *     value={tab} onChange={setTab}
  *   />
  *
- * Keyboard: ←/→ (and Home/End) move between chips and pick them; only the
- * picked chip is in the Tab order. `controls` = id of the list it filters.
+ * Keyboard: ←/→ (and Home/End) move between tabs and pick them; only the
+ * selected tab is in the keyboard Tab order. `controls` = id of the list it filters.
  */
 export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className }) {
   const refs = useRef([]);
@@ -43,9 +43,12 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
       if (list.scrollWidth <= list.clientWidth) return;
       const viewport = list.getBoundingClientRect();
       const tab = active.getBoundingClientRect();
-      // Keep the selected tab visible without scrolling the page vertically.
-      if (tab.left < viewport.left) list.scrollLeft += tab.left - viewport.left;
-      else if (tab.right > viewport.right) list.scrollLeft += tab.right - viewport.right;
+      const { paddingLeft, paddingRight } = window.getComputedStyle(list);
+      const left = viewport.left + list.clientLeft + parseFloat(paddingLeft);
+      const right = viewport.left + list.clientLeft + list.clientWidth - parseFloat(paddingRight);
+      // Leave room for the group padding without scrolling the page vertically.
+      if (tab.left < left) list.scrollLeft += tab.left - left;
+      else if (tab.right > right) list.scrollLeft += tab.right - right;
     };
     reveal();
     window.addEventListener('resize', reveal);

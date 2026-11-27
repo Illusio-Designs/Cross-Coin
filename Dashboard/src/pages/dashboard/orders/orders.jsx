@@ -1234,7 +1234,7 @@ const Orders = ({ initialTab } = {}) => {
                                         <Button variant="secondary" onClick={() => {
                                             window.history.pushState({}, '', '/dashboard/payments#razorpay-check');
                                             window.dispatchEvent(new PopStateEvent('popstate'));
-                                        }}>Check Razorpay payment</Button>
+                                        }}>Find missing Razorpay orders</Button>
                                     </div>
                                 </details>
                             </>
