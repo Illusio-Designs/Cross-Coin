@@ -123,13 +123,19 @@ export const formatAttributesForDisplay = (attributes) => {
  * @param {Object} attributes - Cleaned attributes object
  * @returns {Array} - Array of {key, value} objects
  */
+function attributeText(value) {
+    if (Array.isArray(value)) return value.map(attributeText).filter(Boolean).join(', ');
+    if (value && typeof value === 'object') {
+        const label = value.label ?? value.name ?? value.value ?? value.values;
+        return label === undefined ? '' : attributeText(label);
+    }
+    return value == null ? '' : String(value);
+}
+
 export const getAttributeComponents = (attributes) => {
-    if (!attributes || typeof attributes !== 'object') return [];
-    
     const cleanedAttributes = cleanProductAttributes(attributes);
-    
     return Object.entries(cleanedAttributes).map(([key, value]) => ({
         key: key.charAt(0).toUpperCase() + key.slice(1),
-        value: value
-    }));
+        value: attributeText(value)
+    })).filter(({ value }) => value !== '');
 };

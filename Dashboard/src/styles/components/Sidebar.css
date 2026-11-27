@@ -130,8 +130,9 @@
 .sb-link:hover { background: var(--ds-color-surface); color: var(--ds-color-text); }
 .sb-link.is-active,
 .sb-link.is-active:hover {
-  background: var(--ds-color-text);
-  color: var(--ds-color-surface);
+  background: color-mix(in srgb, var(--ds-color-success) 12%, var(--ds-color-surface));
+  color: var(--ds-color-text);
+  box-shadow: inset 3px 0 var(--ds-color-success-text);
   font-weight: 700;
 }
 .sb--rail .sb-link { width: 44px; margin: 0 auto; padding: 0; justify-content: center; }

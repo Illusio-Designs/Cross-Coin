@@ -366,8 +366,8 @@ function RazorpayLookup({ brands, isAdmin }) {
           <div className="pl-rzp__scan-counts" role="status">
             <span><b>{num(currentScan.totals.captured)}</b> Captured</span>
             <span><b>{num(currentScan.totals.matched)}</b> Matched</span>
-            <span><b>{num(currentScan.totals.missing)}</b> Missing</span>
-            <span><b>{num(currentScan.totals.conflicts)}</b> Conflicts</span>
+            <span className={currentScan.totals.missing > 0 ? "needs-review" : undefined}><b>{num(currentScan.totals.missing)}</b> Missing</span>
+            <span className={currentScan.totals.conflicts > 0 ? "has-conflicts" : undefined}><b>{num(currentScan.totals.conflicts)}</b> Conflicts</span>
           </div>
           {currentScan.lastCreatedOrder && (
             <Button size="sm" variant="secondary" onClick={() => openOrder(currentScan.lastCreatedOrder)}>

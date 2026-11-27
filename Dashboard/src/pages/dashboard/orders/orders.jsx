@@ -272,6 +272,33 @@ const Orders = ({ initialTab } = {}) => {
     const [totalOrders, setTotalOrders] = useState(0);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [orderDetailLoading, setOrderDetailLoading] = useState(false);
+    const [orderDetailError, setOrderDetailError] = useState(false);
+    const [orderDetailRetry, setOrderDetailRetry] = useState(0);
+    const selectedOrderId = selectedOrder?.id;
+
+    useEffect(() => {
+        if (!isViewModalOpen || !selectedOrderId) return;
+        let active = true;
+        setOrderDetailLoading(true);
+        setOrderDetailError(false);
+        orderService.getOrderById(selectedOrderId).then((detail) => {
+            if (!active) return;
+            if (String(detail?.id) !== String(selectedOrderId)) throw new Error('Order details unavailable');
+            setSelectedOrder((row) => ({
+                ...row, ...detail,
+                // The detail endpoint omits some fields that only the desk list provides.
+                ShippingAddress: detail.ShippingAddress
+                    ? { ...detail.ShippingAddress, ...row.ShippingAddress }
+                    : row.ShippingAddress,
+            }));
+        }).catch(() => {
+            if (active) setOrderDetailError(true);
+        }).finally(() => {
+            if (active) setOrderDetailLoading(false);
+        });
+        return () => { active = false; };
+    }, [isViewModalOpen, selectedOrderId, orderDetailRetry]);
     const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState(() => parseTab(initialTab).tab || "to_confirm");
     // Problems desk opening filter ({ type, q }); `n` remounts it on each new link.
@@ -657,6 +684,12 @@ const Orders = ({ initialTab } = {}) => {
         setAddressForm(buildAddressForm(selectedOrder));
         setEditingAddress(true);
     };
+    const openOrderDetails = (row) => {
+        setSelectedOrder(row);
+        setEditingAddress(false);
+        setOrderDetailError(false);
+        setIsViewModalOpen(true);
+    };
     // Open the order panel straight into the address editor (row action).
     const openAddressEditor = (row) => {
         if (!row.ShippingAddress) { showError('updateFailed', 'This order has no shipping address to edit'); return; }
@@ -906,7 +939,7 @@ const Orders = ({ initialTab } = {}) => {
         }
 
         // The one button that moves this order forward.
-        let primary = { label: 'View', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } };
+        let primary = { label: 'View', onClick: () => openOrderDetails(row) };
         if (needsRtoVerification) primary = { label: 'Verify receipt', onClick: () => setRtoReceiptPrompt(row) };
         else if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
         else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
@@ -941,7 +974,8 @@ const Orders = ({ initialTab } = {}) => {
                 const h = ageHours(row.createdAt);
                 return (
                     <div style={{ display: 'grid', gap: 2 }}>
-                        <span style={{ fontFamily: 'var(--ds-font-mono)', fontWeight: 700, whiteSpace: 'nowrap' }}>{row.order_number}</span>
+                        <button type="button" className="ord-order-link" onClick={() => openOrderDetails(row)}
+                            aria-label={`View order ${row.order_number}`}>{row.order_number}</button>
                         <span style={muted}>
                             {row.Brand?.display_name || row.Brand?.name || '—'} · {shortWhen(row.createdAt)}
                             {s.canConfirm && h >= 1 && <b style={{ color: h >= 24 ? 'var(--ds-color-danger)' : 'var(--ds-color-warn)' }}> · {h} h</b>}
@@ -1090,7 +1124,7 @@ const Orders = ({ initialTab } = {}) => {
             cell: (row) => {
                 const s = rowState(row);
                 const menu = [
-                    { icon: <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />, label: 'View full order', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } },
+                    { icon: <HugeiconsIcon icon={ViewIcon} size={16} strokeWidth={2} />, label: 'View full order', onClick: () => openOrderDetails(row) },
                     { icon: <HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={2} />, label: 'Edit address', onClick: () => openAddressEditor(row) },
                     ...(s.pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, s.waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
                     ...(s.waybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Regenerate label', onClick: () => generateLabelForOrder(row.id) }] : []),
@@ -1416,7 +1450,7 @@ const Orders = ({ initialTab } = {}) => {
             <Modal
               isOpen={isViewModalOpen}
               onClose={() => { setIsViewModalOpen(false); setEditingAddress(false); }}
-              title={`Order Details: #${selectedOrder?.order_number}`}
+              title={selectedOrder ? `Order details · ${selectedOrder.order_number}` : "Order details"}
               size="lg"
               role="dialog"
               aria-modal="true"
@@ -1425,6 +1459,11 @@ const Orders = ({ initialTab } = {}) => {
             >
                 {selectedOrder && (
                     <div className="odm-body">
+                        {orderDetailLoading && <p className="odm-detail-status" role="status">Loading full order details…</p>}
+                        {orderDetailError && <div className="odm-detail-status" role="status">
+                            Full order details couldn’t load. The order summary is below.
+                            <Button variant="secondary" size="sm" onClick={() => setOrderDetailRetry((n) => n + 1)}>Retry details</Button>
+                        </div>}
 
                         <OrderDelivery order={selectedOrder}
                             preparingLabel={generatingLabel.has(selectedOrder.id)}
@@ -1589,7 +1628,7 @@ const Orders = ({ initialTab } = {}) => {
                                 <span className="odm-count">{selectedOrder.OrderItems?.length}</span>
                             </div>
                             <div className="odm-items">
-                                {(selectedOrder.OrderItems || []).length === 0 && (
+                                {!orderDetailLoading && !orderDetailError && (selectedOrder.OrderItems || []).length === 0 && (
                                     <div style={{ padding: 16, color: 'var(--ds-color-text-muted)', fontSize: 13, textAlign: 'center' }}>
                                         No items recorded for this order.
                                     </div>

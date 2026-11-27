@@ -3463,3 +3463,28 @@
 .manual-order__muted { color: var(--ds-color-text-muted); font-size: 13px; }
 .manual-order__error { color: var(--ds-color-danger-text); font-size: 13px; }
 @media (max-width: 520px) { .manual-order__grid { grid-template-columns: 1fr; } }
+
+.ord-order-link {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--ds-color-text);
+  font: 700 1em var(--ds-font-mono);
+  text-align: start;
+  text-decoration: underline;
+  text-decoration-color: var(--ds-color-border);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.ord-order-link:hover { text-decoration-color: currentColor; }
+.odm-detail-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--ds-color-text-muted);
+  margin: 0;
+  font-size: 13px;
+}
