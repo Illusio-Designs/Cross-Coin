@@ -221,19 +221,18 @@
 .hm-table .r { text-align: right; }
 .hm-table tr:last-child td { border-bottom: none; }
 
-.hm-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.hm-feed li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
-.hm-feed .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--ds-color-text-faint); }
-.hm-feed .dot.ok { background: var(--ds-color-success); }
-.hm-feed .dot.info { background: var(--ds-color-info); }
-.hm-feed .dot.bad { background: var(--ds-color-danger); }
-.hm-feed .dot.warn { background: var(--ds-color-warn); }
-.hm-feed .dot.return { background: var(--ds-color-accent2); }
-.hm-feed .dot.wa { background: #25d366; }
-.hm-feed .txt { font-size: 13px; line-height: 1.45; color: var(--ds-color-text); overflow-wrap: anywhere; }
-.hm-feed button.txt { all: unset; cursor: pointer; font-size: 13px; line-height: 1.45; color: var(--ds-color-text); overflow-wrap: anywhere; }
-.hm-feed button.txt:hover { text-decoration: underline; }
-.hm-feed .time { font-size: 11.5px; color: var(--ds-color-text-faint); white-space: nowrap; }
+.hm-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hm-activity-card { --nt: var(--ds-color-text-muted); --nt-wash: var(--ds-color-surface-soft); gap: 10px; padding: 10px 12px; }
+.hm-activity-ok { --nt: var(--ds-color-success); --nt-wash: var(--ds-color-success-bg); }
+.hm-activity-info { --nt: var(--ds-color-info); --nt-wash: var(--ds-color-info-bg); }
+.hm-activity-warn { --nt: var(--ds-color-warn); --nt-wash: var(--ds-color-warn-bg); }
+.hm-activity-bad { --nt: var(--ds-color-danger); --nt-wash: var(--ds-color-danger-bg); }
+.hm-activity-return { --nt: var(--ds-color-accent2); --nt-wash: var(--ds-color-accent2-bg); }
+.hm-activity-wa { --nt: var(--ds-color-success); --nt-wash: var(--ds-color-success-bg); }
+.hm-activity-card .notif-chip { width: 34px; height: 34px; }
+.hm-activity-card .notif-c-title { white-space: normal; overflow-wrap: anywhere; }
+.hm-activity-card:not(button) { cursor: default; }
+.hm-activity-card:not(button):hover { transform: none; }
 
 /* Put the work queue and its fulfilment context in the same section. */
 .hm-workspace {

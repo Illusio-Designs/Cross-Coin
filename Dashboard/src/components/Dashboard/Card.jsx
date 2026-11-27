@@ -11,6 +11,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import {
   Package01Icon, ArrowRight01Icon, WhatsappIcon, Building01Icon,
   SlidersHorizontalIcon, News01Icon, Search01Icon, File01Icon, DashboardSquare01Icon,
+  Alert02Icon, ArrowTurnBackwardIcon, Notification01Icon, Tick02Icon,
 } from '@hugeicons/core-free-icons';
 
 /* Navigate the dashboard shell to another view (same pattern as the
@@ -35,6 +36,16 @@ function getGreeting() {
 }
 
 const ic = (icon) => <HugeiconsIcon icon={icon} size={20} strokeWidth={2} />;
+
+const ACTIVITY_ICONS = {
+  ok: Tick02Icon,
+  info: Package01Icon,
+  warn: Alert02Icon,
+  bad: Alert02Icon,
+  return: ArrowTurnBackwardIcon,
+  wa: WhatsappIcon,
+  mut: Notification01Icon,
+};
 // Curated primary destinations (sub-tabs like seo-health / whatsapp-chat are
 // intentionally omitted). Order here = order shown on the home.
 const QUICK_LINKS = [
@@ -360,20 +371,33 @@ function TodayHome() {
           </section>
         )}
 
-        <section className="panel">
+        <section className="panel" aria-label="Just happened">
           <div className="panel-h"><h3>Just happened</h3></div>
           {first ? <SkeletonList rows={5} label="Loading recent activity…" />
             : (data?.feed || []).length === 0 ? <div className="h-hint">Nothing in the last 3 days.</div> : (
-            <ol className="hm-feed">
-              {data.feed.map((e, i) => (
-                <li key={i}>
-                  <span className={`dot ${e.tone}`} aria-hidden="true" />
-                  {e.conversationId ? (
-                    <button type="button" className="txt" onClick={() => { try { sessionStorage.setItem('obz-wa-open', String(e.conversationId)); } catch { /* blocked */ } goToView('whatsapp-chat'); }}>{e.text}</button>
-                  ) : <span className="txt">{e.text}</span>}
-                  <span className="time">{timeAgo(e.at)}</span>
-                </li>
-              ))}
+            <ol className="hm-feed" role="list">
+              {data.feed.map((event, index) => {
+                const tone = Object.hasOwn(ACTIVITY_ICONS, event.tone) ? event.tone : 'mut';
+                const ActivityCard = event.conversationId ? 'button' : 'div';
+                const chatAction = event.conversationId ? {
+                  type: 'button',
+                  onClick: () => {
+                    try { sessionStorage.setItem('obz-wa-open', String(event.conversationId)); } catch { /* storage blocked */ }
+                    goToView('whatsapp-chat');
+                  },
+                } : {};
+                return (
+                  <li key={index}>
+                    <ActivityCard className={`notif-card hm-activity-card hm-activity-${tone}`} {...chatAction}>
+                      <span className="notif-chip" aria-hidden="true">{ic(ACTIVITY_ICONS[tone])}</span>
+                      <span className="notif-c-body">
+                        <span className="notif-c-title">{event.text}</span>
+                        <time className="notif-c-time" dateTime={event.at}>{timeAgo(event.at)}</time>
+                      </span>
+                    </ActivityCard>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </section>
