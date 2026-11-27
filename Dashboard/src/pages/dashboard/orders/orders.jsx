@@ -40,12 +40,14 @@ const DESK_TABS = [
     { v: 'booked',        l: 'Booked',            count: 'booked' },
     { v: 'picked_up',     l: 'Picked up',         count: 'picked_up' },
     { v: 'in_transit',    l: 'In transit',        count: 'in_transit' },
+    { v: 'out_for_delivery', l: 'Out for delivery', count: 'out_for_delivery' },
+    { v: 'undelivered',   l: 'Undelivered',       count: 'undelivered' },
     { v: 'problems',      l: 'Problems',          count: 'problems_total' },
-    { v: 'delivered',     l: 'Delivered' },
-    { v: 'cancelled_rto', l: 'Cancelled & RTO' },
-    { v: 'all',           l: 'All' },
+    { v: 'delivered',     l: 'Delivered',        count: 'delivered' },
+    { v: 'cancelled_rto', l: 'Cancelled & RTO',  count: 'cancelled_rto' },
+    { v: 'all',           l: 'All',              count: 'all' },
 ];
-const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'delivered', 'cancelled_rto']);
+const DESK_STAGE_VALUES = new Set(DESK_TABS.map(({ v }) => v).filter((v) => v !== 'problems' && v !== 'all'));
 // Old home-inbox deep links used status buckets — map them onto the tabs.
 const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit', rto: 'cancelled_rto', cancelled: 'cancelled_rto' };
 // Links into the Problems desk: 'problems:<all|ndr|return|refund>', plus the
@@ -1134,13 +1136,14 @@ const Orders = ({ initialTab } = {}) => {
                     <ManualOrderModal open={manualOrderOpen} brands={brands} initialBrandId={brandFilter}
                         onClose={() => setManualOrderOpen(false)} onCreated={onManualOrderCreated} />
 
-                    {['all', 'in_transit', 'delivered', 'to_ship', 'booked', 'picked_up'].includes(statusFilter) && (
+                    {['all', 'to_ship', 'booked', 'picked_up', 'in_transit', 'out_for_delivery', 'undelivered', 'delivered'].includes(statusFilter) && (
                         <DeliverySummary title="Delivery status" metrics={[
                             { label: 'To ship', value: deskCounts.to_ship },
                             { label: 'Booked', value: deskCounts.booked },
                             { label: 'Picked up', value: deskCounts.picked_up },
                             { label: 'In transit', value: deskCounts.in_transit },
-                            { label: 'Open failed deliveries', value: deskCounts.ndr_open, attention: true },
+                            { label: 'Out for delivery', value: deskCounts.out_for_delivery },
+                            { label: 'Undelivered', value: deskCounts.undelivered, attention: true },
                         ]} action={<Button size="sm" variant="secondary" onClick={() => openDesk('ndr')}>Review failed deliveries</Button>} />
                     )}
 

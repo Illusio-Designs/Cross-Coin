@@ -1313,7 +1313,9 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     to_ship: () => fulfillmentStage(fulfillment.toShip),
     booked: () => fulfillmentStage(fulfillment.booked),
     picked_up: () => ({ status: pickedUpStatus }),
-    in_transit: () => ({ status: { [Op.in]: ['shipped', 'in transit', 'out for delivery'] } }),
+    in_transit: () => ({ status: { [Op.in]: ['shipped', 'in transit'] } }),
+    out_for_delivery: () => ({ status: 'out for delivery' }),
+    undelivered: () => ({ status: 'undelivered' }),
     // Courier could not deliver / shipment stuck.
     problems: () => ({ status: { [Op.in]: ['undelivered', 'exception'] } }),
     delivered: () => ({ status: 'delivered' }),
@@ -1385,11 +1387,15 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     try {
       const base = {};
       if (req.query.brand_id && req.query.brand_id !== 'all') base.brand_id = parseInt(req.query.brand_id, 10);
-      const keys = ['to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'problems', 'refund_due'];
-      const counts = {};
-      await Promise.all(keys.map(async (k) => {
-        counts[k] = await Order.count({ where: { ...base, ...DESK_STAGES[k]() } });
-      }));
+      const keys = [
+        'to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'out_for_delivery',
+        'undelivered', 'delivered', 'cancelled_rto', 'problems', 'refund_due',
+      ];
+      const countFilters = keys.map((key) => [key, DESK_STAGES[key]()]);
+      countFilters.push(['all', {}]);
+      const counts = Object.fromEntries(await Promise.all(countFilters.map(async ([key, filters]) => [
+        key, await Order.count({ where: { ...base, ...filters } }),
+      ])));
       // COD orders waiting > 24h for a call / confirmation.
       counts.to_confirm_overdue = await Order.count({
         where: { ...base, ...DESK_STAGES.to_confirm(), createdAt: { [Op.lt]: new Date(Date.now() - 24 * 3600 * 1000) } },

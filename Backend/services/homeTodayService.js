@@ -17,7 +17,6 @@ const pct = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) 
 
 const TO_CONFIRM = `LOWER(o.status) IN ('awaiting_confirmation','pending') AND LOWER(o.payment_type) = 'cod'`;
 const { toShip: TO_SHIP, booked: BOOKED } = require('./orderFulfillmentStages.js').fulfillmentStageSql('o');
-const IN_TRANSIT = `LOWER(o.status) IN ('shipped','in transit','out for delivery')`;
 const NOT_CANCELLED = `(o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))`;
 
 async function q(sql, replacements) {
@@ -65,7 +64,9 @@ async function getToday({ brandId = null } = {}) {
               COALESCE(SUM(${BOOKED} AND o.shipping_label_url IS NOT NULL
                 AND (o.shipping_label_downloaded IS NULL OR o.shipping_label_downloaded = 0)), 0) AS labels_pending
          FROM orders o WHERE LOWER(o.status) IN ('confirmed','processing','booked','manifested')${b}`, R),
-    q(`SELECT COUNT(*) AS n FROM orders o WHERE ${IN_TRANSIT}${b}`, R),
+    q(`SELECT SUM(LOWER(o.status) IN ('shipped','in transit')) AS n,
+              SUM(LOWER(o.status) = 'out for delivery') AS out_for_delivery
+         FROM orders o WHERE LOWER(o.status) IN ('shipped','in transit','out for delivery')${b}`, R),
     q(`SELECT COUNT(DISTINCT o.id) AS n, COALESCE(SUM(o.final_amount), 0) AS value
          FROM orders o WHERE LOWER(o.status) = 'delivered'${b}
           AND EXISTS (SELECT 1 FROM order_status_history h WHERE h.order_id = o.id AND LOWER(h.status) = 'delivered' AND h.created_at >= :todayStart)`, R),
@@ -121,6 +122,7 @@ async function getToday({ brandId = null } = {}) {
 
   const pipeline = {
     toConfirm: num(confirm.n), toShip: num(ship.n), inTransit: num(transit.n),
+    outForDelivery: num(transit.out_for_delivery),
     deliveredToday: num(deliveredToday.n), deliveredTodayValue: Math.round(num(deliveredToday.value)),
     problems: num(ndr.open_n), returnsOpen: num(ret.open_n), closedToday: num(closedToday.n),
   };

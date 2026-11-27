@@ -266,6 +266,7 @@ function TodayHome() {
             ))}
           </div>
           <div className="hm-chips">
+            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'out_for_delivery', brandId)}>Out for delivery · {num(Number(p.outForDelivery || 0).toLocaleString('en-IN'), 20, 12)}</button>
             <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
             <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
             <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto', brandId)}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
