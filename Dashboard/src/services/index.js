@@ -579,6 +579,16 @@ export const orderService = {
     }
   },
 
+  verifyRtoReceipt: async (id) => {
+    try {
+      const { data } = await adminApi.put(`/api/orders/${id}/rto-receipt`);
+      invalidateCache('/api/orders');
+      return data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error.response?.data || error.message));
+    }
+  },
+
   // Order Desk: one order's history, payments/refunds, returns, NDR cases.
   getOrderDesk: async (id) => {
     try {

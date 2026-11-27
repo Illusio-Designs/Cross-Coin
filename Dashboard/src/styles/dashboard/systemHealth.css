@@ -55,8 +55,8 @@
 /* ── Run now ── */
 .sh-act { text-align: right; white-space: normal; min-width: 130px; }
 .sh-btn {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px;
-  border-radius: 9px; border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--ds-control-height-sm); padding: 0 12px;
+  border-radius: var(--ds-radius-md); border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
   color: var(--ds-color-text); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1;
   cursor: pointer; white-space: nowrap;
 }

@@ -53,7 +53,7 @@
   color: var(--ds-color-text); font: inherit; font-size: 13.5px; height: 38px;
 }
 .cust .cust-dd { min-width: 150px; max-width: 220px; }
-.cust .cust-dd .dropdown-trigger { height: 40px; border-radius: 10px; background: var(--ds-color-surface); }
+.cust .cust-dd .dropdown-trigger { height: var(--ds-control-height); background: var(--ds-color-surface); }
 @media (max-width: 520px) { .cust .cust-dd { flex: 1 1 140px; max-width: none; } }
 
 /* Table */

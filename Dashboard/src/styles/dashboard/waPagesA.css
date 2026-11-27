@@ -42,8 +42,8 @@
 /* ── Buttons ────────────────────────────────────────────────────────── */
 .wpa-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 40px; padding: 0 14px;
-  border-radius: 10px; border: 1px solid var(--ds-color-border);
+  min-height: var(--ds-control-height); padding: 0 14px;
+  border-radius: var(--ds-control-radius); border: 1px solid var(--ds-color-border);
   background: var(--ds-color-surface); color: var(--ds-color-text);
   font: inherit; font-size: 13px; font-weight: var(--ds-weight-bold);
   cursor: pointer; white-space: nowrap; text-decoration: none;
@@ -66,7 +66,7 @@
 }
 .wpa-btn--ghost { background: transparent; border-color: transparent; color: var(--ds-color-text-muted); }
 .wpa-btn--ghost:hover:not(:disabled) { color: var(--ds-color-text); border-color: var(--ds-color-border); }
-.wpa-btn--sm { min-height: 34px; padding: 0 12px; font-size: 12.5px; border-radius: 9px; }
+.wpa-btn--sm { min-height: var(--ds-control-height-sm); padding: 0 12px; font-size: 12.5px; border-radius: var(--ds-radius-md); }
 .wpa-btn--lg { min-height: 46px; font-size: 14.5px; border-radius: 11px; width: 100%; }
 
 /* ── Chips / tabs ───────────────────────────────────────────────────── */

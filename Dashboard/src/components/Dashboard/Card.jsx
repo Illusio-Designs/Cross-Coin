@@ -113,6 +113,7 @@ function queueCard(q) {
       detail: `${plural(q.count, 'booked order')} with labels to download.`,
     };
     case 'returns_refund': return { title: 'Returns to refund', action: 'Refund', detail: `Parcels received — ${rupee(q.amount)} owed.${q.toReview ? ` ${q.toReview} more to review.` : ''}` };
+    case 'rto_to_verify': return { title: 'RTO parcels to verify', action: 'Verify warehouse receipt', detail: 'Courier marked these parcels delivered back. Check the parcel and AWB at the warehouse.' };
     case 'booking_failed': return { title: 'Booking failed', action: 'Fix', detail: q.sample ? String(q.sample).slice(0, 90) : 'No courier could book these — fix the address or enter the AWB.' };
     case 'whatsapp': return { title: 'Unread WhatsApp', action: 'Open inbox', detail: `${plural(q.messages, 'message')}${q.oldestHours != null ? ` · oldest ${q.oldestHours < 1 ? 'under an hour' : q.oldestHours + ' h'} ago` : ''}` };
     case 'stock': return { title: 'Out of stock', action: 'Restock', detail: q.low ? `${plural(q.low, 'more variant')} below 10 units.` : 'Variants with no stock left.' };
@@ -269,7 +270,8 @@ function TodayHome() {
             <button type="button" className="hm-chip" onClick={() => goToView('orders', 'out_for_delivery', brandId)}>Out for delivery · {num(Number(p.outForDelivery || 0).toLocaleString('en-IN'), 20, 12)}</button>
             <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
             <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
-            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled_rto', brandId)}>Cancelled &amp; RTO today · {first ? '–' : p.closedToday || 0}</button>
+            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled', brandId)}>Cancelled today · {first ? '–' : p.cancelledToday || 0}</button>
+            <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'rto', brandId)}>RTO updates today · {first ? '–' : p.rtoToday || 0}</button>
           </div>
         </section>
         <section className="panel" aria-labelledby="hm-deliveries-title">

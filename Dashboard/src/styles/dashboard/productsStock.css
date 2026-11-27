@@ -20,7 +20,7 @@
 /* Buttons */
 .pst-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 40px; padding: 0 14px; border-radius: 10px;
+  min-height: var(--ds-control-height); padding: 0 14px; border-radius: var(--ds-control-radius);
   border: 1px solid var(--ds-color-border); background: var(--ds-color-surface);
   color: var(--ds-color-text); font: 600 13px/1 var(--ds-font-sans); cursor: pointer; white-space: nowrap;
   transition: border-color .15s, background .15s;
@@ -29,7 +29,7 @@
 .pst-btn:disabled { opacity: .5; cursor: not-allowed; }
 .pst-btn--primary { background: var(--ds-color-brand); border-color: var(--ds-color-brand); color: var(--ds-color-bg); }
 .pst-btn--primary:hover:not(:disabled) { background: var(--ds-color-brand-strong); border-color: var(--ds-color-brand-strong); }
-.pst-btn--sm { min-height: 34px; padding: 0 12px; font-size: 12.5px; border-radius: 9px; }
+.pst-btn--sm { min-height: var(--ds-control-height-sm); padding: 0 12px; font-size: 12.5px; border-radius: var(--ds-radius-md); }
 .pst-btn--ghost { background: transparent; }
 .pst-btn--danger { color: var(--ds-color-danger); border-color: var(--ds-color-danger-bd); background: var(--ds-color-danger-bg); }
 .pst-btn--danger:hover:not(:disabled) { border-color: var(--ds-color-danger); background: var(--ds-color-danger-bg); }
@@ -69,13 +69,13 @@
 /* Search, sort, brand chips */
 .pst-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .pst-search {
-  flex: 1 1 260px; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px;
+  flex: 1 1 260px; display: flex; align-items: center; gap: 8px; min-height: var(--ds-control-height); padding: 0 12px;
   border: 1px solid var(--ds-color-border); border-radius: 10px; background: var(--ds-color-surface); color: var(--ds-color-text-muted);
 }
 .pst-search:focus-within { border-color: var(--ds-color-text); }
 .pst-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ds-color-text); font: 400 13.5px var(--ds-font-sans); }
 .pst-select {
-  min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--ds-color-border);
+  min-height: var(--ds-control-height); padding: 0 10px; border-radius: 10px; border: 1px solid var(--ds-color-border);
   background: var(--ds-color-surface); color: var(--ds-color-text); font: 500 13px var(--ds-font-sans); max-width: 100%;
 }
 .pst-chips { display: flex; flex-wrap: wrap; gap: 8px; }

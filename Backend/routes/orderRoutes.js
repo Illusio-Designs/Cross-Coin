@@ -111,14 +111,12 @@ router.put('/:id/shipping/sync',       isAuthenticated, isOrderManager, syncSing
 router.get('/:id/shipping/couriers',   isAuthenticated, isOrderManager, getAvailableCouriers);
 router.post('/:id/sync-with-courier',  isAuthenticated, isOrderManager, syncWithCourier);
 router.put('/:id/confirm',             isAuthenticated, isOrderManager, confirmOrder);
+router.put('/:id/rto-receipt',         isAuthenticated, isOrderManager, require('../controller/orderController.js').verifyRtoReceipt);
 router.put('/:id/admin-cancel',        isAuthenticated, isOrderManager, validateBody(schemas.cancelOrder), adminCancelOrder);
 router.put('/:id/refund',              isAuthenticated, isOrderManager, adminRefundOrder);
 router.delete('/:id',                  isAuthenticated, isOrderManager, adminDeleteOrder);
 router.put('/:id/awb',                 isAuthenticated, isOrderManager, zValidateBody(updateAwbSchema), updateAwbNumber);
 router.put('/:id/address',             isAuthenticated, isOrderManager, updateOrderAddress);
-// (RTO management module removed — RTO is handled automatically by the courier
-//  webhook in orderShippingController: it sets RTO status, restores stock and
-//  refunds prepaid orders. The old standalone /rto endpoints were unused.)
 
 // ── Public ────────────────────────────────────────────────────────────────
 router.post('/guest-checkout',          shiprocketCheckoutOnly, validateBody(schemas.checkout), createGuestOrder);

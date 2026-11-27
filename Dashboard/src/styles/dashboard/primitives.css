@@ -440,10 +440,16 @@
    theme-aware overrides to [data-theme] — the storefront (no data-theme
    attribute) keeps its branded red untouched. */
 :root[data-theme] .dropdown-trigger {
+  min-height: var(--ds-control-height);
+  box-sizing: border-box;
+  padding: 0 12px;
   border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-control-radius);
   background-color: var(--ds-color-surface);
   color: var(--ds-color-text);
   font-family: var(--ds-font-sans);
+  font-size: 13px;
+  letter-spacing: normal;
 }
 :root[data-theme] .dropdown-trigger:hover:not(.disabled),
 :root[data-theme] .dropdown-trigger.open,

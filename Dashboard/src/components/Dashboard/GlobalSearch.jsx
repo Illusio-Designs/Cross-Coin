@@ -33,7 +33,7 @@ const EMPTY = { customers: [], orders: [], chats: [], returns: [] };
 
 const STAGE_TONE = {
   to_confirm: 'warn', pending: 'warn', to_ship: 'info', in_transit: 'info',
-  problems: 'danger', delivered: 'success', returns: 'accent', cancelled_rto: 'neutral',
+  problems: 'danger', delivered: 'success', returns: 'accent', cancelled: 'neutral', rto: 'accent',
 };
 const RETURN_TONE = {
   requested: 'warn', under_review: 'warn', approved: 'info', pickup_scheduled: 'info',

@@ -67,7 +67,7 @@ function CopyButton({ text, label = 'Copy' }) {
   return <button type="button" className="exc-mini" onClick={copy}>{ic(Copy01Icon, 13)} {done ? 'Copied' : label}</button>;
 }
 
-export default function ExceptionsDesk({ initialType = 'all', initialSearch = '', brandId = '', onOpenOrder }) {
+export default function ExceptionsDesk({ initialType = 'all', initialSearch = '', brandId = '', brandFilter, onOpenOrder }) {
   const qc = useQueryClient();
   const [type, setType] = useState(TYPES.includes(initialType) ? initialType : 'all');
   const [search, setSearch] = useState(initialSearch || '');
@@ -111,8 +111,9 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
   const pick = (id) => {
     setPicked(id);
     // Stacked layout (phones): bring the detail into view.
-    if (typeof window !== 'undefined' && window.innerWidth < 980 && detailRef.current) {
-      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    const panel = detailRef.current;
+    if (panel && panel.offsetTop > panel.previousElementSibling.offsetTop) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
   const refresh = () => qc.invalidateQueries({ queryKey: ['exceptions'] });
@@ -130,6 +131,7 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
           <h2 className="exc-h">Order problems</h2>
           <p className="exc-sub">Cases that need action appear first, oldest to newest.</p>
         </div>
+        {brandFilter && <div className="exc-brand">{brandFilter}</div>}
       </header>
 
       {type === 'ndr' && (

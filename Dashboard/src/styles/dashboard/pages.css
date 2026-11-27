@@ -7,23 +7,6 @@
    page-specific prefixes for unique components.
    ============================================================ */
 
-/* ---- Page Wrapper ---- */
-.dashboard-page {
-  padding: 0;
-  /* Grey canvas so the white Panel / StatGrid / table cards pop (SaaS look),
-     instead of white cards on a white page. The surrounding .dashboard-content
-     already supplies the 24px gutter. */
-  background: var(--ds-color-bg);
-  /* The global body sets color:#000 — force the themed text colour here so any
-     descendant without an explicit colour (brand names, table keys, etc.)
-     inherits it and stays visible in dark mode instead of black-on-dark. */
-  color: var(--ds-color-text);
-  /* Cap + centre so content doesn't stretch edge-to-edge on wide monitors
-     (cards/table columns were spreading out with huge gaps). */
-  max-width: 1440px;
-  margin: 0 auto;
-}
-
 /* ---- Page Header ---- */
 .sl-page-header {
   display: flex;
@@ -107,10 +90,11 @@
 }
 
 .sl-search-input {
-  height: 38px;
+  height: var(--ds-control-height);
+  box-sizing: border-box;
   padding: 0 12px 0 34px;
   border: 1px solid var(--ds-color-border);
-  border-radius: 6px;
+  border-radius: var(--ds-control-radius);
   font-size: 13px;
   color: var(--ds-color-text);
   background: var(--ds-color-surface);

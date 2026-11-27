@@ -1305,7 +1305,10 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
   // Get all orders (admin)
   // Order Desk work queues → Sequelize where. Returns a fresh object each time.
   const { fulfillmentStageSql, pickedUpStatus } = require('../services/orderFulfillmentStages.js');
+  const { receiptSql, verifyRtoReceipt } = require('../services/rtoReceiptService.js');
   const fulfillment = fulfillmentStageSql('Order');
+  const orderAlias = '`Order`';
+  const rtoReceipt = receiptSql(orderAlias);
   const fulfillmentStage = (sql) => ({ [Op.and]: [sequelize.literal(sql)] });
   const DESK_STAGES = {
     // COD orders the team still has to call / the customer has to confirm.
@@ -1320,7 +1323,11 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     problems: () => ({ status: { [Op.in]: ['undelivered', 'exception'] } }),
     delivered: () => ({ status: 'delivered' }),
     returns: () => ({ status: { [Op.in]: ['return_initiated', 'returned_rto'] } }),
-    cancelled_rto: () => ({ status: { [Op.in]: ['cancelled', 'order cancelled', 'rto', 'rto delivered'] } }),
+    cancelled: () => ({ status: { [Op.in]: ['cancelled', 'order cancelled'] } }),
+    rto: () => fulfillmentStage(rtoReceipt.all),
+    rto_to_verify: () => fulfillmentStage(rtoReceipt.pending),
+    rto_verified: () => fulfillmentStage(rtoReceipt.verified),
+    cancelled_rto: () => fulfillmentStage(`(${orderAlias}.status IN ('cancelled','order cancelled') OR ${rtoReceipt.all})`),
     // Prepaid money still owed to the customer (and no open return — those
     // are refunded from Returns after the parcel arrives).
     refund_due: () => ({
@@ -1389,13 +1396,14 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       if (req.query.brand_id && req.query.brand_id !== 'all') base.brand_id = parseInt(req.query.brand_id, 10);
       const keys = [
         'to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'out_for_delivery',
-        'undelivered', 'delivered', 'cancelled_rto', 'problems', 'refund_due',
+        'undelivered', 'delivered', 'cancelled', 'rto', 'rto_to_verify', 'rto_verified', 'problems', 'refund_due',
       ];
       const countFilters = keys.map((key) => [key, DESK_STAGES[key]()]);
       countFilters.push(['all', {}]);
       const counts = Object.fromEntries(await Promise.all(countFilters.map(async ([key, filters]) => [
         key, await Order.count({ where: { ...base, ...filters } }),
       ])));
+      counts.cancelled_rto = counts.cancelled + counts.rto;
       // COD orders waiting > 24h for a call / confirmation.
       counts.to_confirm_overdue = await Order.count({
         where: { ...base, ...DESK_STAGES.to_confirm(), createdAt: { [Op.lt]: new Date(Date.now() - 24 * 3600 * 1000) } },
@@ -1424,6 +1432,20 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     } catch (error) {
       logger.error('getDeskCounts error:', error);
       res.status(500).json({ success: false, message: 'Failed to load counts' });
+    }
+  };
+
+  module.exports.verifyRtoReceipt = async (req, res) => {
+    const orderId = Number(req.params.id);
+    if (!Number.isSafeInteger(orderId) || orderId < 1) return res.status(400).json({ success: false, message: 'Invalid order ID.' });
+    try {
+      const result = await verifyRtoReceipt(orderId, req.user.id);
+      if (result.status === 'missing') return res.status(404).json({ success: false, message: 'Order not found.' });
+      if (result.status === 'ineligible') return res.status(409).json({ success: false, message: 'The courier has not marked this RTO delivered back.' });
+      return res.json({ success: true, verifiedAt: result.verifiedAt });
+    } catch (error) {
+      logger.error('verifyRtoReceipt error:', error);
+      return res.status(500).json({ success: false, message: 'Could not verify warehouse receipt. Try again.' });
     }
   };
 
@@ -1530,7 +1552,8 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       // tabs above. Keep in sync with getDeskCounts below.
       const stage = String(req.query.stage || '').toLowerCase();
       const refundDue = ['1', 'true', 'yes'].includes(String(req.query.refund_due || '').toLowerCase());
-      if (!refundDue && Object.hasOwn(DESK_STAGES, stage)) {
+      const rtoStage = ['rto', 'rto_to_verify', 'rto_verified'].includes(stage);
+      if ((!refundDue || rtoStage) && Object.hasOwn(DESK_STAGES, stage)) {
         delete filter.status;
         Object.assign(filter, DESK_STAGES[stage]());
       }
@@ -1649,6 +1672,10 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       const hasSearch = searchConditions.length > 0;
       const queryOptions = {
         where: filter,
+        attributes: { include: [
+          [sequelize.literal(rtoReceipt.delivered), 'rto_receipt_eligible'],
+          [sequelize.literal(`CASE WHEN ${rtoReceipt.delivered} THEN ${rtoReceipt.verifiedAt} END`), 'rto_receipt_verified_at'],
+        ] },
         distinct: true,
         col: "id",
         ...(hasSearch ? { subQuery: false } : {}),

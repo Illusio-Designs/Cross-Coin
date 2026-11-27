@@ -17,6 +17,7 @@ const pct = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) 
 
 const TO_CONFIRM = `LOWER(o.status) IN ('awaiting_confirmation','pending') AND LOWER(o.payment_type) = 'cod'`;
 const { toShip: TO_SHIP, booked: BOOKED } = require('./orderFulfillmentStages.js').fulfillmentStageSql('o');
+const rtoReceipt = require('./rtoReceiptService.js').receiptSql('o');
 const NOT_CANCELLED = `(o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))`;
 
 async function q(sql, replacements) {
@@ -57,7 +58,7 @@ async function getToday({ brandId = null } = {}) {
 
   const [
     confirm, [ship], [transit], [deliveredToday], [closedToday],
-    [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews, deliveryRows,
+    [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews, deliveryRows, [rtoToVerify],
   ] = await Promise.all([
     queueCounts.toConfirm(R),
     q(`SELECT COALESCE(SUM(${TO_SHIP}), 0) AS n,
@@ -70,10 +71,13 @@ async function getToday({ brandId = null } = {}) {
     q(`SELECT COUNT(DISTINCT o.id) AS n, COALESCE(SUM(o.final_amount), 0) AS value
          FROM orders o WHERE LOWER(o.status) = 'delivered'${b}
           AND EXISTS (SELECT 1 FROM order_status_history h WHERE h.order_id = o.id AND LOWER(h.status) = 'delivered' AND h.created_at >= :todayStart)`, R),
-    q(`SELECT COUNT(DISTINCT o.id) AS n FROM orders o
-        WHERE LOWER(o.status) IN ('cancelled','order cancelled','rto','rto delivered','returned_rto')${b}
+    q(`SELECT SUM(o.status IN ('cancelled','order cancelled')) AS cancelled,
+              SUM(${rtoReceipt.all}) AS rto
+         FROM orders o
+        WHERE (o.status IN ('cancelled','order cancelled') OR ${rtoReceipt.all})${b}
           AND EXISTS (SELECT 1 FROM order_status_history h WHERE h.order_id = o.id AND h.created_at >= :todayStart
-                      AND LOWER(h.status) IN ('cancelled','order cancelled','rto','rto delivered','returned_rto'))`, R),
+                      AND ((o.status IN ('cancelled','order cancelled') AND h.status IN ('cancelled','order cancelled'))
+                        OR (${rtoReceipt.all} AND h.status IN ('rto','rto delivered','returned_rto'))))`, R),
     safe(q(`SELECT SUM(status IN ('requested','under_review')) AS to_review,
                    SUM(status = 'received') AS to_refund,
                    COALESCE(SUM(CASE WHEN status = 'received' THEN requested_amount END), 0) AS owed,
@@ -100,6 +104,8 @@ async function getToday({ brandId = null } = {}) {
             GROUP BY h.order_id
          ) delivery
         GROUP BY day`, R), null),
+    q(`SELECT COUNT(*) AS n FROM orders o
+        WHERE ${rtoReceipt.pending}${b}`, R),
   ]);
 
   const hoursSince = (d) => (d ? Math.floor((now - new Date(d)) / 3600000) : null);
@@ -114,6 +120,7 @@ async function getToday({ brandId = null } = {}) {
     { key: 'to_ship', priority: 'today', tab: 'to_ship', count: num(ship.n), nextBatch },
     { key: 'shipment_labels', priority: 'today', tab: 'booked', count: num(ship.labels_pending) },
     { key: 'returns_refund', priority: 'today', tab: 'returns', count: num(ret.to_refund), amount: Math.round(num(ret.owed)), toReview: num(ret.to_review) },
+    { key: 'rto_to_verify', priority: 'today', tab: 'rto_to_verify', count: num(rtoToVerify.n) },
     { key: 'booking_failed', priority: 'today', tab: 'to_ship', count: num(bookingFailed.n), sample: bookingFailed.sample || null },
     { key: 'whatsapp', priority: 'today', view: 'whatsapp-chat', count: num(wa.chats), messages: num(wa.messages), oldestHours: hoursSince(wa.oldest) },
     { key: 'stock', priority: 'later', view: 'products', count: num(stock.out_n), low: num(stock.low_n) },
@@ -124,7 +131,9 @@ async function getToday({ brandId = null } = {}) {
     toConfirm: num(confirm.n), toShip: num(ship.n), inTransit: num(transit.n),
     outForDelivery: num(transit.out_for_delivery),
     deliveredToday: num(deliveredToday.n), deliveredTodayValue: Math.round(num(deliveredToday.value)),
-    problems: num(ndr.open_n), returnsOpen: num(ret.open_n), closedToday: num(closedToday.n),
+    problems: num(ndr.open_n), returnsOpen: num(ret.open_n),
+    cancelledToday: num(closedToday.cancelled), rtoToday: num(closedToday.rto),
+    closedToday: num(closedToday.cancelled) + num(closedToday.rto),
   };
 
   // ── Today vs the same time yesterday ──
@@ -204,7 +213,7 @@ async function getToday({ brandId = null } = {}) {
   const rupee = (n) => '₹' + Math.round(num(n)).toLocaleString('en-IN');
   const STATUS_TEXT = {
     delivered: ['ok', 'delivered'], undelivered: ['bad', 'delivery attempt failed'], exception: ['bad', 'shipment exception'],
-    rto: ['warn', 'is returning to us (RTO)'], 'rto delivered': ['warn', 'came back to us (RTO)'], returned_rto: ['warn', 'returned to us'],
+    rto: ['warn', 'is returning to us (RTO)'], 'rto delivered': ['warn', 'marked delivered back by courier (RTO)'], returned_rto: ['warn', 'returned to us'],
     cancelled: ['mut', 'cancelled'],
   };
   const waText = (m) => {

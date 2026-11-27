@@ -38,8 +38,8 @@ function orderStage(o) {
   if (['undelivered', 'exception'].includes(s)) return { stage: 'problems', stageLabel: 'Delivery problem' };
   if (s === 'delivered') return { stage: 'delivered', stageLabel: 'Delivered' };
   if (['return_initiated', 'returned_rto'].includes(s)) return { stage: 'returns', stageLabel: s === 'return_initiated' ? 'Return started' : 'Returned' };
-  if (['cancelled', 'order cancelled'].includes(s)) return { stage: 'cancelled_rto', stageLabel: 'Cancelled' };
-  if (['rto', 'rto delivered'].includes(s)) return { stage: 'cancelled_rto', stageLabel: 'RTO' };
+  if (['cancelled', 'order cancelled'].includes(s)) return { stage: 'cancelled', stageLabel: 'Cancelled' };
+  if (['rto', 'rto delivered'].includes(s)) return { stage: 'rto', stageLabel: 'RTO' };
   return { stage: 'other', stageLabel: s || 'Unknown' };
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useId, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { orderService, brandService, trafficReportService, exceptionsService } from '../../../services';
 import { Table, Pagination, Modal, Button, Select, DateRangePicker } from "../../../components/ui";
 import FilterChips from "../../../components/ui/FilterChips";
@@ -44,12 +45,21 @@ const DESK_TABS = [
     { v: 'undelivered',   l: 'Undelivered',       count: 'undelivered' },
     { v: 'problems',      l: 'Problems',          count: 'problems_total' },
     { v: 'delivered',     l: 'Delivered',        count: 'delivered' },
-    { v: 'cancelled_rto', l: 'Cancelled & RTO',  count: 'cancelled_rto' },
+    { v: 'cancelled',     l: 'Cancelled',        count: 'cancelled' },
+    { v: 'rto',           l: 'RTO',              count: 'rto' },
     { v: 'all',           l: 'All',              count: 'all' },
 ];
 const DESK_STAGE_VALUES = new Set(DESK_TABS.map(({ v }) => v).filter((v) => v !== 'problems' && v !== 'all'));
+const RTO_FILTERS = [
+    { value: 'rto', label: 'All RTO', count: 'rto' },
+    { value: 'rto_to_verify', label: 'Needs verification', count: 'rto_to_verify' },
+    { value: 'rto_verified', label: 'Verified', count: 'rto_verified' },
+];
+const RTO_STAGES = new Set(RTO_FILTERS.map(({ value }) => value));
+for (const stage of RTO_STAGES) DESK_STAGE_VALUES.add(stage);
+DESK_STAGE_VALUES.add('cancelled_rto');
 // Old home-inbox deep links used status buckets — map them onto the tabs.
-const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit', rto: 'cancelled_rto', cancelled: 'cancelled_rto' };
+const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit' };
 // Links into the Problems desk: 'problems:<all|ndr|return|refund>', plus the
 // old tab names (Delivery problems / Returns / Refunds due) they replaced.
 const PROBLEM_LINKS = { problems: 'ndr', returns: 'return', refund_due: 'refund' };
@@ -237,6 +247,7 @@ function linkedBrand() {
 }
 
 const Orders = ({ initialTab } = {}) => {
+    const queryClient = useQueryClient();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -265,6 +276,7 @@ const Orders = ({ initialTab } = {}) => {
     const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [deletePrompt, setDeletePrompt] = useState(null);
     const [refundPrompt, setRefundPrompt] = useState(null);
+    const [rtoReceiptPrompt, setRtoReceiptPrompt] = useState(null);
     // Summary tiles — same numbers as Reports › Overview for the picked range
     // (last 30 days when no range is picked).
     // Undefined is the initial load. Null indicates unavailable figures.
@@ -284,6 +296,7 @@ const Orders = ({ initialTab } = {}) => {
     const [brandFilter, setBrandFilter] = useState(linkedBrand);
     const [brands, setBrands] = useState([]);
     const deskCounts = deskSnapshot?.brand === brandFilter ? deskSnapshot.counts : {};
+    const isRtoStage = RTO_STAGES.has(statusFilter);
     const [generatingLabel, setGeneratingLabel] = useState(new Set());
     const [highlightedRows, setHighlightedRows] = useState(new Set());
     const [labelPollTimer, setLabelPollTimer] = useState(null);
@@ -436,6 +449,23 @@ const Orders = ({ initialTab } = {}) => {
             await orderService.downloadInvoice(orderId, orderNumber);
         } catch (error) {
             showError('invoiceFailed', error.message || error.error || 'Failed to download invoice');
+        }
+    };
+
+    const handleVerifyRtoReceipt = async () => {
+        try {
+            const { verifiedAt } = await orderService.verifyRtoReceipt(rtoReceiptPrompt.id);
+            const updateReceipt = (row) => row?.id === rtoReceiptPrompt.id
+                ? { ...row, rto_receipt_verified_at: verifiedAt } : row;
+            setOrders((rows) => rows.map(updateReceipt));
+            setSelectedOrder(updateReceipt);
+            setRtoReceiptPrompt(null);
+            queryClient.invalidateQueries({ queryKey: ['dashboard', 'today'] });
+            showSuccess('updated', 'Warehouse receipt verified.');
+            if (statusFilter === 'rto_to_verify' && currentPage > 1) setCurrentPage(1);
+            else fetchOrders(currentPage, { silent: true });
+        } catch (error) {
+            showError('updateFailed', error.message);
         }
     };
 
@@ -825,12 +855,15 @@ const Orders = ({ initialTab } = {}) => {
         const canCancel = ['awaiting_confirmation', 'pending', 'confirmed', 'processing', 'booked'].includes(st);
         const refundableStatus = ['cancelled', 'order cancelled', 'returned_rto', 'rto delivered'].includes(st);
         const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmt);
+        const rtoReceived = Number(row.rto_receipt_eligible) === 1;
+        const needsRtoVerification = rtoReceived && !row.rto_receipt_verified_at;
         const ndr = row.ndr_case;
         const ret = row.open_return;
         const wa = row.last_whatsapp;
 
         let issue = null;
-        if (syncError && pendingSync) issue = { tone: 'bad', tag: 'Booking', text: `Booking failed: ${syncError}` };
+        if (needsRtoVerification) issue = { tone: 'warn', tag: 'Verify receipt', text: 'Courier marked delivered back. Check the parcel and AWB.' };
+        else if (syncError && pendingSync) issue = { tone: 'bad', tag: 'Booking', text: `Booking failed: ${syncError}` };
         else if (ndr) {
             const a = ndr.customer_action;
             issue = a === 'reattempt' ? { tone: 'info', tag: 'NDR', text: `Customer chose deliver again${ndr.reattempt_date ? ` (${ndr.reattempt_date})` : ''}` }
@@ -845,20 +878,21 @@ const Orders = ({ initialTab } = {}) => {
             issue = { tone: 'bad', tag: 'Refund', text: pmt === 'refund_pending' ? 'Refund pending — retry it' : 'Refund owed to the customer' };
         } else if (canConfirm && ageHours(row.createdAt) >= 24) {
             issue = { tone: 'warn', tag: 'Call', text: `Waiting ${ageHours(row.createdAt)} h — call the customer, then confirm or cancel` };
-        } else if (['rto', 'rto delivered', 'returned_rto'].includes(st)) {
-            issue = { tone: 'warn', tag: 'RTO', text: st === 'rto' ? 'Coming back to us — stock restores on receipt' : 'Returned to us' };
+        } else if (st === 'rto') {
+            issue = { tone: 'warn', tag: 'RTO', text: 'Returning to warehouse' };
         } else if (wa && wa.direction === 'inbound' && wa.unread > 0) {
             issue = { tone: 'info', tag: 'Reply', text: 'Unread WhatsApp reply' };
         }
 
         // The one button that moves this order forward.
         let primary = { label: 'View', onClick: () => { setSelectedOrder(row); setIsViewModalOpen(true); } };
-        if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
+        if (needsRtoVerification) primary = { label: 'Verify receipt', onClick: () => setRtoReceiptPrompt(row) };
+        else if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
         else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
         else if (ndr) primary = { label: 'Resolve NDR', onClick: () => openDesk('ndr', row.order_number) };
         else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => openDesk(ret.status === 'received' ? 'refund' : 'return', row.order_number) };
         else if (canRefund) primary = { label: pmt === 'refund_pending' ? 'Retry refund' : 'Refund', onClick: () => refundOrder(row.id, row.order_number) };
-        else if (waybill && !row.shipping_label_url && !isFinal) primary = { label: generatingLabel.has(row.id) ? 'Getting…' : 'Get label', disabled: generatingLabel.has(row.id), onClick: () => generateLabelForOrder(row.id) };
+        else if (waybill && !row.shipping_label_url && !isFinal && !rtoReceived && st !== 'rto') primary = { label: generatingLabel.has(row.id) ? 'Getting…' : 'Get label', disabled: generatingLabel.has(row.id), onClick: () => generateLabelForOrder(row.id) };
         else if (st === 'delivered') primary = { label: 'Invoice', onClick: () => downloadInvoice(row.id, row.order_number) };
 
         return { st, pmt, isPrepaid, waybill, syncError, canConfirm, pendingSync, canCancel, canRefund, issue, primary, wa };
@@ -948,7 +982,12 @@ const Orders = ({ initialTab } = {}) => {
         },
         {
             header: 'Stage',
-            cell: (row) => <OrderStatusBadge status={displayedStage(row)} />,
+            cell: (row) => (
+                <div className="ord-stage">
+                    <OrderStatusBadge status={displayedStage(row)} />
+                    {row.rto_receipt_verified_at && <Pill tone="ok" title={shortWhen(row.rto_receipt_verified_at)}>Receipt verified</Pill>}
+                </div>
+            ),
             width: '130px',
         },
         {
@@ -1042,10 +1081,10 @@ const Orders = ({ initialTab } = {}) => {
                 ];
                 return (
                     <div className="sl-actions" style={{ flexWrap: 'nowrap' }}>
-                        <button type="button" className={`order-sync-main-btn${s.primary.label === 'View' ? '' : ' order-sync-main-btn--primary'}`} style={{ height: 'auto', padding: '6px 10px', fontSize: '.78rem' }}
+                        <Button size="sm" variant={s.primary.label === 'View' ? 'secondary' : 'primary'}
                             disabled={s.primary.disabled} onClick={(e) => { e.stopPropagation(); s.primary.onClick(); }}>
                             {s.primary.label}
-                        </button>
+                        </Button>
                         <OverflowMenu items={menu} />
                     </div>
                 );
@@ -1090,6 +1129,14 @@ const Orders = ({ initialTab } = {}) => {
                 onConfirm={handleRefundConfirm}
                 onCancel={() => setRefundPrompt(null)}
             />
+            <ConfirmModal
+                message={rtoReceiptPrompt ? `Confirm that the warehouse physically received the parcel for ${rtoReceiptPrompt.order_number}${orderWaybill(rtoReceiptPrompt) ? ` (AWB ${orderWaybill(rtoReceiptPrompt)})` : ''}.` : null}
+                title="Verify warehouse receipt"
+                confirmLabel="Confirm receipt"
+                tone="primary"
+                onConfirm={handleVerifyRtoReceipt}
+                onCancel={() => setRtoReceiptPrompt(null)}
+            />
             <div className="dashboard-page">
                 {error && (
                     <div role="alert" style={{
@@ -1116,7 +1163,7 @@ const Orders = ({ initialTab } = {}) => {
                                 <Button icon={<HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={2} />}
                                     onClick={() => setManualOrderOpen(true)}>New order</Button>
                                 <details className="ord-tools">
-                                    <summary className="order-sync-main-btn">Order tools</summary>
+                                    <summary className="btn btn-secondary btn-md">Order tools</summary>
                                     <div className="ord-tools-menu">
                                         <Button variant="secondary" onClick={() => setPickupOpen(true)}>
                                             <HugeiconsIcon icon={Calendar03Icon} size={16} strokeWidth={2} />
@@ -1149,12 +1196,12 @@ const Orders = ({ initialTab } = {}) => {
 
                     <FilterChips className="ord-tabs" ariaLabel="Order pipeline stages"
                         items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] }))}
-                        value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
+                        value={isRtoStage ? 'rto' : statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
 
-                    {statusFilter === 'problems' && <div className="ord-problems-brand">
-                        <Select label="Brand" value={brandFilter} onChange={(v) => setBrandFilter(v || 'all')}
-                            options={[{ value: 'all', label: 'All brands' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))]} />
-                    </div>}
+                    {isRtoStage && <FilterChips className="ord-tabs" ariaLabel="RTO warehouse receipt"
+                        items={RTO_FILTERS.map(({ value, label, count }) => ({ value, label, count: deskCounts[count] }))}
+                        value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />}
+
                     {statusFilter !== 'problems' && <div className="ord-toolbar" role="group" aria-label="Order list filters">
                         <div className="sl-search-wrap">
                             <span className="sl-search-icon" aria-hidden="true"><HugeiconsIcon icon={Search01Icon} size={16} strokeWidth={2} /></span>
@@ -1255,6 +1302,8 @@ const Orders = ({ initialTab } = {}) => {
                 {statusFilter === 'problems' ? (
                     <ExceptionsDesk key={`desk-${deskPreset.n}`} initialType={deskPreset.type} initialSearch={deskPreset.q}
                         brandId={brandFilter !== 'all' ? brandFilter : ''}
+                        brandFilter={<Select label="Brand" value={brandFilter} onChange={(v) => setBrandFilter(v || 'all')}
+                            options={[{ value: 'all', label: 'All brands' }, ...brands.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))]} />}
                         onOpenOrder={(no) => { setStatusFilter('all'); setFilterValue(no); setCurrentPage(1); }} />
                 ) : (
                 /* Table Section */
@@ -1433,7 +1482,7 @@ const Orders = ({ initialTab } = {}) => {
                                                 <label>Country<input value={addressForm.country} onChange={e => setAddressForm(f => ({ ...f, country: e.target.value }))} /></label>
                                             </div>
                                             <div className="oa-actions">
-                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingAddress(false)} disabled={savingAddress}>Cancel</button>
+                                                <Button size="sm" variant="secondary" onClick={() => setEditingAddress(false)} disabled={savingAddress}>Cancel</Button>
                                                 <button type="button" className="btn btn-primary btn-sm" onClick={saveAddress} disabled={savingAddress}>{savingAddress ? 'Saving…' : 'Save address'}</button>
                                             </div>
                                             <p className="oa-hint">After saving, click <b>Sync</b> on the order row to re-check courier serviceability for the new pincode.</p>

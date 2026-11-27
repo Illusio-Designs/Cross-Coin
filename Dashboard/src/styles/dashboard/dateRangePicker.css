@@ -45,11 +45,12 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 34px;
+  min-height: var(--ds-control-height);
+  box-sizing: border-box;
   padding: 0 12px;
   background: var(--ds-color-surface);
-  border: 1.5px solid var(--ds-color-border);
-  border-radius: 8px;
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-control-radius);
   font-size: 12.5px;
   font-family: inherit;
   color: var(--ds-color-text);
@@ -64,8 +65,8 @@
 }
 
 .drp-trigger:hover {
-  border-color: var(--ds-color-text);
-  background: var(--ds-color-surface);
+  border-color: var(--ds-color-text-faint);
+  background: var(--ds-color-surface-soft);
 }
 
 .drp-trigger--active {
@@ -407,7 +408,6 @@
   }
 
   .drp-trigger {
-    height: 36px;
     font-size: 12px;
     padding: 0 10px;
   }

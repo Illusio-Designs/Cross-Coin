@@ -1,8 +1,5 @@
 /*
- * Shared legacy rules that outlived the old brand manager page:
- * .status-badge (Orders' order/payment badges) and .btn-icon (the icon span
- * inside components/ui/Button). The Brands page itself now uses
- * opsSettings.css (.oss-*).
+ * Shared status badges still used for orders and payments.
  */
 
 .status-badge {
@@ -21,48 +18,4 @@
 .status-badge.inactive {
     background: #fce8ec;
     color: var(--ds-color-text);
-}
-
-/* Buttons - Legacy styles (kept for backward compatibility with icon buttons) */
-.btn-icon {
-    padding: 8px;
-    border: none;
-    background: transparent;
-    color: var(--ds-color-text-muted);
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color 0.2s, color 0.2s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-}
-
-.btn-icon:hover {
-    background: var(--ds-color-surface-soft);
-    color: var(--ds-color-text-muted);
-}
-
-.btn-icon.active {
-    color: var(--ds-color-text);
-}
-
-.btn-icon.active:hover {
-    background: var(--ds-color-surface-soft);
-}
-
-.btn-icon.inactive {
-    color: var(--ds-color-text-faint);
-}
-
-.btn-icon.inactive:hover {
-    background: var(--ds-color-surface-soft);
-}
-
-.btn-icon.btn-danger {
-    color: #dc2626;
-}
-
-.btn-icon.btn-danger:hover {
-    background: #fce8ec;
 }

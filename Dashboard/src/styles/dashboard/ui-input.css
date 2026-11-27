@@ -46,8 +46,8 @@ input[type="file"].input-field { border: none; background: transparent; padding:
   box-shadow: 0 0 0 3px var(--ds-color-surface-soft);
 }
 
-.input-sm { padding: 6px 10px; font-size: 12px; height: 32px; }
-.input-md { padding: 9px 12px; font-size: 13px; height: 40px; }
+.input-sm { padding: 6px 10px; font-size: 12px; height: var(--ds-control-height-sm); }
+.input-md { padding: 9px 12px; font-size: 13px; height: var(--ds-control-height); }
 .input-lg { padding: 11px 14px; font-size: 14px; height: 46px; }
 
 .input-filled { background: var(--ds-color-surface-soft); border-color: transparent; }
@@ -148,9 +148,6 @@ select.input-field:disabled { cursor: not-allowed; }
 
 .input-field:focus-visible { outline: none; }
 
-@media (max-width: 480px) {
-  .input-md, .input-lg { min-height: 42px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .input-field, .input-file-wrapper, .input-file-button { transition: none; }
 }

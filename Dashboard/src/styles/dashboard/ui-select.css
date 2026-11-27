@@ -32,7 +32,7 @@
   font-family: 'DM Sans', sans-serif;
   color: var(--ds-color-text);
   user-select: none;
-  min-height: 38px;
+  min-height: var(--ds-control-height);
   padding: 6px 10px;
   box-sizing: border-box;
 }
@@ -46,8 +46,8 @@
 .sel-trigger-has-chips { align-items: flex-start; padding: 6px 10px; }
 
 /* Sizes */
-.sel-sm  { min-height: 32px; font-size: 12px; }
-.sel-md  { min-height: 38px; font-size: 13px; }
+.sel-sm  { min-height: var(--ds-control-height-sm); font-size: 12px; }
+.sel-md  { font-size: 13px; }
 .sel-lg  { min-height: 44px; font-size: 14px; }
 
 .sel-trigger-inner { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }

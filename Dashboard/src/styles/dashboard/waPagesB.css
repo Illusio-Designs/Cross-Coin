@@ -51,7 +51,7 @@
 /* ── Buttons ── */
 .wpb-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 38px; padding: 0 15px; border-radius: 10px; border: 1px solid var(--ds-color-text);
+  min-height: var(--ds-control-height); padding: 0 15px; border-radius: var(--ds-control-radius); border: 1px solid var(--ds-color-text);
   background: var(--ds-color-text); color: var(--ds-color-surface);
   font: var(--ds-weight-bold) 12.5px/1 var(--ds-font-sans); cursor: pointer; white-space: nowrap;
   transition: opacity var(--ds-trans-fast), background var(--ds-trans-fast), border-color var(--ds-trans-fast);
@@ -63,7 +63,7 @@
 .wpb-btn--danger { color: var(--ds-color-danger); }
 .wpb-btn--danger-solid { background: var(--ds-color-danger); border-color: var(--ds-color-danger); color: var(--ds-color-surface); }
 .wpb-btn--go { background: var(--ds-color-success); border-color: var(--ds-color-success); color: var(--ds-color-surface); }
-.wpb-btn--sm { min-height: 32px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+.wpb-btn--sm { min-height: var(--ds-control-height-sm); padding: 0 11px; font-size: 12px; border-radius: var(--ds-radius-md); }
 .wpb-link {
   border: 0; background: none; padding: 0; font: inherit; color: var(--ds-color-info);
   cursor: pointer; text-decoration: underline; text-underline-offset: 2px;

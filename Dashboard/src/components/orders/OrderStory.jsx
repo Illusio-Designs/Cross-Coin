@@ -61,10 +61,20 @@ export default function OrderStory({ orderId }) {
     </div>
   );
 
-  const { history = [], payments = [], returns = [], ndr = [] } = data;
+  const { history = [], payments = [], returns = [], ndr = [], audit = [] } = data;
+  const receipt = audit.find((event) => event.action === "verify_rto_receipt");
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      {receipt && (
+        <div style={box}>
+          <div style={head}>RTO warehouse receipt</div>
+          <Pill tone="ok">Verified</Pill>
+          <span style={{ ...muted, marginInlineStart: 8 }}>
+            {when(receipt.created_at)}{receipt.performed_by ? ` · Staff #${receipt.performed_by}` : ""}
+          </span>
+        </div>
+      )}
       {ndr.length > 0 && (
         <div style={box}>
           <div style={head}>Failed delivery</div>

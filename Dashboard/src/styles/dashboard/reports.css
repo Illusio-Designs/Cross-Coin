@@ -13,18 +13,6 @@
   /* grayscale ramp for shares / segments (flips on dark) */
   --rr1: #0a0a0a; --rr2: #3f3f46; --rr3: #71717a; --rr4: #a1a1aa; --rr5: #d4d4d8;
 }
-/* .obz-rep sits ON the .dashboard-sections element. By default that wrapper is
-   a white card — which made every white panel blend into it (white-on-white)
-   and look flat. Drop it to the grey canvas so the panels read as real cards
-   (like the prototype), and cap the width so cards don't stretch absurdly wide
-   on large monitors. */
-.dashboard-sections.obz-rep {
-  background: var(--ds-color-bg);
-  border-radius: 0;
-  padding: 0;
-  max-width: 1440px;
-  margin-inline: auto;
-}
 :root[data-theme="dark"] .obz-rep {
   --rr1: #fafafa; --rr2: #d4d4d8; --rr3: #a1a1aa; --rr4: #71717a; --rr5: #3f3f46;
 }
@@ -341,10 +329,7 @@ html[data-theme="dark"] .obz-rep {
 
 .rhub { min-width: 0; }
 .rhub > .dashboard-sections { width: 100%; min-width: 0; }
-.rhub .ds-pageheader {
-  margin: 0; padding: 14px 16px; border: 1px solid var(--ds-color-border);
-  border-radius: var(--ds-radius-lg); background: var(--ds-color-surface);
-}
+.rhub .ds-pageheader { margin: 0; }
 .rhub .ds-pageheader__actions .drp { padding: 0; }
 .rhub .ds-pageheader__subtitle { font-size: 13px; }
 .rep-notes {
@@ -357,7 +342,6 @@ html[data-theme="dark"] .obz-rep {
 .rep-marketing-list { min-width: 860px; }
 @media (max-width: 640px) {
   .rhub { gap: 12px; }
-  .rhub .ds-pageheader { padding: 12px; }
   .rhub .ds-pageheader__actions, .rhub .obz-rep-head { gap: 8px; }
   .rhub .obz-rep-head { min-width: 0; }
   .rhub .rep-kpis, .rhub .ds-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
