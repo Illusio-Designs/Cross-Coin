@@ -395,6 +395,8 @@ function DesktopMismatches({ isAdmin }) {
 const COD_REMITTANCE_LABEL = {
   matched: "Matched", missing: "Order missing", conflict: "Conflicting records",
   not_cod: "Order is prepaid", amount_mismatch: "Amount mismatch",
+  courier_amount_unavailable: "Courier amount unavailable", order_amount_unavailable: "Order amount unavailable",
+  delivery_not_confirmed: "Delivery not confirmed",
 };
 
 function codRemittanceIssue(report) {
@@ -426,7 +428,7 @@ function CodRemittance() {
     <section className="pl-card pl-rzp" aria-labelledby="cod-remittance-title">
       <header className="pl-rzp__heading">
         <h2 id="cod-remittance-title">COD reconciliation</h2>
-        <p className="pl-faint pl-small">Match iThink remittance shipments to website orders across all brands by AWB.</p>
+        <p className="pl-faint pl-small">Match iThink remittance shipments to delivered COD orders by AWB across all brands.</p>
       </header>
       <form className="pl-rzp__form" onSubmit={check}>
         <DateRangePicker label="Remittance date (IST)" className="pl-rzp__date" inline single showIcon={false}
@@ -458,7 +460,9 @@ function CodRemittance() {
                     <td>{row.orderNumber ? <Button size="sm" variant="quiet" onClick={() => openOrder(row.orderNumber)}>{row.orderNumber}</Button> : "—"}</td>
                     <td>{row.amountPaise == null ? "—" : rupees.format(row.amountPaise / 100)}</td>
                     <td>{row.expectedPaise == null ? "—" : inr(row.expectedPaise / 100)}</td>
-                    <td>{COD_REMITTANCE_LABEL[row.status]}</td>
+                    <td>{row.status === "amount_mismatch" && row.amountPaise == null
+                      ? COD_REMITTANCE_LABEL.courier_amount_unavailable
+                      : COD_REMITTANCE_LABEL[row.status]}</td>
                   </tr>
                 ))}</tbody>
               </table>

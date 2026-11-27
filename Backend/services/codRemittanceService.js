@@ -4,8 +4,9 @@ const { getShippingProvider } = require('./shippingProviderFactory.js');
 
 function parseRupees(value) {
   const amount = String(value ?? '').trim();
-  if (!/^-?\d+(?:\.\d{1,2})?$/.test(amount)) return null;
-  const paise = Math.round(Number(amount) * 100);
+  const rupeeFormat = /^-?(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d{1,2}0*)?$/;
+  if (!rupeeFormat.test(amount)) return null;
+  const paise = Math.round(Number(amount.replace(/,/g, '')) * 100);
   return Number.isSafeInteger(paise) ? paise : null;
 }
 
@@ -45,14 +46,22 @@ async function reconcileCod(date) {
     if (!/^[A-Z0-9_-]{1,100}$/.test(awb)) continue;
     const amountPaise = parseRupees(entry.price);
     const saved = byAwb.get(awb);
-    if (saved && saved.amountPaise !== amountPaise) saved.conflict = true;
-    if (!saved) byAwb.set(awb, { awb, amountPaise });
+    if (!saved) {
+      byAwb.set(awb, { awb, amountPaise });
+    } else if (saved.amountPaise == null) {
+      saved.amountPaise = amountPaise;
+    } else if (amountPaise != null && saved.amountPaise !== amountPaise) {
+      saved.conflict = true;
+    }
   }
 
   const matches = new Map();
   const keys = [...byAwb.keys()];
   for (let offset = 0; offset < keys.length; offset += 300) {
-    const orders = await sequelize.query(`SELECT s.waybill, s.tracking_number, o.order_number, o.final_amount, o.payment_type
+    const orders = await sequelize.query(`SELECT s.waybill, s.tracking_number, o.order_number, o.final_amount, o.payment_type,
+        (o.status = 'delivered' OR EXISTS (
+          SELECT 1 FROM order_status_history h WHERE h.order_id = o.id AND h.status = 'delivered'
+        )) AS delivery_confirmed
       FROM order_shipments s INNER JOIN orders o ON o.id = s.order_id
       WHERE LOWER(s.provider) = 'ithink' AND (s.waybill IN (:awb) OR s.tracking_number IN (:awb))`,
     { replacements: { awb: keys.slice(offset, offset + 300) }, type: QueryTypes.SELECT });
@@ -70,7 +79,10 @@ async function reconcileCod(date) {
     const expectedPaise = order ? parseRupees(order.final_amount) : null;
     const status = conflict || orders?.size > 1 ? 'conflict' : !order ? 'missing'
       : String(order.payment_type).toLowerCase() !== 'cod' ? 'not_cod'
-      : amountPaise != null && amountPaise === expectedPaise ? 'matched' : 'amount_mismatch';
+      : amountPaise == null ? 'courier_amount_unavailable'
+      : expectedPaise == null ? 'order_amount_unavailable'
+      : !Number(order.delivery_confirmed) ? 'delivery_not_confirmed'
+      : amountPaise === expectedPaise ? 'matched' : 'amount_mismatch';
     return { awb, amountPaise, status, orderNumber: order?.order_number || null, expectedPaise };
   });
   const remittances = reports.flatMap((report) => report.summary || []);
