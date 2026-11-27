@@ -13,7 +13,7 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  background: var(--ds-color-surface);
+  background: var(--ds-color-bg);
   color: var(--ds-color-text);
   border-right: 1px solid var(--ds-color-border);
   font-family: 'DM Sans', sans-serif;
@@ -84,7 +84,7 @@
   cursor: pointer;
   transition: background var(--ds-trans-fast), color var(--ds-trans-fast);
 }
-.sb-toggle:hover { background: var(--ds-color-bg); color: var(--ds-color-text); }
+.sb-toggle:hover { background: var(--ds-color-surface); color: var(--ds-color-text); }
 
 /* ── Groups and items ───────────────────────────────────────────── */
 .sb-nav {
@@ -127,7 +127,7 @@
   cursor: pointer;
   transition: background var(--ds-trans-fast), color var(--ds-trans-fast);
 }
-.sb-link:hover { background: var(--ds-color-bg); color: var(--ds-color-text); }
+.sb-link:hover { background: var(--ds-color-surface); color: var(--ds-color-text); }
 .sb-link.is-active,
 .sb-link.is-active:hover {
   background: var(--ds-color-text);
@@ -189,8 +189,8 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.sb-sublink:hover { background: var(--ds-color-bg); color: var(--ds-color-text); }
-.sb-sublink.is-active { color: var(--ds-color-text); font-weight: 700; background: var(--ds-color-bg); }
+.sb-sublink:hover { background: var(--ds-color-surface); color: var(--ds-color-text); }
+.sb-sublink.is-active { color: var(--ds-color-text); font-weight: 700; background: var(--ds-color-brand-soft); }
 
 /* Rail: name tooltip and sub-item pop-out */
 .sb-tip,

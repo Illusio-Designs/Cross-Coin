@@ -66,13 +66,14 @@ export default function Document({ tracking }) {
         {/* Pre-paint theme: the admin dashboard applies data-theme via JS after
             mount, which flashed white→dark on reload. Set it here before first
             paint (dashboard routes only — public pages stay light), reading the
-            same 'obzus-theme' key + OS preference the shell uses. */}
+            same 'obzus-theme' key and India time schedule as the shell. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var p=location.pathname;if(p.indexOf('/dashboard')!==0)return;" +
+              "(function(){try{var p=location.pathname;if(p!=='/dashboard'&&p.indexOf('/dashboard/')!==0)return;" +
               "var s=localStorage.getItem('obzus-theme')||'auto';" +
-              "var e=s==='auto'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s;" +
+              "var h=new Date(Date.now()+19800000).getUTCHours();" +
+              "var e=s==='light'||s==='dark'?s:h>=18||h<6?'dark':'light';" +
               "document.documentElement.setAttribute('data-theme',e);}catch(x){}})();",
           }}
         />

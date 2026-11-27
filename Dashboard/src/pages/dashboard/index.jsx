@@ -88,8 +88,7 @@ export default function Dashboard() {
   // In 'auto' mode the theme follows the clock in IST (UTC+5:30): dark at
   // night (18:00–06:00), light during the day. Manual light/dark overrides it.
   const istTheme = () => {
-    const now = new Date();
-    const istHour = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (5.5 * 3600000)).getHours();
+    const istHour = new Date(Date.now() + 5.5 * 3600000).getUTCHours();
     return (istHour >= 18 || istHour < 6) ? 'dark' : 'light';
   };
   const applyMode = (mode) => {
@@ -102,7 +101,8 @@ export default function Dashboard() {
   // the dashboard is mounted and remove it on unmount so the storefront (which
   // doesn't read the dark tokens) is never affected.
   useEffect(() => {
-    const saved = (typeof window !== 'undefined' && localStorage.getItem('obzus-theme')) || 'auto';
+    const preference = localStorage.getItem('obzus-theme');
+    const saved = preference === 'light' || preference === 'dark' ? preference : 'auto';
     setThemeMode(saved);
     applyMode(saved);
     return () => { document.documentElement.removeAttribute('data-theme'); };
@@ -112,7 +112,6 @@ export default function Dashboard() {
   // day/night boundary without a page reload.
   useEffect(() => {
     if (themeMode !== 'auto') return;
-    applyMode('auto');
     const id = setInterval(() => applyMode('auto'), 60 * 1000);
     return () => clearInterval(id);
   }, [themeMode]); // eslint-disable-line react-hooks/exhaustive-deps

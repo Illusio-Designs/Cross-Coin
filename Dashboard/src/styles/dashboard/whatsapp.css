@@ -11,7 +11,6 @@
   height: calc(100vh - 156px);
   min-height: 520px;
   overflow: hidden;
-  background: var(--ds-color-bg);
   border: 1px solid var(--ds-color-border);
   border-radius: 14px;
   color: var(--ds-color-text);
@@ -25,7 +24,6 @@
   flex-direction: column;
   gap: 14px;
   padding: 14px 10px;
-  background: var(--ds-color-surface);
   border-right: 1px solid var(--ds-color-border);
   overflow-y: auto;
 }

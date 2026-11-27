@@ -6,7 +6,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: var(--ds-color-bg);
   border-radius: 0;
   padding: 0;
   max-width: 1280px;
