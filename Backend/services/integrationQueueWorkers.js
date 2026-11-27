@@ -12,6 +12,7 @@
 
 const { registerProcessor } = require('./integrationQueue.js');
 const { logger } = require('../config/logging.js');
+const { isUnconfirmedIThinkBooking } = require('./iThinkCourierRouting.js');
 
 function registerWorkers() {
   // ── shipping:sync-order ────────────────────────────────────────────
@@ -49,10 +50,6 @@ function registerWorkers() {
       logger.info(`[queue] shipping:sync-order skipped — ${fullOrder.order_number} already booked or cancelled`);
       return { skipped: true };
     }
-    if (/^iThink (?:did not confirm an AWB|issued AWB )/i.test(fullOrder.shipping_sync_error || '')) {
-      return { success: false, requiresReview: true, error: fullOrder.shipping_sync_error };
-    }
-
     const orderShippingController = require('../controller/orderShippingController.js');
 
     // On the FINAL attempt (or a permanent failure) we flip the order to
@@ -65,6 +62,12 @@ function registerWorkers() {
       shipping_sync_error: String(reason || 'sync failed').slice(0, 1000),
       ...(park ? { shipping_sync_attempts: 999, pickup_hold_until: null } : {}),
     }).catch(() => {});
+
+    if (isUnconfirmedIThinkBooking(fullOrder.shipping_sync_error)) {
+      const error = fullOrder.shipping_sync_error;
+      await markFailed(error, true);
+      return { success: false, requiresReview: true, error };
+    }
 
     try {
       // Pickup-schedule HOLD: the auto path below calls autoSelectCourierWithFallback

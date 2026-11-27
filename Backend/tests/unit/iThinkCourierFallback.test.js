@@ -147,3 +147,39 @@ test('the actual queue processor runs manual selections through iThink fallback'
   ]);
   expect(releaseLock).toHaveBeenCalledTimes(1);
 });
+
+test.each([
+  { remark: '422010 is non-serviceable pincode', expected: { courierRejected: true, requiresReview: false } },
+  { remark: '422010 is non serviceable pincode', expected: { courierRejected: true, requiresReview: false } },
+  {
+    remark: "Delhivery Logistics Error : Crashing while saving package due to exception '422010 is non serviceable pincode'. Package might have been partially saved.",
+    expected: { courierRejected: false, requiresReview: true },
+  },
+])('classifies iThink reply: $remark', async ({ remark, expected }) => {
+  const provider = new IThinkService();
+  jest.spyOn(provider, 'initialize').mockResolvedValue(undefined);
+  jest.spyOn(provider, 'validateOrderData').mockImplementation(() => {});
+  jest.spyOn(provider, 'formatOrderDataForIThink').mockReturnValue({ data: { shipments: [{ pin: '422010' }] } });
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  provider.axiosInstance = { post: jest.fn().mockResolvedValue({
+    status: 200,
+    data: { status: 'error', data: { 1: { status: 'error', remark } } },
+  }) };
+  await expect(provider.createForwardOrder({ orderId: 'ORDER-TEST', logistics: 'delhivery', customer_PinCode: '422010' }))
+    .resolves.toMatchObject({ success: false, ...expected });
+});
+
+test('the worker holds an already queued retry when the saved reply says the package might exist', async () => {
+  const { Order } = require('../../model/orderModel.js');
+  const { registerProcessor } = require('../../services/integrationQueue.js');
+  const { registerWorkers } = require('../../services/integrationQueueWorkers.js');
+  const previousError = '422010 is non serviceable pincode. Package might have been partially saved.';
+  const update = jest.fn().mockResolvedValue(undefined);
+  jest.spyOn(Order, 'findByPk').mockResolvedValue({ ...order, shipping_sync_error: previousError, update });
+  const resolve = jest.spyOn(shipping, 'resolveProviderForOrder');
+  registerWorkers();
+  const processor = registerProcessor.mock.calls.find(([name]) => name === 'shipping:sync-order')[2];
+  await expect(processor({ data: { orderId: order.id } })).resolves.toMatchObject({ requiresReview: true });
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({ shipping_sync_status: 'failed', pickup_hold_until: null }));
+  expect(resolve).not.toHaveBeenCalled();
+});

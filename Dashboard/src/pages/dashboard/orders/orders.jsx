@@ -75,6 +75,9 @@ const orderWaybill = (row) => String(row.Shipment?.waybill || '').trim() || Stri
 
 function orderBookingError(order) {
     const error = order.shipping_sync_error || order.Shipment?.sync_error;
+    if (/partially saved/i.test(error || '')) {
+        return 'The courier may have saved part of this shipment. Check the order in iThink for an AWB before booking again.';
+    }
     const previousPin = typeof error === 'string' && error.match(/^Delivery pincode (\d{6}) is not serviceable by any courier/i)?.[1];
     const deliveryPin = String(order.ShippingAddress?.pincode || '').trim();
     if (previousPin && /^\d{6}$/.test(deliveryPin) && previousPin !== deliveryPin) {

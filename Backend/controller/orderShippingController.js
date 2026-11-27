@@ -105,7 +105,7 @@ module.exports.autoSelectCourierWithFallback = autoSelectCourierWithFallback;
 
 const {
   getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey,
-  discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection,
+  discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking,
 } = require('../services/iThinkCourierRouting.js');
 
 // Try an explicit pick first. Use rate results and then the domestic courier
@@ -1263,7 +1263,9 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
         if (parts.length) diag = ` — [${parts.join(' | ')}]`;
       }
     } catch (_) { /* diagnostics must never mask the real error */ }
-    const courierRejected = providerName === 'ithink' && !bookedWaybill && (error.courierRejected ?? isCourierRouteRejection(error.message));
+    const unconfirmed = providerName === 'ithink' && isUnconfirmedIThinkBooking(error.message);
+    const requiresReview = !!bookedWaybill || !!error.requiresReview || unconfirmed;
+    const courierRejected = providerName === 'ithink' && !requiresReview && (error.courierRejected ?? isCourierRouteRejection(error.message));
     const destination = String(order.ShippingAddress?.pincode || '').trim();
     return {
       success: false,
@@ -1271,7 +1273,7 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
         ? `iThink issued AWB ${bookedWaybill} but the booking could not be saved. Check iThink before booking again.`
         : courierRejected ? `iThink rejected ${selectedLogistics} for the route to delivery pincode ${destination}.` : `${error.message}${diag}`,
       courierRejected,
-      requiresReview: !!bookedWaybill || error.requiresReview,
+      requiresReview,
     };
   }
 };

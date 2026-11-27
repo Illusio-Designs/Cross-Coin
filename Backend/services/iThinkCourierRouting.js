@@ -3,7 +3,8 @@ const settings = require('./settingsHelper.js');
 
 const tokens = (raw) => String(raw || '').toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
 const yes = (value) => ['yes', 'y', '1', 'true'].includes(String(value).trim().toLowerCase());
-const isCourierRouteRejection = (message) => /not\s*(?:servic[e]?able|deliverable)|unserviceable|(?:route|pincode|courier|service|cod|prepaid)[^.;]{0,65}\b(?:not available|not supported)|does not (?:serve|support)/i.test(String(message || ''));
+const isCourierRouteRejection = (message) => /(?:not|non)[\s-]*(?:servic[e]?able|deliverable)|unserviceable|(?:route|pincode|courier|service|cod|prepaid)[^.;]{0,65}\b(?:not available|not supported)|does not (?:serve|support)/i.test(String(message || ''));
+const isUnconfirmedIThinkBooking = (message) => /partially saved|^iThink (?:did not confirm an AWB|issued AWB )/i.test(String(message || ''));
 
 async function getIThinkRoute(order) {
   const brand = order.brand_id || 1;
@@ -70,4 +71,4 @@ function orderIThinkOptions(options, route) {
     .map(({ courier }) => courier);
 }
 
-module.exports = { getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey, discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection };
+module.exports = { getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey, discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking };

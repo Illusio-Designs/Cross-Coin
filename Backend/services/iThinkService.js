@@ -2,7 +2,9 @@ const axios = require('axios');
 const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper');
 const { extractIThinkCouriers } = require('../utils/serviceability.js');
-const { isCourierRouteRejection } = require('./iThinkCourierRouting.js');
+const { isCourierRouteRejection, isUnconfirmedIThinkBooking } = require('./iThinkCourierRouting.js');
+
+const AWB_REVIEW_MESSAGE = 'iThink did not confirm an AWB. Check the order in iThink before booking again.';
 
 const ITHINK_STAGING_URL = 'https://pre-alpha.ithinklogistics.com';
 const ITHINK_PRODUCTION_URL = 'https://my.ithinklogistics.com';
@@ -329,7 +331,13 @@ class IThinkService {
       const orderStatus = String(result.status || '').toLowerCase();
       const waybill     = String(result.waybill || result.awb_number || result.AWB || '').trim() || null;
 
-      const success = !!waybill || (!!options.reverse && orderStatus === 'success');
+      const messages = [
+        result.remark, result.message, result.error, result.reason,
+        responseData?.message, responseData?.status_message, responseData?.remark,
+        responseData?.error, responseData?.html_message, typeof dataRoot === 'string' ? dataRoot : null,
+      ].filter((value) => typeof value === 'string' && value.trim());
+      const partialBooking = messages.some(isUnconfirmedIThinkBooking);
+      const success = (!!waybill && !partialBooking) || (!!options.reverse && orderStatus === 'success');
 
       // When we couldn't confirm success, extract the most useful reason
       // iThink gave us. Different failure modes use different keys.
@@ -337,17 +345,18 @@ class IThinkService {
       let courierRejected = false;
       let requiresReview = false;
       if (!success) {
-        const remark = result.remark || result.message || result.error || result.reason
-          || responseData?.message || responseData?.status_message || responseData?.remark
-          || responseData?.error || (typeof dataRoot === 'string' ? dataRoot : null);
+        const remark = messages[0];
+        const routeRejected = messages.some(isCourierRouteRejection);
+        const pin = String(orderData.customer_PinCode || '').trim();
 
-        courierRejected = orderStatus !== 'success' && isCourierRouteRejection(remark);
-        if (courierRejected) {
-          const pin = String(orderData.customer_PinCode || '').trim();
+        requiresReview = !options.reverse && (partialBooking || orderStatus === 'success' || !remark);
+        courierRejected = !partialBooking && !requiresReview && orderStatus !== 'success' && routeRejected;
+        if (requiresReview) {
+          message = partialBooking && routeRejected
+            ? `iThink did not confirm an AWB. The courier rejected delivery to ${pin} and may have saved part of the shipment. Check the order in iThink before booking again.`
+            : AWB_REVIEW_MESSAGE;
+        } else if (courierRejected) {
           message = `iThink rejected ${orderData.logistics} for the route to delivery pincode ${pin}.`;
-        } else if (!options.reverse && (orderStatus === 'success' || !remark)) {
-          requiresReview = true;
-          message = 'iThink did not confirm an AWB. Check the order in iThink before booking again.';
         } else if (remark) {
           // iThink gave a reason — use it. Only add our field diagnostics when the
           // remark is vague/generic ("Some error occured"), so specific messages
@@ -369,7 +378,7 @@ class IThinkService {
       return {
         success,
         orderId: orderKey,
-        waybill,
+        waybill: success ? waybill : null,
         routeCode: null,
         status: result.status || (success ? 'booked' : 'failed'),
         labelUrl: result.label_url || result.labelurl || null,
@@ -407,9 +416,11 @@ class IThinkService {
           field_issues: this._diagnoseBookingPayload(p),
         };
       } catch (_) { /* diagnostics must never mask the real error */ }
-      if (!options.reverse && ((error.request && !error.response) || error.response?.status >= 500 ||
+      const providerReply = typeof error.response?.data === 'string'
+        ? error.response.data : JSON.stringify(error.response?.data) || '';
+      if (!options.reverse && (isUnconfirmedIThinkBooking(providerReply) || (error.request && !error.response) || error.response?.status >= 500 ||
           /returned null response/i.test(error.message))) {
-        return { success: false, requiresReview: true, message: 'iThink did not confirm an AWB. Check the order in iThink before booking again.' };
+        return { success: false, requiresReview: true, message: AWB_REVIEW_MESSAGE };
       }
       this.handleApiError(error, 'Create Forward Order');
     }
