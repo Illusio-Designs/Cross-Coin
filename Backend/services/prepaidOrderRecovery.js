@@ -1,7 +1,8 @@
 const { randomUUID } = require('node:crypto');
 const store = require('./prepaidRecoveryStore.js');
-const { razorpayOrderReferences, verifyShiprocketRecovery } = require('../utils/shiprocketPaymentRecovery.js');
+const { razorpayPaymentReferences, razorpayOrderReferences, verifyShiprocketRecovery } = require('../utils/shiprocketPaymentRecovery.js');
 const { logger } = require('../config/logging.js');
+const { getSharedPayment } = require('./sharedRazorpayPayments.js');
 
 const retryMinutes = [2, 5, 15, 30, 60, 180];
 const message = (text, status = 409, retryable = false) => Object.assign(new Error(text), { status, retryable });
@@ -11,8 +12,7 @@ function referencesOf(order) {
   const successful = entries.filter((entry) => ['captured', 'success', 'successful', 'paid', 'completed']
     .includes(String(entry.status || entry.payment_status || '').toLowerCase()));
   const candidates = successful.length === 1 ? successful : entries.length <= 1 ? entries : [];
-  const payIds = new Set([order.razorpay_payment_id, ...candidates.flatMap((p) =>
-    [p.razorpay_payment_id, p.pg_transaction_id, p.txn_id])].filter(store.validPaymentId));
+  const payIds = new Set([order, ...candidates].flatMap(razorpayPaymentReferences));
   const orderIds = new Set([order, ...candidates].flatMap(razorpayOrderReferences));
   return {
     paymentId: payIds.size === 1 ? payIds.values().next().value : null,
@@ -69,8 +69,13 @@ async function discoverCheckout(payment, hint) {
     const fromNotes = (notes) => [notes?.shiprocket_order_id, notes?.platform_order_id, notes?.checkout_order_id].find(store.validCheckoutRef);
     let ref = fromNotes(payment.notes);
     if (!ref && payment.order_id) {
-      const gateway = await require('./razorpayService.js').getOrder(payment.order_id);
-      if (gateway?.id === payment.order_id) ref = fromNotes(gateway.notes);
+      try {
+        const gateway = await require('./razorpayService.js').getOrder(payment.order_id);
+        if (gateway?.id === payment.order_id) ref = fromNotes(gateway.notes);
+      } catch (error) {
+        logger.warn(`[prepaid-recovery] Razorpay order metadata unavailable for ${payment.order_id}: ${error.message}`);
+        if (!candidates.size) throw message('Razorpay confirmed the payment, but its order details could not be loaded. Retry or enter the Shiprocket checkout reference.', 502, true);
+      }
     }
     if (ref) {
       const brands = await store.enabledBrands();
@@ -105,8 +110,8 @@ function requireOriginalCheckout(details) {
   }
 }
 
-async function verifyPayment(paymentId) {
-  const truth = await require('./razorpayService.js').getPayment(paymentId);
+async function verifyPayment(paymentId, { date, sourceAt } = {}) {
+  const truth = await getSharedPayment(paymentId, { date, sourceAt });
   if (truth?.id !== paymentId || !store.isCapture(truth)) throw message('Razorpay does not show a captured INR payment with zero refunds.');
   return truth;
 }
@@ -145,7 +150,7 @@ async function recover(row, { hint, actorId = null, verified } = {}) {
   let order;
   const attempt = Number(row.attempts) + 1;
   try {
-    const payment = verified || await verifyPayment(row.payment_id);
+    const payment = verified || await verifyPayment(row.payment_id, { sourceAt: row.source_at });
     if (Number(payment.amount) !== Number(row.amount_paise) || (row.gateway_order_id && row.gateway_order_id !== payment.order_id)) {
       throw message('The captured amount or gateway order differs from the recorded payment.');
     }
@@ -220,8 +225,8 @@ async function resumeCaptureForCheckout(brandId, ref, details, references) {
   return { state: 'pending' };
 }
 
-async function manual(paymentId, { hint, actorId, verifyOnly = false } = {}) {
-  const payment = await verifyPayment(paymentId);
+async function manual(paymentId, { hint, actorId, verifyOnly = false, date } = {}) {
+  const payment = await verifyPayment(paymentId, { date });
   if (verifyOnly) {
     const { existing, candidate } = await resolvePayment(payment, hint);
     return { existing, checkoutRef: candidate?.ref, brandId: candidate?.brandId,

@@ -71,7 +71,7 @@
 
 /* ── Chips / tabs ───────────────────────────────────────────────────── */
 .wpa-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.wpa-tab, .wpa-chip {
+.wpa-chip {
   display: inline-flex; align-items: center; gap: 6px;
   min-height: 36px; padding: 0 14px; border-radius: var(--ds-radius-pill);
   border: 1px solid var(--ds-color-border); background: transparent;
@@ -79,12 +79,11 @@
   cursor: pointer; white-space: nowrap;
 }
 .wpa-chip { min-height: 34px; padding: 0 12px; font-size: 12.5px; }
-.wpa-tab:hover, .wpa-chip:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
-.wpa-tab[aria-selected="true"], .wpa-chip[aria-pressed="true"] {
+.wpa-chip:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
+.wpa-chip[aria-pressed="true"] {
   background: var(--ds-color-text); border-color: var(--ds-color-text); color: var(--ds-color-surface);
 }
-.wpa-tab:focus-visible, .wpa-chip:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
-.wpa-tab-n { opacity: .7; font-variant-numeric: tabular-nums; }
+.wpa-chip:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: 2px; }
 .wpa-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 
 /* ── Status pills ───────────────────────────────────────────────────── */

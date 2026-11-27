@@ -56,9 +56,8 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
     const isCustomCheckout = String(payment.payment_gateway || '').toLowerCase() === 'customcheckout'
       || /custom checkout/i.test(payment.notes || '');
 
-    // Must have a Razorpay payment ID to refund (unless custom checkout)
-    if (!isCustomCheckout && (!payment.transaction_id || !payment.transaction_id.startsWith('pay_'))) {
-      throw new Error('No Razorpay payment ID found — cannot process refund for COD orders');
+    if (!payment.transaction_id || (!isCustomCheckout && !payment.transaction_id.startsWith('pay_'))) {
+      throw new Error('The original online payment reference is missing.');
     }
 
     // Check refundable status. The payments table uses 'successful' (paid) and
@@ -69,7 +68,7 @@ async function processRefund({ paymentId, amount = null, reason, adminId, brandI
       throw new Error(`Cannot refund payment in "${payment.status}" status`);
     }
 
-    const REFUNDABLE_ORDER = ['cancelled', 'return_initiated', 'returned_rto', 'rto delivered'];
+    const REFUNDABLE_ORDER = ['cancelled', 'order cancelled', 'return_initiated', 'returned_rto', 'rto delivered'];
     if (!REFUNDABLE_ORDER.includes(order.status)) {
       throw new Error(`Refund not allowed for orders in "${order.status}" status`);
     }

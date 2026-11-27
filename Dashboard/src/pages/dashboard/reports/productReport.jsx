@@ -1,3 +1,4 @@
+import FilterChips from '../../../components/ui/FilterChips';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { reportPagesService, brandService } from '../../../services';
@@ -93,11 +94,6 @@ const SORT_OPTIONS = [
   { value: 'conversion', label: 'Best conversion' },
 ];
 
-const segBtn = (on) => ({
-  border: 0, cursor: 'pointer', minHeight: 32, padding: '0 12px', borderRadius: 8, font: 'inherit', fontSize: 12.5, fontWeight: 600,
-  background: on ? 'var(--ds-color-surface)' : 'transparent', color: on ? 'var(--ds-color-text)' : 'var(--ds-color-text-muted)',
-  boxShadow: on ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
-});
 const monoLabel = { fontFamily: 'var(--ds-font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ds-color-text-muted)' };
 
 /* ── Side panel for the selected product ── */
@@ -394,11 +390,8 @@ export default function ProductReport() {
         {/* ── Product list ── */}
         <section className="rep-panel rep-panel--flush" aria-label="Products" style={{ flex: '999 1 640px', minWidth: 0, padding: 0, ...(dim || {}) }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderBottom: '1px solid var(--ds-color-border)' }}>
-            <div role="group" aria-label="View" style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 11, background: 'var(--ds-color-surface-soft)', border: '1px solid var(--ds-color-border)' }}>
-              {[['sales', 'Sales'], ['funnel', 'Views to purchase']].map(([v, l]) => (
-                <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} style={segBtn(view === v)}>{l}</button>
-              ))}
-            </div>
+            <FilterChips ariaLabel="Product report view" value={view} onChange={setView}
+              items={[{ value: 'sales', label: 'Sales' }, { value: 'funnel', label: 'Views to purchase' }]} />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ minWidth: 170 }}>
                 <Dropdown value={sort} onChange={(v) => setSort(String(v))} options={sortOptions} />

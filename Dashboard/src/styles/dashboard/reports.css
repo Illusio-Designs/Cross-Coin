@@ -184,16 +184,6 @@
 
 /* Report pages: tab bar over the reports (ReportHub) */
 .rhub { display: flex; flex-direction: column; gap: 16px; }
-.rhub-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--ds-color-border); scrollbar-width: thin; }
-.rhub-tab {
-  flex: none; min-height: 44px; padding: 0 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent;
-  background: transparent; cursor: pointer; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap;
-  color: var(--ds-color-text-muted);
-}
-.rhub-tab:hover { color: var(--ds-color-text); }
-.rhub-tab.is-on { color: var(--ds-color-text); font-weight: 700; border-bottom-color: var(--ds-color-text); }
-.rhub-tab:focus-visible { outline: 2px solid var(--ds-color-text); outline-offset: -2px; border-radius: 6px; }
-
 /* ── Visit check (Traffic): one Lighthouse-style gauge — each check a
    segment of one ring, tracked visits in the middle — with the checks
    beside it, the Meta clicks guide and the latest 10 visits. ── */

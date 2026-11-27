@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton, SkeletonList, SkeletonTableRows } from '../ui/Skeleton';
-import { ErrorState } from '../ui';
+import { ErrorState, FilterChips } from '../ui';
 import { useAuth } from '../../context/AuthContext';
 import { PageHeader } from './primitives';
 import { dashboardService, brandService } from '../../services';
@@ -210,13 +210,10 @@ function TodayHome() {
       <section className="panel" aria-label="Today's work">
         <div className="panel-h">
           <h3>Today’s work</h3>
-          <div className="hm-tabs" role="tablist" aria-label="Filter work">
-            {['all', 'urgent', 'today', 'later'].map((t) => (
-              <button key={t} type="button" role="tab" aria-selected={tab === t} className={`hm-tab${tab === t ? ' on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'all' ? 'All' : PRIORITY_LABEL[t]}{!first && <span className="n">{counts[t]}</span>}
-              </button>
-            ))}
-          </div>
+          <FilterChips ariaLabel="Filter work" value={tab} onChange={setTab}
+            items={['all', 'urgent', 'today', 'later'].map((value) => ({
+              value, label: value === 'all' ? 'All' : PRIORITY_LABEL[value], count: first ? undefined : counts[value],
+            }))} />
         </div>
         {first ? (
           <div className="hm-cards" role="status" aria-busy="true">

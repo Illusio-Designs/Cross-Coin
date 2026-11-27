@@ -1,3 +1,4 @@
+import RefundAmountInput, { formatRefundAmount, validRefundAmount } from '../../../components/orders/RefundAmountInput';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Skeleton, SkeletonList, SkeletonText } from '../../../components/ui/Skeleton';
@@ -141,7 +142,7 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
             { label: 'Waiting', value: list.isPlaceholderData || deliveryCount == null || deliveryActions == null ? null : Math.max(0, deliveryCount - deliveryActions) },
           ]} />
       )}
-      <FilterChips className="ord-tabs" revealSelected ariaLabel="Problem type" controls="exc-workspace"
+      <FilterChips ariaLabel="Problem type" controls="exc-workspace"
         items={TABS.map(([value, label]) => ({ value, label, count: list.isPlaceholderData ? undefined : counts[value] }))}
         value={type} onChange={setType} />
 
@@ -252,8 +253,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
   const ret = item.return;
   const refund = item.refund;
   const eligible = refund ? Number(refund.eligible) || 0 : 0;
-  const amt = Number(amount);
-  const amountOk = Number.isFinite(amt) && amt > 0 && amt <= eligible + 0.01;
+  const amountOk = validRefundAmount(amount, eligible);
 
   const run = async (fn, okText) => {
     setBusy(true); setMsg(null);
@@ -271,7 +271,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
 
   const label = (a) => {
     if (a === 'new_address' && fromCustomer) return 'Send new address & reattempt';
-    if (a === 'retry_refund') return item.status === 'refund_failed' ? `Retry refund ${money(refund?.refundAmount)}` : `Refund ${money(refund?.refundAmount)} via Razorpay`;
+    if (a === 'retry_refund') return item.status === 'refund_failed' ? 'Retry refund' : 'Refund customer';
     return ACTION_LABEL[a] || a;
   };
   const choose = (a) => {
@@ -280,6 +280,7 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
     if (a === 'mark_done' && !note) setNote('Updated in iThink panel');
     if (a === 'reject' || a === 'approve' || a === 'clear_case') setNote('');
     if (a === 'clear_case') setProof(null);
+    if (a === 'retry_refund') setAmount(Number(refund?.refundAmount || 0).toFixed(2));
   };
 
   // Actions that aren't plain buttons: the refund calculator owns 'refund'.
@@ -529,9 +530,12 @@ function ItemPanel({ item, onChanged, onOpenOrder }) {
             )}
             {open === 'retry_refund' && (
               <>
-                <p className="exc-hint">Refund {money(refund?.refundAmount)} to the customer’s original payment through Razorpay?</p>
-                <ConfirmRow busy={busy} label={`Refund ${money(refund?.refundAmount)}`} onCancel={() => setOpen(null)}
-                  onConfirm={() => run(() => orderService.refundOrder(item.order.id, 'Refund from Orders → Problems'), 'Refund sent.')} />
+                <p className="exc-hint">The refund goes to the customer’s original payment.</p>
+                <RefundAmountInput value={amount} maximum={refund?.refundAmount} onChange={setAmount} disabled={busy} />
+                <ConfirmRow busy={busy} disabled={!validRefundAmount(amount, refund?.refundAmount)}
+                  label={validRefundAmount(amount, refund?.refundAmount) ? `Refund ${formatRefundAmount(amount)}` : 'Confirm refund'}
+                  onCancel={() => setOpen(null)}
+                  onConfirm={() => run(() => orderService.refundOrder(item.order.id, 'Refund from Orders → Problems', String(amount).trim()), 'Refund submitted.')} />
               </>
             )}
           </div>
@@ -584,7 +588,7 @@ function RefundBox({ item, amount, setAmount, amountOk, busy, setBusy, setMsg, o
   const doRefund = async () => {
     setBusy(true); setMsg(null);
     try {
-      const r = await returnService.refund(item.refId, amt);
+      const r = await returnService.refund(item.refId, String(amount).trim());
       setMsg({ ok: r?.success !== false, text: r?.message || 'Refund done.' });
       setOpen(null);
     } catch (e) {
@@ -595,25 +599,25 @@ function RefundBox({ item, amount, setAmount, amountOk, busy, setBusy, setMsg, o
   return (
     <div className="exc-refund">
       <label className="exc-field">Refund amount
-        <input type="number" inputMode="decimal" min={1} max={eligible} step="1" value={amount}
+        <input type="number" inputMode="decimal" min={0.01} max={eligible} step="0.01" value={amount}
           onChange={(e) => setAmount(e.target.value)} aria-invalid={!amountOk} className="exc-amount" />
       </label>
       <div className="exc-chips">
         {presets.map(([l, v]) => (
-          <button key={l} type="button" className={`exc-chip${Math.round(v) === Math.round(amt) ? ' on' : ''}`}
-            onClick={() => setAmount(Math.max(0, Math.round(v)))}>{l}</button>
+          <button key={l} type="button" className={`exc-chip${Number(v.toFixed(2)) === amt ? ' on' : ''}`}
+            onClick={() => setAmount(Math.max(0, v).toFixed(2))}>{l}</button>
         ))}
         <button type="button" className="exc-mini" onClick={() => setChargesOpen(!chargesOpen)}>{chargesOpen ? 'Close charges' : 'Edit charges'}</button>
       </div>
       <p className="exc-hint">
-        {!amountOk ? `Enter an amount between ₹1 and ${money(eligible)}.`
-          : deducted > 0 ? `${money(deducted)} deducted · the customer gets ${money(amt)}` : 'Full item value — nothing deducted.'}
+        {!amountOk ? `Enter an amount from ₹0.01 to ${formatRefundAmount(eligible)}.`
+          : deducted > 0 ? `${formatRefundAmount(deducted)} deducted · the customer gets ${formatRefundAmount(amt)}` : 'Full item value — nothing deducted.'}
       </p>
       {chargesOpen && <ChargesEditor brandId={item.order.brandId} charges={ch} onSaved={() => { setChargesOpen(false); onChanged(); }} />}
 
       {!gateway && (
         <div className="exc-upi">
-          <span>Send {money(amt)} to <b>{ret.upiId || 'the customer’s UPI'}</b>, then upload the payment screenshot.</span>
+          <span>Send {formatRefundAmount(amt)} to <b>{ret.upiId || 'the customer’s UPI'}</b>, then upload the payment screenshot.</span>
           <span className="exc-box-row">
             {ret.payoutProof && <a href={ret.payoutProof} target="_blank" rel="noreferrer"><img className="exc-proof" src={ret.payoutProof} alt="UPI payment screenshot" /></a>}
             <label className="exc-btn exc-file">
@@ -628,15 +632,15 @@ function RefundBox({ item, amount, setAmount, amountOk, busy, setBusy, setMsg, o
         <button type="button" className={`exc-btn exc-btn--pri${open === 'refund' ? ' is-open' : ''}`}
           disabled={busy || !amountOk || needsProof} title={needsProof ? 'Upload the UPI payment screenshot first' : undefined}
           onClick={() => setOpen(open === 'refund' ? null : 'refund')}>
-          {gateway ? `Refund ${money(amt)} via Razorpay` : `Confirm UPI refund of ${money(amt)}`}
+          {gateway ? `Refund ${formatRefundAmount(amt)} to original payment` : `Confirm UPI refund of ${formatRefundAmount(amt)}`}
         </button>
       </div>
       {open === 'refund' && (
         <div className="exc-confirm">
           <p className="exc-warn">{gateway
-            ? `Send ${money(amt)} back to the original payment? Razorpay refunds can’t be undone.`
-            : `Record that ${money(amt)} was paid by UPI? The return will be closed.`}</p>
-          <ConfirmRow busy={busy} label={gateway ? `Yes, refund ${money(amt)}` : 'Yes, record it'} onCancel={() => setOpen(null)} onConfirm={doRefund} />
+            ? `Send ${formatRefundAmount(amt)} back to the original payment?`
+            : `Record that ${formatRefundAmount(amt)} was paid by UPI? The return will be closed.`}</p>
+          <ConfirmRow busy={busy} disabled={!amountOk || needsProof} label={gateway ? `Yes, refund ${formatRefundAmount(amt)}` : 'Yes, record it'} onCancel={() => setOpen(null)} onConfirm={doRefund} />
         </div>
       )}
     </div>

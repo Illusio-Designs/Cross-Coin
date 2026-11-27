@@ -20,7 +20,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { brandService } from '../../services';
 import { useAuth } from '../../context/AuthContext';
-import { Select, Skeleton, SkeletonList, SkeletonPage, SkeletonForm } from '../../components/ui';
+import { FilterChips, Select, Skeleton, SkeletonList, SkeletonPage, SkeletonForm } from '../../components/ui';
 
 // While a page's code downloads, draw its shape where it will appear.
 function InboxLoading() {
@@ -171,6 +171,7 @@ export function WhatsAppManager() {
 
   const nav = useMemo(() => NAV.filter((n) => !n.adminOnly || isAdmin), [isAdmin]);
   const current = ADMIN_PAGES.has(page) && !isAdmin ? 'inbox' : page;
+  const activeSection = nav.find((item) => item.key === current || item.also?.includes(current))?.key;
   const Page = PAGE_COMPONENTS[current];
 
   return (
@@ -191,7 +192,7 @@ export function WhatsAppManager() {
 
         <nav className="wst-nav">
           {nav.map((n) => {
-            const active = current === n.key || (n.also || []).includes(current);
+            const active = activeSection === n.key;
             return (
               <button
                 key={n.key}
@@ -209,6 +210,8 @@ export function WhatsAppManager() {
             );
           })}
         </nav>
+        <FilterChips className="wst-mobile-tabs" ariaLabel="WhatsApp sections" value={activeSection} onChange={goTo}
+          items={nav.map(({ key, label }) => ({ value: key, label, count: key === 'inbox' && unread > 0 ? (unread > 99 ? '99+' : unread) : undefined }))} />
       </aside>
 
       <main className={`wst-main${current === 'inbox' ? ' wst-main--inbox' : ''}`}>

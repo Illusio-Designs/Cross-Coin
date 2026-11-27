@@ -381,16 +381,11 @@ async function backfillMethods(brandId, since) {
 
 // Scan Razorpay directly. Starting from local payments cannot find a payment
 // that reached the gateway but never wrote a local record.
-async function razorpayPaymentPage(razorpay, { from, offset, until }) {
-  const count = 100;
-  const result = await razorpay.payments.all({ from, to: until, count, skip: offset });
-  if (!Array.isArray(result?.items)) throw new Error('Razorpay returned an invalid payments list.');
-  return { items: result.items, nextOffset: result.items.length === count ? offset + count : null };
-}
+const { paymentPage, paymentsOnDay } = require('./sharedRazorpayPayments.js');
 
 async function scanRazorpayCaptures({ from, offset, until }) {
   const razorpay = await require('./razorpayService.js').getInstance();
-  const { items, nextOffset } = await razorpayPaymentPage(razorpay, { from, until, offset });
+  const { items, nextOffset } = await paymentPage(razorpay, { from, until, offset });
   const captured = items.filter((payment) => payment.status === 'captured'
     && /^pay_[a-zA-Z0-9]{6,64}$/.test(payment.id)
     && Number(payment.amount) > Number(payment.amount_refunded || 0));
@@ -406,23 +401,8 @@ async function scanRazorpayCaptures({ from, offset, until }) {
 }
 
 async function findMissingRazorpayOrders({ from, until }) {
-  const razorpay = await require('./razorpayService.js').getInstance();
-  const seen = new Set();
-  const captures = [];
-  let offset = 0;
-  while (offset != null) {
-    const page = await razorpayPaymentPage(razorpay, { from, until, offset });
-    let added = 0;
-    for (const payment of page.items) {
-      if (!/^pay_[a-zA-Z0-9]{6,64}$/.test(payment?.id) || seen.has(payment.id)) continue;
-      seen.add(payment.id);
-      added++;
-      const timestamp = Number(payment.created_at);
-      if (payment.status === 'captured' && timestamp >= from && timestamp <= until) captures.push(payment);
-    }
-    if (page.nextOffset != null && !added) throw new Error('Razorpay repeated a page of payments.');
-    offset = page.nextOffset;
-  }
+  const payments = await paymentsOnDay({ from, until });
+  const captures = [...payments.values()].filter((payment) => payment.status === 'captured');
 
   const recoveryStore = require('./prepaidRecoveryStore.js');
   const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');

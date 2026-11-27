@@ -221,7 +221,7 @@ class RazorpayService {
 
       return payment;
     } catch (error) {
-      throw new Error(`Failed to fetch payment: ${rzpErrorMessage(error)}`);
+      throw Object.assign(new Error(`Failed to fetch payment: ${rzpErrorMessage(error)}`), { providerStatus: error.statusCode });
     }
   }
 

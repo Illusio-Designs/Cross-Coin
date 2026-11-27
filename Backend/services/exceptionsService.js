@@ -749,7 +749,7 @@ async function orderRefundDetail(orderId) {
   if (due && refund.gateway) {
     actions = ['retry_refund', 'clear_case'];
     ask = wasFailed ? `Retry the ${inr(owed)} refund via Razorpay?` : `Refund ${inr(owed)} to the original payment?`;
-    help = wasFailed ? 'If Razorpay refuses again, pay the customer by UPI and note it on the order.' : 'Refunds the full amount through Razorpay. The customer gets a WhatsApp when it goes through.';
+    help = wasFailed ? 'If Razorpay refuses again, pay the customer by UPI and note it on the order.' : 'Choose the amount to return to the original payment. The customer gets a WhatsApp when the refund is recorded.';
   } else if (due) {
     actions = ['clear_case'];
     ask = `${inr(owed)} is owed but there’s no online payment to refund`;

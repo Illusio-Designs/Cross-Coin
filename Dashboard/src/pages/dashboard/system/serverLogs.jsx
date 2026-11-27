@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SkeletonKpis, SkeletonTableRows, Switch } from '../../../components/ui';
+import { FilterChips, SkeletonKpis, SkeletonTableRows, Switch } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { serverLogsService } from '../../../services';
@@ -532,18 +532,13 @@ export default function ServerLogs() {
         )}
       />
 
-      <div className="sl-tabs" role="tablist" aria-label="Server logs">
-        {Object.entries(SERVERS).map(([key, sv]) => {
-          const sum = raw?.servers?.[key];
-          return (
-            <button key={key} type="button" role="tab" aria-selected={tab === key} className={`sl-tab sl-tab--server${tab === key ? ' is-on' : ''}`} onClick={() => setTab(key)}>
-              <span className="sl-tab-name">{sv.label}{sum?.open_alerts ? <span className="sl-count">{sum.open_alerts}</span> : null}</span>
-              <span className="sl-tab-sub">{sv.host}{sum ? ` · ${num(sum.requests_15m)} req / 15 min · ${sum.error_pct_15m}% errors` : ''}</span>
-            </button>
-          );
-        })}
-        <button type="button" role="tab" aria-selected={tab === 'settings'} className={`sl-tab${tab === 'settings' ? ' is-on' : ''}`} onClick={() => setTab('settings')}>Alert settings</button>
-      </div>
+      <FilterChips ariaLabel="Server logs" value={tab} onChange={setTab}
+        items={[
+          ...Object.entries(SERVERS).map(([value, server]) => ({
+            value, label: server.label, count: raw?.servers?.[value]?.open_alerts || undefined,
+          })),
+          { value: 'settings', label: 'Alert settings' },
+        ]} />
 
       {isLoading ? (
         <>

@@ -1,10 +1,10 @@
 jest.mock('../../services/prepaidRecoveryStore.js', () => ({
-  ensureSchema: jest.fn(), query: jest.fn(), rows: jest.fn(), queueCaptures: jest.fn(), readCheckouts: jest.fn(),
+  ensureSchema: jest.fn(), query: jest.fn(), rows: jest.fn(), queueCaptures: jest.fn(), readCheckouts: jest.fn(), readRecoveries: jest.fn(),
   findPendingCapture: jest.fn(), enabledBrands: jest.fn(),
   validCheckoutRef: (ref) => typeof ref === 'string' && /^[a-zA-Z0-9_-]+$/.test(ref),
   isCapture: (payment) => payment?.status === 'captured' && !payment.amount_refunded,
 }));
-jest.mock('../../services/razorpayService.js', () => ({ getPayment: jest.fn(), getOrder: jest.fn() }));
+jest.mock('../../services/razorpayService.js', () => ({ getPayment: jest.fn(), getOrder: jest.fn(), getInstance: jest.fn() }));
 jest.mock('../../services/razorpayOrderMatching.js', () => ({ findRazorpayOrderMatches: jest.fn() }));
 jest.mock('../../services/stockReservationService.js', () => ({ getReservationByRazorpayOrder: jest.fn() }));
 jest.mock('../../controller/customCheckoutController.js', () => ({ fetchProviderOrder: jest.fn(), ingestVerifiedOrder: jest.fn() }));
@@ -36,6 +36,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   current = { payment_id: payment.id, gateway_order_id: payment.order_id, amount_paise: 44910, state: 'pending', attempts: 0 };
   razorpay.getPayment.mockResolvedValue(payment);
+  store.readRecoveries.mockResolvedValue(new Map());
   razorpay.getOrder.mockResolvedValue({ id: payment.order_id });
   findRazorpayOrderMatches.mockResolvedValue(new Map([[payment.id, {}]]));
   store.readCheckouts.mockResolvedValue([{ brand_id: 8, checkout_ref: details.platform_order_id }]);
@@ -169,4 +170,39 @@ test('the capture scan saves its cursor only after a page is persisted and resum
   expect(scanRazorpayCaptures.mock.calls.map(([page]) => [page.until, page.offset])).toEqual([
     [end, 100], [end, 200], [end, 200],
   ]);
+});
+
+test('a fresh exact hit in the shared daily list verifies when the single-payment lookup fails', async () => {
+  const at = Date.parse('2025-02-01T18:00:00+05:30') / 1000;
+  razorpay.getPayment.mockRejectedValue(Object.assign(new Error('The ID provided does not exist'), { providerStatus: 400 }));
+  const list = jest.fn().mockResolvedValue({ items: [{ ...payment, id: 'pay_sameamount', created_at: at }, { ...payment, created_at: at }] });
+  razorpay.getInstance.mockResolvedValue({ payments: { all: list } });
+  await expect(recovery.manual(payment.id, { date: '2025-02-01', verifyOnly: true }))
+    .resolves.toMatchObject({ checkoutRef: details.platform_order_id, itemCount: 1 });
+  expect(list).toHaveBeenCalledWith({ from: at - 18 * 3600, to: at + 6 * 3600 - 1, count: 100, skip: 0 });
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
+});
+
+test('the worker retries using the capture date and refuses IDs missing from the shared list', async () => {
+  const at = new Date('2025-02-01T22:00:00Z');
+  current.source_at = at;
+  razorpay.getPayment.mockRejectedValue(Object.assign(new Error('The ID provided does not exist'), { providerStatus: 400 }));
+  const list = jest.fn().mockResolvedValue({ items: [{ ...payment, id: 'pay_sameamount', created_at: at.getTime() / 1000 }] });
+  razorpay.getInstance.mockResolvedValue({ payments: { all: list } });
+  await expect(recovery.handleCapture(payment)).resolves.toMatchObject({ state: 'pending', reason: expect.stringContaining('not found on the selected Razorpay date') });
+  expect(list).toHaveBeenCalledWith(expect.objectContaining({ from: Date.parse('2025-02-02T00:00:00+05:30') / 1000 }));
+  expect(ingestVerifiedOrder).not.toHaveBeenCalled();
+});
+
+test('a gateway metadata outage returns a specific case message', async () => {
+  store.readCheckouts.mockResolvedValue([]);
+  razorpay.getOrder.mockRejectedValue(new Error('provider unavailable'));
+  await expect(recovery.manual(payment.id, { verifyOnly: true }))
+    .rejects.toThrow('Razorpay confirmed the payment, but its order details could not be loaded');
+});
+
+test('recovers references when the provider puts both identifiers on the checkout itself', () => {
+  expect(recovery.referencesOf({
+    platform_order_id: details.platform_order_id, order_id: payment.order_id, pg_transaction_id: payment.id,
+  })).toEqual({ paymentId: payment.id, gatewayOrderId: payment.order_id });
 });

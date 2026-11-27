@@ -574,7 +574,7 @@ async function verifyRecoveryPrices(brandId, order, payment) {
 
 async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recovery = false } = {}) {
   const status = String(p?.status || '').toUpperCase();
-  const { razorpayOrderReferences, canImportCapturedCheckout } = require('../utils/shiprocketPaymentRecovery.js');
+  const { razorpayPaymentReferences, razorpayOrderReferences, canImportCapturedCheckout } = require('../utils/shiprocketPaymentRecovery.js');
   if (recovery && !verifiedRazorpayPayment) throw Object.assign(new Error('A verified Razorpay capture is required.'), { status: 422 });
   if (!canImportCapturedCheckout(p)) return { skipped: `status_${status}` };
   const platformId = String(p?.platform_order_id || p?.order_id || '').trim();
@@ -587,13 +587,12 @@ async function ingestCheckoutOrder(brandId, p, verifiedRazorpayPayment, { recove
   const pay = (successfulPayments.length === 1 ? successfulPayments[0] : payments[0]) || {};
   const isCod = isCodOrder(p, pay);
   const paid = !isCod && (recovery || ((!status || status === 'SUCCESS') && String(p.payment_status || '').toLowerCase() === 'success'));
-  const providerTransactionId = pay.txn_id || pay.pg_transaction_id || null;
+  const providerTransactionId = pay.txn_id || pay.pg_transaction_id || p.txn_id || p.pg_transaction_id || null;
   const paymentMethod = [verifiedRazorpayPayment?.method, pay.payment_method, pay.method, p.payment_method]
     .map((value) => typeof value === 'string' ? value.trim().toLowerCase().replace(/\s+/g, '_') : '')
     .find((value) => /^[a-z][a-z0-9_-]{0,29}$/.test(value));
   const references = paid && (recovery || payments.length <= 1 || successfulPayments.length === 1) ? {
-    razorpay_payment_id: verifiedRazorpayPayment?.id ?? [pay.razorpay_payment_id, pay.pg_transaction_id, pay.txn_id, p.razorpay_payment_id]
-      .find((value) => typeof value === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(value)),
+    razorpay_payment_id: verifiedRazorpayPayment?.id ?? razorpayPaymentReferences(pay)[0] ?? razorpayPaymentReferences(p)[0],
     razorpay_order_id: verifiedRazorpayPayment?.order_id ?? razorpayOrderReferences(pay)[0] ?? razorpayOrderReferences(p)[0],
   } : {};
   const paymentRefs = [references.razorpay_payment_id, references.razorpay_order_id].filter(Boolean);

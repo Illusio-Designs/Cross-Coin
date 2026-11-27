@@ -163,7 +163,7 @@ function RazorpayLookup({ brands, isAdmin }) {
     resetResult();
     setBusy("check");
     try {
-      const payment = await paymentService.checkRazorpayPayment(paymentId);
+      const payment = await paymentService.checkRazorpayPayment(paymentId, date);
       setResult(payment);
     } catch (e) { setError(e.message); }
     finally { setBusy(null); }
@@ -183,10 +183,10 @@ function RazorpayLookup({ brands, isAdmin }) {
       ...previous, items: previous.items.map((item) => item.paymentId === paymentId ? { ...item, ...changes } : item),
     });
   };
-  const verifyItem = async (item, signal) => {
+  const verifyItem = async (item, selectedDate, signal) => {
     try {
       const verified = await paymentService.recoverRazorpayPayment(item.paymentId, {
-        verifyOnly: true, ref: item.checkoutRef, brandId: item.checkoutBrandId,
+        verifyOnly: true, ref: item.checkoutRef, brandId: item.checkoutBrandId, date: selectedDate,
       }, signal);
       if (signal?.aborted) return;
       if (verified.order) removeMatchedPayment(item.paymentId);
@@ -221,7 +221,7 @@ function RazorpayLookup({ brands, isAdmin }) {
     const verifyNext = async () => {
       while (!request.signal.aborted && index < eligible.length) {
         const item = eligible[index++];
-        await verifyItem(item, request.signal);
+        await verifyItem(item, date, request.signal);
       }
     };
     await Promise.all(Array.from({ length: Math.min(4, eligible.length) }, verifyNext));
@@ -234,6 +234,7 @@ function RazorpayLookup({ brands, isAdmin }) {
     try {
       const verified = await paymentService.recoverRazorpayPayment(result.remote.id, {
         ...checkoutHint, ref: checkoutHint.ref.trim(), verifyOnly: true,
+        date: result.remote.at ? istDay(Date.parse(result.remote.at)) : date,
       });
       if (verified.order) {
         setResult({ ...result, order: verified.order, brandId: verified.order.brand_id ?? result.brandId, reason: null });
@@ -251,7 +252,8 @@ function RazorpayLookup({ brands, isAdmin }) {
     setError("");
     try {
       const recovered = await paymentService.recoverRazorpayPayment(result.remote.id,
-        shiprocket ? { ref: verifiedLookup.checkoutRef, brandId: verifiedLookup.brandId } : null);
+        shiprocket ? { ref: verifiedLookup.checkoutRef, brandId: verifiedLookup.brandId,
+          date: result.remote.at ? istDay(Date.parse(result.remote.at)) : date } : null);
       setResult({ ...result, brandId: recovered.order?.brand_id ?? result.brandId, order: { ...result.order, ...recovered.order }, canCreate: false, canLink: false, reason: null });
       if (recovered.order?.order_number) removeMatchedPayment(result.remote.id, recovered.order.order_number);
       showSuccess(null, recovered.message);
@@ -266,7 +268,7 @@ function RazorpayLookup({ brands, isAdmin }) {
     setError("");
     try {
       const recovery = await paymentService.recoverRazorpayPayment(item.paymentId, {
-        ref: item.verified.checkoutRef, brandId: item.verified.brandId,
+        ref: item.verified.checkoutRef, brandId: item.verified.brandId, date,
       });
       removeMatchedPayment(item.paymentId, recovery.order?.order_number);
       showSuccess(null, recovery.message);
@@ -727,7 +729,7 @@ export default function Payments() {
       <PageHeader
         title="Payments"
       />
-      <FilterChips className="pl-main-tabs" ariaLabel="Payments view" items={PAYMENT_VIEWS}
+      <FilterChips ariaLabel="Payments view" items={PAYMENT_VIEWS}
         value={view} onChange={changeView} controls="pl-workspace" />
 
       <div id="pl-workspace" role="tabpanel" aria-label={PAYMENT_VIEWS.find((item) => item.value === view)?.label}>

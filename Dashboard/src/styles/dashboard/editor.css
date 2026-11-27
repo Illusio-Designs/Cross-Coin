@@ -35,7 +35,7 @@
   display: flex; justify-content: space-between; align-items: center; gap: 8px 10px; flex-wrap: wrap;
   padding: 8px 10px; border-bottom: 1px solid var(--ds-color-border);
 }
-.ed-modes, .ed-devices {
+.ed-devices {
   display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--ds-color-surface-soft);
 }
 .ed-mode {

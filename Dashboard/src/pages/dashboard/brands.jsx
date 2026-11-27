@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import { brandService, brandSettingsService, facebookCapiService, googleAnalyticsService } from '../../services';
-import { PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar, Select } from '../../components/ui';
+import { FilterChips, PageHeader, StatusPill, EmptyState, ErrorState, Skeleton, SkeletonForm, ConfirmBar, Select } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { queryKeys } from '../../lib/queryClient';
 
@@ -729,16 +729,14 @@ export function BrandManager() {
               />
             )}
 
-            <div role="tablist" aria-label="Section" className="oss-tabs">
-              {sections.map((s) => {
+            <FilterChips ariaLabel="Brand settings section" value={section.key} onChange={setTab}
+              items={sections.map((s) => {
                 const n = tabWarn(s.key).length;
-                return (
-                  <button key={s.key} type="button" role="tab" aria-selected={section.key === s.key} className={`oss-tab${section.key === s.key ? ' is-on' : ''}`} onClick={() => setTab(s.key)}>
-                    {s.title}{n > 0 && <span className="oss-tabwarn" aria-label={`${n} warning${n === 1 ? '' : 's'}`}>!</span>}
-                  </button>
-                );
-              })}
-            </div>
+                return {
+                  value: s.key,
+                  label: <>{s.title}{n > 0 && <span className="oss-tabwarn" aria-label={`${n} warning${n === 1 ? '' : 's'}`}>!</span>}</>,
+                };
+              })} />
 
             <section className="oss-card oss-section" aria-label={section.title}>
               <div className="oss-section-head">

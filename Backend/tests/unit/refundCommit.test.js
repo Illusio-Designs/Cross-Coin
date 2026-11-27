@@ -92,3 +92,9 @@ test('simultaneous refund requests serialize on the order and re-read the paymen
  expect(gateway.createRefund).toHaveBeenCalledTimes(1);expect(Payment.create).toHaveBeenCalledTimes(1);
  expect(Payment.findByPk).toHaveBeenCalledWith(10,expect.objectContaining({lock:true}));
 });
+
+test('a custom refund keeps paise precision for a direct Razorpay payment',async()=>{
+ releaseCommit();await expect(processRefund({...options,amount:'219.35'})).resolves.toMatchObject({refund:{amount:219.35,is_partial:true}});
+ expect(gateway.createRefund).toHaveBeenCalledWith('pay_fixture',expect.objectContaining({amount:219.35,brandId:3}));
+ expect(Payment.create).toHaveBeenCalledWith(expect.objectContaining({amount_paid:-21935}),expect.anything());
+});

@@ -99,7 +99,7 @@
 @keyframes ui-spin { to { transform: rotate(360deg); } }
 
 /* ── FilterChips ────────────────────────────────────────────────── */
-.ui-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ui-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
 .ui-chip {
   display: inline-flex;
   align-items: center;
@@ -119,6 +119,39 @@
 .ui-chip.is-on:hover { background: var(--ds-color-text); border-color: var(--ds-color-text); color: var(--ds-color-surface); font-weight: 700; }
 .ui-chip:disabled { opacity: 0.5; cursor: not-allowed; }
 .ui-chip__count { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 900px) {
+  .ui-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    border-bottom: 1px solid var(--ds-color-border);
+  }
+  .web-bar > .ui-chips,
+  .rvw-toolbar > .ui-chips,
+  .wpa-toolbar > .ui-chips,
+  .obz-home .panel-h > .ui-chips { flex-basis: 100%; }
+  .ui-chips .ui-chip {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 11px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+  .ui-chips .ui-chip:hover:not(:disabled) { border-bottom-color: var(--ds-color-border); }
+  .ui-chips .ui-chip.is-on,
+  .ui-chips .ui-chip.is-on:hover {
+    background: transparent;
+    color: var(--ds-color-text);
+    border-bottom-color: currentColor;
+  }
+  .ui-chips .ui-chip:focus-visible { outline-offset: -2px; }
+}
 
 /* ── SidePanel ──────────────────────────────────────────────────── */
 .ui-panel-root { position: fixed; inset: 0; z-index: 1200; }

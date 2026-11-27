@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Add01Icon, Search01Icon, Alert02Icon, Delete02Icon, Copy01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
-import { Select, Skeleton, SkeletonList, SkeletonText } from '../ui';
+import { FilterChips, Select, Skeleton, SkeletonList, SkeletonText } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Templates — the pre-approved messages WhatsApp lets a store use to
@@ -564,14 +564,8 @@ export default function TemplatesPage({ brandId = '', brands = [], isAdmin = fal
       <div className="wpa-split">
         <div className="wpa-main">
           <div className="wpa-toolbar">
-            <div className="wpa-tabs" role="tablist" aria-label="Status">
-              {TABS.map((t) => (
-                <button key={t.key} type="button" role="tab" className="wpa-tab" aria-selected={tab === t.key ? 'true' : 'false'}
-                  onClick={() => setTab(t.key)}>
-                  {t.label} <span className="wpa-tab-n">{list ? counts[t.key] : ''}</span>
-                </button>
-              ))}
-            </div>
+            <FilterChips ariaLabel="Template status" value={tab} onChange={setTab}
+              items={TABS.map(({ key, label }) => ({ value: key, label, count: list ? counts[key] : undefined }))} />
             <div className="wpa-search">
               <HugeiconsIcon icon={Search01Icon} size={15} strokeWidth={2} />
               <input type="search" className="wpa-input" placeholder="Search templates" aria-label="Search templates"

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { ReportFiltersContext, useReportFiltersProvider } from '../../../lib/reportFilters';
+import { FilterChips } from '../../../components/ui';
 import Reports from './reports';
 import MarketingOrdersReport from './marketingOrdersReport';
 import RevenueProfitReport from './revenueProfit';
@@ -93,14 +94,8 @@ export default function ReportHub({ group = 'sales', initialTab = null }) {
   return (
     <ReportFiltersContext.Provider value={filters}>
       <div className="rhub">
-        <nav className="rhub-tabs" aria-label={`${g.title} sections`}>
-          {tabs.map((t) => (
-            <button key={t.key} type="button" className={`rhub-tab${t.key === current.key ? ' is-on' : ''}`}
-              aria-current={t.key === current.key ? 'page' : undefined} onClick={() => setTab(t.key)}>
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <FilterChips ariaLabel={`${g.title} sections`} value={current.key} onChange={setTab}
+          items={tabs.map(({ key, label }) => ({ value: key, label }))} />
         {/* key: each tab mounts fresh (its own queries); filters come from the provider */}
         <Body key={current.key} />
       </div>

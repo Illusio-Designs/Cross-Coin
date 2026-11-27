@@ -15,13 +15,13 @@ const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
  * Keyboard: ←/→ (and Home/End) move between chips and pick them; only the
  * picked chip is in the Tab order. `controls` = id of the list it filters.
  */
-export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className, itemClassName, revealSelected = false }) {
+export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className }) {
   const refs = useRef([]);
   const listRef = useRef(null);
   const pick = (i) => {
     const it = items[i];
     if (!it || it.disabled) return;
-    refs.current[i]?.focus();
+    refs.current[i]?.focus({ preventScroll: true });
     if (it.value !== value) onChange?.(it.value);
   };
   const onKeyDown = (e, i) => {
@@ -38,7 +38,7 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
   useEffect(() => {
     const list = listRef.current;
     const active = refs.current[activeIndex];
-    if (!revealSelected || !list || !active) return;
+    if (!list || !active) return;
     const reveal = () => {
       if (list.scrollWidth <= list.clientWidth) return;
       const viewport = list.getBoundingClientRect();
@@ -50,7 +50,7 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
     reveal();
     window.addEventListener('resize', reveal);
     return () => window.removeEventListener('resize', reveal);
-  }, [activeIndex, value, hasCounts, revealSelected]);
+  }, [activeIndex, value, hasCounts]);
 
   return (
     <div ref={listRef} className={clsx('ui-chips', className)} role="tablist" aria-label={ariaLabel}>
@@ -66,7 +66,7 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
             aria-controls={controls}
             tabIndex={i === selectedIndex ? 0 : -1}
             disabled={it.disabled}
-            className={clsx('ui-chip', itemClassName, on && 'is-on')}
+            className={clsx('ui-chip', on && 'is-on')}
             onClick={() => pick(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
           >

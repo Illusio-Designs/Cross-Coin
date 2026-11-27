@@ -763,11 +763,11 @@ export const orderService = {
     }
   },
 
-  // Refund a prepaid order's Razorpay payment (full by default). Also retries a
+  // Refund a prepaid order to its original payment (full by default). Also retries a
   // refund stuck at refund_pending.
-  refundOrder: async (orderId, reason) => {
+  refundOrder: async (orderId, reason, amount) => {
     try {
-      const response = await adminApi.put(`/api/orders/${orderId}/refund`, { reason });
+      const response = await adminApi.put(`/api/orders/${orderId}/refund`, { reason, amount });
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -1141,9 +1141,9 @@ export const paymentService = {
       return (await adminApi.get('/api/payments/admin/razorpay/missing-orders', { params: { date }, signal, timeout: 60000 })).data;
     } catch (error) { throw payErr(error); }
   },
-  checkRazorpayPayment: async (paymentRef) => {
+  checkRazorpayPayment: async (paymentRef, date) => {
     try {
-      return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`)).data;
+      return (await adminApi.get(`/api/payments/admin/razorpay/${encodeURIComponent(paymentRef)}`, { params: { date }, timeout: 60000 })).data;
     } catch (error) { throw payErr(error); }
   },
   recoverRazorpayPayment: async (paymentRef, shiprocket, signal) => {
@@ -1152,6 +1152,7 @@ export const paymentService = {
         shiprocket ? {
           source: 'shiprocket',
           verify_only: shiprocket.verifyOnly === true,
+          ...(shiprocket.date ? { payment_date: shiprocket.date } : {}),
           ...(shiprocket.ref ? { shiprocket_order_id: shiprocket.ref, brand_id: shiprocket.brandId } : {}),
         } : {}, { signal, timeout: shiprocket ? 120000 : 45000 })).data;
     } catch (error) { throw payErr(error); }

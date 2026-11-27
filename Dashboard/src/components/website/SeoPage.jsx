@@ -120,7 +120,7 @@ export default function SeoPage({ initialTab = 'fix' }) {
       <Score o={o} loading={ov.loading || !brandId} error={ov.error} onRetry={() => ov.reload()} onGo={pickTab} />
 
       <div className="web-bar">
-        <FilterChips ariaLabel="SEO section" controls="seo-tab-content" className="web-tabs" itemClassName="web-tab"
+        <FilterChips ariaLabel="SEO section" controls="seo-tab-content"
           items={TABS.map(({ id, label }) => ({ value: id, label, count: counts[id] }))}
           value={current.id} onChange={pickTab} />
         {current.search && (

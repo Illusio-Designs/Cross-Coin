@@ -1,5 +1,11 @@
+function razorpayPaymentReferences(entry) {
+  return [entry.razorpay_payment_id, entry.pg_transaction_id, entry.txn_id]
+    .filter((id) => typeof id === 'string' && /^pay_[a-zA-Z0-9]{6,64}$/.test(id));
+}
+
 function razorpayOrderReferences(entry) {
-  return [entry.razorpay_order_id, entry.pg_order_id, entry.gateway_order_id, entry.pg_transaction_id, entry.txn_id]
+  return [entry.razorpay_order_id, entry.pg_order_id, entry.gateway_order_id, entry.pg_transaction_id, entry.txn_id,
+    entry.platform_order_id && entry.order_id]
     .filter((id) => typeof id === 'string' && /^order_[a-zA-Z0-9]{6,64}$/.test(id));
 }
 
@@ -23,8 +29,7 @@ function verifyShiprocketRecovery(order, orderId, payment) {
   const matched = candidates.filter((entry) => {
     if ([entry.payment_method, entry.payment_type, entry.payment_mode, entry.gateway, entry.mode]
       .some((value) => /^(cod|cash[\s_-]*on[\s_-]*delivery|cash)$/i.test(String(value || '').trim()))) return false;
-    const ids = [entry.razorpay_payment_id, entry.pg_transaction_id, entry.txn_id, order.razorpay_payment_id]
-      .filter((id) => typeof id === 'string' && /^pay_/.test(id));
+    const ids = [...razorpayPaymentReferences(entry), ...razorpayPaymentReferences(order)];
     const orderIds = [...razorpayOrderReferences(entry), ...razorpayOrderReferences(order)];
     if (orderIds.some((id) => id !== payment.order_id)) return false;
     if (ids.length) return ids.includes(payment.id) && ids.every((id) => id === payment.id);
@@ -37,4 +42,4 @@ function verifyShiprocketRecovery(order, orderId, payment) {
   }
 }
 
-module.exports = { razorpayOrderReferences, verifyShiprocketRecovery, canImportCapturedCheckout };
+module.exports = { razorpayPaymentReferences, razorpayOrderReferences, verifyShiprocketRecovery, canImportCapturedCheckout };

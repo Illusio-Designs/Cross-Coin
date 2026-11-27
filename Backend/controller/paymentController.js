@@ -40,18 +40,7 @@ module.exports.adminPaymentMismatches = async (req, res) => {
     catch (error) { adminFail(res, error, 'the Razorpay check'); }
 };
 
-function istPaymentDay(date) {
-    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return null;
-    }
-    const utc = new Date(`${date}T00:00:00Z`);
-    const from = Date.parse(`${date}T00:00:00+05:30`) / 1000;
-    const now = Math.floor(Date.now() / 1000);
-    if (!Number.isFinite(from) || from <= 0 || from > now || utc.toISOString().slice(0, 10) !== date) {
-        return null;
-    }
-    return { from, until: Math.min(now, from + 86399) };
-}
+const { istPaymentDay } = require('../services/sharedRazorpayPayments.js');
 
 module.exports.adminMissingRazorpayOrders = async (req, res) => {
     const { date } = req.query;
@@ -84,7 +73,7 @@ async function checkRazorpayReference(req, res, recover = false) {
             return await recoverShiprocketOrder(req, res, paymentRef);
         }
         const { lookupRazorpayPayment, reconcileOrphanPayment } = require('../services/paymentReconciliationService.js');
-        const result = await lookupRazorpayPayment(paymentRef);
+        const result = await lookupRazorpayPayment(paymentRef, req.query?.date);
         if (result.error) return res.status(result.status).json({ message: result.error });
         if (!recover) {
             const { localPaymentId, ...lookup } = result;
@@ -141,7 +130,7 @@ async function recoverShiprocketOrder(req, res, paymentRef) {
         hint = { ref, brandId };
     }
     try {
-        const result = await manual(paymentRef, { hint, actorId: req.user?.id, verifyOnly });
+        const result = await manual(paymentRef, { hint, actorId: req.user?.id, verifyOnly, date: req.body?.payment_date });
         if (verifyOnly) return res.json({ success: true, order: result.existing, checkoutRef: result.checkoutRef,
             brandId: result.brandId, orderBrandId: result.orderBrandId, itemCount: result.itemCount });
         if (!result.order) return res.status(409).json({ message: result.reason, recoveryState: result.state });

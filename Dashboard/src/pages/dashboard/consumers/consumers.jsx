@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { Skeleton, SkeletonTableRows } from "../../../components/ui";
+import { FilterChips, SkeletonTableRows } from "../../../components/ui";
 import { ConfirmModal } from "../../../components/common/AlertModal";
 import Dropdown from "../../../components/ui/Dropdown";
 import { PageHeader } from "../../../components/Dashboard/primitives";
@@ -161,7 +161,7 @@ export default function Consumers() {
   const total = data?.total || 0;
   const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = Math.min(total, page * PAGE_SIZE);
-  const segLabel = SEGMENTS.find((s) => s.key === segment)?.label || "Everyone";
+  const activeSegment = SEGMENTS.find((s) => s.key === segment);
   const brandName = brandId ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name || "this brand") : "";
 
   const download = async () => {
@@ -199,7 +199,7 @@ export default function Consumers() {
     ? { title: "No customers match your search", body: "Try a full 10-digit phone number, a name, an email or an order number." }
     : segment === "all"
       ? { title: "No customers yet", body: "People appear here once they sign up, order, or leave a cart." }
-      : { title: `No one in “${segLabel}”`, body: brandName ? `Nobody for ${brandName} fits this group right now.` : "Nobody fits this group right now." };
+      : { title: `No one in “${activeSegment?.label || "Everyone"}”`, body: brandName ? `Nobody for ${brandName} fits this group right now.` : "Nobody fits this group right now." };
 
   return (
     <div className="dashboard-sections obz-rep cust">
@@ -213,16 +213,11 @@ export default function Consumers() {
         ) : null}
       />
 
-      <section className="cust-segs" aria-label="Customer groups">
-        {SEGMENTS.map((s) => (
-          <button key={s.key} type="button" className={`cust-seg${segment === s.key ? " is-on" : ""}`}
-            aria-pressed={segment === s.key} onClick={() => pickSegment(s.key)}>
-            <span className="cust-seg-label">{s.label}</span>
-            <span className="cust-seg-n num">{data ? num(counts[s.key]) : isLoading ? <Skeleton w={48} h={26} /> : "–"}</span>
-            <span className="cust-seg-note">{s.note}</span>
-          </button>
-        ))}
-      </section>
+      <div className="cust-group-nav">
+        <FilterChips ariaLabel="Customer groups" value={segment} onChange={pickSegment}
+          items={SEGMENTS.map(({ key, label }) => ({ value: key, label, count: data ? counts[key] ?? 0 : null }))} />
+        {activeSegment?.note && <p className="cust-sub">{activeSegment.note}</p>}
+      </div>
 
       <div className="cust-controls">
         <label className="cust-search">

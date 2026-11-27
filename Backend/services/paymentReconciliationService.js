@@ -101,15 +101,15 @@ function recoveryBlock(payment, truth, session) {
   return null;
 }
 
-async function lookupRazorpayPayment(paymentRef) {
+async function lookupRazorpayPayment(paymentRef, date) {
+  const { getSharedPayment } = require('./sharedRazorpayPayments.js');
   let truth;
   try {
-    truth = await razorpayService.getPayment(paymentRef);
+    truth = await getSharedPayment(paymentRef, { date });
   } catch (error) {
-    logger.warn(`[reconcile] Shared Razorpay lookup failed: ${error.message}`);
-    return { error: 'Couldn’t find this payment in the shared Razorpay account. Check the payment ID.', status: 502 };
+    if (!error.status) throw error;
+    return { error: error.message, status: error.status };
   }
-  if (!truth || truth.id !== paymentRef) return { error: 'Razorpay payment not found.', status: 404 };
 
   const { findRazorpayOrderMatches } = require('./razorpayOrderMatching');
   const matches = await findRazorpayOrderMatches([truth]);

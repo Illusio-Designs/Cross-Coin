@@ -20,6 +20,7 @@ import {
 } from '@hugeicons/core-free-icons';
 import { productService, brandService } from '../../services';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
+import FilterChips from '../ui/FilterChips';
 import { Skeleton, SkeletonText } from '../ui/Skeleton';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -710,11 +711,8 @@ const Editor = ({
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; fileInputRef.current?.onPick?.(f); }} />
 
       <div className="ed-top">
-        <div className="ed-modes" role="tablist" aria-label="Editor mode">
-          {modes.map(([id, label]) => (
-            <button key={id} type="button" role="tab" aria-selected={mode === id} className={`ed-mode${mode === id ? ' is-on' : ''}`} onClick={() => switchMode(id)}>{label}</button>
-          ))}
-        </div>
+        <FilterChips ariaLabel="Editor mode" value={mode} onChange={switchMode}
+          items={modes.map(([value, label]) => ({ value, label }))} />
         <span className="ed-stats" aria-live="polite">
           {uploading ? 'Uploading photo… · ' : ''}{words} {words === 1 ? 'word' : 'words'} · {minutes} min read
         </span>

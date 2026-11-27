@@ -8,10 +8,11 @@ import ProductEditor from '../../../components/products/ProductEditor';
 import SeoBulkPanel from '../../../components/products/SeoBulkPanel';
 import { Skeleton, SkeletonTableRows } from '../../../components/ui/Skeleton';
 import Dropdown from '../../../components/ui/Dropdown';
+import FilterChips from '../../../components/ui/FilterChips';
 import { ConfirmModal } from '../../../components/common/AlertModal';
 
 /*
- * Products — stock first. Tiles filter the list (same thresholds as Home's
+ * Products — stock first. Tabs filter the list (same thresholds as Home's
  * "Out of stock → Restock" queue), brand chips + search narrow it, and each
  * product opens to its sizes where stock is typed straight in (Enter or
  * leaving the box saves). Editing a product's details opens a full-page
@@ -243,14 +244,15 @@ export default function ProductsPage() {
   const counts = data?.counts || {};
   const rules = data?.rules || { lowStock: 10, slowMinStock: 30, slowDays: 180 };
   const brandName = brands.find((b) => String(b.id) === String(brandId));
-  const tiles = [
-    { key: 'all', label: 'All products', value: counts.all, note: brandName ? `on ${brandName.display_name || brandName.name}` : `across ${plural(brands.length || 0, 'brand')}`, tone: '' },
-    { key: 'out', label: 'Out of stock', value: counts.out, note: counts.outSizes != null ? `${plural(counts.outSizes, 'size')} at 0${counts.waitingOut ? ` · ${plural(counts.waitingOut, 'customer')} waiting` : ''}` : '', tone: 'out' },
-    { key: 'low', label: 'Running low', value: counts.low, note: `a size has fewer than ${rules.lowStock} left`, tone: 'low' },
-    { key: 'slow', label: 'Slow movers', value: counts.slow, note: `${rules.slowMinStock}+ in stock, over ${Math.round(rules.slowDays / 30)} months to sell`, tone: 'slow' },
-    { key: 'hidden', label: 'Hidden on site', value: counts.hidden, note: 'not shown to shoppers', tone: 'muted' },
-    { key: 'missing_cost', label: 'Missing cost price', value: counts.missingCost, note: 'products with uncosted variations', tone: 'low' },
+  const stockTabs = [
+    { value: 'all', label: 'All products', count: counts.all, note: brandName ? `on ${brandName.display_name || brandName.name}` : `across ${plural(brands.length || 0, 'brand')}` },
+    { value: 'out', label: 'Out of stock', count: counts.out, note: counts.outSizes != null ? `${plural(counts.outSizes, 'size')} at 0${counts.waitingOut ? ` · ${plural(counts.waitingOut, 'customer')} waiting` : ''}` : '' },
+    { value: 'low', label: 'Running low', count: counts.low, note: `a size has fewer than ${rules.lowStock} left` },
+    { value: 'slow', label: 'Slow movers', count: counts.slow, note: `${rules.slowMinStock}+ in stock, over ${Math.round(rules.slowDays / 30)} months to sell` },
+    { value: 'hidden', label: 'Hidden on site', count: counts.hidden, note: 'not shown to shoppers' },
+    { value: 'missing_cost', label: 'Missing cost price', count: counts.missingCost, note: 'products with uncosted variations' },
   ];
+  const stockNote = data && stockTabs.find((tab) => tab.value === filter)?.note;
   const total = data?.total ?? 0;
   const pages = Math.max(1, data?.pages || 1);
   const from = total ? (page - 1) * PAGE_SIZE + 1 : 0;
@@ -297,15 +299,10 @@ export default function ProductsPage() {
         </div>
       </header>
 
-      <section className="pst-tiles" aria-label="Stock health">
-        {tiles.map((t) => (
-          <button key={t.key} type="button" className={`pst-tile${filter === t.key ? ' is-on' : ''}`} aria-pressed={filter === t.key} onClick={() => setFilter(t.key)}>
-            <span className="pst-tile-l">{t.label}</span>
-            <span className={`pst-tile-v ${t.tone ? `tone-${t.tone}` : ''}`}>{t.value == null ? (firstLoad ? <Skeleton w="45%" h={24} /> : '—') : Number(t.value).toLocaleString('en-IN')}</span>
-            <span className="pst-tile-n">{firstLoad && t.value == null ? <Skeleton w="80%" h={10} /> : t.note}</span>
-          </button>
-        ))}
-      </section>
+      <div className="pst-stock-nav">
+        <FilterChips ariaLabel="Stock health" items={stockTabs} value={filter} onChange={setFilter} />
+        {stockNote && <p className="pst-sub">{stockNote}</p>}
+      </div>
 
       <div className="pst-bar">
         <label className="pst-search">

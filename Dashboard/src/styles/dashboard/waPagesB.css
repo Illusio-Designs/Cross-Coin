@@ -43,7 +43,6 @@
 .wpb-chip:hover { color: var(--ds-color-text); border-color: var(--ds-color-text-faint); }
 .wpb-chip.is-on { background: var(--ds-color-text); border-color: var(--ds-color-text); color: var(--ds-color-surface); }
 .wpb-chip--sm { min-height: 30px; padding: 0 11px; font-size: 12px; }
-.wpb-chip-n { opacity: 0.7; font-variant-numeric: tabular-nums; }
 .wpb-chip:focus-visible, .wpb-btn:focus-visible, .wpb-token:focus-visible, .wpb-link:focus-visible, .wpb-qr-row:focus-visible {
   outline: 2px solid var(--ds-color-info); outline-offset: 2px;
 }

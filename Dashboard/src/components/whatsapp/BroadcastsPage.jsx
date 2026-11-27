@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon, Add01Icon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showError, showSuccess } from '../../utils/toastNotification';
-import { SkeletonTableRows } from '../ui';
+import { FilterChips, SkeletonTableRows } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Broadcasts — one template message to many customers.
@@ -297,14 +297,8 @@ export default function BroadcastsPage({ brandId = '', brands = [], isAdmin = fa
         </div>
       </section>
 
-      <div className="wpa-tabs" role="tablist" aria-label="Status">
-        {TABS.map((t) => (
-          <button key={t.key} type="button" role="tab" className="wpa-tab" aria-selected={tab === t.key ? 'true' : 'false'}
-            onClick={() => { setTab(t.key); setConfirm(null); }}>
-            {t.label} <span className="wpa-tab-n">{rows ? counts[t.key] : ''}</span>
-          </button>
-        ))}
-      </div>
+      <FilterChips ariaLabel="Broadcast status" value={tab} onChange={(next) => { setTab(next); setConfirm(null); }}
+        items={TABS.map(({ key, label }) => ({ value: key, label, count: rows ? counts[key] : undefined }))} />
 
       <section className={`wpa-card${loading && rows ? ' is-stale' : ''}`} aria-label="Broadcasts" aria-busy={loading || undefined}>
         {error ? (

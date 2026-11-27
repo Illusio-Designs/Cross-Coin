@@ -18,6 +18,7 @@ import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
+import RefundAmountInput, { formatRefundAmount, validRefundAmount } from "../../../components/orders/RefundAmountInput";
 import OrderStory from '../../../components/orders/OrderStory';
 import ExceptionsDesk from '../exceptions/ExceptionsDesk';
 import { PageHeader, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
@@ -289,6 +290,8 @@ const Orders = ({ initialTab } = {}) => {
     const [confirmPrompt, setConfirmPrompt] = useState(null);
     const [deletePrompt, setDeletePrompt] = useState(null);
     const [refundPrompt, setRefundPrompt] = useState(null);
+    const [refunding, setRefunding] = useState(false);
+    const [refundError, setRefundError] = useState("");
     const [rtoReceiptPrompt, setRtoReceiptPrompt] = useState(null);
     // Summary tiles — same numbers as Reports › Overview for the picked range
     // (last 30 days when no range is picked).
@@ -581,23 +584,28 @@ const Orders = ({ initialTab } = {}) => {
         } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to cancel order'); }
     };
 
-    const refundOrder = (orderId, orderNumber, amount) => {
-        setRefundPrompt({ orderId, orderNumber, amount });
+    const refundOrder = (order) => {
+        const maximum = Math.round(Number(order.final_amount ?? getOrderTotal(order)) * 100) / 100;
+        setRefundError("");
+        setRefundPrompt({ orderId: order.id, orderNumber: order.order_number, maximum, amount: maximum > 0 ? maximum.toFixed(2) : "" });
     };
 
     const handleRefundConfirm = async () => {
-        const { orderId, orderNumber } = refundPrompt;
-        setRefundPrompt(null);
+        if (!refundPrompt || refunding || !validRefundAmount(refundPrompt.amount, refundPrompt.maximum)) return;
+        const { orderId, orderNumber, amount } = refundPrompt;
+        setRefunding(true);
+        setRefundError("");
         try {
-            const result = await orderService.refundOrder(orderId);
-            if (result.success) {
-                showSuccess('orderRefunded', `Refund processed for order ${orderNumber}`);
-                highlightRow(orderId);
-                fetchOrders(currentPage, { silent: true });
-                fetchAllOrdersForStats();
-            }
-            else { showError('saveFailed', result.message || 'Failed to process refund'); }
-        } catch (error) { showError('saveFailed', error.message || error.error || 'Failed to process refund'); }
+            const result = await orderService.refundOrder(orderId, undefined, amount.trim());
+            if (!result.success) throw new Error(result.message || 'Failed to process refund');
+            setRefundPrompt(null);
+            showSuccess('orderRefunded', `Refund of ${formatRefundAmount(amount)} submitted for order ${orderNumber}`);
+            highlightRow(orderId);
+            fetchOrders(currentPage, { silent: true });
+            fetchAllOrdersForStats();
+        } catch (error) {
+            setRefundError(error.message || error.error || 'Failed to process refund');
+        } finally { setRefunding(false); }
     };
 
     const deleteOrder = (orderId, orderNumber) => {
@@ -904,7 +912,7 @@ const Orders = ({ initialTab } = {}) => {
         else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
         else if (ndr) primary = { label: 'Resolve NDR', onClick: () => openDesk('ndr', row.order_number) };
         else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => openDesk(ret.status === 'received' ? 'refund' : 'return', row.order_number) };
-        else if (canRefund) primary = { label: pmt === 'refund_pending' ? 'Retry refund' : 'Refund', onClick: () => refundOrder(row.id, row.order_number) };
+        else if (canRefund) primary = { label: pmt === 'refund_pending' ? 'Retry refund' : 'Refund', onClick: () => refundOrder(row) };
         else if (waybill && !row.shipping_label_url && !isFinal && !rtoReceived && st !== 'rto') primary = { label: generatingLabel.has(row.id) ? 'Getting…' : 'Get label', disabled: generatingLabel.has(row.id), onClick: () => generateLabelForOrder(row.id) };
         else if (st === 'delivered') primary = { label: 'Invoice', onClick: () => downloadInvoice(row.id, row.order_number) };
 
@@ -1087,7 +1095,7 @@ const Orders = ({ initialTab } = {}) => {
                     ...(s.pendingSync ? [{ icon: <HugeiconsIcon icon={LinkSquare02Icon} size={16} strokeWidth={2} />, label: 'Enter AWB manually', onClick: () => handleAwbUpdate(row.id, s.waybill, row.Shipment?.courier_name || row.courier_name) }] : []),
                     ...(s.waybill ? [{ icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Regenerate label', onClick: () => generateLabelForOrder(row.id) }] : []),
                     ...(s.wa ? [{ icon: <HugeiconsIcon icon={WhatsappIcon} size={16} strokeWidth={2} />, label: 'Open WhatsApp chat', onClick: () => openChat(s.wa.conversation_id) }] : []),
-                    ...(s.canRefund && s.primary.label !== 'Refund' && s.primary.label !== 'Retry refund' ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: s.pmt === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row.id, row.order_number) }] : []),
+                    ...(s.canRefund && s.primary.label !== 'Refund' && s.primary.label !== 'Retry refund' ? [{ icon: <HugeiconsIcon icon={RefreshIcon} size={16} strokeWidth={2} />, label: s.pmt === 'refund_pending' ? 'Retry refund' : 'Refund customer', onClick: () => refundOrder(row) }] : []),
                     { icon: <HugeiconsIcon icon={File01Icon} size={16} strokeWidth={2} />, label: 'Download invoice', onClick: () => downloadInvoice(row.id, row.order_number) },
                     ...(s.canCancel ? [{ icon: <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />, label: 'Cancel order', tone: 'danger', onClick: () => cancelOrder(row.id, row.order_number) }] : []),
                     { icon: <HugeiconsIcon icon={Delete02Icon} size={16} strokeWidth={2} />, label: 'Delete order', tone: 'danger', onClick: () => deleteOrder(row.id, row.order_number) },
@@ -1134,14 +1142,21 @@ const Orders = ({ initialTab } = {}) => {
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeletePrompt(null)}
             />
-            <ConfirmModal
-                message={refundPrompt ? `Refund the full paid amount for order ${refundPrompt.orderNumber} to the customer via Razorpay? This cannot be undone.` : null}
-                title="Refund order"
-                confirmLabel="Refund customer"
-                tone="primary"
-                onConfirm={handleRefundConfirm}
-                onCancel={() => setRefundPrompt(null)}
-            />
+            <Modal isOpen={!!refundPrompt} onClose={refunding ? undefined : () => setRefundPrompt(null)}
+                title="Refund prepaid order" size="sm" closeOnOverlayClick={false} closeOnEscape={!refunding}
+                showCloseButton={!refunding}
+                footer={refundPrompt && <>
+                    <Button variant="ghost" disabled={refunding} onClick={() => setRefundPrompt(null)}>Cancel</Button>
+                    <Button disabled={!validRefundAmount(refundPrompt.amount, refundPrompt.maximum)} loading={refunding}
+                        onClick={handleRefundConfirm}>Confirm refund</Button>
+                </>}>
+                {refundPrompt && <div style={{ display: 'grid', gap: 12 }}>
+                    <p>Send money back to the original payment for {refundPrompt.orderNumber}.</p>
+                    <RefundAmountInput value={refundPrompt.amount} maximum={refundPrompt.maximum} disabled={refunding}
+                        onChange={(amount) => { setRefundError(""); setRefundPrompt((current) => ({ ...current, amount })); }} />
+                    {refundError && <p role="alert" style={{ color: 'var(--ds-color-danger-text)' }}>{refundError}</p>}
+                </div>}
+            </Modal>
             <ConfirmModal
                 message={rtoReceiptPrompt ? `Confirm that the warehouse physically received the parcel for ${rtoReceiptPrompt.order_number}${orderWaybill(rtoReceiptPrompt) ? ` (AWB ${orderWaybill(rtoReceiptPrompt)})` : ''}.` : null}
                 title="Verify warehouse receipt"
@@ -1218,11 +1233,11 @@ const Orders = ({ initialTab } = {}) => {
                         )}
                     </section>
 
-                    <FilterChips className="ord-tabs" revealSelected ariaLabel="Order pipeline stages"
+                    <FilterChips ariaLabel="Order pipeline stages"
                         items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] }))}
                         value={isRtoStage ? 'rto' : statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
 
-                    {isRtoStage && <FilterChips className="ord-tabs" revealSelected ariaLabel="RTO warehouse receipt"
+                    {isRtoStage && <FilterChips ariaLabel="RTO warehouse receipt"
                         items={RTO_FILTERS.map(({ value, label, count }) => ({ value, label, count: deskCounts[count] }))}
                         value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />}
 

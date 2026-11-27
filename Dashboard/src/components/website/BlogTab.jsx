@@ -7,7 +7,7 @@ import { blogService, productService } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
 import ConfirmBar from '../ui/ConfirmBar';
 import EmptyState from '../ui/EmptyState';
-import { Select } from '../ui';
+import { FilterChips, Select } from '../ui';
 import SerpPreview, { brandSiteName } from '../common/SerpPreview';
 import SeoLengthMeter from '../common/SeoLengthMeter';
 import { WebChips, WebBody, WebGridState, webStale, WebPanelSkeleton, WebCard, WebPager, WebPanel, WebField, ViewOnSite, StoreChecks } from './webParts';
@@ -35,11 +35,8 @@ export default function BlogTab(props) {
   const [kind, setKind] = useState('posts');
   return (
     <>
-      <div className="web-seg" role="tablist" aria-label="Blog">
-        {[['posts', 'Posts'], ['categories', 'Categories']].map(([id, label]) => (
-          <button key={id} type="button" role="tab" aria-selected={kind === id} className={`web-seg-btn${kind === id ? ' is-on' : ''}`} onClick={() => setKind(id)}>{label}</button>
-        ))}
-      </div>
+      <FilterChips ariaLabel="Blog" value={kind} onChange={setKind}
+        items={[{ value: 'posts', label: 'Posts' }, { value: 'categories', label: 'Categories' }]} />
       {kind === 'posts' ? <Posts {...props} /> : <Categories {...props} />}
     </>
   );

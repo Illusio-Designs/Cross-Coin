@@ -2178,7 +2178,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     }
   };
 
-  // Admin manual refund — refund a prepaid order's Razorpay payment (full by
+  // Admin manual refund — refund a prepaid order's original payment (full by
   // default). Used by the row "Refund" action, including to RETRY a refund that
   // is stuck at refund_pending. Guards (payment must be paid/refund_pending, the
   // order must be cancelled/returned) live in refundService.processRefund.
@@ -2198,14 +2198,11 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       }
       const { Payment } = require('../model/paymentModel.js');
       const payment = await Payment.findOne({
-        where: { order_id: req.params.id, status: ['successful', 'completed', 'refund_pending'] },
+        where: { order_id: req.params.id, status: ['successful', 'completed', 'refund_pending'], amount_paid: { [Op.gt]: 0 } },
         order: [['createdAt', 'DESC']],
       });
       if (!payment) {
         return res.status(400).json({ success: false, message: 'No refundable payment found for this order.' });
-      }
-      if (!payment.transaction_id || !payment.transaction_id.startsWith('pay_')) {
-        return res.status(400).json({ success: false, message: 'This order has no online (Razorpay) payment to refund.' });
       }
       const { processRefund } = require('../services/refundService.js');
       const result = await processRefund({

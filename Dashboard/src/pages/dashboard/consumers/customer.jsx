@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton, SkeletonTableRows } from '../../../components/ui';
+import { FilterChips, Skeleton, SkeletonTableRows } from '../../../components/ui';
 import { API_BASE_URL } from '../../../services/api/config';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowLeft01Icon, CallIcon, WhatsappIcon, UserMultiple02Icon } from '@hugeicons/core-free-icons';
@@ -233,14 +233,8 @@ function Profile({ data, tab, setTab, openOrder, openChat, refreshing }) {
       <div className="cp-grid">
         {/* ── Tabs ── */}
         <div className="rep-panel rep-panel--flush cp-main">
-          <div className="cp-tabs" role="tablist">
-            {tabs.map((t) => (
-              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
-                className={`cp-tab${tab === t.id ? ' is-on' : ''}`} onClick={() => setTab(t.id)}>
-                {t.label}{t.count ? <span className="cp-tab-n">{t.count}</span> : null}
-              </button>
-            ))}
-          </div>
+          <FilterChips className="cp-tabs" ariaLabel="Customer profile" value={tab} onChange={setTab}
+            items={tabs.map(({ id, label, count }) => ({ value: id, label, count: count || undefined }))} />
           <div className="cp-tab-body">
             {tab === 'orders' && <OrdersTab orders={orders} total={s.orders} openOrder={openOrder} />}
             {tab === 'returns' && <ReturnsTab returns={returns} refunds={refunds} />}
@@ -304,9 +298,9 @@ function ProfileSkeleton() {
       </div>
       <div className="cp-grid" aria-hidden="true">
         <div className="rep-panel rep-panel--flush cp-main">
-          <div className="cp-tabs">
+          <div className="ui-chips cp-tabs">
             {['Orders', 'Returns & refunds', 'WhatsApp', 'Addresses'].map((t, i) => (
-              <span key={t} className={`cp-tab${i === 0 ? ' is-on' : ''}`}>{t}</span>
+              <span key={t} className={`ui-chip${i === 0 ? ' is-on' : ''}`}>{t}</span>
             ))}
           </div>
           <div className="cp-tab-body">
@@ -559,21 +553,7 @@ const CP_CSS = `
 .cp .cp-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
 .cp .cp-main { padding: 0; }
-.cp .cp-tabs {
-  display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--ds-color-border);
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-}
-.cp .cp-tab {
-  display: inline-flex; align-items: center; gap: 6px; padding: 13px 10px 11px; margin-bottom: -1px;
-  background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
-  font: inherit; font-size: 13px; font-weight: 600; color: var(--ds-color-text-muted);
-}
-.cp .cp-tab:hover { color: var(--ds-color-text); }
-.cp .cp-tab.is-on { color: var(--ds-color-text); border-bottom-color: var(--ds-color-text); }
-.cp .cp-tab-n {
-  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center;
-  background: var(--ds-color-surface-soft); border: 1px solid var(--ds-color-border); font-size: 10.5px; font-weight: 700;
-}
+.cp .cp-tabs { padding: 8px 18px; border-bottom: 1px solid var(--ds-color-border); }
 .cp .cp-tab-body { padding: 0 18px; }
 .cp .cp-tbl { margin: 0 -18px; }
 .cp .cp-tbl .rep-table td { vertical-align: top; }

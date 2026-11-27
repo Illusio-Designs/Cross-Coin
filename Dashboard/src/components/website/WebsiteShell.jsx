@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import Dropdown from '../ui/Dropdown';
+import FilterChips from '../ui/FilterChips';
 import EmptyState from '../ui/EmptyState';
 import ErrorState from '../ui/ErrorState';
 import { useAuth } from '../../context/AuthContext';
@@ -117,18 +118,8 @@ export default function WebsiteShell({ tab = 'sliders' }) {
       </header>
 
       <div className="web-bar">
-        <div role="tablist" aria-label="Website section" className="web-tabs">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={t.id === current.id}
-              className={`web-tab${t.id === current.id ? ' is-on' : ''}`}
-              onClick={() => { if (t.id !== current.id) goToView(t.view); }}
-            >{t.label}</button>
-          ))}
-        </div>
+        <FilterChips ariaLabel="Website section" value={current.view} onChange={goToView}
+          items={tabs.map(({ view, label }) => ({ value: view, label }))} />
         <div className="web-bar-right">
           {mode && brands.length > 0 && (
             <div className="web-dd" aria-label="Store">

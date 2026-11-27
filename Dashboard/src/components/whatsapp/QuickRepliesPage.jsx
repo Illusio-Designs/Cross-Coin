@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Add01Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 import { adminApi } from '../../services';
 import { showSuccess, showError } from '../../utils/toastNotification';
-import { SkeletonForm } from '../ui';
+import { FilterChips, SkeletonForm } from '../ui';
 
 /* ──────────────────────────────────────────────────────────────
    Quick replies — saved answers the team types often.
@@ -206,14 +206,8 @@ export default function QuickRepliesPage({ brandId = '', brands = [], isAdmin = 
 
       <div className="wpb-split">
         <div className="wpb-split-main">
-          <div className="wpb-chips" role="tablist" aria-label="Topic">
-            {TABS.map((t) => (
-              <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
-                className={`wpb-chip${tab === t.key ? ' is-on' : ''}`} onClick={() => setTab(t.key)}>
-                {t.label}{(!loading || rows.length > 0) && <span className="wpb-chip-n">{counts[t.key] || 0}</span>}
-              </button>
-            ))}
-          </div>
+          <FilterChips ariaLabel="Quick reply topic" value={tab} onChange={setTab}
+            items={TABS.map(({ key, label }) => ({ value: key, label, count: (!loading || rows.length) ? counts[key] || 0 : undefined }))} />
 
           <section className="wpb-card wpb-card--flush" aria-busy={loading}>
             {loading && rows.length === 0 ? (

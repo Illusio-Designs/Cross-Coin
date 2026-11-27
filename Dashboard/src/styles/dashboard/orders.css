@@ -3325,33 +3325,6 @@
 
 /* Order navigation, search and actions */
 .orders-header-container .ds-pageheader { margin-bottom: 0; }
-@media (max-width: 900px) {
-  .ui-chips.ord-tabs {
-    flex-wrap: nowrap;
-    gap: 0;
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
-    border-bottom: 1px solid var(--ds-color-border);
-  }
-  .ord-tabs .ui-chip {
-    flex: 0 0 auto;
-    min-height: 44px;
-    padding: 0 11px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-  }
-  .ord-tabs .ui-chip:hover:not(:disabled) { border-bottom-color: var(--ds-color-border); }
-  .ord-tabs .ui-chip.is-on,
-  .ord-tabs .ui-chip.is-on:hover {
-    background: transparent;
-    color: var(--ds-color-text);
-    border-bottom-color: currentColor;
-  }
-  .ord-tabs .ui-chip:focus-visible { outline-offset: -2px; }
-}
 .ord-tools { position: relative; }
 .ord-tools summary { list-style: none; }
 .ord-tools summary:focus-visible { outline: 2px solid var(--ds-color-brand); outline-offset: 2px; }

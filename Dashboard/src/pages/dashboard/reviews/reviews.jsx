@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Modal, Pagination, Skeleton } from '../../../components/ui';
+import { FilterChips, Modal, Pagination, Skeleton } from '../../../components/ui';
 import Dropdown from '../../../components/ui/Dropdown';
 import { PageHeader } from '../../../components/Dashboard/primitives';
 import { reviewService, brandService } from '../../../services';
@@ -574,14 +574,8 @@ export default function Reviews() {
       </PageHeader>
 
       <div className="rvw-toolbar">
-        <div className="rvw-tabs" role="tablist" aria-label="Review status">
-          {TABS.map((t) => (
-            <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
-              className={`rvw-tab${tab === t.key ? ' on' : ''}`} onClick={() => setTab(t.key)}>
-              {t.label}<span className="n">{data ? num(counts[t.key]) : <Skeleton w={18} h={11} style={{ display: 'inline-block', verticalAlign: 'middle' }} />}</span>
-            </button>
-          ))}
-        </div>
+        <FilterChips ariaLabel="Review status" value={tab} onChange={setTab}
+          items={TABS.map(({ key, label }) => ({ value: key, label, count: data ? num(counts[key]) : undefined }))} />
         <label className="rvw-search">
           <span className="rvw-sr">Search reviews</span>
           {IC.search}

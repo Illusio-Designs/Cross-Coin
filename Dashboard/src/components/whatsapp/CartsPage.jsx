@@ -263,7 +263,7 @@ export default function CartsPage({ brandId = '', brands = [], isAdmin = false, 
 
       <h2 className="wpb-section-title" id="wa-carts-list-title">Cart activity</h2>
       <div className="wpb-bar-row">
-        <FilterChips className="wpb-chips" itemClassName="wpb-chip" ariaLabel="Status" controls="wa-carts-list"
+        <FilterChips ariaLabel="Status" controls="wa-carts-list"
           items={TABS.map(({ key, label }) => ({ value: key, label, count: counts?.[key] }))} value={tab} onChange={setTab} />
         <span className="wpb-hint">No phone number = can’t message. Those show as “No number”.</span>
       </div>
