@@ -1304,11 +1304,15 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
 
   // Get all orders (admin)
   // Order Desk work queues → Sequelize where. Returns a fresh object each time.
+  const { fulfillmentStageSql, pickedUpStatus } = require('../services/orderFulfillmentStages.js');
+  const fulfillment = fulfillmentStageSql('Order');
+  const fulfillmentStage = (sql) => ({ [Op.and]: [sequelize.literal(sql)] });
   const DESK_STAGES = {
     // COD orders the team still has to call / the customer has to confirm.
     to_confirm: () => ({ status: { [Op.in]: ['awaiting_confirmation', 'pending'] }, payment_type: { [Op.in]: ['cod', 'COD'] } }),
-    // Confirmed but not yet picked up by the courier (booking, labels, pickup).
-    to_ship: () => ({ status: { [Op.in]: ['confirmed', 'processing', 'booked', 'pickup initiated', 'manifested'] } }),
+    to_ship: () => fulfillmentStage(fulfillment.toShip),
+    booked: () => fulfillmentStage(fulfillment.booked),
+    picked_up: () => ({ status: pickedUpStatus }),
     in_transit: () => ({ status: { [Op.in]: ['shipped', 'in transit', 'out for delivery'] } }),
     // Courier could not deliver / shipment stuck.
     problems: () => ({ status: { [Op.in]: ['undelivered', 'exception'] } }),
@@ -1381,7 +1385,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
     try {
       const base = {};
       if (req.query.brand_id && req.query.brand_id !== 'all') base.brand_id = parseInt(req.query.brand_id, 10);
-      const keys = ['to_confirm', 'to_ship', 'in_transit', 'problems', 'refund_due'];
+      const keys = ['to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'problems', 'refund_due'];
       const counts = {};
       await Promise.all(keys.map(async (k) => {
         counts[k] = await Order.count({ where: { ...base, ...DESK_STAGES[k]() } });
@@ -1519,7 +1523,9 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       // Order Desk stages (work queues). Overrides the status / payment-type
       // tabs above. Keep in sync with getDeskCounts below.
       const stage = String(req.query.stage || '').toLowerCase();
-      if (stage && DESK_STAGES[stage]) {
+      const refundDue = ['1', 'true', 'yes'].includes(String(req.query.refund_due || '').toLowerCase());
+      if (!refundDue && Object.hasOwn(DESK_STAGES, stage)) {
+        delete filter.status;
         Object.assign(filter, DESK_STAGES[stage]());
       }
 
@@ -1546,7 +1552,7 @@ const { createBrandPriceResolver } = require('../utils/brandPrice.js');
       // (payment is paid or refund_pending, not yet refunded). Finds orders that
       // need to be refunded — including any cancelled before the refund fix.
       // Overrides the status / payment filters above.
-      if (['1', 'true', 'yes'].includes(String(req.query.refund_due || '').toLowerCase())) {
+      if (refundDue) {
         filter.status = { [Op.in]: ['cancelled', 'order cancelled', 'return_initiated', 'returned_rto', 'rto delivered'] };
         filter.payment_status = { [Op.in]: ['paid', 'refund_pending'] };
         filter.payment_type = { [Op.notIn]: ['cod', 'COD'] };

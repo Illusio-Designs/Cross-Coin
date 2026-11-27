@@ -10,6 +10,7 @@ const ORDER_STATUS = {
   processing: ['progress', 'Processing'],
   booked: ['progress', 'Booked'],
   'pickup initiated': ['progress', 'Pickup Initiated'],
+  'picked up': ['progress', 'Picked up'],
   manifested: ['progress', 'Manifested'],
   'in transit': ['progress', 'In Transit'],
   shipped: ['progress', 'Shipped'],

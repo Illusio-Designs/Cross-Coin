@@ -16,7 +16,7 @@ const num = (v) => Number(v) || 0;
 const pct = (cur, prev) => (prev > 0 ? Math.round(((cur - prev) / prev) * 1000) / 10 : null);
 
 const TO_CONFIRM = `LOWER(o.status) IN ('awaiting_confirmation','pending') AND LOWER(o.payment_type) = 'cod'`;
-const TO_SHIP = `LOWER(o.status) IN ('confirmed','processing','booked','pickup initiated','manifested')`;
+const { toShip: TO_SHIP, booked: BOOKED } = require('./orderFulfillmentStages.js').fulfillmentStageSql('o');
 const IN_TRANSIT = `LOWER(o.status) IN ('shipped','in transit','out for delivery')`;
 const NOT_CANCELLED = `(o.status IS NULL OR LOWER(o.status) NOT IN ('cancelled','order cancelled'))`;
 
@@ -61,10 +61,10 @@ async function getToday({ brandId = null } = {}) {
     [ret], [ndr], [refundFailed], [bookingFailed], wa, stock, reviews, deliveryRows,
   ] = await Promise.all([
     queueCounts.toConfirm(R),
-    q(`SELECT COUNT(*) AS n,
-              SUM(o.shipping_label_url IS NOT NULL AND (o.shipping_label_downloaded IS NULL OR o.shipping_label_downloaded = 0)) AS labels_pending,
-              SUM(o.shipping_waybill IS NULL) AS not_booked
-         FROM orders o WHERE ${TO_SHIP}${b}`, R),
+    q(`SELECT COALESCE(SUM(${TO_SHIP}), 0) AS n,
+              COALESCE(SUM(${BOOKED} AND o.shipping_label_url IS NOT NULL
+                AND (o.shipping_label_downloaded IS NULL OR o.shipping_label_downloaded = 0)), 0) AS labels_pending
+         FROM orders o WHERE LOWER(o.status) IN ('confirmed','processing','booked','manifested')${b}`, R),
     q(`SELECT COUNT(*) AS n FROM orders o WHERE ${IN_TRANSIT}${b}`, R),
     q(`SELECT COUNT(DISTINCT o.id) AS n, COALESCE(SUM(o.final_amount), 0) AS value
          FROM orders o WHERE LOWER(o.status) = 'delivered'${b}
@@ -85,7 +85,7 @@ async function getToday({ brandId = null } = {}) {
               FROM payments p JOIN orders o ON o.id = p.order_id
              WHERE p.amount_paid < 0 AND p.status = 'failed' AND LOWER(o.payment_status) = 'refund_pending'${b}`, R), [{}]),
     q(`SELECT COUNT(*) AS n, MAX(o.shipping_sync_error) AS sample
-         FROM orders o WHERE ${TO_SHIP} AND o.shipping_waybill IS NULL AND LOWER(o.shipping_sync_status) = 'failed'${b}`, R),
+         FROM orders o WHERE ${TO_SHIP} AND LOWER(o.shipping_sync_status) = 'failed'${b}`, R),
     queueCounts.whatsapp(R),
     queueCounts.stock(R),
     queueCounts.reviews(R),
@@ -110,7 +110,8 @@ async function getToday({ brandId = null } = {}) {
     { key: 'to_confirm', priority: 'urgent', tab: 'to_confirm', count: num(confirm.n), overdue: num(confirm.overdue), oldestHours: hoursSince(confirm.oldest) },
     { key: 'ndr', priority: 'urgent', tab: 'problems', count: num(ndr.open_n), replied: num(ndr.replied) },
     { key: 'refund_failed', priority: 'urgent', tab: 'refund_due', count: num(refundFailed.n), amount: Math.round(num(refundFailed.amount)) },
-    { key: 'to_ship', priority: 'today', tab: 'to_ship', count: num(ship.n), labelsPending: num(ship.labels_pending), notBooked: num(ship.not_booked), nextBatch },
+    { key: 'to_ship', priority: 'today', tab: 'to_ship', count: num(ship.n), nextBatch },
+    { key: 'shipment_labels', priority: 'today', tab: 'booked', count: num(ship.labels_pending) },
     { key: 'returns_refund', priority: 'today', tab: 'returns', count: num(ret.to_refund), amount: Math.round(num(ret.owed)), toReview: num(ret.to_review) },
     { key: 'booking_failed', priority: 'today', tab: 'to_ship', count: num(bookingFailed.n), sample: bookingFailed.sample || null },
     { key: 'whatsapp', priority: 'today', view: 'whatsapp-chat', count: num(wa.chats), messages: num(wa.messages), oldestHours: hoursSince(wa.oldest) },

@@ -493,5 +493,9 @@
 .ds-delivery-summary__metrics .needs-attention { color: var(--ds-color-danger); }
 @media (max-width: 420px) {
   .ds-delivery-summary__action { flex-basis: 100%; }
-  .ds-delivery-summary__metrics { gap: 8px; }
+  .ds-delivery-summary__metrics {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 80px), 1fr));
+    gap: 10px 8px;
+  }
 }

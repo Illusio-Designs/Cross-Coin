@@ -17,7 +17,6 @@ import { showSuccess, showError } from '../../../utils/toastNotification';
 import { PromptModal, ConfirmModal } from '../../../components/common/AlertModal';
 import { getProductImageSrc } from '../../../utils/imageUtils';
 import { getAttributeComponents } from '../../../utils/productAttributeFormatter';
-import { getStatusClassName, getStatusDisplayText } from '../../../utils/statusUtils';
 import OrderStory from '../../../components/orders/OrderStory';
 import ExceptionsDesk from '../exceptions/ExceptionsDesk';
 import { PageHeader, StatGrid, StatTile, ResponsiveTable } from '../../../components/Dashboard/primitives';
@@ -38,13 +37,15 @@ import {
 const DESK_TABS = [
     { v: 'to_confirm',    l: 'To confirm',        count: 'to_confirm' },
     { v: 'to_ship',       l: 'To ship',           count: 'to_ship' },
+    { v: 'booked',        l: 'Booked',            count: 'booked' },
+    { v: 'picked_up',     l: 'Picked up',         count: 'picked_up' },
     { v: 'in_transit',    l: 'In transit',        count: 'in_transit' },
     { v: 'problems',      l: 'Problems',          count: 'problems_total' },
     { v: 'delivered',     l: 'Delivered' },
     { v: 'cancelled_rto', l: 'Cancelled & RTO' },
     { v: 'all',           l: 'All' },
 ];
-const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'in_transit', 'delivered', 'cancelled_rto']);
+const DESK_STAGE_VALUES = new Set(['to_confirm', 'to_ship', 'booked', 'picked_up', 'in_transit', 'delivered', 'cancelled_rto']);
 // Old home-inbox deep links used status buckets — map them onto the tabs.
 const LEGACY_TAB = { pending: 'to_confirm', processing: 'to_ship', shipped: 'in_transit', rto: 'cancelled_rto', cancelled: 'cancelled_rto' };
 // Links into the Problems desk: 'problems:<all|ndr|return|refund>', plus the
@@ -58,6 +59,14 @@ function parseTab(v) {
     return { tab: LEGACY_TAB[v] || v, desk: null };
 }
 
+const orderWaybill = (row) => String(row.Shipment?.waybill || '').trim() || String(row.shipping_waybill || '').trim();
+
+function displayedStage(row) {
+    const status = String(row.status || '').toLowerCase();
+    if (status === 'pickup initiated') return 'picked up';
+    if (status === 'manifested' || (['confirmed', 'processing'].includes(status) && orderWaybill(row))) return 'booked';
+    return row.status;
+}
 
 /** Portal escapes table clipping; measured placement keeps every action reachable. */
 function OverflowMenu({ items = [] }) {
@@ -806,7 +815,7 @@ const Orders = ({ initialTab } = {}) => {
         const st = (row.status || '').toLowerCase();
         const pmt = (row.payment_status || '').toLowerCase();
         const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
-        const waybill = row.Shipment?.waybill || row.shipping_waybill;
+        const waybill = orderWaybill(row);
         const syncError = row.Shipment?.sync_error || row.shipping_sync_error;
         const canConfirm = ['awaiting_confirmation', 'pending'].includes(st);
         const isFinal = ['delivered', 'cancelled', 'order cancelled'].includes(st);
@@ -937,12 +946,7 @@ const Orders = ({ initialTab } = {}) => {
         },
         {
             header: 'Stage',
-            cell: (row) => (
-                <div style={{ display: 'grid', gap: 3, justifyItems: 'start' }}>
-                    <OrderStatusBadge status={row.status} />
-                    <span style={{ ...muted, fontFamily: 'var(--ds-font-mono)', fontSize: '.7rem' }}>{row.status}</span>
-                </div>
-            ),
+            cell: (row) => <OrderStatusBadge status={displayedStage(row)} />,
             width: '130px',
         },
         {
@@ -1130,16 +1134,18 @@ const Orders = ({ initialTab } = {}) => {
                     <ManualOrderModal open={manualOrderOpen} brands={brands} initialBrandId={brandFilter}
                         onClose={() => setManualOrderOpen(false)} onCreated={onManualOrderCreated} />
 
-                    {['all', 'in_transit', 'delivered', 'to_ship'].includes(statusFilter) && (
+                    {['all', 'in_transit', 'delivered', 'to_ship', 'booked', 'picked_up'].includes(statusFilter) && (
                         <DeliverySummary title="Delivery status" metrics={[
                             { label: 'To ship', value: deskCounts.to_ship },
+                            { label: 'Booked', value: deskCounts.booked },
+                            { label: 'Picked up', value: deskCounts.picked_up },
                             { label: 'In transit', value: deskCounts.in_transit },
                             { label: 'Open failed deliveries', value: deskCounts.ndr_open, attention: true },
                         ]} action={<Button size="sm" variant="secondary" onClick={() => openDesk('ndr')}>Review failed deliveries</Button>} />
                     )}
 
                     <FilterChips className="ord-tabs" ariaLabel="Order pipeline stages"
-                        items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] || undefined }))}
+                        items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] }))}
                         value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
 
                     {statusFilter === 'problems' && <div className="ord-problems-brand">
@@ -1457,7 +1463,7 @@ const Orders = ({ initialTab } = {}) => {
                                 </div>
                                 <div className="odm-field">
                                     <span className="odm-label">Order Status</span>
-                                    <span className={`status-badge status-${getStatusClassName(selectedOrder.status)}`}>{getStatusDisplayText(selectedOrder.status)}</span>
+                                    <OrderStatusBadge status={displayedStage(selectedOrder)} />
                                 </div>
                                 {selectedOrder.payment_type?.toLowerCase() === 'cod' && (
                                     <div className="odm-field">

@@ -105,9 +105,12 @@ function queueCard(q) {
     };
     case 'refund_failed': return { title: 'Refund failed', action: 'Retry refund', detail: `${rupee(q.amount)} still owed — Razorpay refused it. Retry or pay by UPI.` };
     case 'to_ship': return {
-      title: 'Ready to ship', action: q.labelsPending > 0 ? 'Download labels' : 'Open',
-      detail: [q.labelsPending > 0 ? `${plural(q.labelsPending, 'label')} not downloaded` : null,
-        q.notBooked > 0 ? `${q.notBooked} not booked yet${q.nextBatch ? ' — next booking 11:00' : ''}` : null].filter(Boolean).join(' · ') || 'Booked and waiting for pickup.',
+      title: 'To ship', action: 'Open orders',
+      detail: 'Confirmed orders waiting for a courier booking.',
+    };
+    case 'shipment_labels': return {
+      title: 'Shipping labels', action: 'Download labels',
+      detail: `${plural(q.count, 'booked order')} with labels to download.`,
     };
     case 'returns_refund': return { title: 'Returns to refund', action: 'Refund', detail: `Parcels received — ${rupee(q.amount)} owed.${q.toReview ? ` ${q.toReview} more to review.` : ''}` };
     case 'booking_failed': return { title: 'Booking failed', action: 'Fix', detail: q.sample ? String(q.sample).slice(0, 90) : 'No courier could book these — fix the address or enter the AWB.' };
