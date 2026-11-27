@@ -141,7 +141,7 @@ export default function ExceptionsDesk({ initialType = 'all', initialSearch = ''
             { label: 'Waiting', value: list.isPlaceholderData || deliveryCount == null || deliveryActions == null ? null : Math.max(0, deliveryCount - deliveryActions) },
           ]} />
       )}
-      <FilterChips ariaLabel="Problem type" controls="exc-workspace"
+      <FilterChips className="ord-tabs" revealSelected ariaLabel="Problem type" controls="exc-workspace"
         items={TABS.map(([value, label]) => ({ value, label, count: list.isPlaceholderData ? undefined : counts[value] }))}
         value={type} onChange={setType} />
 

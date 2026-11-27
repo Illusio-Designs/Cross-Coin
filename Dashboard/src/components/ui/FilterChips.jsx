@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import clsx from '../Dashboard/primitives/_clsx';
 
 const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
@@ -15,8 +15,9 @@ const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN') : n);
  * Keyboard: ←/→ (and Home/End) move between chips and pick them; only the
  * picked chip is in the Tab order. `controls` = id of the list it filters.
  */
-export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className, itemClassName }) {
+export default function FilterChips({ items = [], value, onChange, ariaLabel = 'Filter', controls, className, itemClassName, revealSelected = false }) {
   const refs = useRef([]);
+  const listRef = useRef(null);
   const pick = (i) => {
     const it = items[i];
     if (!it || it.disabled) return;
@@ -30,10 +31,29 @@ export default function FilterChips({ items = [], value, onChange, ariaLabel = '
     e.preventDefault();
     pick(to);
   };
-  const selectedIndex = Math.max(0, items.findIndex((it) => it.value === value));
+  const activeIndex = items.findIndex((it) => it.value === value);
+  const selectedIndex = Math.max(0, activeIndex);
+  const hasCounts = items.some((it) => it.count != null);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const active = refs.current[activeIndex];
+    if (!revealSelected || !list || !active) return;
+    const reveal = () => {
+      if (list.scrollWidth <= list.clientWidth) return;
+      const viewport = list.getBoundingClientRect();
+      const tab = active.getBoundingClientRect();
+      // Keep the selected tab visible without scrolling the page vertically.
+      if (tab.left < viewport.left) list.scrollLeft += tab.left - viewport.left;
+      else if (tab.right > viewport.right) list.scrollLeft += tab.right - viewport.right;
+    };
+    reveal();
+    window.addEventListener('resize', reveal);
+    return () => window.removeEventListener('resize', reveal);
+  }, [activeIndex, value, hasCounts, revealSelected]);
 
   return (
-    <div className={clsx('ui-chips', className)} role="tablist" aria-label={ariaLabel}>
+    <div ref={listRef} className={clsx('ui-chips', className)} role="tablist" aria-label={ariaLabel}>
       {items.map((it, i) => {
         const on = it.value === value;
         return (

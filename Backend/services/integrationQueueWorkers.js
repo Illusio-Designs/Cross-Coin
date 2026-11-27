@@ -15,7 +15,7 @@ const { logger } = require('../config/logging.js');
 
 function registerWorkers() {
   // ── shipping:sync-order ────────────────────────────────────────────
-  registerProcessor('shipping:sync-order', 2, async (job) => {
+  const bookQueuedOrder = async (job) => {
     const { orderId, logistics = null, serviceType = null, auto = false } = job.data;
     if (!orderId) throw new Error('orderId required');
 
@@ -45,9 +45,12 @@ function registerWorkers() {
       ],
     });
     if (!fullOrder) throw new Error(`order ${orderId} not found`);
-    if (fullOrder.shipping_sync_status === 'synced') {
-      logger.info(`[queue] shipping:sync-order skipped — ${fullOrder.order_number} already synced`);
+    if (fullOrder.shipping_waybill || fullOrder.shipping_sync_status === 'synced' || ['cancelled', 'order cancelled'].includes(fullOrder.status)) {
+      logger.info(`[queue] shipping:sync-order skipped — ${fullOrder.order_number} already booked or cancelled`);
       return { skipped: true };
+    }
+    if (/^iThink (?:did not confirm an AWB|issued AWB )/i.test(fullOrder.shipping_sync_error || '')) {
+      return { success: false, requiresReview: true, error: fullOrder.shipping_sync_error };
     }
 
     const orderShippingController = require('../controller/orderShippingController.js');
@@ -57,9 +60,10 @@ function registerWorkers() {
     // the admin then sees the error and the manual courier picker takes over.
     const attempts = job.opts?.attempts || 1;
     const isLastAttempt = (job.attemptsMade || 0) >= (attempts - 1);
-    const markFailed = (reason) => fullOrder.update({
+    const markFailed = (reason, park = false) => fullOrder.update({
       shipping_sync_status: 'failed',
       shipping_sync_error: String(reason || 'sync failed').slice(0, 1000),
+      ...(park ? { shipping_sync_attempts: 999, pickup_hold_until: null } : {}),
     }).catch(() => {});
 
     try {
@@ -87,36 +91,32 @@ function registerWorkers() {
         logger.warn(`[queue] pickup hold check failed for ${fullOrder.order_number}: ${e.message}`);
       }
 
-      // Do the slow external courier call HERE (worker), never inside an HTTP
-      // request. Manual courier selection travels on the job payload; without it
-      // we auto-select with fallback. enhancedSyncSingleOrder/autoSelect open
-      // their own short transaction, so at most `concurrency` DB connections are
-      // ever pinned by shipping syncs at once.
+      const { service, name } = await orderShippingController.resolveProviderForOrder(fullOrder);
       let result;
-      if (auto || !logistics) {
-        const { service: provider } = await orderShippingController.resolveProviderForOrder(fullOrder);
-        const autoResult = await orderShippingController.autoSelectCourierWithFallback(fullOrder, provider);
-        result = autoResult.success
-          ? autoResult.result
-          : { success: false, error: autoResult.error || 'auto courier selection failed', permanent: autoResult.permanent };
+      if (name === 'ithink') {
+        const selected = logistics ? { logistics, s_type: serviceType } : null;
+        const booking = await orderShippingController.autoSelectCourierWithFallback(fullOrder, service, null, selected);
+        result = booking.success ? booking.result : booking;
       } else {
-        result = await orderShippingController.enhancedSyncSingleOrder(
-          fullOrder, null, null, null, logistics, serviceType || 'surface'
-        );
+        result = await orderShippingController.enhancedSyncSingleOrder(fullOrder, null, service, name, logistics, serviceType);
+      }
+
+      if (result.held || result.action === 'skipped') return result;
+      if (result.requiresReview) {
+        await markFailed(result.error, true);
+        logger.warn(`[queue] shipping:sync-order AWB unconfirmed for ${fullOrder.order_number}: ${result.error}`);
+        try { require('./errorReporter.js').notify('📦 Booking needs review', [`Order ${fullOrder.order_number}`, result.error], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
+        return result;
       }
 
       if (!result.success) {
         const err = result.error || 'sync returned success=false';
         // Permanent failures (bad address / non-serviceable pincode / no courier)
         // will never succeed on retry. Park the order and return WITHOUT throwing.
-        if (result.permanent || orderShippingController.isPermanentShippingFailure(err)) {
-          await fullOrder.update({
-            shipping_sync_status: 'failed',
-            shipping_sync_error: err,
-            shipping_sync_attempts: 999, // PARKED sentinel — do not retry, needs a human
-          }).catch(() => {});
+        if (result.permanent ?? orderShippingController.isPermanentShippingFailure(err)) {
+          await markFailed(err, true);
           logger.warn(`[queue] shipping:sync-order gave up (permanent) — ${fullOrder.order_number}: ${err}`);
-          try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err, 'Needs manual attention (pick a courier / fix the address).'], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
+          try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err, 'Review iThink courier availability or the order address.'], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
           return { success: false, permanent: true, error: err };
         }
         // Transient — retry with backoff, but surface it as failed on the last try.
@@ -139,6 +139,19 @@ function registerWorkers() {
         try { require('./errorReporter.js').notify('📦 Courier booking failed', [`Order ${fullOrder.order_number}`, err.message || String(err), `Gave up after ${attempts} attempts.`], { dedupeKey: `book-fail:${fullOrder.id}` }); } catch (_) {}
       }
       throw err;
+    }
+  };
+
+  registerProcessor('shipping:sync-order', 2, async (job) => {
+    const { orderId } = job.data;
+    if (!orderId) throw new Error('orderId required');
+    const { acquireLock, releaseLock } = require('./jobRunService.js');
+    const lock = await acquireLock(`shipping-booking:${orderId}`);
+    if (!lock) return { skipped: true };
+    try {
+      return await bookQueuedOrder(job);
+    } finally {
+      await releaseLock(lock);
     }
   });
 

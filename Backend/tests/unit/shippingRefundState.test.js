@@ -57,7 +57,7 @@ test.each(['refund_pending','partial_refund','refunded'])('courier warehouse rec
  expect(Payment.findOne).not.toHaveBeenCalled();
 });
 function orderAt(status){
- const order={id:1,order_number:'ORDER-1',brand_id:3,status,payment_type:'razorpay',payment_status:'paid',shipping_waybill:'AWB-1',shipping_address_id:4,shipping_label_url:'https://example.test/label'};
+ const order={id:1,order_number:'ORDER-1',brand_id:3,status,payment_type:'razorpay',payment_status:'paid',shipping_waybill:status==='confirmed'?null:'AWB-1',shipping_address_id:4,shipping_label_url:'https://example.test/label'};
  order.update=jest.fn(async patch=>Object.assign(order,patch));order.reload=jest.fn(async()=>order);return order;
 }
 function providerAt(status){return {getTrackingHistory:jest.fn(async()=>({summary:{status:'provider-scan'}})),mapShippingStatusToCrossCoin:()=>status};}

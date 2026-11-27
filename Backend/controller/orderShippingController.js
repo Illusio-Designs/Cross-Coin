@@ -45,11 +45,11 @@ const PARKED_ATTEMPTS = 999;      // sentinel: give up + admin already alerted, 
 // decided by autoSelectCourierWithFallback, which inspects each courier's own
 // error and only flags permanent when EVERY attempt failed permanently.
 const PERMANENT_FAILURE_PATTERNS = [
-  /serviceab/i,                 // "not serviceable", "pincode serviceability failed"
+  /not\s+serviceable|unserviceable/i,
   /not\s+deliverable/i,
-  /pincode/i,                   // "pincode is missing", "pincode must be 6 digits", "invalid pincode"
+  /invalid\s+pin\s*code/i,
   /is\s+missing/i,              // validation: address/name/city/state/phone missing
-  /must\s+be\s+(a\s+valid|exactly)/i, // validation: phone/pincode format
+  /must\s+be\s+(a\s+valid|exactly|6\s+digits)/i,
   /no\s+items/i,
   /no\s+customer/i,
 ];
@@ -103,184 +103,92 @@ module.exports.resolveProviderForOrder = resolveProviderForOrder;
 // request path (see services/integrationQueueWorkers.js → shipping:sync-order).
 module.exports.autoSelectCourierWithFallback = autoSelectCourierWithFallback;
 
-const truthyFlag = (v) => v === true || v === 1 || ['yes', '1', 'true', 'y'].includes(String(v).toLowerCase());
+const {
+  getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey,
+  discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection,
+} = require('../services/iThinkCourierRouting.js');
 
-// ── Courier auto-selection: rate/check.json (couriers + live rates) ─────────
-// iThink's rate/check.json returns every courier that serves warehouse → customer
-// WITH per-courier cod/prepaid support, service type (Air/Surface) and the actual
-// rate — e.g. Amazon ₹75, Ekart ₹80, Xpressbees ₹86. (It looked "empty" before
-// only because the request was missing order_type/payment_method/product_mrp.)
-// We keep the couriers that support the order's payment mode, sort by rate, and
-// book the cheapest that succeeds. If none serve the route → a clean, permanent
-// "not serviceable" failure (never a scary generic "sync failed").
-async function autoSelectCourierWithFallback(order, provider, transaction = null) {
-  // Ensure the associations this function relies on are present. The manual
-  // Sync button and the queue worker load the order WITH includes, but the
-  // post-payment auto-sync path (orderService.syncOrderToShipping → bare
-  // Order.findByPk) does not — so ShippingAddress / OrderItems were undefined,
-  // the destination pincode came through EMPTY, iThink returned zero couriers,
-  // and every prepaid order failed with "No serviceable courier could book"
-  // (then booked fine on a manual resume, which loads the associations). Reload
-  // the missing pieces here so courier selection works no matter how the order
-  // was loaded. This is a no-op when the caller already eager-loaded them.
+// Try an explicit pick first. Use rate results and then the domestic courier
+// matrix, including options the rate endpoint omitted. Advance to another
+// carrier only after a definitive route rejection from the booking endpoint.
+async function autoSelectCourierWithFallback(order, provider, transaction = null, selected = null) {
   if (!order.ShippingAddress || !order.OrderItems) {
     const reloaded = await Order.findByPk(order.id, {
-      include: [
-        { model: ShippingAddress, as: 'ShippingAddress' },
-        { model: OrderItem, as: 'OrderItems' },
-      ],
+      transaction,
+      include: [{ model: ShippingAddress, as: 'ShippingAddress' }, { model: OrderItem, as: 'OrderItems' }],
     });
     if (reloaded) {
-      if (!order.ShippingAddress) order.ShippingAddress = reloaded.ShippingAddress;
-      if (!order.OrderItems) order.OrderItems = reloaded.OrderItems;
+      order.ShippingAddress ||= reloaded.ShippingAddress;
+      order.OrderItems ||= reloaded.OrderItems;
     }
   }
 
-  const destPin = order.ShippingAddress?.pincode || '';
-  const brandId = order.brand_id || 1;
-  const isCOD = String(order.payment_type || '').toLowerCase() === 'cod';
+  const destination = String(order.ShippingAddress?.pincode || '').trim();
+  if (!/^\d{6}$/.test(destination)) {
+    return { success: false, permanent: true, error: 'The delivery pincode must be exactly 6 digits.' };
+  }
+  if (!order.OrderItems?.length) return { success: false, permanent: true, error: 'Order has no items.' };
 
-  // 1. Ask iThink for the serviceable couriers + rates for this route. We prefer
-  //    rate/check (it returns live rates so we can pick the cheapest). If that
-  //    yields nothing, fall back to the domestic pincode serviceability check
-  //    (no rates, but still lists the couriers) before giving up.
-  const { extractIThinkCouriers } = require('../utils/serviceability.js');
-  const whPin = await settingsHelper.getSetting(brandId, 'ITHINK_WAREHOUSE_PINCODE', '363641');
-  const items = order.OrderItems || [];
-  const totalQty = items.reduce((s, i) => s + (i.quantity || 0), 0) || 1;
-
-  let couriers = [];
-  let checkErr = null;
-  try {
-    if (typeof provider.getAvailableCouriers === 'function') {
-      const raw = await provider.getAvailableCouriers({
-        sourcePincode: whPin,
-        destinationPincode: destPin,
-        // iThink bills on a 0.5 kg minimum slab — never send below it or the
-        // rate call can come back empty.
-        weight: Math.max(0.5, totalQty * 0.1),
-        length: 10, width: 10, height: 5 * totalQty,
-        paymentMode: isCOD ? 'COD' : 'Prepaid',
-        productMrp: parseFloat(order.final_amount) || 500,
-      });
-      couriers = extractIThinkCouriers(raw);
-    }
-  } catch (e) {
-    checkErr = e.message;
-    logger.warn(`[auto-courier] rate check failed for ${order.order_number}: ${e.message}`);
+  const route = await getIThinkRoute(order);
+  if (!/^\d{6}$/.test(route.from)) {
+    return { success: false, permanent: true, error: 'Set a valid iThink pickup pincode in Shipping settings.' };
   }
 
-  // Fallback: domestic pincode serviceability (still lists couriers, no rates).
-  if (couriers.length === 0 && typeof provider.checkServiceability === 'function') {
-    try {
-      const raw2 = await provider.checkServiceability(whPin, destPin);
-      couriers = extractIThinkCouriers(raw2);
-      if (couriers.length) checkErr = null;
-    } catch (e) {
-      checkErr = checkErr || e.message;
-      logger.warn(`[auto-courier] pincode check failed for ${order.order_number}: ${e.message}`);
-    }
-  }
+  const tried = new Set();
+  const tryCourier = async (courier) => {
+    const key = courierKey(courier);
+    if (tried.has(key) || isCourierExcluded(route, courier.logistics)) return null;
+    tried.add(key);
 
-  // SHUFFLE orders across the enabled couriers instead of dumping every order on
-  // one. COURIER_PRIORITY is the set of couriers to distribute across (comma-
-  // separated, matched case-insensitively as a substring of the courier name),
-  // default "delhivery, amazon, xpressbees, dtdc" (the four enabled in iThink).
-  // For each order we RANDOMLY shuffle the enabled serviceable couriers, keep
-  // only ones serviceable for this route, and use the cheapest rate as the
-  // tiebreak. If the chosen courier can't book, the loop below falls through to
-  // the next serviceable one. Couriers NOT in the list are used only as a last
-  // resort (cheapest of them).
-  const priorityRaw = await settingsHelper.getSetting(brandId, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees, dtdc');
-  const priorityList = String(priorityRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  // 0 = an enabled/listed courier (gets shuffled), 1 = not in the list (last resort).
-  const listedRank = (name) => {
-    const n = String(name || '').toLowerCase();
-    return priorityList.some((tok) => n.includes(tok)) ? 0 : 1;
+    const result = await module.exports.enhancedSyncSingleOrder(
+      order, transaction, provider, 'ithink', courier.logistics, courier.s_type
+    );
+    if (result.success) {
+      logger.info(`[auto-courier] ${order.order_number}: booked with ${key}`);
+      return { success: true, courier: result.courier || courier.logistics, result };
+    }
+    if (!result.courierRejected) return result;
+    logger.info(`[auto-courier] ${order.order_number}: ${key} rejected ${describeIThinkRoute(route)}`);
+    return null;
   };
 
-  // Optional blocklist — couriers to never book (case-insensitive substring of
-  // the courier name/code), for BOTH COD and prepaid. Empty by default (DTDC is
-  // allowed); set the COURIER_EXCLUDE brand setting to block specific couriers.
-  const excludeRaw = await settingsHelper.getSetting(brandId, 'COURIER_EXCLUDE', '');
-  const excludeList = String(excludeRaw || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const isExcluded = (name) => {
-    const n = String(name || '').toLowerCase();
-    return excludeList.some((tok) => n.includes(tok));
-  };
-
-  // 3. Keep only couriers that can carry THIS order's payment mode. A COD order
-  //    MUST use a COD-capable courier (cod === 'Y'); a prepaid order a
-  //    prepaid-capable one. When the flag is absent we keep the courier and let
-  //    the booking be the final gate.
-  const options = couriers
-    .map((c) => {
-      if (isExcluded(c.code)) return null;   // blocked courier (e.g. DTDC)
-      const modeOk = isCOD
-        ? (c.cod === undefined || truthyFlag(c.cod))
-        : (c.prepaid === undefined || truthyFlag(c.prepaid));
-      if (!modeOk) return null;
-      const rate = parseFloat(c.raw?.rate ?? c.raw?.freight_charges ?? c.raw?.total_charges ?? c.raw?.total_amount ?? 0) || 0;
-      const st = String(c.s_type || 'surface');
-      // Prefer economy/surface ("delivery") over premium/air on a tie.
-      const economy = /econom|surface|ground|standard|deliver/i.test(st) ? 0 : 1;
-      return {
-        // order/add.json expects the courier NAME (e.g. "delhivery") + s_type.
-        logistics: String(c.code).toLowerCase(),
-        s_type: st.toLowerCase(),
-        rate,
-        name: c.code,
-        economy,
-        listed: listedRank(c.code),   // 0 = enabled courier, 1 = last resort
-        shuffle: Math.random(),       // fresh random order every time → distributes
-      };
-    })
-    .filter(Boolean);
-
-  // 4. Nothing usable. Distinguish two very different cases:
-  //    (a) the serviceability CHECK itself errored (timeout, auth, provider
-  //        outage) — do NOT brand the pincode permanently un-serviceable; this
-  //        must stay retryable so a transient blip doesn't stick a scary label.
-  //    (b) the check succeeded but returned no courier for this order — the
-  //        pincode/payment-mode genuinely isn't serviceable (permanent).
-  if (options.length === 0) {
-    if (checkErr) {
-      logger.warn(`[auto-courier] ${order.order_number}: serviceability check errored (${checkErr}) — retryable`);
-      return { success: false, courier: null, error: `Couldn't check courier serviceability for ${destPin || 'this pincode'} right now (${checkErr}). Please Sync again.` };
-    }
-    const codNote = isCOD ? ' for Cash-on-Delivery' : '';
-    const msg = `Delivery pincode ${destPin || 'N/A'} is not serviceable by any courier${codNote} — please verify the customer's address.`;
-    logger.info(`[auto-courier] ${order.order_number}: not serviceable (${destPin})`);
-    return { success: false, courier: null, permanent: true, notServiceable: true, error: msg };
+  if (selected) {
+    const result = await tryCourier({
+      logistics: String(selected.logistics).trim().toLowerCase(),
+      s_type: String(selected.s_type || 'surface').trim().toLowerCase(),
+    });
+    if (result) return result;
   }
 
-  // 4b. SURFACE ONLY — every parcel ships surface, never air/express. Keep only
-  //     surface (economy) service options; fall back to the rest ONLY if the route
-  //     has no surface option at all, so orders are never stuck un-bookable.
-  const surfaceOptions = options.filter((o) => o.economy === 0);
-  const bookable = surfaceOptions.length ? surfaceOptions : options;
-  if (!surfaceOptions.length) {
-    logger.warn(`[auto-courier] ${order.order_number}: no surface service for ${destPin} — allowing non-surface as fallback`);
-  }
-
-  // 5. Enabled couriers first, then a RANDOM shuffle (so orders spread across
-  //    them), then cheapest rate. Book the first that succeeds — the
-  //    serviceability fallback: if the lead courier can't book, the next
-  //    serviceable one is tried.
-  bookable.sort((a, b) => (a.listed - b.listed) || (a.shuffle - b.shuffle) || (a.rate - b.rate) || (a.economy - b.economy));
-  logger.info(`[auto-courier] ${order.order_number}: ${bookable.length} surface courier(s) — shuffled among [${priorityList.join(', ') || 'none'}], trying: ${bookable.map(o => `${o.name}/${o.s_type}@₹${o.rate}`).join(', ')}`);
-  let lastError = null;
-  for (const opt of bookable) {
+  let matrixUnavailable = false;
+  for (const useMatrix of [false, true]) {
+    let options;
     try {
-      const r = await module.exports.enhancedSyncSingleOrder(order, transaction, provider, 'ithink', opt.logistics, opt.s_type);
-      if (r.success) {
-        logger.info(`✅ Auto-assigned courier ${opt.name}/${opt.s_type} (${opt.logistics}) @ ₹${opt.rate} [${opt.listed === 0 ? 'enabled' : 'last-resort'}] for ${order.order_number}`);
-        return { success: true, courier: opt.logistics, result: r };
-      }
-      lastError = r.error || lastError;
-    } catch (e) { lastError = e.message || lastError; }
+      options = await discoverIThinkCouriers(provider, route, useMatrix);
+    } catch (error) {
+      if (useMatrix) matrixUnavailable = true;
+      logger.warn(`[auto-courier] ${order.order_number}: ${useMatrix ? 'pincode' : 'rate'} check failed: ${error.message}`);
+      continue;
+    }
+    for (const courier of orderIThinkOptions(options, route)) {
+      const result = await tryCourier(courier);
+      if (result) return result;
+    }
   }
-  return { success: false, courier: null, error: lastError || `No available courier could book delivery to ${destPin}` };
+
+  const shippingRoute = describeIThinkRoute(route);
+  if (matrixUnavailable) {
+    return { success: false, permanent: false, error: `iThink could not confirm courier availability for ${shippingRoute}. Try booking again.` };
+  }
+  const attempted = [...tried].join(', ');
+  return {
+    success: false,
+    permanent: true,
+    notServiceable: true,
+    error: attempted
+      ? `No eligible iThink courier accepted ${shippingRoute}. Tried: ${attempted}.`
+      : `iThink returned no eligible courier for ${shippingRoute}.`,
+  };
 }
 
 // ── Dual-write helper: sync shipment data to order_shipments table ──────
@@ -901,6 +809,7 @@ module.exports.cancelOrdersInShipping = async (req, res) => {
 module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
   const localTransaction = transaction || await sequelize.transaction();
   const shouldCommit = !transaction;
+  let bookedWaybill;
 
   try {
     // Resolve inside the owned transaction's failure handling too.
@@ -913,7 +822,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
     logger.debug(`🔍 Enhanced sync for order ${order.order_number} via ${providerName}${selectedLogistics ? ` with courier: ${selectedLogistics}` : ''}`);
 
     // STEP 1: Check if order is already synced or currently syncing
-    const isSynced = order.shipping_order_id && order.shipping_waybill;
+    const isSynced = !!order.shipping_waybill;
     const isSyncing = order.shipping_sync_status === 'syncing';
 
     if (isSyncing) {
@@ -975,13 +884,15 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       if (providerName === 'ithink' && !selectedLogistics) {
         logger.debug(`🔄 Order ${order.order_number}: no courier given — auto-selecting for iThink.`);
         const auto = await module.exports.autoSelectCourierWithFallback(order, provider, localTransaction);
+        bookedWaybill = auto.result?.waybill;
         if (shouldCommit) {
           if (auto.success) await commitTransaction(localTransaction);
+          else if (auto.held) await commitTransaction(localTransaction);
           else await rollbackTransaction(localTransaction);
         }
         return auto.success
           ? { success: true, action: 'synced', provider: providerName, courier: auto.courier, ...(auto.result || {}) }
-          : { success: false, error: auto.error || 'No serviceable courier could book this order.', notServiceable: auto.notServiceable, permanent: auto.permanent };
+          : auto;
       }
 
       logger.debug(`📝 Order ${order.order_number} not synced. Creating in ${providerName}...`);
@@ -989,6 +900,7 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
       const createResult = await module.exports.createOrderInShipping(order, localTransaction, provider, providerName, selectedLogistics, serviceType);
 
       if (createResult.success) {
+        if (providerName === 'ithink') bookedWaybill = createResult.waybill;
         logger.debug(`✅ Order ${order.order_number} created in ${providerName}`);
 
         // "Packed & ready" WhatsApp — the order is now booked with a courier.
@@ -1012,10 +924,12 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
           provider: providerName,
           shipping_order_id: createResult.shipping_order_id,
           waybill: createResult.waybill,
+          courier: createResult.courier,
           message: `Order created and synced with ${providerName}`
         };
       } else {
-        throw new Error(createResult.error);
+        if (shouldCommit) await rollbackTransaction(localTransaction);
+        return createResult;
       }
     } else {
       // STEP 3: Order already synced — update status from provider
@@ -1048,7 +962,8 @@ module.exports.enhancedSyncSingleOrder = async (order, transaction = null, provi
 
     return {
       success: false,
-      error: error.message
+      requiresReview: !!bookedWaybill,
+      error: bookedWaybill ? `iThink issued AWB ${bookedWaybill} but the booking could not be saved. Check iThink before booking again.` : error.message,
     };
   }
 };
@@ -1094,6 +1009,7 @@ module.exports.validateOrderForShipping = (order) => {
 // Method name kept for backward compatibility; despite "Shipping" in the name it
 // dispatches to whichever provider is currently configured (Shipping or iThink).
 module.exports.createOrderInShipping = async (order, transaction, provider = null, providerName = null, selectedLogistics = null, serviceType = null) => {
+  let bookedWaybill;
   try {
     if (!provider) {
       const resolved = await resolveProviderForOrder(order);
@@ -1107,7 +1023,7 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
     await order.reload({ transaction });
 
     // Double-check if order was already synced by another process
-    if (order.shipping_order_id && order.shipping_waybill) {
+    if (order.shipping_waybill) {
       logger.debug(`⚠️ Order ${order.order_number} already has Shipping data. Skipping creation.`);
       return {
         success: true,
@@ -1159,6 +1075,7 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
 
     // Create order using the resolved provider
     const result = await provider.createOrUpdateForwardOrder(shippingOrderData);
+    if (providerName === 'ithink') bookedWaybill = result.waybill;
 
     logger.debug(`=== ${providerName} Create Order Result ===`);
     logger.debug('Success:', result.success);
@@ -1223,7 +1140,10 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
         shipping_courier_id: result.courierId || null,
         courier_name: result.courierName || null,
         tracking_number: result.waybill || null,
-        status: 'processing', // Update status to processing when synced
+        status: 'processing',
+        shipping_sync_status: 'synced',
+        shipping_sync_error: null,
+        shipping_sync_attempts: 0,
         shipping_last_synced_at: new Date(), // Track last sync time
         pickup_hold_until: null, // booked — no longer held
         ...(scheduledPickupDate ? { scheduled_pickup_date: scheduledPickupDate } : {}),
@@ -1308,10 +1228,14 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
         waybill: result.waybill,
         route_code: result.routeCode,
         labelId: labelId,
-        labelUrl2: labelUrl2
+        labelUrl2: labelUrl2,
+        courier: order.courier_name || result.courierName || null,
       };
     } else {
-      throw new Error(result.message || `Failed to create order in ${providerName}`);
+      const error = new Error(result.message || `Failed to create order in ${providerName}`);
+      error.courierRejected = result.courierRejected;
+      error.requiresReview = result.requiresReview;
+      throw error;
     }
 
   } catch (error) {
@@ -1339,9 +1263,15 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
         if (parts.length) diag = ` — [${parts.join(' | ')}]`;
       }
     } catch (_) { /* diagnostics must never mask the real error */ }
+    const courierRejected = providerName === 'ithink' && !bookedWaybill && (error.courierRejected ?? isCourierRouteRejection(error.message));
+    const destination = String(order.ShippingAddress?.pincode || '').trim();
     return {
       success: false,
-      error: `${error.message}${diag}`
+      error: bookedWaybill
+        ? `iThink issued AWB ${bookedWaybill} but the booking could not be saved. Check iThink before booking again.`
+        : courierRejected ? `iThink rejected ${selectedLogistics} for the route to delivery pincode ${destination}.` : `${error.message}${diag}`,
+      courierRejected,
+      requiresReview: !!bookedWaybill || error.requiresReview,
     };
   }
 };
@@ -1917,6 +1847,15 @@ module.exports.prepareShippingOrderData = async (order, providerName = 'ithink',
   }
 };
 
+async function queueManualBooking(orderId, selection = {}) {
+  await Order.update({ shipping_sync_status: 'pending', shipping_sync_error: null, shipping_sync_attempts: 0 }, {
+    where: { id: orderId, shipping_waybill: null, shipping_sync_status: { [Op.notIn]: ['synced', 'syncing'] } },
+  });
+  const { enqueue } = require('../services/integrationQueue.js');
+  await enqueue('shipping:sync-order', { orderId, auto: false, ...selection },
+    { attempts: 3, backoff: { type: 'exponential', delay: 8000 } });
+}
+
 // Enhanced single order sync endpoint
 module.exports.syncSingleOrderWithShipping = async (req, res) => {
   try {
@@ -1931,7 +1870,7 @@ module.exports.syncSingleOrderWithShipping = async (req, res) => {
     });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    if (order.status === 'cancelled') {
+    if (['cancelled', 'order cancelled'].includes(order.status)) {
       return res.json({ success: true, skipped: true, message: `Order ${order.order_number} is cancelled. No sync needed.` });
     }
     if (order.shipping_waybill || order.shipping_sync_status === 'synced') {
@@ -1941,11 +1880,7 @@ module.exports.syncSingleOrderWithShipping = async (req, res) => {
     // Mark "booking in progress" so the row shows Pending Sync, then hand the
     // actual courier booking to the shipping:sync-order worker (auto-selects the
     // best courier, retries on transient failure, records the AWB / error).
-    await order.update({ shipping_sync_status: 'pending', shipping_sync_error: null });
-
-    const { enqueue } = require('../services/integrationQueue.js');
-    await enqueue('shipping:sync-order', { orderId: order.id, auto: false },
-      { attempts: 3, backoff: { type: 'exponential', delay: 8000 } });
+    await queueManualBooking(order.id);
 
     return res.json({
       success: true,
@@ -2164,24 +2099,23 @@ module.exports.getAvailableCouriers = async (req, res) => {
     const provider = await getShippingProvider(order.brand_id || 1);
 
     const totalQty = order.OrderItems.reduce((s, i) => s + (i.quantity || 0), 0);
-    const warehousePincode = await settingsHelper.getSetting(
-      order.brand_id || 1,
-      'ITHINK_WAREHOUSE_PINCODE',
-      '395006'
-    );
-
-    // For iThink — use getAvailableCouriers; for Shipping — use calculateRates
+    const route = providerName === 'ithink' ? await getIThinkRoute(order) : null;
+    const warehousePincode = route?.from || await settingsHelper.getSetting(order.brand_id || 1, 'DEFAULT_WAREHOUSE_PINCODE', '395006');
     let couriers = [];
-    if (providerName === 'ithink' && typeof provider.getAvailableCouriers === 'function') {
-      couriers = await provider.getAvailableCouriers({
-        sourcePincode: warehousePincode,
-        destinationPincode: order.ShippingAddress.pincode,
-        weight: totalQty * 0.07,
-        length: 14,
-        width: 3,
-        height: 10 * totalQty,
-        paymentMode: order.payment_type === 'cod' ? 'COD' : 'Prepaid',
-        productMrp: parseFloat(order.final_amount),
+    if (route) {
+      try {
+        couriers = await discoverIThinkCouriers(provider, route);
+      } catch (error) {
+        logger.warn(`iThink rate check unavailable for ${order.order_number}: ${error.message}`);
+      }
+      if (!couriers.length) couriers = await discoverIThinkCouriers(provider, route, true);
+      return res.json({
+        success: true,
+        provider: providerName,
+        order_number: order.order_number,
+        route: { from: route.from, to: route.to, city: order.ShippingAddress.city, payment_type: order.payment_type },
+        warnings: validation.warnings,
+        couriers: orderIThinkOptions(couriers, route),
       });
     } else {
       // Shipping rate calculator
@@ -2290,12 +2224,9 @@ module.exports.syncWithCourier = async (req, res) => {
     // concurrency caps how many syncs hold a DB connection at once. If Redis
     // is down, enqueue() runs the job inline AFTER this response is sent, so
     // the request still never holds a connection during the provider call.
-    const { enqueue } = require('../services/integrationQueue.js');
-    await enqueue('shipping:sync-order', {
-      orderId: order.id,
+    await queueManualBooking(order.id, {
       logistics: (auto ? null : logistics) || null,
       serviceType: s_type,
-      auto: !!auto || !logistics,
     });
 
     // NOTE: we deliberately do NOT pre-set shipping_sync_status to 'syncing' here.
@@ -2305,7 +2236,7 @@ module.exports.syncWithCourier = async (req, res) => {
     return res.status(202).json({
       success: true,
       queued: true,
-      message: `Sync queued for order ${order.order_number}. Refresh status in a moment.`,
+      message: `Booking queued for ${order.order_number}. If iThink rejects the selected courier for this route, another eligible courier will be tried.`,
       data: {
         auto: !!auto || !logistics,
         logistics: (auto ? null : logistics) || null,

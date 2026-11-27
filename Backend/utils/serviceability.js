@@ -77,52 +77,51 @@ function parseServiceability(raw) {
  * Returns: [{ code, id, s_type, is_serviceable, cod, prepaid, pickup, delivery, raw }]
  */
 function looksLikeCourierRow(v) {
-  return v && typeof v === 'object' && !Array.isArray(v) && (
-    'cod' in v || 'prepaid' in v || 'mode' in v || 'is_serviceable' in v ||
-    'rate' in v || 'service_type' in v || 'logistic_name' in v || 'logistics_name' in v
-  );
+  return v && typeof v === 'object' && !Array.isArray(v) && [
+    'cod', 'prepaid', 'cod_available', 'is_cod', 'prepaid_available', 'pickup',
+    'delivery', 'is_serviceable', 'serviceable', 'rate', 'freight_charges',
+    'total_charges', 'total_amount', 'logistic_name', 'logistics_name', 'courier_name',
+    'service_type', 's_type', 'mode',
+  ].some((field) => field in v);
 }
 
 function extractIThinkCouriers(raw) {
-  const unwrap = (Array.isArray(raw) && raw.length === 1 && raw[0] && raw[0].data) ? raw[0] : raw;
-
-  // The container that holds courier rows: the `data` payload if present.
-  let container = unwrap;
-  if (unwrap && !Array.isArray(unwrap) && unwrap.data != null) container = unwrap.data;
-
   const list = [];
-  if (Array.isArray(container)) {
-    container.forEach((val) => list.push({ key: null, val }));
-  } else if (container && typeof container === 'object') {
-    for (const [key, val] of Object.entries(container)) {
-      if (looksLikeCourierRow(val)) {
-        list.push({ key, val });
-      } else if (val && typeof val === 'object') {
-        // A wrapper (e.g. keyed by pincode) — dig one level for courier rows,
-        // skipping scalar meta like city_name/state_name/remark.
-        for (const [k2, v2] of Object.entries(val)) {
-          if (looksLikeCourierRow(v2)) list.push({ key: k2, val: v2 });
+  function collect(node, key = null, mode = null, depth = 0) {
+    if (!node || typeof node !== 'object' || depth > 6) return;
+    if (Array.isArray(node)) {
+      node.forEach((child) => collect(child, key, mode, depth + 1));
+    } else if (looksLikeCourierRow(node)) {
+      list.push({ key, val: node, mode });
+    } else {
+      for (const [childKey, child] of Object.entries(node)) {
+        if (/^(air|surface|standard|ground|express)$/i.test(childKey)) {
+          collect(child, key, childKey, depth + 1);
+        } else {
+          const name = /^(?:data|courier_data|couriers|rates|[0-9]+)$/i.test(childKey) ? key : childKey;
+          collect(child, name, mode, depth + 1);
         }
       }
     }
   }
+  collect(raw);
 
-  return list.map(({ key, val }) => {
+  return list.map(({ key, val, mode }) => {
     const c = val || {};
     // Booking `logistics` value: iThink's canonical courier name (or the object
     // key, which is the same code in the keyed shape).
-    const code = c.logistics_name || c.logistic_name || c.logistic || c.courier_name
-      || c.name || key || c.code || c.logistics_id || c.logistic_id || c.id;
+    const code = c.logistics_name || c.logistic_name || c.logistics || c.logistic || c.courier_name
+      || c.name || c.code || key || c.logistics_id || c.logistic_id || c.id;
     const s_type = c.logistics_service_type || c.service_type || c.s_type
-      || c.mode || c.serviceType || c.service || 'surface';
+      || c.mode || c.serviceType || c.service || mode || 'surface';
     return {
       code: code != null ? String(code).trim() : '',
       id: c.logistics_id || c.logistic_id || c.courier_id || c.id || null,
       s_type: String(s_type),
       is_serviceable: c.is_serviceable != null ? c.is_serviceable
         : (c.serviceable != null ? c.serviceable : undefined),
-      cod: c.cod,
-      prepaid: c.prepaid,
+      cod: c.cod ?? c.cod_available ?? c.is_cod,
+      prepaid: c.prepaid ?? c.prepaid_available,
       pickup: c.pickup,
       delivery: c.delivery,
       raw: c,

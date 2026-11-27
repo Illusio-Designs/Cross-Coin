@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper');
+const { extractIThinkCouriers } = require('../utils/serviceability.js');
+const { isCourierRouteRejection } = require('./iThinkCourierRouting.js');
 
 const ITHINK_STAGING_URL = 'https://pre-alpha.ithinklogistics.com';
 const ITHINK_PRODUCTION_URL = 'https://my.ithinklogistics.com';
@@ -170,48 +172,11 @@ class IThinkService {
       const response = await this.axiosInstance.post('/api_v3/rate/check.json', payload);
       const raw = response.data;
 
-      // Normalise into a flat array of courier options. iThink's rate/check
-      // response comes back in several shapes depending on account/route, and a
-      // shape we didn't handle used to normalise to [] → a FALSE "not serviceable"
-      // even when the pincode is deliverable. Handle them all:
-      const looksCourier = (v) => v && typeof v === 'object' && !Array.isArray(v)
-        && (('cod' in v) || ('prepaid' in v) || ('rate' in v) || ('mode' in v)
-            || ('service_type' in v) || ('logistics_name' in v) || ('logistic_name' in v));
-      const flattenObject = (obj) => {
-        const rows = [];
-        for (const [key, val] of Object.entries(obj)) {
-          if (looksCourier(val)) rows.push({ logistics: key, ...val });
-          else if (val && typeof val === 'object' && !Array.isArray(val)) {
-            // One nested level (e.g. keyed by pincode → { <courier>: {...} }).
-            for (const [k2, v2] of Object.entries(val)) {
-              if (looksCourier(v2)) rows.push({ logistics: k2, ...v2 });
-            }
-          }
-        }
-        return rows;
-      };
-
-      let couriers = [];
-      if (raw?.data && Array.isArray(raw.data)) {
-        couriers = raw.data;
-      } else if (raw?.data && typeof raw.data === 'object') {
-        // { data: { delhivery:{cod,prepaid,rate,…}, bluedart:{…} } } — the shape
-        // that previously slipped through and returned zero couriers.
-        couriers = flattenObject(raw.data);
-      } else if (raw?.courier_data && typeof raw.courier_data === 'object') {
-        // iThink sometimes returns { courier_data: { delhivery: {...}, bluedart: {...} } }
-        couriers = Object.entries(raw.courier_data).map(([key, val]) => ({
-          logistics: key,
-          ...val,
-        }));
-      } else if (Array.isArray(raw)) {
-        couriers = raw;
-      } else if (raw && typeof raw === 'object') {
-        // Try an array-like structure first, then any keyed-object of couriers.
-        const firstArrayKey = Object.keys(raw).find(k => Array.isArray(raw[k]));
-        if (firstArrayKey) couriers = raw[firstArrayKey];
-        else couriers = flattenObject(raw);
-      }
+      const couriers = extractIThinkCouriers(raw).map((courier) => ({
+        ...courier.raw,
+        logistics: courier.code,
+        s_type: courier.s_type,
+      }));
 
       logger.debug(`Found ${couriers.length} courier options`);
       return couriers;
@@ -362,30 +327,27 @@ class IThinkService {
 
       const topStatus   = String(responseData?.status || '').toLowerCase();
       const orderStatus = String(result.status || '').toLowerCase();
-      const waybill     = result.waybill || result.awb_number || result.AWB || null;
+      const waybill     = String(result.waybill || result.awb_number || result.AWB || '').trim() || null;
 
-      // Real success requires either:
-      //   - a waybill was issued, OR
-      //   - the per-order status explicitly says success
-      // Top-level status / status_code are NOT enough on their own because
-      // iThink returns status_code 200 even when an individual order failed.
-      const success = !!waybill || orderStatus === 'success';
+      const success = !!waybill || (!!options.reverse && orderStatus === 'success');
 
       // When we couldn't confirm success, extract the most useful reason
       // iThink gave us. Different failure modes use different keys.
       let message = null;
+      let courierRejected = false;
+      let requiresReview = false;
       if (!success) {
         const remark = result.remark || result.message || result.error || result.reason
           || responseData?.message || responseData?.status_message || responseData?.remark
           || responseData?.error || (typeof dataRoot === 'string' ? dataRoot : null);
 
-        if (remark && /not\s*serviceable/i.test(remark)) {
-          // Clean, human message for the common "pincode not serviceable" case.
-          const pin = (String(remark).match(/\b(\d{6})\b/) || [])[1]
-            || (String(orderData.customer_PinCode || '').match(/\d{6}/) || [])[0] || '';
-          message = pin
-            ? `Delivery pincode ${pin} is not serviceable by any courier — please verify the customer's address.`
-            : `Delivery pincode is not serviceable by any courier — please verify the customer's address.`;
+        courierRejected = orderStatus !== 'success' && isCourierRouteRejection(remark);
+        if (courierRejected) {
+          const pin = String(orderData.customer_PinCode || '').trim();
+          message = `iThink rejected ${orderData.logistics} for the route to delivery pincode ${pin}.`;
+        } else if (!options.reverse && (orderStatus === 'success' || !remark)) {
+          requiresReview = true;
+          message = 'iThink did not confirm an AWB. Check the order in iThink before booking again.';
         } else if (remark) {
           // iThink gave a reason — use it. Only add our field diagnostics when the
           // remark is vague/generic ("Some error occured"), so specific messages
@@ -411,9 +373,11 @@ class IThinkService {
         routeCode: null,
         status: result.status || (success ? 'booked' : 'failed'),
         labelUrl: result.label_url || result.labelurl || null,
-        courierName: result.courier_name || result.logistic || orderData.logistics || null,
+        courierName: result.courier_name || result.logistics_name || result.logistics || result.logistic || orderData.logistics || null,
         courierId: result.courier_id || null,
         message,
+        courierRejected,
+        requiresReview,
         response: responseData,
       };
     } catch (error) {
@@ -443,6 +407,10 @@ class IThinkService {
           field_issues: this._diagnoseBookingPayload(p),
         };
       } catch (_) { /* diagnostics must never mask the real error */ }
+      if (!options.reverse && ((error.request && !error.response) || error.response?.status >= 500 ||
+          /returned null response/i.test(error.message))) {
+        return { success: false, requiresReview: true, message: 'iThink did not confirm an AWB. Check the order in iThink before booking again.' };
+      }
       this.handleApiError(error, 'Create Forward Order');
     }
   }

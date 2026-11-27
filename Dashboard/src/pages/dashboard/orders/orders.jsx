@@ -73,6 +73,16 @@ function parseTab(v) {
 
 const orderWaybill = (row) => String(row.Shipment?.waybill || '').trim() || String(row.shipping_waybill || '').trim();
 
+function orderBookingError(order) {
+    const error = order.shipping_sync_error || order.Shipment?.sync_error;
+    const previousPin = typeof error === 'string' && error.match(/^Delivery pincode (\d{6}) is not serviceable by any courier/i)?.[1];
+    const deliveryPin = String(order.ShippingAddress?.pincode || '').trim();
+    if (previousPin && /^\d{6}$/.test(deliveryPin) && previousPin !== deliveryPin) {
+        return `The previous booking error references pincode ${previousPin}. The delivery address uses ${deliveryPin}. Use Book now to check courier availability again.`;
+    }
+    return error;
+}
+
 function displayedStage(row) {
     const status = String(row.status || '').toLowerCase();
     if (status === 'pickup initiated') return 'picked up';
@@ -196,7 +206,7 @@ function OrderDelivery({ order, preparingLabel, onDownloadLabel }) {
     const courier = shipment.courier_name || order.courier_name;
     const provider = shipment.provider || (order.shipping_order_id || order.shipping_waybill ? 'ithink' : null);
     const labelUrl = shipment.label_url || order.shipping_label_url;
-    const syncError = shipment.sync_error || order.shipping_sync_error;
+    const syncError = orderBookingError(order);
     const fields = [
         ['Courier', courier],
         ['AWB', waybill],
@@ -848,7 +858,7 @@ const Orders = ({ initialTab } = {}) => {
         const pmt = (row.payment_status || '').toLowerCase();
         const isPrepaid = (row.payment_type || '').toLowerCase() !== 'cod';
         const waybill = orderWaybill(row);
-        const syncError = row.Shipment?.sync_error || row.shipping_sync_error;
+        const syncError = orderBookingError(row);
         const canConfirm = ['awaiting_confirmation', 'pending'].includes(st);
         const isFinal = ['delivered', 'cancelled', 'order cancelled'].includes(st);
         const pendingSync = !waybill && !isFinal && !canConfirm && !['rto', 'rto delivered', 'returned_rto', 'return_initiated'].includes(st);
@@ -1183,6 +1193,36 @@ const Orders = ({ initialTab } = {}) => {
                     <ManualOrderModal open={manualOrderOpen} brands={brands} initialBrandId={brandFilter}
                         onClose={() => setManualOrderOpen(false)} onCreated={onManualOrderCreated} />
 
+                    <section className="ord-overview" aria-labelledby="ord-overview-heading">
+                        <div className="ord-overview-head">
+                            <h2 id="ord-overview-heading">Order overview</h2>
+                            <span>{statsStartDate || statsEndDate ? 'Selected dates' : 'Last 30 days'}</span>
+                        </div>
+                        {allOrdersStats === null ? (
+                            <p className="ord-overview-error">Order figures are unavailable. <button type="button" onClick={fetchAllOrdersForStats}>Try again</button></p>
+                        ) : (
+                            <StatGrid className="orders-kpi-grid"
+                                {...(statsPending ? { role: 'status', 'aria-busy': true, 'aria-label': 'Loading order figures' } : {})}>
+                                <StatTile label="Placed" value={statVal((allOrdersStats?.placed ?? 0).toLocaleString('en-IN'))} />
+                                <StatTile label="Booked value" value={statVal(Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                                <StatTile label="Prepaid"   value={statVal(allOrdersStats?.prepaid?.orders ?? 0)} />
+                                <StatTile label="COD"       value={statVal(allOrdersStats?.cod?.orders ?? 0)} />
+                                <StatTile label="Delivered" value={statVal(allOrdersStats?.delivered ?? 0)} />
+                                <StatTile label="Cancelled" value={statVal(allOrdersStats?.cancelled ?? 0)} />
+                                <StatTile label="Net sales" value={statVal(Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                                <StatTile label="Avg order" value={statVal(Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
+                            </StatGrid>
+                        )}
+                    </section>
+
+                    <FilterChips className="ord-tabs" revealSelected ariaLabel="Order pipeline stages"
+                        items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] }))}
+                        value={isRtoStage ? 'rto' : statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
+
+                    {isRtoStage && <FilterChips className="ord-tabs" revealSelected ariaLabel="RTO warehouse receipt"
+                        items={RTO_FILTERS.map(({ value, label, count }) => ({ value, label, count: deskCounts[count] }))}
+                        value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />}
+
                     {['all', 'to_ship', 'booked', 'picked_up', 'in_transit', 'out_for_delivery', 'undelivered', 'delivered'].includes(statusFilter) && (
                         <DeliverySummary title="Delivery status" metrics={[
                             { label: 'To ship', value: deskCounts.to_ship },
@@ -1193,14 +1233,6 @@ const Orders = ({ initialTab } = {}) => {
                             { label: 'Undelivered', value: deskCounts.undelivered, attention: true },
                         ]} action={<Button size="sm" variant="secondary" onClick={() => openDesk('ndr')}>Review failed deliveries</Button>} />
                     )}
-
-                    <FilterChips className="ord-tabs" ariaLabel="Order pipeline stages"
-                        items={DESK_TABS.map(({ v, l, count }) => ({ value: v, label: l, count: deskCounts[count] }))}
-                        value={isRtoStage ? 'rto' : statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />
-
-                    {isRtoStage && <FilterChips className="ord-tabs" ariaLabel="RTO warehouse receipt"
-                        items={RTO_FILTERS.map(({ value, label, count }) => ({ value, label, count: deskCounts[count] }))}
-                        value={statusFilter} onChange={(v) => { setStatusFilter(v); setCurrentPage(1); }} />}
 
                     {statusFilter !== 'problems' && <div className="ord-toolbar" role="group" aria-label="Order list filters">
                         <div className="sl-search-wrap">
@@ -1360,25 +1392,6 @@ const Orders = ({ initialTab } = {}) => {
                     )}
                 </section>
                 )}
-
-                {statusFilter !== 'problems' && <details className="ord-overview">
-                    <summary>Order overview <span>{statsStartDate || statsEndDate ? 'Selected dates' : 'Last 30 days'}</span></summary>
-                    {allOrdersStats === null ? (
-                        <p className="ord-overview-error">Order figures are unavailable. <button type="button" onClick={fetchAllOrdersForStats}>Try again</button></p>
-                    ) : (
-                        <StatGrid className="orders-kpi-grid"
-                            {...(statsPending ? { role: 'status', 'aria-busy': true, 'aria-label': 'Loading order figures' } : {})}>
-                            <StatTile label="Placed" value={statVal((allOrdersStats?.placed ?? 0).toLocaleString('en-IN'))} />
-                            <StatTile label="Booked value" value={statVal(Math.round((allOrdersStats?.placedValue || 0) - (allOrdersStats?.cancelledValue || 0)).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                            <StatTile label="Prepaid"   value={statVal(allOrdersStats?.prepaid?.orders ?? 0)} />
-                            <StatTile label="COD"       value={statVal(allOrdersStats?.cod?.orders ?? 0)} />
-                            <StatTile label="Delivered" value={statVal(allOrdersStats?.delivered ?? 0)} />
-                            <StatTile label="Cancelled" value={statVal(allOrdersStats?.cancelled ?? 0)} />
-                            <StatTile label="Net sales" value={statVal(Math.round(allOrdersStats?.netSales || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                            <StatTile label="Avg order" value={statVal(Math.round(allOrdersStats?.aov || 0).toLocaleString('en-IN'))} prefix={statsPending ? null : '₹'} />
-                        </StatGrid>
-                    )}
-                </details>}
             </div>
 
             {/* Order Details Modal */}
