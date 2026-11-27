@@ -103,6 +103,27 @@
 .hm-head p { margin: 3px 0 0; font-size: 13.5px; color: var(--ds-color-text-muted); }
 .hm-tools { width: min(100%, 200px); }
 
+.obz-home .hm-work-tabs {
+  flex-wrap: nowrap; gap: 4px; padding: 3px; border-radius: 10px;
+  border: 1px solid var(--ds-color-border); background: var(--ds-color-surface-soft); overflow-x: auto;
+}
+.obz-home .hm-work-tabs .ui-chip {
+  flex: 0 0 auto; gap: 4px; min-height: 34px; padding: 0 12px; border: 0;
+  border-radius: 8px; font-weight: 600;
+}
+.obz-home .hm-work-tabs .ui-chip__count {
+  padding: 0 6px; font-size: 11px; border-radius: var(--ds-radius-pill);
+  background: var(--ds-color-border); color: var(--ds-color-text);
+}
+.obz-home .hm-work-tabs .ui-chip.is-on,
+.obz-home .hm-work-tabs .ui-chip.is-on:hover {
+  background: var(--ds-color-brand); color: var(--ds-color-bg);
+}
+.obz-home .hm-work-tabs .ui-chip.is-on .ui-chip__count { background: var(--ds-color-bg); }
+@media (max-width: 900px) {
+  .obz-home .hm-work-tabs .ui-chip { min-height: 44px; }
+}
+
 .hm-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .hm-card {
   --t: var(--ds-color-info); --tb: var(--ds-color-info-bg); --tbd: var(--ds-color-info-bd, var(--ds-color-border));
@@ -200,6 +221,7 @@
 .hm-kpi .down { color: var(--ds-color-danger); font-weight: 700; }
 
 .hm-operations { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+.hm-delivery-bars .bar.today { background: var(--ds-color-success); }
 @media (max-width: 1080px) { .hm-operations { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .hm-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .hm-grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
@@ -233,43 +255,3 @@
 .hm-activity-card .notif-c-title { white-space: normal; overflow-wrap: anywhere; }
 .hm-activity-card:not(button) { cursor: default; }
 .hm-activity-card:not(button):hover { transform: none; }
-
-/* Put the work queue and its fulfilment context in the same section. */
-.hm-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.hm-workspace > *, .hm-workspace .hm-operations > * { min-width: 0; }
-.hm-workspace .hm-operations { grid-template-columns: minmax(0, 1fr); }
-.hm-workspace .hm-cards { grid-template-columns: minmax(0, 1fr); gap: 0; }
-.hm-workspace .hm-card {
-  display: grid;
-  grid-template-columns: 66px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 0;
-  min-height: 0;
-  background: transparent;
-  border-width: 0 0 1px;
-  border-color: var(--ds-color-border);
-  border-radius: 0;
-}
-.hm-workspace .hm-card:last-child { border-bottom-width: 0; }
-.hm-workspace .hm-card .top { display: grid; justify-items: start; gap: 5px; }
-.hm-workspace .hm-card .tag { padding: 2px 6px; font-size: 10px; }
-.hm-workspace .hm-card .count { font-size: 20px; }
-.hm-workspace .hm-card h3 { font-size: 13px; }
-.hm-workspace .hm-card p { font-size: 12px; }
-.hm-workspace .hm-card .go { align-self: center; margin: 0; padding: 6px 9px; max-width: 140px; }
-.hm-workspace .hm-delivery-bars .bar.today { background: var(--ds-color-success); }
-
-@media (max-width: 1080px) {
-  .hm-workspace { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 640px) {
-  .hm-workspace .panel-h { flex-wrap: wrap; }
-  .hm-workspace .hm-card { grid-template-columns: 60px minmax(0, 1fr); gap: 7px 10px; }
-  .hm-workspace .hm-card .go { grid-column: 2; justify-self: start; }
-}

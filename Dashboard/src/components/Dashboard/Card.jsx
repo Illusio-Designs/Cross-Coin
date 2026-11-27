@@ -234,92 +234,90 @@ function TodayHome() {
       </section>
       )}
 
-      <div className="hm-workspace">
-        <section className="panel" aria-label="Today's work">
-          <div className="panel-h">
-            <h3>Today’s work</h3>
-            <FilterChips ariaLabel="Filter work" value={tab} onChange={setTab}
-              items={['all', 'urgent', 'today', 'later'].map((value) => ({
-                value, label: value === 'all' ? 'All' : PRIORITY_LABEL[value], count: first ? undefined : counts[value],
-              }))} />
+      <section className="panel" aria-label="Today's work">
+        <div className="panel-h">
+          <h3>Today’s work</h3>
+          <FilterChips className="hm-work-tabs" ariaLabel="Filter work" value={tab} onChange={setTab}
+            items={['all', 'urgent', 'today', 'later'].map((value) => ({
+              value, label: value === 'all' ? 'All' : PRIORITY_LABEL[value], count: first ? undefined : counts[value],
+            }))} />
+        </div>
+        {first ? (
+          <div className="hm-cards" role="status" aria-busy="true">
+            <span className="ds-sr-only">Loading today’s work…</span>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="hm-card" aria-hidden="true" style={{ borderColor: 'var(--ds-color-border)' }}>
+                <div className="top"><Skeleton w={64} h={18} r={999} /><Skeleton w={40} h={28} /></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}><Skeleton w="70%" h={14} /><Skeleton w="90%" h={11} /></div>
+                <Skeleton w="100%" h={34} r={10} />
+              </div>
+            ))}
           </div>
-          {first ? (
-            <div className="hm-cards" role="status" aria-busy="true">
-              <span className="ds-sr-only">Loading today’s work…</span>
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="hm-card" aria-hidden="true" style={{ borderColor: 'var(--ds-color-border)' }}>
-                  <div className="top"><Skeleton w={64} h={18} r={999} /><Skeleton w={40} h={28} /></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}><Skeleton w="70%" h={14} /><Skeleton w="90%" h={11} /></div>
-                  <Skeleton w="100%" h={34} r={10} />
-                </div>
-              ))}
-            </div>
-          ) : shown.length === 0 ? (
-            <div className="hm-empty">{queues.length === 0 ? 'Nothing waiting. Nice work.' : 'Nothing in this group.'}</div>
+        ) : shown.length === 0 ? (
+          <div className="hm-empty">{queues.length === 0 ? 'Nothing waiting. Nice work.' : 'Nothing in this group.'}</div>
+        ) : (
+          <div className="hm-cards">
+            {shown.map((q) => {
+              const c = queueCard(q);
+              return (
+                <article key={q.key} className={`hm-card p-${q.priority}`}>
+                  <div className="top"><span className="tag">{PRIORITY_LABEL[q.priority]}</span><span className="count">{q.count.toLocaleString('en-IN')}</span></div>
+                  <div><h3>{c.title}</h3><p>{c.detail}</p></div>
+                  <button type="button" className="go" onClick={() => openQueue(q, brandId)}>{c.action} →</button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <div className="hm-operations">
+        <section className="panel" aria-label="Orders right now">
+          <div className="panel-h"><h3>Orders right now</h3></div>
+          <div className="hm-flow">
+            {[
+              { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
+              { l: 'To ship', v: p.toShip, tab: 'to_ship' },
+              { l: 'In transit', v: p.inTransit, tab: 'in_transit' },
+              { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
+            ].map((s) => (
+              <div className="step" key={s.l}>
+                <button type="button" onClick={() => goToView('orders', s.tab, brandId)}>
+                  <span className="l">{s.l}</span>
+                  <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
+                  {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="hm-chips">
+            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'out_for_delivery', brandId)}>Out for delivery · {num(Number(p.outForDelivery || 0).toLocaleString('en-IN'), 20, 12)}</button>
+            <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
+            <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
+            <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled', brandId)}>Cancelled today · {first ? '–' : p.cancelledToday || 0}</button>
+            <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'rto', brandId)}>RTO updates today · {first ? '–' : p.rtoToday || 0}</button>
+          </div>
+        </section>
+        <section className="panel" aria-labelledby="hm-deliveries-title">
+          <div className="panel-h">
+            <h3 id="hm-deliveries-title">Delivered orders · last 7 days</h3>
+            <span className="h-hint">{first ? <Skeleton w={48} h={11} /> : deliveries && plural(deliveryTotal, 'order')}</span>
+          </div>
+          {first ? <Skeleton w="100%" h={138} /> : !deliveries ? (
+            <p className="h-hint">Delivery history is unavailable.</p>
           ) : (
-            <div className="hm-cards">
-              {shown.map((q) => {
-                const c = queueCard(q);
-                return (
-                  <article key={q.key} className={`hm-card p-${q.priority}`}>
-                    <div className="top"><span className="tag">{PRIORITY_LABEL[q.priority]}</span><span className="count">{q.count.toLocaleString('en-IN')}</span></div>
-                    <div><h3>{c.title}</h3><p>{c.detail}</p></div>
-                    <button type="button" className="go" onClick={() => openQueue(q, brandId)}>{c.action} →</button>
-                  </article>
-                );
-              })}
-            </div>
+            <ul className="hm-week hm-delivery-bars" aria-label="Orders by delivery date in India">
+              {deliveries.map(({ day, orders }) => (
+                <li className="col" key={day}>
+                  <span className="amt">{orders.toLocaleString('en-IN')}</span>
+                  <div className={`bar${day === todayYmd ? ' today' : ''}`}
+                    style={{ height: `${Math.max(2, Math.round(orders / deliveryMax * 120))}px` }} aria-hidden="true" />
+                  <span className={`day${day === todayYmd ? ' today' : ''}`}>{dayName(day)}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
-
-        <div className="hm-operations">
-          <section className="panel" aria-label="Orders right now">
-            <div className="panel-h"><h3>Orders right now</h3></div>
-            <div className="hm-flow">
-              {[
-                { l: 'To confirm', v: p.toConfirm, tab: 'to_confirm' },
-                { l: 'To ship', v: p.toShip, tab: 'to_ship' },
-                { l: 'In transit', v: p.inTransit, tab: 'in_transit' },
-                { l: 'Delivered today', v: p.deliveredToday, sub: rupee(p.deliveredTodayValue), tab: 'delivered' },
-              ].map((s) => (
-                <div className="step" key={s.l}>
-                  <button type="button" onClick={() => goToView('orders', s.tab, brandId)}>
-                    <span className="l">{s.l}</span>
-                    <span className="v">{num(Number(s.v || 0).toLocaleString('en-IN'), 48, 26)}</span>
-                    {s.sub && <span className="l">{num(s.sub, 60, 11)}</span>}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="hm-chips">
-              <button type="button" className="hm-chip" onClick={() => goToView('orders', 'out_for_delivery', brandId)}>Out for delivery · {num(Number(p.outForDelivery || 0).toLocaleString('en-IN'), 20, 12)}</button>
-              <button type="button" className="hm-chip bad" onClick={() => goToView('orders', 'problems', brandId)}>Delivery problems · {first ? '–' : p.problems || 0}</button>
-              <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'returns', brandId)}>Returns open · {first ? '–' : p.returnsOpen || 0}</button>
-              <button type="button" className="hm-chip" onClick={() => goToView('orders', 'cancelled', brandId)}>Cancelled today · {first ? '–' : p.cancelledToday || 0}</button>
-              <button type="button" className="hm-chip ret" onClick={() => goToView('orders', 'rto', brandId)}>RTO updates today · {first ? '–' : p.rtoToday || 0}</button>
-            </div>
-          </section>
-          <section className="panel" aria-labelledby="hm-deliveries-title">
-            <div className="panel-h">
-              <h3 id="hm-deliveries-title">Delivered orders · last 7 days</h3>
-              <span className="h-hint">{first ? <Skeleton w={48} h={11} /> : deliveries && plural(deliveryTotal, 'order')}</span>
-            </div>
-            {first ? <Skeleton w="100%" h={138} /> : !deliveries ? (
-              <p className="h-hint">Delivery history is unavailable.</p>
-            ) : (
-              <ul className="hm-week hm-delivery-bars" aria-label="Orders by delivery date in India">
-                {deliveries.map(({ day, orders }) => (
-                  <li className="col" key={day}>
-                    <span className="amt">{orders.toLocaleString('en-IN')}</span>
-                    <div className={`bar${day === todayYmd ? ' today' : ''}`}
-                      style={{ height: `${Math.max(2, Math.round(orders / deliveryMax * 120))}px` }} aria-hidden="true" />
-                    <span className={`day${day === todayYmd ? ' today' : ''}`}>{dayName(day)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
       </div>
 
       {isAdmin && <ProviderWalletBalances key={brandId || 'all'} brandId={brandId} />}
