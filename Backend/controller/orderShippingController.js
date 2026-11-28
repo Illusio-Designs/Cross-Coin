@@ -105,7 +105,7 @@ module.exports.autoSelectCourierWithFallback = autoSelectCourierWithFallback;
 
 const {
   getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey,
-  discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking,
+  discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking, isIThinkCod,
 } = require('../services/iThinkCourierRouting.js');
 
 // Try an explicit pick first. Use rate results and then the domestic courier
@@ -1034,6 +1034,10 @@ module.exports.createOrderInShipping = async (order, transaction, provider = nul
       };
     }
 
+    if (providerName === 'ithink' && isUnconfirmedIThinkBooking(order.shipping_sync_error)) {
+      return { success: false, requiresReview: true, error: order.shipping_sync_error };
+    }
+
     // Validate order data before sending to Shipping
     const validationIssues = module.exports.validateOrderForShipping(order);
     if (validationIssues.length > 0) {
@@ -1819,7 +1823,7 @@ module.exports.prepareShippingOrderData = async (order, providerName = 'ithink',
       customer_PinCode: String(shippingAddress?.pincode || '').trim(),
       customer_City: String(shippingAddress?.city || '').trim(),
       customer_State: String(shippingAddress?.state || '').trim(),
-      payment_Mode: order.payment_type === 'cod' ? 1 : 2, // 1=COD, 2=PREPAID
+      payment_Mode: (providerName === 'ithink' ? isIThinkCod(order) : order.payment_type === 'cod') ? 1 : 2,
       express_Type: 'surface',
       is_Ndd: 0,
       order_Amount: parseFloat(order.total_amount) || 0,
@@ -1850,7 +1854,9 @@ module.exports.prepareShippingOrderData = async (order, providerName = 'ithink',
 };
 
 async function queueManualBooking(orderId, selection = {}) {
-  await Order.update({ shipping_sync_status: 'pending', shipping_sync_error: null, shipping_sync_attempts: 0 }, {
+  // Preserve the last provider response so the worker can detect a partial
+  // booking even if it was recorded after the endpoint loaded the order.
+  await Order.update({ shipping_sync_status: 'pending', shipping_sync_attempts: 0 }, {
     where: { id: orderId, shipping_waybill: null, shipping_sync_status: { [Op.notIn]: ['synced', 'syncing'] } },
   });
   const { enqueue } = require('../services/integrationQueue.js');
@@ -1868,7 +1874,7 @@ module.exports.syncSingleOrderWithShipping = async (req, res) => {
     // call can't tie up a Passenger worker (which surfaced as "Network Error" on
     // other requests).
     const order = await Order.findByPk(id, {
-      attributes: ['id', 'order_number', 'status', 'shipping_sync_status', 'shipping_waybill'],
+      attributes: ['id', 'order_number', 'status', 'shipping_sync_status', 'shipping_waybill', 'shipping_sync_error'],
     });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
@@ -1877,6 +1883,9 @@ module.exports.syncSingleOrderWithShipping = async (req, res) => {
     }
     if (order.shipping_waybill || order.shipping_sync_status === 'synced') {
       return res.json({ success: true, queued: false, message: `Order ${order.order_number} is already booked.` });
+    }
+    if (isUnconfirmedIThinkBooking(order.shipping_sync_error)) {
+      return res.status(409).json({ success: false, message: 'Check the order in iThink for an AWB before booking again.' });
     }
 
     // Mark "booking in progress" so the row shows Pending Sync, then hand the
@@ -2208,6 +2217,9 @@ module.exports.syncWithCourier = async (req, res) => {
         message: `Order ${order.order_number} is cancelled. No sync needed.`,
         data: { order: { id: order.id, order_number: order.order_number, status: order.status, action: 'skipped' } },
       });
+    }
+    if (!order.shipping_waybill && isUnconfirmedIThinkBooking(order.shipping_sync_error)) {
+      return res.status(409).json({ success: false, message: 'Check the order in iThink for an AWB before booking again.' });
     }
 
     // Validate (reads only) before queueing so operators get instant feedback

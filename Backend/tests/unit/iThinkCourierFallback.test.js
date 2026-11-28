@@ -1,8 +1,10 @@
 jest.mock('../../services/settingsHelper.js', () => ({
   getSetting: jest.fn(async (_brand, key, fallback) => ({
     ITHINK_WAREHOUSE_PINCODE: '363641',
+    ITHINK_PICKUP_ADDRESS_ID: '42',
     COURIER_EXCLUDE: 'dtdc',
   }[key] ?? fallback)),
+  clearCache: jest.fn(),
 }));
 jest.mock('../../config/logging.js', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -36,10 +38,20 @@ const matrix = {
   },
 };
 
-function providerWith(rates = [], reply = matrix) {
+const pickupMatrix = {
+  data: {
+    363641: {
+      Delhivery: { pickup: 'Y' },
+      BlueDart: { pickup: 'N' },
+      Xpressbees: { pickup: 'Y' },
+    },
+  },
+};
+
+function providerWith(rates = [], reply = matrix, pickup = pickupMatrix) {
   return {
     getAvailableCouriers: jest.fn().mockResolvedValue(rates),
-    checkServiceability: jest.fn().mockResolvedValue(reply),
+    checkServiceability: jest.fn(async (_source, pin) => pin === '363641' ? pickup : reply),
   };
 }
 
@@ -70,6 +82,7 @@ test('checks both pincodes and books a matrix courier when the selected courier 
     sourcePincode: '363641', destinationPincode: '422010', paymentMode: 'COD',
   }));
   expect(provider.checkServiceability).toHaveBeenCalledWith('363641', '422010');
+  expect(provider.checkServiceability).toHaveBeenCalledWith('363641', '363641');
   expect(book.mock.calls.map((call) => call.slice(-2))).toEqual([
     ['xpressbees', 'surface'], ['delhivery', 'surface'], ['delhivery', 'air'],
   ]);
@@ -182,4 +195,73 @@ test('the worker holds an already queued retry when the saved reply says the pac
   await expect(processor({ data: { orderId: order.id } })).resolves.toMatchObject({ requiresReview: true });
   expect(update).toHaveBeenCalledWith(expect.objectContaining({ shipping_sync_status: 'failed', pickup_hold_until: null }));
   expect(resolve).not.toHaveBeenCalled();
+});
+
+test('preserves air service from the documented rate-check field when booking', async () => {
+  const provider = providerWith([
+    { logistic_name: 'BlueDart', logistic_service_type: 'Air', cod: 'Y', prepaid: 'Y', rate: 90 },
+  ]);
+  const book = jest.spyOn(shipping, 'enhancedSyncSingleOrder').mockResolvedValue({ success: true, waybill: 'AWB-AIR' });
+  await expect(shipping.autoSelectCourierWithFallback(order, provider)).resolves.toMatchObject({ success: true });
+  expect(book).toHaveBeenCalledWith(order, null, provider, 'ithink', 'bluedart', 'air');
+  expect(provider.checkServiceability).not.toHaveBeenCalled();
+});
+
+test('matches pickup and delivery before trying an eligible service when the rate is missing', async () => {
+  const provider = providerWith([], {
+    data: { 422010: {
+      BlueDart: { cod: 'Y' },
+      Delhivery: { cod: 'Y', pickup: 'N' },
+    } },
+  }, {
+    data: { 363641: {
+      BlueDart: { pickup: 'N' },
+      Delhivery: { Air: { pickup: 'Y' }, Surface: { pickup: 'N' } },
+    } },
+  });
+  const book = jest.spyOn(shipping, 'enhancedSyncSingleOrder').mockResolvedValue({ success: true, waybill: 'AWB-AIR' });
+  await expect(shipping.autoSelectCourierWithFallback(order, provider)).resolves.toMatchObject({ success: true });
+  expect(book).toHaveBeenCalledTimes(1);
+  expect(book).toHaveBeenCalledWith(order, null, provider, 'ithink', 'delhivery', 'air');
+});
+
+test('sends the same weight, dimensions and COD mode to rate check and booking', async () => {
+  const { getIThinkRoute } = require('../../services/iThinkCourierRouting.js');
+  const orderWithAddress = {
+    ...order, payment_type: 'COD', OrderItems: [{ quantity: '2' }, { quantity: '1' }],
+    ShippingAddress: { pincode: ' 422010 ', phone: '9876543210' },
+  };
+  const route = await getIThinkRoute(orderWithAddress);
+  const orderData = await shipping.prepareShippingOrderData(orderWithAddress, 'ithink', 'delhivery', 'air');
+  const provider = new IThinkService();
+  jest.spyOn(provider, 'initialize').mockResolvedValue(undefined);
+  provider.axiosInstance = { post: jest.fn().mockResolvedValue({ data: [] }) };
+  const { discoverIThinkCouriers } = require('../../services/iThinkCourierRouting.js');
+  await discoverIThinkCouriers(provider, route);
+  expect(provider.axiosInstance.post).toHaveBeenCalledWith('/api_v3/rate/check.json', {
+    data: expect.objectContaining({
+      from_pincode: '363641', to_pincode: '422010', payment_method: 'COD',
+      shipping_weight_kg: '0.21', shipping_height_cms: '30',
+    }),
+  });
+  const { data } = provider.formatOrderDataForIThink(orderData);
+  expect(data.s_type).toBe('air');
+  expect(data.shipments[0]).toMatchObject({
+    pin: route.to, payment_mode: route.paymentMode, pickup_address_id: '42',
+    weight: '0.21', shipment_length: String(route.length), shipment_width: String(route.width),
+    shipment_height: '30',
+  });
+  expect(route).toMatchObject({ from: '363641', weight: 0.21, height: 30, paymentMode: 'COD' });
+});
+
+test('the manual booking endpoint preserves a partial booking for AWB review', async () => {
+  const { Order } = require('../../model/orderModel.js');
+  jest.spyOn(Order, 'findByPk').mockResolvedValue({
+    ...order, shipping_sync_status: 'failed', shipping_sync_error: 'Package might have been partially saved.',
+  });
+  const update = jest.spyOn(Order, 'update').mockResolvedValue([1]);
+  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+  await shipping.syncSingleOrderWithShipping({ params: { id: order.id } }, res);
+  expect(res.status).toHaveBeenCalledWith(409);
+  expect(update).not.toHaveBeenCalled();
 });

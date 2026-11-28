@@ -81,7 +81,7 @@ function looksLikeCourierRow(v) {
     'cod', 'prepaid', 'cod_available', 'is_cod', 'prepaid_available', 'pickup',
     'delivery', 'is_serviceable', 'serviceable', 'rate', 'freight_charges',
     'total_charges', 'total_amount', 'logistic_name', 'logistics_name', 'courier_name',
-    'service_type', 's_type', 'mode',
+    'logistic_service_type', 'logistics_service_type', 'service_type', 's_type', 'mode',
   ].some((field) => field in v);
 }
 
@@ -112,12 +112,13 @@ function extractIThinkCouriers(raw) {
     // key, which is the same code in the keyed shape).
     const code = c.logistics_name || c.logistic_name || c.logistics || c.logistic || c.courier_name
       || c.name || c.code || key || c.logistics_id || c.logistic_id || c.id;
-    const s_type = c.logistics_service_type || c.service_type || c.s_type
-      || c.mode || c.serviceType || c.service || mode || 'surface';
+    const serviceType = String(c.logistics_service_type || c.logistic_service_type || c.service_type || c.s_type
+      || c.mode || c.serviceType || c.service || mode || '').trim();
     return {
       code: code != null ? String(code).trim() : '',
       id: c.logistics_id || c.logistic_id || c.courier_id || c.id || null,
-      s_type: String(s_type),
+      s_type: serviceType || 'surface',
+      serviceType,
       is_serviceable: c.is_serviceable != null ? c.is_serviceable
         : (c.serviceable != null ? c.serviceable : undefined),
       cod: c.cod ?? c.cod_available ?? c.is_cod,

@@ -5,6 +5,17 @@ const tokens = (raw) => String(raw || '').toLowerCase().split(',').map((s) => s.
 const yes = (value) => ['yes', 'y', '1', 'true'].includes(String(value).trim().toLowerCase());
 const isCourierRouteRejection = (message) => /(?:not|non)[\s-]*(?:servic[e]?able|deliverable)|unserviceable|(?:route|pincode|courier|service|cod|prepaid)[^.;]{0,65}\b(?:not available|not supported)|does not (?:serve|support)/i.test(String(message || ''));
 const isUnconfirmedIThinkBooking = (message) => /partially saved|^iThink (?:did not confirm an AWB|issued AWB )/i.test(String(message || ''));
+const isIThinkCod = (order) => String(order.payment_type).trim().toLowerCase() === 'cod';
+
+function calculateIThinkShipmentDimensions(items) {
+  const quantity = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0) || 1;
+  return {
+    shipment_Weight: Number((quantity * 0.07).toFixed(2)),
+    shipment_Length: 14,
+    shipment_Width: 3,
+    shipment_Height: 10 * quantity,
+  };
+}
 
 async function getIThinkRoute(order) {
   const brand = order.brand_id || 1;
@@ -13,15 +24,15 @@ async function getIThinkRoute(order) {
     settings.getSetting(brand, 'COURIER_PRIORITY', 'delhivery, amazon, xpressbees, dtdc'),
     settings.getSetting(brand, 'COURIER_EXCLUDE', ''),
   ]);
-  const quantity = order.OrderItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0) || 1;
+  const dims = calculateIThinkShipmentDimensions(order.OrderItems);
   return {
     from: String(from || '').trim(),
     to: String(order.ShippingAddress?.pincode || '').trim(),
-    paymentMode: String(order.payment_type).toLowerCase() === 'cod' ? 'COD' : 'Prepaid',
-    weight: Math.max(0.5, quantity * 0.07),
-    length: 14,
-    width: 3,
-    height: 10 * quantity,
+    paymentMode: isIThinkCod(order) ? 'COD' : 'Prepaid',
+    weight: dims.shipment_Weight,
+    length: dims.shipment_Length,
+    width: dims.shipment_Width,
+    height: dims.shipment_Height,
     productMrp: Number(order.final_amount) || Number(order.total_amount) || 500,
     preferred: tokens(preferred),
     excluded: tokens(excluded),
@@ -52,12 +63,32 @@ function eligibleCouriers(rows, route, useMatrix) {
 
 async function discoverIThinkCouriers(provider, route, useMatrix = false) {
   const { from, to, paymentMode, weight, length, width, height, productMrp } = route;
-  const raw = useMatrix
-    ? await provider.checkServiceability(from, to)
-    : await provider.getAvailableCouriers({ sourcePincode: from, destinationPincode: to, paymentMode, weight, length, width, height, productMrp });
-  const rows = extractIThinkCouriers(raw);
-  if (useMatrix && !rows.length) throw new Error('iThink did not return courier serviceability data');
-  return eligibleCouriers(rows, route, useMatrix);
+  if (!useMatrix) {
+    const rates = await provider.getAvailableCouriers({ sourcePincode: from, destinationPincode: to, paymentMode, weight, length, width, height, productMrp });
+    return eligibleCouriers(extractIThinkCouriers(rates), route, false);
+  }
+
+  // The domestic pincode API checks only one pincode per request.
+  const [deliveryReply, pickupReply] = await Promise.all([
+    provider.checkServiceability(from, to),
+    provider.checkServiceability(from, from),
+  ]);
+  const delivery = extractIThinkCouriers(deliveryReply);
+  const pickup = extractIThinkCouriers(pickupReply);
+  if (!delivery.length || !pickup.length) throw new Error('iThink did not return courier serviceability data for both pincodes');
+
+  const pickupServices = pickup.filter((courier) => yes(courier.pickup));
+  const matching = delivery.flatMap((courier) => {
+    const code = courier.code.toLowerCase();
+    const origin = pickupServices.filter((option) => option.code.toLowerCase() === code);
+    const services = courier.serviceType ? [courier.serviceType] :
+      ['delhivery', 'bluedart'].includes(code) ? ['surface', 'air'] : ['surface'];
+    return services
+      .filter((service) => origin.some((option) =>
+        !option.serviceType || option.serviceType.toLowerCase() === service.toLowerCase()))
+      .map((service) => ({ ...courier, s_type: service }));
+  });
+  return eligibleCouriers(matching, route, true);
 }
 
 function orderIThinkOptions(options, route) {
@@ -71,4 +102,4 @@ function orderIThinkOptions(options, route) {
     .map(({ courier }) => courier);
 }
 
-module.exports = { getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey, discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking };
+module.exports = { getIThinkRoute, describeIThinkRoute, isCourierExcluded, courierKey, discoverIThinkCouriers, orderIThinkOptions, isCourierRouteRejection, isUnconfirmedIThinkBooking, isIThinkCod, calculateIThinkShipmentDimensions };

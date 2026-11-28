@@ -2,7 +2,7 @@ const axios = require('axios');
 const { logger } = require('../config/logging.js');
 const settingsHelper = require('./settingsHelper');
 const { extractIThinkCouriers } = require('../utils/serviceability.js');
-const { isCourierRouteRejection, isUnconfirmedIThinkBooking } = require('./iThinkCourierRouting.js');
+const { isCourierRouteRejection, isUnconfirmedIThinkBooking, calculateIThinkShipmentDimensions } = require('./iThinkCourierRouting.js');
 
 const AWB_REVIEW_MESSAGE = 'iThink did not confirm an AWB. Check the order in iThink before booking again.';
 
@@ -367,8 +367,9 @@ class IThinkService {
         requiresReview = !options.reverse && (partialBooking || orderStatus === 'success' || !remark);
         courierRejected = !partialBooking && !requiresReview && orderStatus !== 'success' && routeRejected;
         if (requiresReview) {
+          const service = [orderData.logistics, orderData.s_type].filter(Boolean).join(' ');
           message = partialBooking && routeRejected
-            ? `iThink did not confirm an AWB. The courier rejected delivery to ${pin} and may have saved part of the shipment. Check the order in iThink before booking again.`
+            ? `iThink did not confirm an AWB. ${service || 'The courier'} reported a pincode serviceability error while booking delivery to ${pin} and may have saved part of the shipment. Check the order in iThink before booking again.`
             : AWB_REVIEW_MESSAGE;
         } else if (courierRejected) {
           message = `iThink rejected ${orderData.logistics} for the route to delivery pincode ${pin}.`;
@@ -1091,13 +1092,7 @@ class IThinkService {
   // ── Dimensions (reuse CrossCoin standard) ───────────────────────────────
 
   calculateShipmentDimensions(items) {
-    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-    return {
-      shipment_Weight: totalQuantity * 0.07,
-      shipment_Length: 14,
-      shipment_Width: 3,
-      shipment_Height: 10 * totalQuantity,
-    };
+    return calculateIThinkShipmentDimensions(items);
   }
 
   // ── Health Check ────────────────────────────────────────────────────────

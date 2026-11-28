@@ -911,12 +911,16 @@ const Orders = ({ initialTab } = {}) => {
         const canRefund = isPrepaid && refundableStatus && ['paid', 'refund_pending'].includes(pmt);
         const rtoReceived = Number(row.rto_receipt_eligible) === 1;
         const needsRtoVerification = rtoReceived && !row.rto_receipt_verified_at;
+        const bookingNeedsReview = pendingSync && /partially saved|^iThink (?:did not confirm an AWB|issued AWB )/i.test(
+            row.shipping_sync_error || row.Shipment?.sync_error || '',
+        );
         const ndr = row.ndr_case;
         const ret = row.open_return;
         const wa = row.last_whatsapp;
 
         let issue = null;
         if (needsRtoVerification) issue = { tone: 'warn', tag: 'Verify receipt', text: 'Courier marked delivered back. Check the parcel and AWB.' };
+        else if (bookingNeedsReview) issue = { tone: 'warn', tag: 'Booking review', text: syncError };
         else if (syncError && pendingSync) issue = { tone: 'bad', tag: 'Booking', text: `Booking failed: ${syncError}` };
         else if (ndr) {
             const a = ndr.customer_action;
@@ -942,6 +946,7 @@ const Orders = ({ initialTab } = {}) => {
         let primary = { label: 'View', onClick: () => openOrderDetails(row) };
         if (needsRtoVerification) primary = { label: 'Verify receipt', onClick: () => setRtoReceiptPrompt(row) };
         else if (canConfirm) primary = { label: 'Confirm', onClick: () => confirmOrder(row.id, row.order_number) };
+        else if (bookingNeedsReview) primary = { label: 'Review booking', onClick: () => openOrderDetails(row) };
         else if (pendingSync) primary = { label: syncingOrders.has(row.id) ? 'Booking…' : 'Book now', disabled: syncingOrders.has(row.id), onClick: () => syncSingleOrder(row.id, row.order_number) };
         else if (ndr) primary = { label: 'Resolve NDR', onClick: () => openDesk('ndr', row.order_number) };
         else if (ret) primary = { label: ret.status === 'received' ? 'Refund' : 'Open return', onClick: () => openDesk(ret.status === 'received' ? 'refund' : 'return', row.order_number) };
