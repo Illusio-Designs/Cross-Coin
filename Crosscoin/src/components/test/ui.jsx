@@ -236,7 +236,7 @@ export function TextSkeleton({ paras = 3, lines = 4, heading = true }) {
 // ImageKit URLs are requested at the width they are shown (`w`, plus an
 // optional `widths` srcSet with `sizes`), WebP/AVIF via f-auto. Other URLs are
 // used as-is. `priority` = the LCP image (eager + high fetch priority).
-export function Thumb({ src, color, className, style, alt = '', w, widths, sizes, mobileSource, priority = false }) {
+export function Thumb({ src, color, className, style, alt = '', w, widths, sizes, mobileSource, priority = false, onReady }) {
   const ref = useRef(null);
   const [shown, setShown] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -250,6 +250,10 @@ export function Thumb({ src, color, className, style, alt = '', w, widths, sizes
     const img = ref.current;
     setShown(!!(img && img.complete && img.naturalWidth > 0));
   }, [url, srcSet]);
+
+  useEffect(() => {
+    if (ref.current?.complete) onReady?.();
+  }, [url, srcSet, onReady]);
 
   const reveal = (e) => {
     const img = e.currentTarget;
@@ -272,8 +276,8 @@ export function Thumb({ src, color, className, style, alt = '', w, widths, sizes
         loading={priority ? 'eager' : 'lazy'}
         decoding={priority ? 'auto' : 'async'}
         fetchPriority={priority ? 'high' : undefined}
-        onLoad={reveal}
-        onError={() => setFailed(true)}
+        onLoad={(event) => { reveal(event); onReady?.(); }}
+        onError={() => { setFailed(true); onReady?.(); }}
         style={{ width: '100%', height: '100%', objectFit: 'cover', ...style }}
       />
     );

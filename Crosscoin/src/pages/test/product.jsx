@@ -1,7 +1,7 @@
 import ProductHighlights from '../../components/test/ProductHighlights';
 import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons, ProductPageSkeleton } from '../../components/test/ui';
@@ -20,11 +20,11 @@ import { videosForProduct } from '../../lib/productVideos';
 import ProductVideos from '../../components/product/ProductVideos';
 import { packPairCount } from '../../components/test/packPairCount';
 import BundleCards from '../../components/test/BundleCards';
-import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 import LazyMount from '../../components/common/LazyMount';
 
 const SocksComparison = dynamic(() => import('../../components/test/SocksComparison'), { ssr: false });
+const ProductReviewCarousel = dynamic(() => import('../../components/test/ProductReviewCarousel'), { ssr: false });
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 // Format a review's timestamp as "Mon YYYY" (e.g. "Oct 2026"); blank if unparseable.
@@ -48,7 +48,7 @@ export const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
 export const MAIN_SIZES = '(max-width: 860px) calc(100vw - 32px), 600px';
 // On phones, cap the gallery rendition and keep the full-size zoom on demand.
 export const MAIN_MOBILE_MEDIA = '(max-width: 480px)';
-export const MAIN_MOBILE_WIDTHS = [480, 640];
+export const MAIN_MOBILE_WIDTHS = [480, 600];
 
 // The variant, size and photo a product opens on (a single pair by default).
 function openingState(prod) {
@@ -92,6 +92,10 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
   const [size, setSize] = useState(seed?.size || '');
   const [qty, setQty] = useState(1);
   const [mainImg, setMainImg] = useState(seed?.img || '');
+  const [galleryReadyFor, setGalleryReadyFor] = useState(null);
+  const productId = p?.id;
+  const galleryReady = galleryReadyFor === productId || !mainImg;
+  const markGalleryReady = useCallback(() => setGalleryReadyFor(productId), [productId]);
   const [prodReviews, setProdReviews] = useState({ items: [], avg: null, count: 0 });
   const [prodFaqs, setProdFaqs] = useState(() => (initialFaqs || [])
     .map(({ question, answer }) => [question, answer]).filter(([q, a]) => q && a));
@@ -140,7 +144,6 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
           setProdReviews({ items: [], avg: null, count: 0 }); setFaqOpen(0);
           setPackTiers([]); setPackSel(1);
           setRevLoading(true); setTiersLoading(true);
-          fetchProductReviews(prod.id, 8).then((r) => { if (!off) setProdReviews(r); }).catch(() => {}).finally(() => { if (!off) setRevLoading(false); });
           if (!initialFaqs) {
             setProdFaqs([]);
             fetchProductFaqs(prod.id).then((f) => { if (!off) setProdFaqs(f); }).catch(() => {});
@@ -152,6 +155,16 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
     })();
     return () => { off = true; };
   }, [canLoadProduct, requestedSlug, seed, initialFaqs]);
+
+  useEffect(() => {
+    if (loading || productId == null || !galleryReady) return;
+    let active = true;
+    fetchProductReviews(productId, 8)
+      .then((reviews) => { if (active) setProdReviews(reviews); })
+      .catch(() => {})
+      .finally(() => { if (active) setRevLoading(false); });
+    return () => { active = false; };
+  }, [galleryReady, loading, productId]);
 
   const productSlug = p?.slug;
   useEffect(() => {
@@ -313,14 +326,14 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
           <div className="gallery">
             <div className="gmain" style={{ overflow: 'hidden', cursor: thumbs.length ? 'zoom-in' : 'default' }} onClick={() => { const i = thumbs.indexOf(mainImg); setLightbox(i >= 0 ? i : 0); }}>
               <Thumb src={mainImg} alt={p.name} color={cur.colors?.[0]} w={1200}
-                widths={MAIN_WIDTHS} sizes={MAIN_SIZES}
+                widths={MAIN_WIDTHS} sizes={MAIN_SIZES} onReady={markGalleryReady}
                 mobileSource={{ media: MAIN_MOBILE_MEDIA, srcSet: ikSrcSet(mainImg, MAIN_MOBILE_WIDTHS) }} priority />
               {thumbs.length > 0 && <span className="gzoom" aria-hidden="true">{I.search(16)}</span>}
             </div>
             {thumbs.length > 1 && (
               <div className="gthumbs">
                 {thumbs.map((src, i) => (
-                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)} aria-label={`View image ${i + 1}`} aria-pressed={src === mainImg}><Thumb src={src} w={144} widths={[112, 144, 216]} sizes="70px" /></button>
+                  <button key={i} className={`gthumb${src === mainImg ? ' on' : ''}`} style={{ overflow: 'hidden' }} onClick={() => setMainImg(src)} aria-label={`View image ${i + 1}`} aria-pressed={src === mainImg}><Thumb src={galleryReady ? src : undefined} w={144} widths={[112, 144, 216]} sizes="70px" /></button>
                 ))}
               </div>
             )}
@@ -542,7 +555,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
       <div className={`pdpsticky${sticky ? ' on' : ''}`}>
         <div className="wrap pdpsticky__in">
           <div className="pdpsticky__p">
-            <div className="pdpsticky__thumb"><Thumb src={mainImg} color={cur.colors?.[0]} w={200} /></div>
+            <div className="pdpsticky__thumb">{sticky && <Thumb src={mainImg} color={cur.colors?.[0]} w={112} />}</div>
             <div className="pdpsticky__meta"><b>{p.name}</b><span>{inr(payable)}</span></div>
           </div>
           <div className="pdpsticky__btns">
