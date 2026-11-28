@@ -1,0 +1,139 @@
+.page,
+.section {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.page > :global(.ds-pageheader),
+.summary :global(.ds-stat-grid) {
+  margin-bottom: 0;
+}
+
+.toolbar,
+.tableControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.toolbar {
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--ds-color-surface);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-lg);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.filters > :first-child {
+  min-width: min(180px, 100%);
+}
+
+.sync {
+  align-self: center;
+  color: var(--ds-color-text-muted);
+  font-size: 12px;
+}
+
+.notice {
+  margin: 0;
+  color: var(--ds-color-text-muted);
+  font-size: 13px;
+}
+
+.campaigns,
+.connection {
+  min-width: 0;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--ds-color-text-muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.breadcrumbs > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.tableControls {
+  margin-bottom: 14px;
+}
+
+.search {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.rowName {
+  display: grid;
+  gap: 2px;
+  align-items: start;
+  justify-items: start;
+  text-align: left;
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+
+.drill {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ds-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.drill:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.drill:focus-visible {
+  outline: 2px solid var(--ds-color-text);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .campaigns :global(.tbl--auto) tbody td:first-child {
+    justify-content: flex-start;
+  }
+
+  .campaigns :global(.tbl--auto) tbody td:first-child::before {
+    content: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    padding: 12px;
+  }
+
+  .filters,
+  .filters > *,
+  .search {
+    width: 100%;
+  }
+}

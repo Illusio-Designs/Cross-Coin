@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { reportPagesService, brandService, metaAdsService } from '../../../services';
-import { Button, DateRangePicker, Input, Select, Table, SkeletonKpis, Skeleton, StatusPill } from '../../../components/ui';
+import { Button, DateRangePicker, ErrorState, FilterChips, Input, Select, Table, SkeletonKpis, Skeleton, StatusPill } from '../../../components/ui';
 import { PageHeader, Panel, StatGrid, StatTile } from '../../../components/Dashboard/primitives';
-import Dropdown from '../../../components/ui/Dropdown';
 import { useReportState } from '../../../lib/reportFilters';
+import styles from './adsReport.module.css';
 
 /* ──────────────────────────────────────────────────────────────
    Ads — Meta ad spend against the orders it actually brought in.
@@ -17,7 +17,7 @@ import { useReportState } from '../../../lib/reportFilters';
    with Meta's names (case, spaces and URL-encoding ignored), in the same
    store. ROAS = delivered net sales ÷ spend, so RTO and refunds count.
 
-   The connection panel on top (/api/admin/meta-ads/connection) holds the
+   The connection section (/api/admin/meta-ads/connection) holds the
    one Meta token for all stores and which ad account belongs to which store.
    ────────────────────────────────────────────────────────────── */
 
@@ -26,6 +26,13 @@ const inr = (v) => `₹${(Math.round(Number(v) || 0)).toLocaleString('en-IN')}`;
 const inr2 = (v) => (v == null ? '—' : `₹${(Number(v) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`);
 const pc = (v) => (v == null ? '—' : `${(Number(v) || 0).toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
 const xr = (v) => (v == null ? '—' : `${(Number(v) || 0).toFixed(2)}×`);
+const adMoney = (value, currency, decimals = false) => {
+  if (value == null) return '—';
+  if (currency && currency !== 'INR') {
+    return `${currency} ${Number(value).toLocaleString('en-IN', { maximumFractionDigits: decimals ? 2 : 0 })}`;
+  }
+  return decimals ? inr2(value) : inr(value);
+};
 
 const istDate = (d = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
@@ -51,9 +58,15 @@ const faint = { color: 'var(--ds-color-text-faint)' };
 const tabular = { fontVariantNumeric: 'tabular-nums' };
 const URL_PARAMS = 'utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&placement={{placement}}';
 const LEVEL_TXT = { campaign: 'Campaign', adset: 'Ad set', ad: 'Ad' };
+const SECTIONS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'campaigns', label: 'Campaigns' },
+  { value: 'tracking', label: 'Tracking' },
+  { value: 'connection', label: 'Connection' },
+];
 const GAP_REASON = {
   no_spend: 'No spend on Meta under this name in this period — renamed, or run from an ad account that isn’t linked.',
-  no_account: 'This store has no ad account linked above.',
+  no_account: 'This store has no ad account linked in Connection.',
   macro: 'The link still says {{campaign.name}} — the URL parameters weren’t filled in by Meta (check the spelling of the parameters).',
   no_campaign: 'The visit came from Meta without a campaign name.',
 };
@@ -153,6 +166,7 @@ function ConnectionPanel({ onSynced }) {
   return (
     <Panel
       title="Meta connection"
+      className={styles.connection}
       subtitle={<span>{statusLine}{errored.length ? <span style={{ color: 'var(--ds-color-danger-text, #b42318)' }}> · {errored.length} account{errored.length === 1 ? '' : 's'} failed last time</span> : null}</span>}
       actions={
         <>
@@ -205,6 +219,7 @@ function ConnectionPanel({ onSynced }) {
               columns={accountCols}
               data={accounts}
               loading={connQ.isLoading}
+              cardOnMobile
               sortable={false}
               emptyMessage={conn?.tokenSet ? 'Press “Find my ad accounts” to list the accounts this token can read.' : 'Save a token first.'}
             />
@@ -252,11 +267,11 @@ function DailyBars({ daily }) {
 
 // ── "Why don't orders match?" — per store, each link of the chain counted ──
 const STEP_TONE = { ok: 'done', account: 'needs', sync: 'problem', spend: 'needs', orders: 'needs', linked: 'problem', meta: 'needs', tags: 'needs', names: 'needs' };
-function Chain({ d }) {
+function Chain({ d, showSpend }) {
   const steps = [
     { label: 'Ad account', value: d.accountLinked ? 'linked' : 'not linked', ok: d.accountLinked },
     { label: 'Synced', value: d.lastSyncedAt ? when(d.lastSyncedAt) : 'never', ok: !!d.lastSyncedAt && !d.lastError },
-    { label: 'Meta spend', value: inr(d.spend), ok: d.spend > 0 },
+    ...(showSpend ? [{ label: 'Meta spend', value: inr(d.spend), ok: d.spend > 0 }] : []),
     { label: 'Orders', value: num(d.orders), ok: d.orders > 0 },
     { label: 'Linked to a visit', value: num(d.ordersLinked), ok: d.ordersLinked > 0 },
     { label: 'From Meta', value: num(d.ordersMeta), ok: d.ordersMeta > 0 },
@@ -289,7 +304,7 @@ function NameList({ title, items, render }) {
     </div>
   );
 }
-function DiagnosisPanel({ diagnosis }) {
+function DiagnosisPanel({ diagnosis, showSpend }) {
   const [open, setOpen] = useState(null);
   if (!diagnosis || !diagnosis.length) return null;
   const allOk = diagnosis.every((d) => d.step === 'ok');
@@ -303,7 +318,7 @@ function DiagnosisPanel({ diagnosis }) {
               <StatusPill tone={STEP_TONE[d.step] || 'needs'} size="sm">{d.step === 'ok' ? 'Matching' : 'Needs a fix'}</StatusPill>
             </div>
             <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{d.message}</span>
-            <Chain d={d} />
+            <Chain d={d} showSpend={showSpend} />
             {d.orders >= 10 && d.ordersLinked / d.orders < 0.5 ? (
               <span style={{ fontSize: 12.5, color: 'var(--ds-color-warn-text, #b54708)' }}>Only {num(d.ordersLinked)} of {num(d.orders)} orders are linked to the visit they came from — the rest have no known source and can’t be matched to any ad.</span>
             ) : null}
@@ -321,7 +336,7 @@ function DiagnosisPanel({ diagnosis }) {
                     <NameList title="In your order links (utm_campaign)" items={d.ourCampaigns}
                       render={(it) => <><b>{it.name}</b> <span style={muted}>· {num(it.orders)} order{it.orders === 1 ? '' : 's'}{it.matched ? ' · matched' : ' · no match'}</span></>} />
                     <NameList title="In Meta (campaigns with spend)" items={d.metaCampaigns}
-                      render={(it) => <><b>{it.name}</b> <span style={muted}>· {inr(it.spend)}{it.matched ? ' · matched' : ' · no orders'}</span></>} />
+                      render={(it) => <><b>{it.name}</b> <span style={muted}>{showSpend ? `· ${inr(it.spend)}` : ''}{it.matched ? ' · matched' : ' · no orders'}</span></>} />
                   </div>
                 ) : null}
               </div>
@@ -338,74 +353,88 @@ export default function AdsReport() {
   const [from, setFrom] = useReportState('from', shiftDay(istDate(), -29));
   const [to, setTo] = useReportState('to', istDate());
   const [brandId, setBrandId] = useReportState('brandId', '');
-  const [brandList, setBrandList] = useState([]);
   const [path, setPath] = useState([]); // [{ campaign, brandId }, { adset }]
-
-  useEffect(() => {
-    let off = false;
-    brandService.getAllBrands(true)
-      .then((r) => { if (!off && r?.success) setBrandList(r.data || []); })
-      .catch(() => {});
-    return () => { off = true; };
-  }, []);
-  useEffect(() => { setPath([]); }, [brandId]);
-
-  const level = path.length === 0 ? 'campaign' : path.length === 1 ? 'adset' : 'ad';
+  const [section, setSection] = useState('overview');
+  const [metrics, setMetrics] = useState('sales');
+  const [search, setSearch] = useState('');
+  const { data: brands } = useQuery({
+    queryKey: ['ads-report-brands'],
+    queryFn: () => brandService.getAllBrands(true),
+    staleTime: 60 * 1000,
+  });
+  const brandList = brands?.success ? brands.data || [] : [];
+  const scope = section === 'campaigns' ? path : [];
+  const level = scope.length === 0 ? 'campaign' : scope.length === 1 ? 'adset' : 'ad';
+  const hasRange = !!(from && to && from <= to);
   const params = {
     startDate: from, endDate: to, brandId: brandId || undefined, level,
-    campaign: path[0]?.campaign, scopeBrandId: path[0]?.brandId, adset: path[1]?.adset,
+    campaign: scope[0]?.campaign, scopeBrandId: scope[0]?.brandId, adset: scope[1]?.adset,
   };
-  const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ['reports', 'ads', from, to, brandId, level, path[0]?.campaign, path[0]?.brandId, path[1]?.adset],
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ['reports', 'ads', params],
     queryFn: () => reportPagesService.get('ads', params),
-    enabled: !!(from && to),
-    placeholderData: keepPreviousData,
+    enabled: hasRange && section !== 'connection',
     staleTime: 60 * 1000,
   });
 
   const rows = useMemo(() => (data?.rows || []).map((r) => ({ ...r, id: r.key })), [data]);
+  const term = search.trim().toLowerCase();
+  const visibleRows = term ? rows.filter((row) => [row.name, row.brand].some((value) => String(value || '').toLowerCase().includes(term))) : rows;
   const k = data?.kpis || {};
   const canSeeCost = !!data?.canSeeCost;
   const allStores = !brandId;
   const first = isLoading && !data;
-  const dim = isFetching && data ? { opacity: 0.6, transition: 'opacity .15s' } : undefined;
-  const brandName = brandId
-    ? (brandList.find((b) => String(b.id) === String(brandId))?.display_name || brandList.find((b) => String(b.id) === String(brandId))?.name || 'Store')
-    : 'All brands';
+  const selectedBrand = brandList.find((brand) => String(brand.id) === String(brandId));
+  const brandName = selectedBrand?.display_name || selectedBrand?.name || (brandId ? 'Store' : 'All brands');
   const foreign = (data?.currencies || []).filter((c) => c !== 'INR');
+  const comparable = foreign.length === 0;
+  const formatSpend = (value) => data?.currencies?.length > 1 ? '—' : adMoney(value, foreign[0]);
 
+  const goTo = (nextPath) => { setPath(nextPath); setSearch(''); };
   const drill = (r) => {
-    if (level === 'campaign') setPath([{ campaign: r.campaign, brandId: r.brandId, label: r.campaign }]);
-    else if (level === 'adset') setPath((p) => [p[0], { adset: r.adset ?? '', label: r.adset || '(no ad set name)' }]);
+    if (level === 'campaign') goTo([{ campaign: r.campaign, brandId: r.brandId, label: r.campaign }]);
+    else if (level === 'adset') goTo([scope[0], { adset: r.adset ?? '', label: r.adset || '(no ad set name)' }]);
   };
 
-  const columns = [
-    {
+  const nameColumn = {
       header: LEVEL_TXT[level], accessor: 'name', align: 'left',
       cell: (r) => (
-        <div style={{ minWidth: 190, maxWidth: 360 }}>
-          <b style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{r.name || '(no name)'}</b>
+        <div className={styles.rowName}>
+          {level === 'ad' ? <b>{r.name || '(no name)'}</b>
+            : <button type="button" className={styles.drill} onClick={() => drill(r)}
+                aria-label={`Open ${r.name || LEVEL_TXT[level]} ${level === 'campaign' ? 'ad sets' : 'ads'}`}>
+                {r.name || '(no name)'} <span aria-hidden="true">›</span>
+              </button>}
           <span style={{ display: 'block', fontSize: 11.5, ...faint }}>
-            {[allStores ? r.brand : null, level === 'ad' ? null : `${num(r.ads)} ad${r.ads === 1 ? '' : 's'}`, level !== 'ad' ? 'click to open' : null].filter(Boolean).join(' · ')}
+            {[allStores ? r.brand : null, level === 'ad' ? null : `${num(r.ads)} ad${r.ads === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
           </span>
           {level === 'campaign' && !r.tracked && r.spend > 0
             ? <StatusPill tone="needs" size="sm" style={{ marginTop: 4 }}>No tracking tags</StatusPill> : null}
         </div>
       ),
-    },
-    { header: 'Spend', accessor: 'spend', align: 'right', cell: (r) => <span style={tabular}>{inr(r.spend)}</span> },
+  };
+  const spendColumn = { header: 'Spend', accessor: 'spend', align: 'right', cell: (r) => <span style={tabular}>{adMoney(r.spend, r.currency)}</span> };
+  const salesColumns = [
+    nameColumn,
+    spendColumn,
     { header: 'Our orders', accessor: 'orders', align: 'right', cell: (r) => <span style={tabular}>{num(r.orders)}</span> },
-    { header: 'Cost / order', accessor: 'costPerOrder', align: 'right', cell: (r) => <span style={tabular}>{r.costPerOrder == null ? '—' : inr(r.costPerOrder)}</span> },
+    { header: 'Cost / order', accessor: 'costPerOrder', align: 'right', cell: (r) => <span style={tabular}>{adMoney(r.costPerOrder, r.currency)}</span> },
     { header: 'Delivered sales', accessor: 'deliveredNet', align: 'right', cell: (r) => <span style={tabular} title={`${num(r.delivered)} delivered orders`}>{inr(r.deliveredNet)}</span> },
     {
       header: 'ROAS', accessor: 'roas', align: 'right',
-      cell: (r) => (r.roas == null ? <span style={faint}>—</span>
+      cell: (r) => (r.roas == null || (r.currency && r.currency !== 'INR') ? <span style={faint}>—</span>
         : <StatusPill tone={roasTone(r.roas)} size="sm" style={{ whiteSpace: 'nowrap' }} title={`Meta says ${xr(r.metaRoas)}`}>{xr(r.roas)}</StatusPill>),
     },
-    { header: 'Meta purchases', accessor: 'metaPurchases', align: 'right', cell: (r) => <span style={tabular}>{num(Math.round(r.metaPurchases))}</span> },
     { header: 'RTO', accessor: 'rtoPct', align: 'right', cell: (r) => <span style={tabular}>{pc(r.rtoPct)}</span> },
+  ];
+  const trafficColumns = [
+    nameColumn,
+    spendColumn,
+    { header: 'Impressions', accessor: 'impressions', align: 'right', cell: (r) => <span style={tabular}>{num(r.impressions)}</span> },
+    { header: 'Link clicks', accessor: 'clicks', align: 'right', cell: (r) => <span style={tabular}>{num(r.clicks)}</span> },
     { header: 'CTR', accessor: 'ctr', align: 'right', cell: (r) => <span style={tabular}>{pc(r.ctr)}</span> },
-    { header: 'CPC', accessor: 'cpc', align: 'right', cell: (r) => <span style={tabular}>{inr2(r.cpc)}</span> },
+    { header: 'CPC', accessor: 'cpc', align: 'right', cell: (r) => <span style={tabular}>{adMoney(r.cpc, r.currency, true)}</span> },
+    { header: 'Meta purchases', accessor: 'metaPurchases', align: 'right', cell: (r) => <span style={tabular}>{num(Math.round(r.metaPurchases))}</span> },
   ];
 
   const doExport = () => exportCsv(`ads_${level}_${brandName.replace(/\W+/g, '-').toLowerCase()}_${from}_to_${to}.csv`, [
@@ -414,6 +443,7 @@ export default function AdsReport() {
     ...(level !== 'campaign' ? [{ label: 'Ad set', value: (r) => r.adset }] : []),
     ...(level === 'ad' ? [{ label: 'Ad', value: (r) => r.ad }] : []),
     { label: 'Spend', value: (r) => r.spend },
+    { label: 'Spend currency', value: (r) => r.currency || 'INR' },
     { label: 'Impressions', value: (r) => r.impressions },
     { label: 'Link clicks', value: (r) => r.clicks },
     { label: 'CTR %', value: (r) => r.ctr ?? '' },
@@ -422,7 +452,7 @@ export default function AdsReport() {
     { label: 'Cost per order', value: (r) => r.costPerOrder ?? '' },
     { label: 'Delivered orders', value: (r) => r.delivered },
     { label: 'Delivered net sales', value: (r) => r.deliveredNet },
-    { label: 'ROAS (delivered net / spend)', value: (r) => r.roas ?? '' },
+    { label: 'ROAS (delivered net / spend)', value: (r) => !r.currency || r.currency === 'INR' ? r.roas ?? '' : '' },
     { label: 'RTO %', value: (r) => r.rtoPct ?? '' },
     { label: 'Return %', value: (r) => r.returnPct ?? '' },
     { label: 'Meta purchases', value: (r) => r.metaPurchases },
@@ -430,163 +460,163 @@ export default function AdsReport() {
     { label: 'Meta ROAS', value: (r) => r.metaRoas ?? '' },
     ...(canSeeCost ? [
       { label: 'Cost of goods kept', value: (r) => r.cogs },
-      { label: 'Profit after ads (before GST, shipping, fees)', value: (r) => r.profitAfterAds },
+      { label: 'Profit after ads (before GST, shipping, fees)', value: (r) => !r.currency || r.currency === 'INR' ? r.profitAfterAds : '' },
     ] : []),
     { label: 'From', value: () => from },
     { label: 'To', value: () => to },
-  ], rows);
+  ], visibleRows);
 
   const untagged = data?.gaps?.untagged || [];
   const noSpend = data?.gaps?.noSpend || [];
-  const crumbs = [{ label: 'All campaigns' }, ...path];
+  const crumbs = [{ label: 'All campaigns' }, ...scope];
+
+  const emptyMessage = !data?.hasSpendData
+    ? 'No Meta spend in this period. Use Connection to check accounts and sync.'
+    : term ? 'No results for this search.' : 'No activity in this period.';
+  const trackingCount = untagged.length + noSpend.length;
+  const purchaseDifference = k.metaOverCountPct == null ? 'No matched orders to compare'
+    : k.metaOverCountPct === 0 ? 'Same purchase count'
+    : `Meta counts ${pc(Math.abs(k.metaOverCountPct))} ${k.metaOverCountPct > 0 ? 'more' : 'fewer'}`;
+  const summary = first ? <SkeletonKpis count={5} label="Loading ad spend…" /> : data ? (
+    <div className={styles.summary} aria-busy={isFetching || undefined}>
+      <StatGrid>
+        <StatTile label="Ad spend" value={formatSpend(k.spend)} sub={`${num(k.impressions)} impressions · ${num(k.clicks)} link clicks`} />
+        <StatTile label="Our orders" value={num(k.orders)} sub={k.costPerOrder == null ? 'No matched orders' : `${formatSpend(k.costPerOrder)} per order`} />
+        <StatTile label="Delivered ROAS" value={comparable ? xr(k.roas) : '—'} tone={comparable ? roasTone(k.roas) : undefined}
+          sub={`${inr(k.deliveredNet)} delivered sales · Meta ${data.currencies?.length > 1 ? '—' : xr(k.metaRoas)}`} />
+        <StatTile label="Meta purchases vs ours" value={`${num(Math.round(k.metaPurchases || 0))} vs ${num(k.orders)}`} sub={purchaseDifference} />
+        <StatTile label="Spend with no orders" value={formatSpend(k.spendNoOrders)} tone={k.spendNoOrders > 0 ? 'needs' : undefined}
+          sub={`${num(k.rowsNoOrders)} ${LEVEL_TXT[level].toLowerCase()}${k.rowsNoOrders === 1 ? '' : 's'} with spend and no order`} />
+        {canSeeCost ? <StatTile label="Profit after ads" value={comparable ? inr(k.profitAfterAds) : '—'}
+          tone={comparable ? ((k.profitAfterAds || 0) < 0 ? 'problem' : 'done') : undefined} sub="Delivered sales − cost of goods − spend" /> : null}
+      </StatGrid>
+    </div>
+  ) : null;
+  const chart = first ? <Skeleton w="100%" h={170} r={10} /> : comparable
+    ? <DailyBars daily={data?.daily} />
+    : <p className={styles.notice}>Available when the selected accounts report spend in INR.</p>;
 
   return (
-    <div className="dashboard-sections obz-rep">
-      <PageHeader
-        title="Ads"
-        subtitle={`${brandName} · ${from} → ${to} IST${isFetching && data ? ' · updating…' : ''}`}
-        actions={
-          <>
-            <Dropdown
-              value={brandId || 'all'}
-              onChange={(v) => setBrandId(v === 'all' ? '' : String(v))}
-              options={[{ value: 'all', label: 'All brands' }, ...brandList.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))]}
-              className="bset-brand-select"
-            />
-            <DateRangePicker label="" inline startDate={from} endDate={to}
-              onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
-            <Button variant="secondary" onClick={doExport} disabled={!rows.length || first}>Export CSV</Button>
-          </>
-        }
-      />
+    <div className={`dashboard-sections obz-rep ${styles.page}`}>
+      <PageHeader title="Ads" subtitle={`Meta performance · ${brandName}`} />
 
-      <ConnectionPanel onSynced={() => qc.invalidateQueries({ queryKey: ['reports', 'ads'] })} />
-
-      {error ? <Panel><span style={{ color: 'var(--ds-color-danger, #dc2626)' }}>{error.message || 'Failed to load the report'}</span></Panel> : null}
-      {foreign.length ? (
-        <Panel><span style={{ fontSize: 13, color: 'var(--ds-color-warn-text, #b54708)' }}>Some ad accounts report spend in {foreign.join(', ')}. Spend is shown as Meta reports it, not converted to rupees.</span></Panel>
-      ) : null}
-
-      {first ? (
-        <SkeletonKpis count={5} label="Loading ad spend…" />
-      ) : data ? (
-        <div style={dim} aria-busy={isFetching || undefined}>
-          <StatGrid>
-            <StatTile label="Ad spend" value={inr(k.spend)} sub={`${num(k.impressions)} impressions · ${num(k.clicks)} link clicks`} />
-            <StatTile label="Our orders" value={num(k.orders)} sub={k.costPerOrder != null ? `${inr(k.costPerOrder)} per order` : 'none matched to this spend'} />
-            <StatTile label="ROAS · after RTO" value={xr(k.roas)} tone={k.roas == null ? undefined : roasTone(k.roas)} sub={`${inr(k.deliveredNet)} delivered sales ÷ spend · Meta says ${xr(k.metaRoas)}`} />
-            <StatTile
-              label="Meta purchases vs ours"
-              value={`${num(Math.round(k.metaPurchases || 0))} vs ${num(k.orders)}`}
-              sub={k.metaOverCountPct == null ? 'no matched orders to compare' : k.metaOverCountPct > 0 ? `Meta counts ${pc(k.metaOverCountPct)} more` : `Meta counts ${pc(Math.abs(k.metaOverCountPct))} fewer`}
-            />
-            <StatTile label="Spend with no orders" value={inr(k.spendNoOrders)} tone={k.spendNoOrders > 0 ? 'needs' : undefined} sub={`${num(k.rowsNoOrders)} ${LEVEL_TXT[level].toLowerCase()}${k.rowsNoOrders === 1 ? '' : 's'} with spend and no order`} />
-            {canSeeCost ? (
-              <StatTile label="Profit after ads" value={inr(k.profitAfterAds)} tone={(k.profitAfterAds || 0) < 0 ? 'problem' : 'done'} sub="delivered sales − cost of goods − spend" />
-            ) : null}
-          </StatGrid>
+      <div className={styles.toolbar}>
+        <div className={styles.filters}>
+          <Select label="Brand" value={brandId || ''} onChange={(value) => { setBrandId(String(value)); goTo([]); }}
+            options={[{ value: '', label: 'All brands' }, ...brandList.map((b) => ({ value: String(b.id), label: b.display_name || b.name }))]} />
+          <DateRangePicker label="Date range" startDate={from} endDate={to}
+            onStartChange={setFrom} onEndChange={setTo} maxDate={istDate()} />
         </div>
-      ) : null}
-
-      {!path.length && data?.diagnosis ? <div style={dim}><DiagnosisPanel diagnosis={data.diagnosis} /></div> : null}
-
-      <div style={dim}>
-        <Panel
-          flush
-          title={
-            <nav aria-label="Breadcrumb" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {crumbs.map((c, i) => (
-                <span key={i} style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                  {i ? <span aria-hidden="true" style={faint}>›</span> : null}
-                  {i < crumbs.length - 1
-                    ? <button type="button" onClick={() => setPath(path.slice(0, i))} style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', font: 'inherit', color: 'var(--ds-color-text-muted)', textDecoration: 'underline' }}>{c.label}</button>
-                    : <span aria-current="page">{c.label}</span>}
-                </span>
-              ))}
-            </nav>
-          }
-          subtitle={level === 'ad' ? 'Each ad in this ad set.' : `Click a ${level === 'campaign' ? 'campaign to see its ad sets' : 'ad set to see its ads'}.`}
-        >
-          <div style={{ overflowX: 'auto' }}>
-            <Table
-              columns={columns}
-              data={rows}
-              loading={first}
-              sortable={false}
-              onRowClick={level !== 'ad' ? drill : undefined}
-              getRowStyle={() => (level !== 'ad' ? { cursor: 'pointer' } : {})}
-              emptyMessage={data && !data.hasSpendData
-                ? 'No ad spend synced for this period yet. Link the ad accounts above and press “Sync now”.'
-                : 'No spend here in this period.'}
-            />
-          </div>
-          {data && k.unmatchedOrders > 0 && level === 'campaign' ? (
-            <div style={{ padding: '10px 20px', fontSize: 12.5, borderTop: '1px solid var(--ds-color-border)', ...muted }}>
-              {num(k.unmatchedOrders)} more order{k.unmatchedOrders === 1 ? '' : 's'} came from Meta links ({inr(k.unmatchedDeliveredNet)} delivered) but don’t match a campaign with spend — see “Needs tracking tags”.
-            </div>
-          ) : null}
-        </Panel>
+        {data?.sync?.lastSyncedAt && section !== 'connection'
+          ? <span className={styles.sync}>Last Meta sync {when(data.sync.lastSyncedAt)} IST</span> : null}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 380px', minWidth: 0 }}>
-          <Panel title="Needs tracking tags" subtitle="Spend and orders that can’t be joined up yet.">
-            {first ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}><Skeleton w="70%" h={12} /><Skeleton w="90%" h={12} /><Skeleton w="60%" h={12} /></div>
-            ) : !untagged.length && !noSpend.length ? (
-              <span style={{ fontSize: 13, color: 'var(--ds-color-success-text, #067647)' }}>Every campaign with spend has tracked visits, and every Meta order matches a campaign.</span>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {untagged.length ? (
-                  <div>
-                    <b style={{ fontSize: 13 }}>Ads without tracking tags — add the URL parameters</b>
-                    <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                      {untagged.slice(0, 12).map((g) => (
-                        <li key={`${g.brandId}:${g.campaign}`}><b>{g.campaign}</b> <span style={muted}>· {g.brand} · {inr(g.spend)} spent, no visits with this campaign name</span></li>
-                      ))}
-                    </ul>
-                    <div style={{ marginTop: 8, fontSize: 12.5, ...muted }}>
-                      In Ads Manager → each ad → Tracking → URL parameters, paste:
-                      <code style={{ display: 'block', marginTop: 4, padding: '6px 8px', borderRadius: 8, background: 'var(--ds-color-surface-soft)', fontSize: 11.5, overflowWrap: 'anywhere', color: 'var(--ds-color-text)' }}>{URL_PARAMS}</code>
-                    </div>
-                  </div>
-                ) : null}
-                {noSpend.length ? (
-                  <div>
-                    <b style={{ fontSize: 13 }}>Meta orders with no spend under that name</b>
-                    <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
-                      {noSpend.slice(0, 12).map((g) => (
-                        <li key={`${g.brandId}:${g.campaign}`}>
-                          <b>{g.campaign || '(no campaign)'}</b> <span style={muted}>· {g.brand} · {num(g.orders)} order{g.orders === 1 ? '' : 's'}, {inr(g.deliveredNet)} delivered</span>
-                          <span style={{ display: 'block', fontSize: 12, ...faint }}>{GAP_REASON[g.reason] || ''}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </Panel>
-        </div>
-        <div style={{ flex: '1 1 420px', minWidth: 0 }}>
-          <Panel title="Spend vs delivered sales" subtitle={path.length ? `Per day, for ${path.map((p) => p.label).join(' › ')}.` : 'Per day: Meta spend and the delivered sales of orders matched to it (by the day the order was placed).'}>
-            {first ? <Skeleton w="100%" h={170} r={10} /> : <DailyBars daily={data?.daily} />}
-          </Panel>
-        </div>
-      </div>
+      <FilterChips ariaLabel="Ads report sections" value={section} onChange={setSection} controls="ads-report-section"
+        items={SECTIONS.map((item) => item.value === 'tracking' && trackingCount > 0 ? { ...item, count: trackingCount } : item)} />
 
-      <details className="rep-notes">
-        <summary>How Ads figures are calculated</summary>
-        <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, ...muted }}>
-          <li><b>Spend</b>, impressions, link clicks and <b>Meta purchases</b> come from Meta, by the day in your ad account’s time zone. They are synced every 3 hours; Meta keeps revising the last few days.</li>
-          <li><b>Our orders</b> are orders placed in this period (cancelled left out) whose visit came from a Meta link carrying this campaign / ad set / ad name, in the same store. Names are matched ignoring capital letters, extra spaces and link encoding.</li>
-          <li><b>ROAS after RTO</b> = delivered sales ÷ spend. Delivered sales are what reached the customer, minus refunds — orders the courier brought back (RTO) bring in nothing, so this is usually lower than Meta’s own ROAS, which counts every purchase the pixel saw.</li>
-          <li><b>ROAS colours</b>: red under 1× (the ads cost more than they brought in), amber 1–2×, green over 2×. <b>RTO</b> = RTO ÷ (delivered + RTO), same rule as the Overview.</li>
-          <li><b>Meta purchases vs ours</b>: Meta also counts purchases after a view or a click days earlier, and cancelled or undelivered ones, so it usually reports more.</li>
-          {canSeeCost ? <li><b>Profit after ads</b> = delivered sales − cost price of the goods kept − spend. It is before GST, shipping and payment fees; Revenue &amp; Profit has the full picture and now uses this real spend.</li> : null}
-          <li>Orders from ads that don’t carry the URL parameters can’t be matched — they are listed under <b>Needs tracking tags</b>.</li>
-        </ul>
-      </details>
+      <div id="ads-report-section" role="tabpanel" aria-label={SECTIONS.find((item) => item.value === section)?.label} className={styles.section}>
+        {section === 'connection' ? <ConnectionPanel onSynced={() => qc.invalidateQueries({ queryKey: ['reports', 'ads'] })} />
+          : !hasRange ? <Panel title="Select a date range" subtitle="Choose a start date and an end date to load the report." />
+          : error ? <Panel><ErrorState message={error.response?.data?.message || error.message || 'Could not load the Ads report'} onRetry={() => refetch()} /></Panel>
+          : <>
+            {foreign.length ? <p className={styles.notice} role="note">Spend includes {foreign.join(', ')}. Totals across currencies and comparisons with INR sales are unavailable.</p> : null}
+
+            {section === 'overview' ? <>
+              {summary}
+              <Panel title="Spend and delivered sales" subtitle="Spend by Meta reporting day. Sales by the date the order was placed.">
+                {chart}
+              </Panel>
+              <details className="rep-notes">
+                <summary>How Ads figures are calculated</summary>
+                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, ...muted }}>
+                  <li><b>Spend</b>, impressions, link clicks and <b>Meta purchases</b> come from Meta, by the day in your ad account’s time zone. They are synced every 3 hours; Meta keeps revising the last few days.</li>
+                  <li><b>Our orders</b> are orders placed in this period (cancelled left out) whose visit came from a Meta link carrying this campaign / ad set / ad name, in the same store. Names are matched ignoring capital letters, extra spaces and link encoding.</li>
+                  <li><b>ROAS after RTO</b> = delivered sales ÷ spend. Delivered sales are what reached the customer, minus refunds — orders the courier brought back (RTO) bring in nothing, so this is usually lower than Meta’s own ROAS, which counts every purchase the pixel saw.</li>
+                  <li><b>ROAS colours</b>: red under 1× (the ads cost more than they brought in), amber 1–2×, green over 2×. <b>RTO</b> = RTO ÷ (delivered + RTO), same rule as the Overview.</li>
+                  <li><b>Meta purchases vs ours</b>: Meta also counts purchases after a view or a click days earlier, and cancelled or undelivered ones, so it usually reports more.</li>
+                  {canSeeCost ? <li><b>Profit after ads</b> = delivered sales − cost price of the goods kept − spend. It is before GST, shipping and payment fees; Revenue &amp; Profit has the full picture and now uses this real spend.</li> : null}
+                  <li>Orders from ads that don’t carry the URL parameters can’t be matched — they are listed under <b>Needs tracking tags</b>.</li>
+                </ul>
+              </details>
+            </> : null}
+
+            {section === 'campaigns' ? <>
+              {scope.length ? summary : null}
+              <Panel title={level === 'campaign' ? 'Campaign performance' : level === 'adset' ? 'Ad set performance' : 'Ad performance'} className={styles.campaigns}>
+                <nav aria-label="Campaign breakdown" className={styles.breadcrumbs}>
+                  {crumbs.map((crumb, index) => (
+                    <span key={index}>
+                      {index ? <span aria-hidden="true">›</span> : null}
+                      {index < crumbs.length - 1
+                        ? <button type="button" className={styles.drill} onClick={() => goTo(scope.slice(0, index))}>{crumb.label}</button>
+                        : <span aria-current="page">{crumb.label}</span>}
+                    </span>
+                  ))}
+                </nav>
+                <div className={styles.tableControls}>
+                  <div className={styles.search}>
+                    <Input label={`Search ${LEVEL_TXT[level].toLowerCase()}s`} type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+                  </div>
+                  <Select label="Metrics" value={metrics} onChange={setMetrics}
+                    options={[{ value: 'sales', label: 'Sales' }, { value: 'traffic', label: 'Traffic' }]} />
+                  <Button variant="secondary" onClick={doExport} disabled={!visibleRows.length || first}>Export CSV</Button>
+                </div>
+                <Table
+                  columns={metrics === 'sales' ? salesColumns : trafficColumns}
+                  data={visibleRows}
+                  loading={first}
+                  cardOnMobile
+                  size="sm"
+                  emptyMessage={emptyMessage}
+                />
+              </Panel>
+              {scope.length ? <Panel title="Spend and delivered sales" subtitle={scope.map((item) => item.label).join(' › ')}>
+                {chart}
+              </Panel> : null}
+            </> : null}
+
+            {section === 'tracking' ? <>
+              <Panel title="Needs tracking tags" subtitle="Spend and orders that can’t be joined up yet.">
+                {first ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}><Skeleton w="70%" h={12} /><Skeleton w="90%" h={12} /><Skeleton w="60%" h={12} /></div>
+                ) : !untagged.length && !noSpend.length ? (
+                  <span style={{ fontSize: 13, color: 'var(--ds-color-success-text, #067647)' }}>{data?.hasSpendData ? 'No unmatched campaigns or orders in this period.' : 'Sync Meta spend to check campaign tracking.'}</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {untagged.length ? (
+                      <div>
+                        <b style={{ fontSize: 13 }}>Ads without tracking tags — add the URL parameters</b>
+                        <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                          {untagged.slice(0, 12).map((g) => (
+                            <li key={`${g.brandId}:${g.campaign}`}><b>{g.campaign}</b> <span style={muted}>· {g.brand}{comparable ? ` · ${inr(g.spend)} spent` : ''} · No visits with this campaign name</span></li>
+                          ))}
+                        </ul>
+                        <div style={{ marginTop: 8, fontSize: 12.5, ...muted }}>
+                          In Ads Manager → each ad → Tracking → URL parameters, paste:
+                          <code style={{ display: 'block', marginTop: 4, padding: '6px 8px', borderRadius: 8, background: 'var(--ds-color-surface-soft)', fontSize: 11.5, overflowWrap: 'anywhere', color: 'var(--ds-color-text)' }}>{URL_PARAMS}</code>
+                        </div>
+                      </div>
+                    ) : null}
+                    {noSpend.length ? (
+                      <div>
+                        <b style={{ fontSize: 13 }}>Meta orders with no spend under that name</b>
+                        <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                          {noSpend.slice(0, 12).map((g) => (
+                            <li key={`${g.brandId}:${g.campaign}`}>
+                              <b>{g.campaign || '(no campaign)'}</b> <span style={muted}>· {g.brand} · {num(g.orders)} order{g.orders === 1 ? '' : 's'}, {inr(g.deliveredNet)} delivered</span>
+                              <span style={{ display: 'block', fontSize: 12, ...faint }}>{GAP_REASON[g.reason] || ''}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </Panel>
+              {data?.diagnosis ? <DiagnosisPanel diagnosis={data.diagnosis} showSpend={comparable} /> : null}
+            </> : null}
+          </>}
+      </div>
     </div>
   );
 }
