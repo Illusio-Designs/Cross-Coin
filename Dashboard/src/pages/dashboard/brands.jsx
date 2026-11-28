@@ -615,9 +615,12 @@ export function BrandManager() {
   const tabWarn = (k) => warnings.filter((w) => w.tab === k);
   const section = sections.find((s) => s.key === tab) || sections[0];
   const tabFields = fieldsByTab[section.key] || [];
+  const hideUnusedGoogleAds = section.key === 'tracking' && brandRecord.slug === 'morbix'
+    && !tabFields.some((f) => f.group === 'Google Ads' && f.isSet);
   const groups = [];
   for (const f of tabFields) {
     const g = f.group || '';
+    if (hideUnusedGoogleAds && g === 'Google Ads') continue;
     let entry = groups.find((x) => x.name === g);
     if (!entry) groups.push(entry = { name: g, fields: [] });
     entry.fields.push(f);
