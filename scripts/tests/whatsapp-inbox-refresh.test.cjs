@@ -4,7 +4,7 @@ const ast=parser.parse(source,{sourceType:'module',plugins:['jsx']});const funct
 function visit(node){if(!node||typeof node!=='object')return;if(node.type==='FunctionDeclaration'&&node.id?.name==='hasUnconfirmed')functions.hasUnconfirmed=source.slice(node.start,node.end);if(node.type==='VariableDeclarator'&&['refreshActiveMessages','mergeMessages'].includes(node.id?.name))functions[node.id.name]=source.slice(node.init.start,node.init.end);for(const value of Object.values(node))if(Array.isArray(value))value.forEach(visit);else if(value&&typeof value==='object')visit(value);}
 visit(ast);
 function fixture(){const pending=[],map=new Map(),open={current:1};let messages=[],calls=0;
- const context=vm.createContext({W:'/api/whatsapp',msgRefreshRef:{current:map},openReqRef:open,adminApi:{get:()=>{calls++;return new Promise((resolve,reject)=>pending.push({resolve,reject}));}},setMessages:update=>{messages=update(messages);},touchCache:()=>{}});
+ const context=vm.createContext({W:'/api/whatsapp',msgRefreshRef:{current:map},openReqRef:open,openingRef:{current:null},adminApi:{get:()=>{calls++;return new Promise((resolve,reject)=>pending.push({resolve,reject}));}},setMessages:update=>{messages=update(messages);},setMsgError:()=>{},touchCache:()=>{}});
  context.mergeMessages=vm.runInContext('('+functions.mergeMessages+')',context);context.refresh=vm.runInContext('('+functions.refreshActiveMessages+')',context);
  return{context,pending,map,open,get messages(){return messages;},get calls(){return calls;}};
 }

@@ -392,14 +392,17 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   const filter  = CONV_FILTERS.has(query.filter) ? query.filter : 'all';
   const page    = Math.max(1, parseInt(query.page, 10) || 1);
   const limit   = Math.min(100, Math.max(1, parseInt(query.limit, 10) || defaultLimit));
+  const preview = query.preview === '1';
   const q       = String(query.q || '').trim().slice(0, 100);
   const cut24   = new Date(Date.now() - WINDOW_MS);
   const aiService = require('../services/whatsappAiService.js');
-  let aiCols = true; // ai_* columns (AI auto chat) — present after its first schema check
-  try { await aiService.ensureSchema(); } catch (_) { aiCols = false; }
+  let aiCols = false;
+  if (!preview || filter === 'needs_you') {
+    try { await aiService.ensureSchema(); aiCols = true; } catch (_) { /* older schema */ }
+  }
 
   const base = [];
-  const repl = { cut24, limit, offset: (page - 1) * limit };
+  const repl = { cut24, limit: limit + Number(preview), offset: (page - 1) * limit };
   if (brandId) { base.push('c.brand_id = :brandId'); repl.brandId = brandId; }
   if (status !== 'all') { base.push('c.status = :status'); repl.status = status; }
   if (q) {
@@ -418,20 +421,26 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
 
   const WAITING = '(c.last_inbound_at IS NOT NULL AND (c.last_reply_at IS NULL OR c.last_reply_at < c.last_inbound_at))';
   const CLOSED  = '(c.last_inbound_at IS NULL OR c.last_inbound_at < :cut24)';
-  const hasKey = !!require('../utils/encryption.js').phoneHash('9999999999');
-  const col = await phoneCollations();
-  const P10 = 'RIGHT(c.customer_phone, 10)';
-  const HAS_ORDER = `(EXISTS (SELECT 1 FROM users u JOIN orders o ON o.user_id = u.id
+  let HAS_ORDER = '0';
+  if (!preview || filter === 'has_order') {
+    const hasKey = !!require('../utils/encryption.js').phoneHash('9999999999');
+    const col = await phoneCollations();
+    const P10 = 'RIGHT(c.customer_phone, 10)';
+    HAS_ORDER = `(EXISTS (SELECT 1 FROM users u JOIN orders o ON o.user_id = u.id
                         WHERE u.phone IN (${asColumn(P10, col.users_phone)}, ${asColumn(`CONCAT('91', ${P10})`, col.users_phone)}, ${asColumn(`CONCAT('+91', ${P10})`, col.users_phone)}))
      OR ${hasKey
     ? `(c.phone_hash IS NOT NULL AND (EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone_hash = ${asColumn('c.phone_hash', col.sa_hash)})
           OR EXISTS (SELECT 1 FROM guest_users g JOIN orders o ON o.guest_user_id = g.id WHERE g.phone_hash = ${asColumn('c.phone_hash', col.gu_hash)})))`
     : `EXISTS (SELECT 1 FROM shipping_addresses a JOIN orders o ON o.shipping_address_id = a.id WHERE a.phone = ${asColumn(P10, col.sa_phone)})`})`;
+  }
   // Chats the AI auto chat handed to the team.
   const NEEDS_YOU = aiCols ? 'c.ai_needs_human = 1' : '0';
   const filterSql = { all: '1=1', unread: 'c.unread_count > 0', waiting: WAITING, window_closed: CLOSED, has_order: HAS_ORDER, needs_you: NEEDS_YOU }[filter];
+  const columns = preview
+    ? 'c.id, c.brand_id, c.customer_phone, c.customer_name, c.last_message, c.last_message_at, c.unread_count, c.status, c.opted_out, c.agent_notes, c.phone_hash, c.last_inbound_at, c.last_reply_at'
+    : Object.values(WhatsappConversation.getAttributes()).map(({ field }) => `c.\`${field}\``).join(', ');
 
-  const [countRow] = await sequelize.query(
+  const countPromise = preview ? Promise.resolve([]) : sequelize.query(
     `SELECT COUNT(*) AS all_n,
             SUM(c.unread_count > 0) AS unread_n,
             SUM(${WAITING}) AS waiting_n,
@@ -441,28 +450,26 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
             SUM(${filterSql}) AS filtered_n
        FROM whatsapp_conversations c WHERE ${baseSql}`,
     { replacements: repl, type: QueryTypes.SELECT });
-  const idRows = await sequelize.query(
-    `SELECT c.id FROM whatsapp_conversations c
+  const rowsPromise = sequelize.query(
+    `SELECT ${columns} FROM whatsapp_conversations c
       WHERE ${baseSql} AND ${filterSql}
-      ORDER BY c.last_message_at IS NULL, c.last_message_at DESC, c.id DESC
+      ORDER BY c.last_message_at DESC, c.id DESC
       LIMIT :limit OFFSET :offset`,
-    { replacements: repl, type: QueryTypes.SELECT });
-
-  const ids = idRows.map((r) => r.id);
-  const rows = ids.length ? await WhatsappConversation.findAll({ where: { id: ids } }) : [];
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
+    { replacements: repl, model: WhatsappConversation, mapToModel: true });
+  const [[countRow], rows] = await Promise.all([countPromise, rowsPromise]);
+  const ordered = preview ? rows.slice(0, limit) : rows;
+  const ids = ordered.map((r) => r.id);
 
   // Latest order per customer — one grouped lookup for the whole page.
   const p10 = (ph) => String(ph || '').replace(/\D/g, '').slice(-10);
-  let latest = new Map();
-  try { latest = await whatsappService.latestOrderByPhone(ordered.map((c) => p10(c.customer_phone))); } catch (e) {
-    logger.warn('[WhatsApp] inbox latest-order lookup failed: ' + e.message);
-  }
-  let stageOf = null;
-  try { stageOf = require('../services/chatContextService.js').stageOf; } catch (_) {}
-
-  const aiFlags = await aiService.flagsFor(ids);
+  const [latest, aiFlags] = preview ? [new Map(), new Map()] : await Promise.all([
+    whatsappService.latestOrderByPhone(ordered.map((c) => p10(c.customer_phone))).catch((err) => {
+      logger.warn('[WhatsApp] inbox latest-order lookup failed: ' + err.message);
+      return new Map();
+    }),
+    aiService.flagsFor(ids),
+  ]);
+  const stageOf = latest.size ? require('../services/chatContextService.js').stageOf : null;
 
   const now = Date.now();
   const conversations = ordered.map((c) => {
@@ -502,6 +509,7 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
   }
 
   const total = Number(countRow?.filtered_n) || 0;
+  if (preview) return { conversations, preview: true, hasMore: rows.length > limit, page, limit };
   return {
     conversations,
     total,
@@ -520,8 +528,11 @@ async function buildConversationList(query, { defaultLimit = 30 } = {}) {
 }
 
 exports.getConversations = async (req, res) => {
+  const started = Date.now();
+  res.setHeader('Access-Control-Expose-Headers', 'X-Handler-Ms');
   try {
     const data = await buildConversationList(req.query);
+    res.setHeader('X-Handler-Ms', String(Date.now() - started));
     res.json({ success: true, ...data });
   } catch (err) {
     logger.error('[WhatsApp] getConversations failed: ' + err.message);
@@ -565,18 +576,21 @@ exports.getMessages = async (req, res) => {
     rows.reverse(); // chronological (oldest → newest)
 
     // Attach quoted message data for replies
-    const quotedIds = rows.filter(m => m.quoted_message_id).map(m => m.quoted_message_id);
-    let quotedMap = {};
-    if (quotedIds.length > 0) {
-      const quotedMsgs = await WhatsappMessage.findAll({ where: { id: quotedIds } });
-      quotedMsgs.forEach(q => { quotedMap[q.id] = q; });
+    const quotedIds = new Set(rows.map((m) => m.quoted_message_id).filter(Boolean));
+    const quotedMap = new Map();
+    for (const message of rows) {
+      if (quotedIds.delete(message.id)) quotedMap.set(message.id, message);
+    }
+    if (quotedIds.size) {
+      const quotedMsgs = await WhatsappMessage.findAll({ where: { id: [...quotedIds], conversation_id: id } });
+      quotedMsgs.forEach((message) => quotedMap.set(message.id, message));
     }
     dbMs = Date.now() - tDb;
     const brandIdForMedia = conv.brand_id || 1;
     const messagesWithQuotes = rows.map(m => {
       const plain = m.toJSON();
-      if (m.quoted_message_id && quotedMap[m.quoted_message_id]) {
-        plain._quotedMsg = quotedMap[m.quoted_message_id].toJSON();
+      if (quotedMap.has(m.quoted_message_id)) {
+        plain._quotedMsg = quotedMap.get(m.quoted_message_id).toJSON();
       }
       // For media messages the media id/url lives in the JSON `body`. Attach a
       // ready-to-use, signed, short-lived proxy URL so the browser can render the
@@ -597,7 +611,7 @@ exports.getMessages = async (req, res) => {
     // Clearing the unread badge is a side effect the client doesn't wait on —
     // fire it off without blocking the response (saves a round-trip on open).
     // Only write when there's actually something to clear.
-    if (!before && conv.unread_count > 0) {
+    if (!before && req.query.preview !== '1' && conv.unread_count > 0) {
       conv.unread_count = 0; // reflect in the response payload immediately
       conv.update({ unread_count: 0 }).catch(() => {});
     }

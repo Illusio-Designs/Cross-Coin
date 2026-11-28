@@ -2,13 +2,15 @@ const {EventEmitter}=require('events');
 jest.mock('sequelize',()=>({Op:{},QueryTypes:{SELECT:'SELECT'}}),{virtual:true});
 jest.mock('../../model/whatsappConversationModel.js',()=>({WhatsappConversation:{findAll:jest.fn(),findByPk:jest.fn()},WhatsappMessage:{findAll:jest.fn(),update:jest.fn()}}));
 jest.mock('../../services/whatsappService.js',()=>({}));
+jest.mock('../../config/db.js', () => ({ sequelize: { query: jest.fn() } }));
+jest.mock('../../services/whatsappAiService.js', () => ({ ensureSchema: jest.fn() }));
 jest.mock('../../config/logging.js',()=>({logger:{warn:jest.fn(),error:jest.fn(),info:jest.fn()}}));
 jest.mock('../../utils/uploadsDir.js',()=>'/tmp/whatsapp-test-media');
 jest.mock('../../services/notificationService.js',()=>({getLatestWhatsAppId:jest.fn(),waitForWhatsApp:jest.fn(),notifyWhatsAppChanged:jest.fn()}));
-const {streamUpdates,receiveWebhook}=require('../../controller/whatsappController.js');
+const {streamUpdates,receiveWebhook,getConversations,getMessages}=require('../../controller/whatsappController.js');
 const notifications=require('../../services/notificationService.js');
 const {WhatsappConversation,WhatsappMessage}=require('../../model/whatsappConversationModel.js');
-function response(){const r=new EventEmitter();r.status=jest.fn(()=>r);r.json=jest.fn();return r;}
+function response(){const r=new EventEmitter();r.status=jest.fn(()=>r);r.json=jest.fn();r.setHeader=jest.fn();return r;}
 beforeEach(()=>{jest.clearAllMocks();notifications.getLatestWhatsAppId.mockResolvedValue(12);notifications.waitForWhatsApp.mockResolvedValue('timeout');});
 test('initial lightweight stream returns a cursor without rebuilding the conversation list',async()=>{
  const r=response();await streamUpdates({query:{changes:'1'}},r);expect(r.json).toHaveBeenCalledWith(expect.objectContaining({success:true,changed:true,kind:'initial',after:12}));expect(WhatsappConversation.findAll).not.toHaveBeenCalled();expect(notifications.waitForWhatsApp).not.toHaveBeenCalled();
@@ -43,4 +45,36 @@ test('duplicate or stale status receipt does not trigger another refresh',async(
 test('a failed status write does not publish an unpersisted receipt',async()=>{
  WhatsappMessage.findAll.mockResolvedValue([{id:5,wa_message_id:'wamid-1',status:'sent'}]);WhatsappMessage.update.mockRejectedValueOnce(Error('DB unavailable'));
  await receiveWebhook({body:{object:'whatsapp_business_account',entry:[{changes:[{field:'messages',value:{statuses:[{id:'wamid-1',status:'read'}]}}]}]}},response());expect(notifications.notifyWhatsAppChanged).not.toHaveBeenCalled();
+});
+
+test('inbox preview loads rows in one query without waiting for filter counts or order details', async () => {
+  const { sequelize } = require('../../config/db.js');
+  const ai = require('../../services/whatsappAiService.js');
+  const row = (id) => ({ id, phone_hash: 'fixture', toJSON: () => ({ id }) });
+  sequelize.query.mockResolvedValueOnce([row(3), row(2), row(1)]);
+  const res = response();
+  await getConversations({ query: { brandId: '8', filter: 'unread', preview: '1', limit: '2' } }, res);
+  expect(sequelize.query).toHaveBeenCalledTimes(1);
+  expect(sequelize.query).toHaveBeenCalledWith(expect.stringMatching(/c\.brand_id = :brandId.*c\.unread_count > 0/s),
+    expect.objectContaining({ replacements: expect.objectContaining({ limit: 3, brandId: 8 }), mapToModel: true }));
+  expect(ai.ensureSchema).not.toHaveBeenCalled();
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+    success: true, preview: true, hasMore: true,
+    conversations: [expect.objectContaining({ id: 3 }), expect.objectContaining({ id: 2 })],
+  }));
+});
+
+test('prefetching a message page keeps unread status and reuses quoted messages in that page', async () => {
+  const conversation = { unread_count: 2, update: jest.fn() };
+  const message = (id, quoted_message_id) => ({ id, quoted_message_id, toJSON: () => ({ id, body: 'Text' }) });
+  WhatsappConversation.findByPk.mockResolvedValueOnce(conversation);
+  WhatsappMessage.findAll.mockResolvedValueOnce([message(2, 1), message(1)]);
+  const res = response();
+  await getMessages({ params: { id: 7 }, query: { preview: '1' } }, res);
+  expect(conversation.update).not.toHaveBeenCalled();
+  expect(WhatsappMessage.findAll).toHaveBeenCalledTimes(1);
+  expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, messages: [
+    expect.objectContaining({ id: 1 }),
+    expect.objectContaining({ id: 2, _quotedMsg: expect.objectContaining({ id: 1 }) }),
+  ] }));
 });

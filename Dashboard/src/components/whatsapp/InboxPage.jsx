@@ -192,6 +192,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   const [status, setStatus] = useState('open');
   const [conversations, setConversations] = useState([]);
   const [total, setTotal] = useState(0);
+  const [totalPending, setTotalPending] = useState(false);
   const [counts, setCounts] = useState(null);
   const [convLoading, setConvLoading] = useState(true);
   const [convError, setConvError] = useState(null);
@@ -220,9 +221,12 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
   const msgRefreshRef = useRef(new Map());
   const liveListRef = useRef({ busy: false, again: false });
   const listAbortRef = useRef(null);
+  const listDetailsTimer = useRef(null);
+  const previewSupported = useRef(false);
   const lastListLoadedRef = useRef(0);
   const lastReceiptCheckRef = useRef(0);
   const cacheRef = useRef(new Map());
+  const prefetchRef = useRef(null);
   const openingRef = useRef(null);
   const ctxAbortRef = useRef(null);
   const messagesBoxRef = useRef(null);
@@ -281,6 +285,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     if (silent && liveListRef.current.busy) { liveListRef.current.again = true; return; }
     liveListRef.current.busy = true;
     listAbortRef.current?.abort();
+    clearTimeout(listDetailsTimer.current);
     const controller = new AbortController();
     listAbortRef.current = controller;
     const req = ++convReqRef.current;
@@ -289,16 +294,38 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       // A silent (live) refresh re-reads everything already on screen so rows
       // paged in with "Load more" don't disappear.
       const limit = silent ? Math.min(100, Math.max(PAGE_SIZE, conversationsRef.current.length)) : PAGE_SIZE;
-      const { data } = await adminApi.get(`${W}/conversations`, { params: listParams(1, limit), signal: controller.signal });
+      const params = listParams(1, limit);
+      const { data } = await adminApi.get(`${W}/conversations`, { params: silent ? params : { ...params, preview: 1 }, signal: controller.signal });
       if (req !== convReqRef.current) return;
       if (!data?.success) throw new Error(data?.message || 'Could not load chats');
       const openId = activeRef.current?.id;
       const rows = (data.conversations || []).map((c) => (c.id === openId ? { ...c, unread_count: 0 } : c));
       setConversations(rows);
       lastListLoadedRef.current = Date.now();
-      setTotal(Number(data.total) || rows.length);
+      setTotal(data.preview ? rows.length + Number(!!data.hasMore) : Number(data.total) || rows.length);
+      setTotalPending(!!data.preview && !!data.hasMore);
       setCounts(data.counts || null);
       setConvError(null);
+      if (data.preview) {
+        previewSupported.current = true;
+        // Publish the chat rows before loading the all-inbox filter counts and
+        // latest-order information. Merge by ID so a reply or pagination during
+        // this request cannot replace the visible list with an older snapshot.
+        listDetailsTimer.current = setTimeout(async () => {
+          try {
+            const { data: details } = await adminApi.get(`${W}/conversations`, { params, signal: controller.signal });
+            if (req !== convReqRef.current || !details?.success) return;
+            const byId = new Map((details.conversations || []).map((chat) => [chat.id, chat]));
+            setConversations((current) => current.map((chat) => {
+              const extra = byId.get(chat.id);
+              return extra ? { ...chat, latest_order: extra.latest_order, ai: extra.ai } : chat;
+            }));
+            setCounts(details.counts || null);
+            setTotal(Number(details.total) || 0);
+            setTotalPending(false);
+          } catch { /* keep the usable list if nonessential details fail */ }
+        }, 250);
+      }
     } catch (e) {
       if (isCancel(e) || req !== convReqRef.current) return;
       if (!silent) { setConversations([]); setTotal(0); setConvError(errMsg(e, 'Could not load chats')); }
@@ -326,6 +353,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       if (!data?.success) throw new Error(data?.message);
       pageRef.current = next;
       setTotal(Number(data.total) || 0);
+      setTotalPending(false);
       setConversations((prev) => {
         const seen = new Set(prev.map((c) => c.id));
         return [...prev, ...(data.conversations || []).filter((c) => !seen.has(c.id))];
@@ -354,8 +382,32 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     if (el) nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
+  const cancelPrefetch = (id) => {
+    const pending = prefetchRef.current;
+    if (!pending || (id != null && id !== pending.id)) return;
+    clearTimeout(pending.timer);
+    pending.controller.abort();
+    prefetchRef.current = null;
+  };
+
+  const prefetchChat = (id) => {
+    if (!previewSupported.current || openReqRef.current === id || cacheRef.current.has(id) || prefetchRef.current?.id === id) return;
+    cancelPrefetch();
+    const controller = new AbortController();
+    const pending = { id, controller, timer: null };
+    pending.timer = setTimeout(async () => {
+      try {
+        const { data } = await adminApi.get(`${W}/conversations/${id}/messages`, { params: { preview: 1 }, signal: controller.signal });
+        if (data?.success && !controller.signal.aborted) touchCache(id, data.messages || []);
+      } catch { /* opening the chat still loads it normally */ }
+      finally { if (prefetchRef.current === pending) prefetchRef.current = null; }
+    }, 150);
+    prefetchRef.current = pending;
+  };
+
   const openChat = async (conv) => {
     if (!conv?.id) return;
+    cancelPrefetch();
     const request = { id: conv.id, pending: true, refreshAgain: false };
     openingRef.current = request;
     openReqRef.current = conv.id;
@@ -386,7 +438,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
       const msgs = data.messages || [];
       touchCache(conv.id, msgs);
       nearBottomRef.current = true;
-      setMessages(msgs);
+      setMessages((current) => mergeMessages(current, msgs));
       setHasMoreMsgs(!!data.hasMore);
       if (data.conversation) {
         setActiveConv((prev) => (prev && prev.id === conv.id ? { ...prev, ...data.conversation, unread_count: 0 } : prev));
@@ -576,7 +628,14 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
     return () => ctxAbortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, msgLoading, msgError]);
-  useEffect(() => () => { msgAbortRef.current?.abort(); ctxAbortRef.current?.abort(); listAbortRef.current?.abort(); }, []);
+  useEffect(() => () => {
+    msgAbortRef.current?.abort();
+    ctxAbortRef.current?.abort();
+    listAbortRef.current?.abort();
+    clearTimeout(listDetailsTimer.current);
+    cancelPrefetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // The customer wrote again → the window may have re-opened.
   const lastInboundId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) if (messages[i].direction === 'inbound') return messages[i].id;
@@ -1002,7 +1061,7 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
           <div className="wib-list-sub">
             {convLoading && !conversations.length
               ? <Skeleton w={64} h={10} />
-              : <span>{`${total.toLocaleString('en-IN')} chat${total === 1 ? '' : 's'}`}</span>}
+              : <span>{totalPending ? `${conversations.length.toLocaleString('en-IN')}+ chats` : `${total.toLocaleString('en-IN')} chat${total === 1 ? '' : 's'}`}</span>}
             <label className="wib-status">
               <span className="wib-sr">Which chats</span>
               <Dropdown value={status} onChange={setStatus} options={STATUS_OPTIONS} />
@@ -1032,6 +1091,10 @@ export default function InboxPage({ brandId = '', brands = [], goTo, extra, onUn
                   <li key={c.id}>
                     <button type="button" className={`wib-row${on ? ' is-on' : ''}${c.unread_count > 0 ? ' is-unread' : ''}`}
                       onClick={() => openChat(c)}
+                      onPointerEnter={(event) => { if (event.pointerType === 'mouse') prefetchChat(c.id); }}
+                      onPointerLeave={() => cancelPrefetch(c.id)}
+                      onFocus={() => prefetchChat(c.id)}
+                      onBlur={() => cancelPrefetch(c.id)}
                       aria-current={on ? 'true' : undefined}>
                       <span className="wib-av" aria-hidden="true">{initials(c.customer_name || c.customer_phone)}</span>
                       <span className="wib-row-main">
