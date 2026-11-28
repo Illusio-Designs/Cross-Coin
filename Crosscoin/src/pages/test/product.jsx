@@ -15,6 +15,8 @@ import { toggleWish, isWished } from '../../components/test/wishlist';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
+import { videosForProduct } from '../../lib/productVideos';
+import ProductVideos from '../../components/product/ProductVideos';
 import { packPairCount } from '../../components/test/packPairCount';
 import BundleCards from '../../components/test/BundleCards';
 import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
@@ -377,6 +379,8 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
             {prodReviews.items.length > 0 && <div style={{ marginTop: 18 }}><ProductReviewCarousel key={p.id} reviews={prodReviews.items} /></div>}
           </div>
         </div>
+
+        <ProductVideos videos={videosForProduct(p.raw)} />
 
         {/* About + Specifications — Morbix-style (description left, spec list right) */}
         <section className="block">

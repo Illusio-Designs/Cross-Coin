@@ -1,4 +1,4 @@
-const MAX_PRODUCT_VIDEOS = 4;
+const MAX_PRODUCT_VIDEOS = 5;
 const MAX_PRODUCT_VIDEO_BYTES = 50 * 1024 * 1024;
 const VIDEO_MIME_TYPES = ['video/mp4', 'video/webm'];
 
@@ -18,7 +18,7 @@ function normalizeProductVideos(value, { strict = false } = {}) {
     if (strict) throw new Error('Product videos must be an array.');
     return [];
   }
-  if (strict && value.length > MAX_PRODUCT_VIDEOS) throw new Error('A product can have up to 4 videos.');
+  if (strict && value.length > MAX_PRODUCT_VIDEOS) throw new Error(`A product can have up to ${MAX_PRODUCT_VIDEOS} videos.`);
   return value.slice(0, MAX_PRODUCT_VIDEOS).flatMap((item) => {
     const url = mediaUrl(item?.url);
     const poster = mediaUrl(item?.poster);

@@ -20,8 +20,9 @@ describe('Product video metadata', () => {
   test('rejects invalid covers, malformed metadata and too many videos', () => {
     expect(() => normalizeProductVideos([{ ...video, poster: 'javascript:alert(1)' }], { strict: true })).toThrow();
     expect(() => normalizeProductVideos('bad', { strict: true })).toThrow();
-    expect(() => normalizeProductVideos(Array(5).fill(video), { strict: true })).toThrow();
-    expect(MAX_PRODUCT_VIDEOS).toBe(4);
+    expect(() => normalizeProductVideos(Array(6).fill(video), { strict: true })).toThrow();
+    expect(normalizeProductVideos(Array(5).fill(video), { strict: true })).toHaveLength(5);
+    expect(MAX_PRODUCT_VIDEOS).toBe(5);
     expect(MAX_PRODUCT_VIDEO_BYTES).toBe(50 * 1024 * 1024);
   });
   test('caps captions and ignores unsafe legacy entries on reads', () => {

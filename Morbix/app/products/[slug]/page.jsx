@@ -117,14 +117,13 @@ export default async function ProductPage({ params }) {
       {/* ── Gallery + buy panel + About/Specs (shared variation selection) ── */}
       <ProductShowcase product={product} initialColor={pickedColor} bundleTiers={bundleTiers} />
 
-      {/* Everything below the first screen is built only as the shopper
+      <ProductVideos videos={product.videos} />
+
+      {/* Heavier sections below the first screen are built as the shopper
           scrolls near it (LazyMount), so the photo, price and Buy button
           load and respond first. The product's own text (conditions,
           manufacturing details) stays in the page for search engines and is
           only skipped by the browser until it is scrolled to (pdp-later). */}
-      <LazyMount minHeight={480}>
-        <ProductVideos videos={product.videos} />
-      </LazyMount>
 
       {/* ── Conditions it can help with ── */}
       <div className="pdp-later">

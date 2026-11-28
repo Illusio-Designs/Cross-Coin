@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Dropdown from '../ui/Dropdown';
 import { productService } from '../../services';
-import { videosForProduct } from './productVideoData';
+import { MAX_PRODUCT_VIDEOS, videosForProduct } from './productVideoData';
 
 export default function ExistingProductVideoPicker({ productId, videos, onAdd, onClose, disabled }) {
   const [search, setSearch] = useState('');
@@ -46,12 +46,12 @@ export default function ExistingProductVideoPicker({ productId, videos, onAdd, o
     return () => controller.abort();
   }, [sourceId]);
 
-  const remaining = Math.max(0, 4 - videos.length);
+  const remaining = Math.max(0, MAX_PRODUCT_VIDEOS - videos.length);
   const add = () => {
     const chosen = available.filter(video => selected.includes(video.url) && !videos.some(existing => existing.url === video.url));
     const unique = chosen.filter((video, index) => chosen.findIndex(other => other.url === video.url) === index);
     if (!unique.length) return;
-    if (unique.length > remaining) { setError('A product can have up to 4 videos.'); return; }
+    if (unique.length > remaining) { setError(`A product can have up to ${MAX_PRODUCT_VIDEOS} videos.`); return; }
     onAdd(unique.map(video => ({ ...video })));
   };
 

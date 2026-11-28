@@ -61,7 +61,12 @@ const PDP_COLOR_REWRITE = { Morbix: true, Soxbae: true };
 // (brands omitted = all 7; vars = extra placeholder → value replacements)
 const PURCHASE_KEYS = { Crosscoin: 'cc-purchase', Morbix: 'mbx-purchase', Soxbae: 'soxbae-purchase', Knitwink: 'kw-purchase', Velmique: 'vlq-purchase', Velquira: 'vq-purchase', Gripzus: 'gz-purchase' };
 
+const REEL_STORES = ['Crosscoin', 'Morbix', 'Soxbae'];
+
 const FILES = [
+  { source: 'shared/frontend/ProductVideos.jsx', dest: (base) => `${base}components/product/ProductVideos.jsx`, brands: REEL_STORES },
+  { source: 'shared/frontend/ProductVideos.module.css', dest: (base) => `${base}components/product/ProductVideos.module.css`, brands: REEL_STORES },
+  { source: 'shared/frontend/productVideos.js', dest: (base) => `${base}lib/productVideos.js`, brands: REEL_STORES },
   { source: 'shared/frontend/buyingFlow.js', dest: (base) => `${base}lib/buyingFlow.js` },
   { source: 'shared/frontend/purchasePixel.js', dest: (base) => `${base}utils/purchasePixel.js` },
   { source: 'shared/frontend/thankYou.js', dest: (base) => `${base}lib/thankYou.js`, vars: (brand) => ({ __PURCHASE_KEY__: PURCHASE_KEYS[brand] }) },
@@ -116,8 +121,10 @@ const FILES = [
   },
 ];
 
-const banner = (source) =>
-  `// @generated — DO NOT EDIT. Source: ${source}\n` +
+const banner = (source) => source.endsWith('.css')
+  ? `/* @generated — DO NOT EDIT. Source: ${source}
+ * Edit that file then run: node scripts/sync-frontend-shared.mjs */\n`
+  : `// @generated — DO NOT EDIT. Source: ${source}\n` +
   `// Edit that file then run: node scripts/sync-frontend-shared.mjs\n`;
 
 let drift = 0;

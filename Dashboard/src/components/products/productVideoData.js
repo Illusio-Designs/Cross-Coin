@@ -1,3 +1,5 @@
+export const MAX_PRODUCT_VIDEOS = 5;
+
 // Read both API versions and MySQL/MariaDB JSON-column representations.
 export function videosForProduct(product) {
   if (Array.isArray(product?.videos) && product.videos.length) return product.videos;

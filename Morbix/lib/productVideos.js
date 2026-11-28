@@ -1,3 +1,5 @@
+// @generated — DO NOT EDIT. Source: shared/frontend/productVideos.js
+// Edit that file then run: node scripts/sync-frontend-shared.mjs
 function mediaUrl(value) {
   if (typeof value !== 'string') return '';
   try {
@@ -8,7 +10,7 @@ function mediaUrl(value) {
 
 export function productVideos(value) {
   if (!Array.isArray(value)) return [];
-  return value.slice(0, 4).flatMap((video) => {
+  return value.slice(0, 5).flatMap((video) => {
     const url = mediaUrl(video?.url);
     return url ? [{ url, poster: mediaUrl(video.poster), caption: String(video.caption || '').trim().slice(0, 300) }] : [];
   });

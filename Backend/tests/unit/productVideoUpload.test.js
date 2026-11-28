@@ -1,3 +1,4 @@
+const { MAX_PRODUCT_VIDEOS } = require('../../utils/productVideos');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -7,7 +8,7 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'product-videos-'));
 process.env.UPLOAD_PATH = temporary;
 const { productVideoUpload, validateProductVideos } = require('../../middleware/uploadMiddleware');
 const app = express();
-app.post('/api/products/upload-videos', productVideoUpload.array('videos', 4), validateProductVideos, (req, res) => res.json({ count: req.files.length, filenames: req.files.map(f => f.filename) }));
+app.post('/api/products/upload-videos', productVideoUpload.array('videos', MAX_PRODUCT_VIDEOS), validateProductVideos, (req, res) => res.json({ count: req.files.length, filenames: req.files.map(f => f.filename) }));
 app.use((error, req, res, next) => res.status(400).json({ message: error.message }));
 const valid = Buffer.from([0,0,0,24,102,116,121,112,105,115,111,109]);
 let server;
@@ -40,7 +41,10 @@ test('rejects images and forged video content', async () => {
   expect(forged.status).toBe(400);
   expect(forged.body.message).toMatch(/content does not match/);
 });
-test('rejects more than four files and unexpected upload fields', async () => {
-  expect((await upload(Array.from({ length: 5 }, () => ({})))).status).toBe(400);
+test('accepts five files and rejects uploads above the limit or with unexpected fields', async () => {
+  const five = await upload(Array.from({ length: 5 }, () => ({})));
+  expect(five.status).toBe(200);
+  expect(five.body.count).toBe(5);
+  expect((await upload(Array.from({ length: 6 }, () => ({})))).status).toBe(400);
   expect((await upload([{ field: 'images' }])).status).toBe(400);
 });

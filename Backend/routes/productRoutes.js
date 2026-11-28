@@ -8,6 +8,7 @@ const {
 } = require('../controller/productController.js');
 const { isAuthenticated, isProductManager } = require('../middleware/authMiddleware.js');
 const { productUpload, productVideoUpload, validateProductVideos } = require('../middleware/uploadMiddleware.js');
+const { MAX_PRODUCT_VIDEOS } = require('../utils/productVideos');
 const { validateBody, validateQuery, z } = require('../middleware/validate.js');
 
 const router = express.Router();
@@ -54,7 +55,7 @@ router.get('/existing-images',      isAuthenticated, isProductManager, getExisti
 router.get('/admin/stock-list',     isAuthenticated, isProductManager, getStockList);
 router.get('/admin/:id/variations', isAuthenticated, isProductManager, getVariationStock);
 router.patch('/admin/variations/:variationId/stock', isAuthenticated, isProductManager, patchVariationStock);
-router.post('/upload-videos', isAuthenticated, isProductManager, productVideoUpload.array('videos', 4), multerErr, validateProductVideos, multerErr, uploadImages);
+router.post('/upload-videos', isAuthenticated, isProductManager, productVideoUpload.array('videos', MAX_PRODUCT_VIDEOS), multerErr, validateProductVideos, multerErr, uploadImages);
 router.post('/upload-images',       isAuthenticated, isProductManager, productUpload.any(), multerErr, uploadImages);
 router.delete('/delete-images',     isAuthenticated, isProductManager, deleteImages);
 router.post('/',                    isAuthenticated, isProductManager, productUpload.any(), multerErr, validateBody(productBaseSchema), createProduct);

@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
 import { productService } from '../../services';
 import ExistingProductVideoPicker from './ExistingProductVideoPicker';
+import { MAX_PRODUCT_VIDEOS } from './productVideoData';
 
-const MAX_VIDEOS = 4;
 const MAX_BYTES = 50 * 1024 * 1024;
 
 export default function ProductVideoFields({ productId, videos = [], onChange, onUploadingChange, disabled = false }) {
@@ -18,7 +18,7 @@ export default function ProductVideoFields({ productId, videos = [], onChange, o
     if (!files.length) return;
     setError('');
     const isCover = index !== null;
-    if (!isCover && videos.length + files.length > MAX_VIDEOS) { setError('Add up to 4 videos per product.'); return; }
+    if (!isCover && videos.length + files.length > MAX_PRODUCT_VIDEOS) { setError(`Add up to ${MAX_PRODUCT_VIDEOS} videos per product.`); return; }
     if (files.some((file) => isCover
       ? !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024
       : !['video/mp4', 'video/webm'].includes(file.type) || file.size > MAX_BYTES)) {
@@ -41,12 +41,12 @@ export default function ProductVideoFields({ productId, videos = [], onChange, o
   return (
     <section id="pst-sec-videos" className="pst-panel pst-sec">
       <h2>Product videos</h2>
-      <p className="pst-help">Add up to 4 portrait videos (MP4 or WebM, 50 MB each). They appear as playable cards on Morbix and Soxbae product pages. Save the product to publish your changes.</p>
+      <p className="pst-help">Add up to {MAX_PRODUCT_VIDEOS} portrait videos (MP4 or WebM, 50 MB each). They appear on CrossCoin, Morbix and Soxbae product pages. Save the product to publish them.</p>
       <label className="pst-btn pst-video-upload">
         {busy ? 'Uploading…' : 'Upload videos'}
-        <input aria-label="Upload product videos" type="file" accept="video/mp4,video/webm" multiple disabled={locked || videos.length >= MAX_VIDEOS} onChange={upload} />
+        <input aria-label="Upload product videos" type="file" accept="video/mp4,video/webm" multiple disabled={locked || videos.length >= MAX_PRODUCT_VIDEOS} onChange={upload} />
       </label>
-      <button type="button" className="pst-btn" disabled={locked || videos.length >= MAX_VIDEOS} onClick={() => setPickerOpen(value => !value)}>Choose from another product</button>
+      <button type="button" className="pst-btn" disabled={locked || videos.length >= MAX_PRODUCT_VIDEOS} onClick={() => setPickerOpen(value => !value)}>Choose from another product</button>
       {pickerOpen && <ExistingProductVideoPicker productId={productId} videos={videos} disabled={locked}
         onClose={() => setPickerOpen(false)}
         onAdd={(selected) => { onChange([...videos, ...selected]); setPickerOpen(false); }} />}
