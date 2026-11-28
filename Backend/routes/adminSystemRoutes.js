@@ -3,6 +3,18 @@ const router = express.Router();
 const { authenticate, isAdmin } = require('../middleware/authMiddleware');
 const { logger } = require('../config/logging.js');
 const systemHealth = require('../services/systemHealthService');
+const adminAudit = require('../services/adminAuditService.js');
+
+router.get('/audit-log', authenticate, isAdmin, async (req, res) => {
+  try {
+    const data = await adminAudit.list(req.query);
+    res.set('Cache-Control', 'no-store');
+    return res.json({ success: true, ...data });
+  } catch (error) {
+    logger.error('Admin audit log error:', error);
+    return res.status(500).json({ success: false, message: 'Could not load the audit log' });
+  }
+});
 
 // GET /api/admin/system/health — server, job queue, webhooks, errors in 24 h
 // and every scheduled job with its last run, next run and last 10 runs.

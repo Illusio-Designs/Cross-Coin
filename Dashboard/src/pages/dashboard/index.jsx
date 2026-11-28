@@ -31,6 +31,7 @@ import StaffUsers from "./staff-users/staffUsers";
 import ReportHub, { LEGACY_REPORT_VIEWS } from "./reports/ReportHub";
 import SystemHealth from "./system/systemHealth";
 import ServerLogs from "./system/serverLogs";
+import AuditLog from "./system/auditLog";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UnavailableIcon } from '@hugeicons/core-free-icons';
 
@@ -215,6 +216,7 @@ export default function Dashboard() {
       // role lists it in ROLE_VIEWS).
       case 'system-health':   return <SystemHealth />;
       case 'server-logs':     return <ServerLogs />;
+      case 'audit-log':       return <AuditLog />;
       default:                return <CardGrid />;
     }
   };

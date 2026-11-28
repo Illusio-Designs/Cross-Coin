@@ -1,6 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { optionalBrand } = require('../middleware/brandMiddleware.js');
+const { auditMutation } = require('../services/adminAuditService.js');
+
+for (const [path, name] of Object.entries({
+  '/products': 'Products', '/categories': 'Categories', '/attributes': 'Attributes',
+  '/sliders': 'Sliders', '/blogs': 'Blog', '/policies': 'Policies',
+  '/admin/attributes': 'Attributes', '/admin/website': 'Website', '/admin/seo/products': 'Product SEO',
+  '/admin/faqs': 'FAQs', '/admin/bundle-tiers': 'Pack prices',
+})) {
+  router.use(path, auditMutation('catalogue', name));
+}
 
 // ── Core resources ────────────────────────────────────────────────────────
 router.use('/users',              optionalBrand, require('./userRoutes.js'));

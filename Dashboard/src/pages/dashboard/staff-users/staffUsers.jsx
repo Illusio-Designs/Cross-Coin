@@ -39,7 +39,7 @@ const PAGE_GROUPS = [
   ["Brands", ["brands", "brand-settings"]],
   ["Shipping & courier", ["shippingFees", "webhook-events"]],
   ["Staff", ["staff-users"]],
-  ["System", ["system-health", "server-logs"]],
+  ["System", ["system-health", "server-logs", "audit-log"]],
 ];
 const EMPTY_FORM = { username: "", email: "", password: "", roles: ["order_manager"] };
 

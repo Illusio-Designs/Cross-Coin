@@ -10,6 +10,7 @@ const {
 const { isAuthenticated, isAdmin, isOrderManager } = require('../middleware/authMiddleware.js');
 const { validateBody, schemas } = require('../utils/validate.js');
 const { validateBody: zValidateBody, z, schemas: zSchemas } = require('../middleware/validate.js');
+const { auditMutation } = require('../services/adminAuditService.js');
 
 const router = express.Router();
 
@@ -85,8 +86,8 @@ router.delete('/delete', isAuthenticated, deleteUser);
 // GET /api/admin/customers; this stays for the Staff page fallback + storefront admin.
 router.get('/all', isAuthenticated, isOrderManager, getAllUsers);
 router.get('/staff-list', isAuthenticated, isAdmin, getStaffUsers);
-router.post('/staff', isAuthenticated, isAdmin, createStaffUser);
-router.put('/:id/role', isAuthenticated, isAdmin, updateUserRole);
-router.delete('/:id', isAuthenticated, isAdmin, require('../controller/userController.js').adminDeleteUser);
+router.post('/staff', isAuthenticated, isAdmin, auditMutation('staff', 'Staff account'), createStaffUser);
+router.put('/:id/role', isAuthenticated, isAdmin, auditMutation('staff', 'Staff permissions'), updateUserRole);
+router.delete('/:id', isAuthenticated, isAdmin, auditMutation('staff', 'User account'), require('../controller/userController.js').adminDeleteUser);
 
 module.exports = router;

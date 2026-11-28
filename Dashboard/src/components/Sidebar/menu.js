@@ -78,6 +78,7 @@ export const MENU = [
       // Courier updates (the old 'webhook-events' view) live on the Shipping page.
       { key: 'shipping', label: 'Shipping & courier', view: 'shippingFees', also: ['webhook-events'], icon: DeliveryTruck01Icon, roles: ADMIN },
       { key: 'staff', label: 'Staff', view: 'staff-users', icon: UserCheck01Icon, roles: ADMIN },
+      { key: 'audit-log', label: 'Audit Log', view: 'audit-log', icon: File01Icon, roles: ADMIN },
       { key: 'system', label: 'System', icon: ServerStack01Icon, roles: ADMIN, count: 'health', countText: 'failed job in the last 24 hours', alert: true, children: [
         { key: 'health', label: 'System health', view: 'system-health' },
         { key: 'server-logs', label: 'Server logs', view: 'server-logs' },

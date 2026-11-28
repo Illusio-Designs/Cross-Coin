@@ -406,6 +406,13 @@ export const systemHealthService = {
   },
 };
 
+export const adminAuditService = {
+  async list(params, signal) {
+    const { data } = await adminApi.get('/api/admin/system/audit-log', { params, signal });
+    return data;
+  },
+};
+
 // Server Watch (Settings → Server logs): request counts, logged problems,
 // alerts and the alert settings. Admin only.
 export const serverLogsService = {

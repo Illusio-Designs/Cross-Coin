@@ -50,6 +50,7 @@ export const getPageTitle = (view) => {
     'staff-users': 'Staff',
     'system-health': 'System health',
     'server-logs': 'Server logs',
+    'audit-log': 'Audit Log',
   };
   return titles[view] || 'Today';
 };
