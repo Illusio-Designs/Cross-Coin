@@ -160,7 +160,8 @@ export default function Document({ tracking }) {
                 (gtmId ? `if(!BLOCK)inj('https://www.googletagmanager.com/gtm.js?id=${gtmId}');` : "") +
                 ((gaId || adsId) ? `if(!BLOCK)inj('https://www.googletagmanager.com/gtag/js?id=${gaId || adsId}');` : "") +
                 (fbId ? "if(MK)inj('https://connect.facebook.net/en_US/fbevents.js');" : "") +
-                (clarityId ? `if(!BLOCK&&AN)inj('https://www.clarity.ms/tag/${clarityId}');` : "") +
+                // Let the product gallery finish loading before starting session replay.
+                (clarityId ? `if(!BLOCK&&AN){var replayStarted=false;function replay(){if(replayStarted)return;replayStarted=true;inj('https://www.clarity.ms/tag/${clarityId}');}if(P.indexOf('/products/')===0&&document.readyState!=='complete'){window.addEventListener('load',replay,{once:true});setTimeout(replay,8000);}else{replay();}}` : "") +
                 "}" +
                 // Visitors from an ad (click id or utm_source in the link) get
                 // everything at once. Everyone else: on the first real touch,

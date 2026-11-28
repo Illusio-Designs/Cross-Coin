@@ -33,7 +33,7 @@ import ProductDetailBlocks from '@/components/product/ProductDetailBlocks'
 import DescriptionHtml from '@/components/product/DescriptionHtml'
 import LazyMount from '@/components/common/LazyMount'
 
-export default function ProductDetailClient({ initialHandle, initialProduct, initialBestsellers } = {}) {
+export default function ProductDetailClient({ initialHandle, initialProduct } = {}) {
   // initialHandle comes from the server shell on first load. On client-
   // side navigations (Link / router.push), useParams gives us the URL
   // segment instead.
@@ -205,7 +205,7 @@ export default function ProductDetailClient({ initialHandle, initialProduct, ini
       <ReviewsSection productId={product.id} productName={product.name} />
 
       {/* Cross-sell */}
-        <CrossSell currentHandle={product.handle} initialBestsellers={initialBestsellers} />
+        <CrossSell currentHandle={product.handle} />
       </LazyMount>
     </SeoWrapper>
   )

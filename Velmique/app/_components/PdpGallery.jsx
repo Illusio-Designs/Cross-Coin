@@ -7,6 +7,8 @@ import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import SkImg from './SkImg';
 
 const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MOBILE_WIDTHS = [480, 640];
+const MOBILE_MEDIA = '(max-width: 480px)';
 const MAIN_SIZES = '(max-width: 820px) calc(100vw - 40px), 560px';
 const THUMB_WIDTHS = [64, 144, 216];
 const THUMB_SIZES = '(max-width: 820px) 58px, 66px';
@@ -47,6 +49,8 @@ export default function PdpGallery({ images = [], name = '' }) {
   if (!images.length) return null;
 
   const mainImage = images[current];
+  const srcSet = ikSrcSet(mainImage, MAIN_WIDTHS);
+  const mobileSrcSet = ikSrcSet(mainImage, MOBILE_WIDTHS);
   const selectFromRail = (event) => {
     const direction = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[event.key];
     if (!direction) return;
@@ -58,6 +62,14 @@ export default function PdpGallery({ images = [], name = '' }) {
 
   return (
     <>
+      {current === 0 && mobileSrcSet && (
+        <>
+          <link rel="preload" as="image" fetchPriority="high" media={MOBILE_MEDIA}
+            imageSrcSet={mobileSrcSet} imageSizes={MAIN_SIZES} />
+          <link rel="preload" as="image" fetchPriority="high" media={`not all and ${MOBILE_MEDIA}`}
+            imageSrcSet={srcSet} imageSizes={MAIN_SIZES} />
+        </>
+      )}
       <div className={`v-gallery${images.length === 1 ? ' v-gallery--single' : ''}`}>
         <div className="v-gallery__stage">
           <button className="v-gallery__main" type="button" aria-label={`Zoom ${name} image ${current + 1}`}
@@ -65,10 +77,12 @@ export default function PdpGallery({ images = [], name = '' }) {
             {failedImage === mainImage ? (
               <span className="v-gallery__unavailable">Image unavailable</span>
             ) : (
-              <SkImg natural src={ik(mainImage, 1200)}
-                srcSet={ikSrcSet(mainImage, MAIN_WIDTHS)} sizes={MAIN_SIZES}
-                alt={`${name} — view ${current + 1}`} loading="eager" fetchPriority="high"
-                onError={() => setFailedImage(mainImage)} />
+              <picture>
+                {mobileSrcSet && <source media={MOBILE_MEDIA} srcSet={mobileSrcSet} sizes={MAIN_SIZES} />}
+                <img src={ik(mainImage, 1200)} srcSet={srcSet} sizes={srcSet ? MAIN_SIZES : undefined}
+                  alt={`${name} — view ${current + 1}`} loading="eager" fetchPriority="high"
+                  onError={() => setFailedImage(mainImage)} />
+              </picture>
             )}
             {failedImage !== mainImage && <span className="v-gallery__zoom" aria-hidden="true"><BrandIcon name="zoom" size={18} /></span>}
           </button>

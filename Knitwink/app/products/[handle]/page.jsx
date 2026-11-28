@@ -12,7 +12,7 @@
  */
 
 import ClientPage from './ClientPage';
-import { getProduct, getBestsellers } from '@/lib/api/products';
+import { getProduct } from '@/lib/api/products';
 
 const SITE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://knitwink.com';
 
@@ -55,18 +55,12 @@ export async function generateMetadata({ params }) {
 
 export default async function ProductRoute({ params }) {
   const { handle } = await params;
-  // Server-side fetches in parallel. The product call is deduped with
-  // generateMetadata's call via Next's request cache. Bestsellers are
-  // a separate endpoint with 5-min ISR.
-  const [initialProduct, initialBestsellers] = await Promise.all([
-    fetchProduct(handle),
-    getBestsellers().catch(() => []),
-  ]);
+  // Recommendations load near their section. The first render only waits for the product.
+  const initialProduct = await fetchProduct(handle);
   return (
     <ClientPage
       initialHandle={handle}
       initialProduct={initialProduct}
-      initialBestsellers={initialBestsellers}
     />
   );
 }

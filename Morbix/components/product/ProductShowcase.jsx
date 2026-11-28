@@ -15,6 +15,7 @@ import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketC
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
 import { cleanColorParam } from '@/lib/pdpColor';
 import { getDeliveryEstimate } from '@/lib/deliveryEstimate';
+import ProductDescription from '@/components/ProductDescription';
 
 // Right-size ImageKit images per slot (thumbnail vs main vs zoom) with f-auto
 // so mobile never downloads a full-res original — same as the CrossCoin gallery.
@@ -37,50 +38,8 @@ function tidyDescription(html) {
       const to = n <= 3 ? 3 : 4;
       if (close) return `</h${to}>`;
       return n <= 2 ? `<h3 class="rt-lg"${attrs}>` : `<h${to}${attrs}>`;
-    })
-    .replace(/<img(?![^>]*\sloading=)/gi, '<img loading="lazy" decoding="async"')
-    // Ask for a column-sized copy (ImageKit or our own uploads), not the
-    // original upload (one description picture was a 1.8 MB PNG); the browser
-    // picks the width that fits the screen from DESC_WIDTHS.
-    .replace(/(<img\b[^>]*\s)src="([^"]+)"/gi, (m, a, raw) => {
-      const src = raw.replace(/&amp;/g, '&');
-      const set = ikSrcSet(src, DESC_WIDTHS);
-      const attr = (v) => v.replace(/&/g, '&amp;');
-      // data-* only: the picture is fetched when it comes near the screen
-      // (DescriptionHtml below), not with the first screen — the browser's
-      // own lazy loading starts far earlier on slow connections.
-      return `${a}data-src="${attr(ikSrc(src, 1100))}"${set ? ` data-srcset="${attr(set)}" sizes="${DESC_SIZES}"` : ''}`;
     });
 }
-
-// The product description (admin rich text) with its pictures attached only
-// when they are within ~300px of the screen.
-function DescriptionHtml({ html }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return undefined;
-    const imgs = [...root.querySelectorAll('img[data-src]')];
-    const show = (img) => {
-      if (img.dataset.srcset) img.srcset = img.dataset.srcset;
-      img.src = img.dataset.src;
-      img.removeAttribute('data-src');
-      img.removeAttribute('data-srcset');
-    };
-    if (typeof IntersectionObserver === 'undefined') { imgs.forEach(show); return undefined; }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
-    }, { rootMargin: '300px 0px' });
-    imgs.forEach((img) => io.observe(img));
-    return () => io.disconnect();
-  }, [html]);
-  return <div ref={ref} className="pdp-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
-}
-
-// Description pictures fill the "About" card: the screen width less the page
-// and card padding on phones, about 680px beside the specs on desktop.
-const DESC_WIDTHS = [400, 480, 600, 800, 1100];
-const DESC_SIZES = '(max-width: 760px) calc(100vw - 96px), 680px';
 
 // Main photo: the screen width less the page padding on phones, 600px on
 // desktop. Thumbnails are 62px (phones) / 72px squares.
@@ -618,7 +577,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
       <div className="pdp-about">
         <h2>Product description</h2>
         {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-          ? <DescriptionHtml html={tidyDescription(product.descriptionHtml)} />
+          ? <ProductDescription className="pdp-desc-rich" html={tidyDescription(product.descriptionHtml)} />
           : product.description
             ? <p style={{ whiteSpace: 'pre-line' }}>{product.description}</p>
             : <p className="muted">No description available for this product yet.</p>}

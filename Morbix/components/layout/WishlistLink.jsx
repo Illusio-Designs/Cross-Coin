@@ -24,7 +24,7 @@ export default function WishlistLink() {
   }, []);
 
   return (
-    <Link href="/wishlist" className="pill icon-pill wl-link" aria-label={`Wishlist, ${count} item${count === 1 ? '' : 's'}`}>
+    <Link href="/wishlist" prefetch={false} className="pill icon-pill wl-link" aria-label={`Wishlist, ${count} item${count === 1 ? '' : 's'}`}>
       <Icon name="Heart" size={16} />
       {count > 0 && <span className="wl-count">{count}</span>}
     </Link>

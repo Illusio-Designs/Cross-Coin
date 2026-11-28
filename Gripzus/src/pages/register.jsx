@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
@@ -29,6 +29,10 @@ export default function RegisterPage() {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  useEffect(() => {
+    if (!isLocal) window.__loadGripzusOtp?.();
+  }, [isLocal]);
+
   // Step 1 — validate details and send OTP
   const handleSendOtp = (e) => {
     e?.preventDefault();
@@ -40,6 +44,7 @@ export default function RegisterPage() {
 
     if (isLocal) { setStep('otp'); return; }
 
+    window.__loadGripzusOtp?.();
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {

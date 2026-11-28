@@ -7,9 +7,11 @@ import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { checkServiceability } from '@/lib/api/serviceability';
 import ShimmerImg from '@/components/ui/ShimmerImg';
-import { ikUrl } from '@/lib/image';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
 import ShiprocketButton from '@/components/checkout/ShiprocketButton';
+
+const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MAIN_SIZES = '(max-width: 860px) calc(100vw - 40px), 600px';
 
 // Gallery + buy panel share one colour + size selection, so the whole panel —
 // images, price, SKU, stock — reflects the exact variation the customer picked,
@@ -67,7 +69,7 @@ export default function ProductShowcase({ product }) {
   const thumbsRef = useRef(null);
   // Hold the main image box at the gallery's 4:5 ratio (shimmering) until the
   // FIRST photo has loaded, so the buy card and page below never jump. Later
-  // thumbnail swaps are preloaded, so the box just follows the image.
+  // thumbnail swaps begin when the shopper selects an image.
   const [readySrc, setReadySrc] = useState(null);
   const [railH, setRailH] = useState(0);
   useEffect(() => {
@@ -121,25 +123,6 @@ export default function ProductShowcase({ product }) {
   const mainSrc = shown[Math.min(active, shown.length - 1)] || product.image || null;
   // Box held at 4:5 with the shimmer until THIS main photo is fully decoded.
   const mainReady = readySrc === mainSrc;
-
-  // Preload the ACTIVE colour's gallery (not every colour's images), and only
-  // when the browser is idle — so thumbnail swaps still feel instant without a
-  // burst of full-size downloads on PDP load competing with the LCP image.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const perColorImgs = product.colorImages?.[color];
-    const urls = ((Array.isArray(perColorImgs) && perColorImgs.length ? perColorImgs : product.images) || []).filter(Boolean);
-    if (!urls.length) return;
-    // Same w-1200 URL the main image requests, so a thumbnail swap hits the cache.
-    const preload = () => urls.forEach((u) => { const im = new Image(); im.src = ikUrl(u, 1200); });
-    if (window.requestIdleCallback) {
-      const id = window.requestIdleCallback(preload, { timeout: 1500 });
-      return () => window.cancelIdleCallback?.(id);
-    }
-    const t = setTimeout(preload, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [color, product?.id]);
 
   // Close the zoom lightbox on Escape.
   useEffect(() => {
@@ -291,7 +274,8 @@ export default function ProductShowcase({ product }) {
           {mainSrc && !mainReady && <span className="sk sk-fill" aria-hidden="true" />}
           {mainSrc ? (
             <button type="button" className="pdp-main-zoom" onClick={() => setLightbox(true)} aria-label="Zoom image">
-              <ShimmerImg src={mainSrc} width={1200} alt={product.name} priority skeleton={false}
+              <ShimmerImg src={mainSrc} width={1200} widths={MAIN_WIDTHS} sizes={MAIN_SIZES}
+                alt={product.name} priority skeleton={false}
                 onReveal={() => setReadySrc(mainSrc)} />
               {sku && <span className="pdp-style-badge">Style: #{sku}</span>}
               <span className="pdp-zoom-hint" aria-hidden="true">

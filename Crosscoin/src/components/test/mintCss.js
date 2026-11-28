@@ -748,4 +748,9 @@ html:not(.mx-go) .cc-test-root .hero__coin, html:not(.mx-go) .cc-test-root .hero
 .cc-test-root .cc-product-summary .instock svg{ color:#18782c; }
 .cc-test-root .cc-product-summary .freeship svg{ color:var(--ink); }
 .cc-test-root .cc-product-description img{ display:block; max-width:100%; height:auto; }
+.cc-test-root .cc-product-description img.only-mobile{ display:none; }
+@media(max-width:760px){
+  .cc-test-root .cc-product-description img.only-mobile{ display:block; }
+  .cc-test-root .cc-product-description img.only-desktop{ display:none; }
+}
 `;

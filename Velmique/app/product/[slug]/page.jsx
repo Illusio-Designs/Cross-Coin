@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import DescriptionHtml from '@/components/product/DescriptionHtml';
+import ProductDescription from '@/components/ProductDescription';
 import FaqSection from '../../_components/FaqSection';
 import ScentExperience from '@/components/product/ScentExperience';
 import NotePhoto from '@/components/product/NotePhoto';
@@ -213,7 +213,7 @@ function PdpDescription({ product }) {
     <section className="v-detail-section v-product-description" aria-labelledby="pdp-description">
       <h2 id="pdp-description">Product description</h2>
       {html ? (
-        <DescriptionHtml className="m-desc-rich" html={html} />
+        <ProductDescription className="m-desc-rich" html={html} />
       ) : (
         <p className="m-desc-rich">{product.description}</p>
       )}

@@ -69,9 +69,9 @@ function AnnouncementBar() {
   );
 }
 
-function Brand({ className = '' }) {
+function Brand({ className = '', prefetch }) {
   return (
-    <Link href="/" className={`m-logo-link ${className}`} aria-label="Velmique">
+    <Link prefetch={prefetch} href="/" className={`m-logo-link ${className}`} aria-label="Velmique">
       <span className="m-logo" aria-hidden="true" />
     </Link>
   );
@@ -83,6 +83,7 @@ export default function MintShell({ children }) {
   const { cartCount, setCartOpen } = useStore();
   const [menu, setMenu] = useState(false);
   const pathname = usePathname();
+  const prefetch = pathname?.startsWith('/product/') ? false : undefined;
 
   // Close the slide-nav on navigation and on Escape; lock page scroll while open.
   useEffect(() => { setMenu(false); }, [pathname]);
@@ -110,13 +111,13 @@ export default function MintShell({ children }) {
         <div className="m-wrap m-nav">
           <button className="m-burger" aria-label="Open menu" aria-expanded={menu} aria-controls="m-mnav" onClick={() => setMenu(true)}>{I.menu}</button>
           <nav className="m-nav__links" aria-label="Primary">
-            {NAV.map((n) => <Link key={n.label} className="m-lnk" href={n.href}>{n.label}</Link>)}
+            {NAV.map((n) => <Link prefetch={prefetch} key={n.label} className="m-lnk" href={n.href}>{n.label}</Link>)}
           </nav>
-          <Brand />
+          <Brand prefetch={prefetch} />
           <div className="m-icons">
-            <Link href="/search" aria-label="Search">{I.search}</Link>
-            <Link href="/wishlist" aria-label="Wishlist"><BrandIcon name="heart" /></Link>
-            <Link href="/account" aria-label="Account">{I.user}</Link>
+            <Link prefetch={prefetch} href="/search" aria-label="Search">{I.search}</Link>
+            <Link prefetch={prefetch} href="/wishlist" aria-label="Wishlist"><BrandIcon name="heart" /></Link>
+            <Link prefetch={prefetch} href="/account" aria-label="Account">{I.user}</Link>
             <button className="m-bag" aria-label={`Open bag, ${cartCount} item${cartCount === 1 ? '' : 's'}`} onClick={() => setCartOpen(true)}>{I.bag}<b aria-hidden="true">{cartCount}</b></button>
           </div>
         </div>
@@ -125,9 +126,9 @@ export default function MintShell({ children }) {
       {/* mobile slide-nav */}
       <div id="m-mnav" className={`m-mnav ${menu ? 'on' : ''}`} role="dialog" aria-modal="true" aria-label="Menu" aria-hidden={!menu} inert={menu ? undefined : ''}>
         <button className="m-mnav__x" aria-label="Close menu" onClick={() => setMenu(false)}>{I.close}</button>
-        <Brand className="v-mobile-logo" />
-        {NAV.map((n) => <Link key={n.label} href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
-        {MNAV_EXTRA.map((n) => <Link key={n.label} className="m-mnav__sub" href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
+        <Brand prefetch={prefetch} className="v-mobile-logo" />
+        {NAV.map((n) => <Link prefetch={prefetch} key={n.label} href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
+        {MNAV_EXTRA.map((n) => <Link prefetch={prefetch} key={n.label} className="m-mnav__sub" href={n.href} onClick={() => setMenu(false)}>{n.label}</Link>)}
       </div>
 
       <main id="main">{children}</main>
@@ -137,7 +138,7 @@ export default function MintShell({ children }) {
         <div className="m-wrap">
           <div className="m-foot">
             <div className="m-foot__brand">
-              <Brand className="m-foot__logo" />
+              <Brand prefetch={prefetch} className="m-foot__logo" />
               <p>Maison de Parfum — fragrances for a more intentional you.</p>
               <div className="m-social" aria-label="Social links">
                 <a href="https://www.instagram.com/velmique_perfume/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><BrandIcon name="instagram" size={19}/></a>
@@ -151,34 +152,34 @@ export default function MintShell({ children }) {
             <div>
               <h4>Shop</h4>
               <ul>
-                <li><Link href="/shop">All Fragrances</Link></li>
-                <li><Link href="/collections">Collections</Link></li>
-                <li><Link href="/pack">Build a Pack</Link></li>
-                <li><Link href="/wishlist">Wishlist</Link></li>
+                <li><Link prefetch={prefetch} href="/shop">All Fragrances</Link></li>
+                <li><Link prefetch={prefetch} href="/collections">Collections</Link></li>
+                <li><Link prefetch={prefetch} href="/pack">Build a Pack</Link></li>
+                <li><Link prefetch={prefetch} href="/wishlist">Wishlist</Link></li>
               </ul>
             </div>
             <div>
               <h4>About</h4>
               <ul>
-                <li><Link href="/about">Our Story</Link></li>
-                <li><Link href="/journal">Journal</Link></li>
-                <li><Link href="/account">My Account</Link></li>
-                <li><Link href="/contact">Contact</Link></li>
+                <li><Link prefetch={prefetch} href="/about">Our Story</Link></li>
+                <li><Link prefetch={prefetch} href="/journal">Journal</Link></li>
+                <li><Link prefetch={prefetch} href="/account">My Account</Link></li>
+                <li><Link prefetch={prefetch} href="/contact">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h4>Customer Care</h4>
               <ul>
-                <li><Link href="/track-order">Track Order</Link></li>
-                <li><Link href="/account/returns">Returns &amp; Refunds</Link></li>
-                <li><Link href="/shipping-returns">Shipping Policy</Link></li>
-                <li><Link href="/cancellation-refund">Cancellation &amp; Refund</Link></li>
+                <li><Link prefetch={prefetch} href="/track-order">Track Order</Link></li>
+                <li><Link prefetch={prefetch} href="/account/returns">Returns &amp; Refunds</Link></li>
+                <li><Link prefetch={prefetch} href="/shipping-returns">Shipping Policy</Link></li>
+                <li><Link prefetch={prefetch} href="/cancellation-refund">Cancellation &amp; Refund</Link></li>
               </ul>
             </div>
           </div>
           <div className="m-legal">
             <span>© {new Date().getFullYear()} VELMIQUE. All rights reserved.</span>
-            <span><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms">Terms Of Use</Link><Link href="/contact#grievance">Grievance</Link><CookieSettingsButton className="m-legal__cookie" /></span>
+            <span><Link prefetch={prefetch} href="/privacy-policy">Privacy Policy</Link><Link prefetch={prefetch} href="/terms">Terms Of Use</Link><Link prefetch={prefetch} href="/contact#grievance">Grievance</Link><CookieSettingsButton className="m-legal__cookie" /></span>
             <span className="m-legal__by">Made with <em>❤</em> by <a href="https://finvera.solutions" target="_blank" rel="noopener noreferrer">Finvera.solutions</a></span>
           </div>
         </div>

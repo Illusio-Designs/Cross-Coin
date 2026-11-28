@@ -16,16 +16,12 @@ export default function Document() {
         <script dangerouslySetInnerHTML={{ __html: "document.addEventListener('load',function(e){var t=e.target;if(!t||t.tagName!=='IMG'||!t.classList||!t.classList.contains('gzimg'))return;var d=function(){t.classList.add('is-on')};if(t.decode){t.decode().then(d,d)}else{d()}},true);" }} />
         {/* Deploy resilience (no Vercel Pro): reload once if a CSS chunk fails to load. */}
         <script dangerouslySetInnerHTML={{ __html: "(function(){try{var K='__cssReload';window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t.tagName==='LINK'&&t.rel==='stylesheet'&&/\\/_next\\/static\\/css\\//.test(t.href||'')){if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,'1');location.reload();}}},true);}catch(_){}})();" }} />
-        <link rel="icon" href="/Gripzusfavicon.jpeg" />
-        <link rel="shortcut icon" href="/Gripzusfavicon.jpeg" />
-        <link rel="apple-touch-icon" href="/Gripzusfavicon.jpeg" />
+        <link rel="preconnect" href="https://ik.imagekit.io" />
+        <link rel="icon" href="/gripzus-mark.webp" />
+        <link rel="shortcut icon" href="/gripzus-mark.webp" />
+        <link rel="apple-touch-icon" href="/gripzus-mark.webp" />
 
-        {/* MSG91 OTP widget — exposes window.sendOtp / window.verifyOtp for
-            phone-OTP login. Only login + checkout need it, never at first paint,
-            so we defer the third-party script until the browser is idle instead
-            of loading it eagerly in <head> on every page. By the time a user
-            reaches an OTP step it has long since loaded, but it no longer
-            competes with the critical render path. */}
+        {/* Login and registration warm the OTP widget when opened. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -56,8 +52,7 @@ export default function Document() {
                   window.__msg91Started = true;
                   tryLoad(0);
                 }
-                var ric = window.requestIdleCallback || function(cb){ return setTimeout(cb, 2500); };
-                ric(loadMsg91);
+                window.__loadGripzusOtp = loadMsg91;
               })();
             `,
           }}

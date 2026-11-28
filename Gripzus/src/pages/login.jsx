@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import PageHero from '../components/common/PageHero';
@@ -24,6 +24,10 @@ export default function LoginPage() {
   const OTP_TEST_MODE = false;
   const isLocal = OTP_TEST_MODE || (typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+
+  useEffect(() => {
+    if (!isLocal) window.__loadGripzusOtp?.();
+  }, [isLocal]);
 
   // Step 1 — send OTP
   const handleSendOtp = async (e) => {
@@ -52,6 +56,7 @@ export default function LoginPage() {
     setLoading(false);
 
     const identifier = '91' + digits;
+    window.__loadGripzusOtp?.();
     let attempts = 0;
     const trySend = () => {
       if (typeof window.sendOtp === 'function') {

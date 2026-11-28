@@ -5,6 +5,11 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { ShimmerImg } from '@/components/ui/ShimmerImg'
 
+const MAIN_WIDTHS = [480, 640, 800, 960, 1200];
+const MAIN_SIZES = '(max-width: 1023px) calc(100vw - 32px), (max-width: 1280px) 45vw, 580px';
+const SECONDARY_WIDTHS = [240, 400, 600];
+const SECONDARY_SIZES = '(max-width: 1023px) calc(50vw - 20px), (max-width: 1280px) 22vw, 286px';
+
 function Lightbox({ images, startIndex, productName, onClose }) {
   const [active, setActive] = useState(startIndex)
   // Each full-size photo holds a square box until it is decoded.
@@ -162,6 +167,8 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
         <ShimmerImg
           src={main?.url}
           width={1200}
+          widths={MAIN_WIDTHS}
+          sizes={MAIN_SIZES}
           alt={main?.alt || productName}
           className="w-full object-contain min-h-[260px] sm:min-h-[340px] md:min-h-[420px]"
           priority
@@ -184,6 +191,9 @@ export function ProductGallery({ images, colorImages, activeColorName, productNa
                 <ShimmerImg
                   src={img.url}
                   width={600}
+                  widths={SECONDARY_WIDTHS}
+                  sizes={SECONDARY_SIZES}
+                  fetchPriority="low"
                   alt={img.alt || `${productName} ${i + 2}`}
                   className="aspect-square w-full object-contain"
                 />

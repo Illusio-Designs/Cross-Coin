@@ -102,7 +102,7 @@ export default function Home({
   return (
     <SeoWrapper pageName="home">
       <Head>
-        <link rel="icon" href="/Gripzusfavicon.jpeg" />
+        <link rel="icon" href="/gripzus-mark.webp" />
         {/* Brand Organization JSON-LD from the backend — only when present. */}
         {organization && (
           <script

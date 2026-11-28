@@ -53,6 +53,7 @@ const dancingScript = localFont({
   weight: '400 700',
   style: 'normal',
   variable: '--font-dancing',
+  preload: false,
   display: 'swap',
   declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
@@ -101,6 +102,8 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${dancingScript.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://ik.imagekit.io" />
+        <link rel="preconnect" href="https://api.crosscoin.in" />
         {/* Moving strips start on the shopper's first touch, click, key or
             wheel (globals.css: html:not(.mx-go)). Motion from the first frame
             keeps the screen "changing" while the page loads, which page-speed

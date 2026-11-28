@@ -10,6 +10,7 @@ import { useCart } from '@/context/CartContext';
 import { toast } from '@/lib/toast';
 import { fbTrack } from '@/utils/pixel';
 import { getDeliveryEstimate } from '@/lib/deliveryEstimate';
+import ProductDescription from '@/components/ProductDescription';
 import { SIZE_GUIDE } from '@/lib/sizeGuide';
 import SizeChartModal from '@/components/product/SizeChartModal';
 import { shiprocketEnabled, openShiprocketCheckout } from '@/lib/api/shiprocketCheckout';
@@ -36,12 +37,7 @@ function tidyDescription(html) {
       if (close) return `</h${to}>`;
       const cls = { 1: 'rt-h1', 2: 'rt-lg', 5: 'rt-h5', 6: 'rt-h6' }[n];
       return cls ? `<h${to} class="${cls}"${attrs}>` : `<h${to}${attrs}>`;
-    })
-    .replace(/<img\b(?![^>]*\sloading\s*=)/gi, '<img loading="lazy"');
-}
-
-function DescriptionHtml({ html }) {
-  return <div className="pdx-desc-rich" dangerouslySetInnerHTML={{ __html: html }} />;
+    });
 }
 
 // Soxbae PDP — an editorial layout: a large image with a horizontal thumbnail
@@ -564,7 +560,7 @@ export default function ProductShowcase({ product, initialColor, bundleTiers = [
             <div className="pdx-about-main">
               <h2 className="pdx-description-title">Product description</h2>
               {(product.descriptionHtml && /<[a-z][\s\S]*>/i.test(product.descriptionHtml))
-                ? <DescriptionHtml html={tidyDescription(product.descriptionHtml)} />
+                ? <ProductDescription className="pdx-desc-rich" html={tidyDescription(product.descriptionHtml)} />
                 : product.description
                   ? <p className="pdx-about-desc">{product.description}</p>
                   : <p className="pdx-about-desc muted">No description available for this product yet.</p>}

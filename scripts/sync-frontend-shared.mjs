@@ -63,7 +63,11 @@ const PURCHASE_KEYS = { Crosscoin: 'cc-purchase', Morbix: 'mbx-purchase', Soxbae
 
 const REEL_STORES = ['Crosscoin', 'Morbix', 'Soxbae'];
 
+const DESCRIPTION_STORES = ['Crosscoin', 'Morbix', 'Soxbae', 'Velmique'];
+
 const FILES = [
+  { source: 'shared/frontend/ProductDescription.jsx', dest: (base) => `${base}components/ProductDescription.jsx`, brands: DESCRIPTION_STORES },
+  { source: 'shared/frontend/descriptionImages.js', dest: (base) => `${base}lib/descriptionImages.js`, brands: DESCRIPTION_STORES },
   { source: 'shared/frontend/ProductVideos.jsx', dest: (base) => `${base}components/product/ProductVideos.jsx`, brands: REEL_STORES },
   { source: 'shared/frontend/ProductVideos.module.css', dest: (base) => `${base}components/product/ProductVideos.module.css`, brands: REEL_STORES },
   { source: 'shared/frontend/productVideos.js', dest: (base) => `${base}lib/productVideos.js`, brands: REEL_STORES },

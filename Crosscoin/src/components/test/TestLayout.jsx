@@ -37,6 +37,7 @@ const fraunces = localFont({
   style: 'normal',
   display: 'swap',
   variable: '--ff-display',
+  preload: false,
   adjustFontFallback: 'Times New Roman',
   declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
@@ -55,6 +56,7 @@ const spaceMono = localFont({
   ],
   display: 'swap',
   variable: '--ff-mono',
+  preload: false,
   declarations: [{ prop: 'unicode-range', value: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD' }],
 });
 const FONT_VARS = `${fraunces.variable} ${inter.variable} ${spaceMono.variable}`;
@@ -526,6 +528,8 @@ export default function TestLayout({ children }) {
   const wish = useWishlist();
   const wishN = wishCount(wish);
   const [drawer, setDrawer] = useState(false);
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  useEffect(() => { if (drawer) setDrawerMounted(true); }, [drawer]);
   const [mnav, setMnav] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [productPending, setProductPending] = useState(false);
@@ -1011,7 +1015,7 @@ export default function TestLayout({ children }) {
 
       {/* cart drawer — full cart + 2-step checkout, Morbix-style */}
       <div className={`scrim${drawer ? ' on' : ''}`} onClick={() => setDrawer(false)} />
-      <aside className={`drawer${drawer ? ' on' : ''}`} aria-label="Cart">
+      {(drawer || drawerMounted) && <aside className={`drawer${drawer ? ' on' : ''}`} aria-label="Cart">
         <div className="drawer__h">
           <b>{step === 'done' ? 'Order confirmed' : step === 'checkout' ? 'Checkout · delivery & payment' : `Your cart (${count})`}</b>
           <button className="ibtn" onClick={() => setDrawer(false)} aria-label="Close">{I.close()}</button>
@@ -1206,7 +1210,7 @@ export default function TestLayout({ children }) {
             </div>
           </div>
         )}
-      </aside>
+      </aside>}
 
       <div id="toast" className={toastMsg ? 'on' : ''}>{toastMsg}</div>
 

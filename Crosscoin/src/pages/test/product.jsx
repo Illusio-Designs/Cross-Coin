@@ -1,7 +1,7 @@
 import ProductHighlights from '../../components/test/ProductHighlights';
-import SocksComparison from '../../components/test/SocksComparison';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import TestLayout from '../../components/test/TestLayout';
 import { ProductCard, I, Thumb, toast, Sk, SkBusy, SkeletonCards, ReviewCardSkeletons, ProductPageSkeleton } from '../../components/test/ui';
@@ -13,6 +13,7 @@ import { ikSrcSet } from '../../utils/imageUtils';
 import { fbqTrack } from '@/utils/fbqTrack';
 import { toggleWish, isWished } from '../../components/test/wishlist';
 import { sanitizeRich } from '../../utils/sanitizeHtml';
+import ProductDescription from '../../components/ProductDescription';
 import { SIZE_GUIDE } from '../../lib/sizeGuide';
 import { shiprocketEnabled, openShiprocketCheckout } from '../../lib/shiprocketCheckout';
 import { videosForProduct } from '../../lib/productVideos';
@@ -23,6 +24,7 @@ import ProductReviewCarousel from '../../components/test/ProductReviewCarousel';
 import ShiprocketButton from '../../components/checkout/ShiprocketButton';
 import LazyMount from '../../components/common/LazyMount';
 
+const SocksComparison = dynamic(() => import('../../components/test/SocksComparison'), { ssr: false });
 const AVBG = ['#ce1e36', '#180d3e', '#0f766e', '#c9a25a', '#6d28d9'];
 const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 // Format a review's timestamp as "Mon YYYY" (e.g. "Oct 2026"); blank if unparseable.
@@ -32,12 +34,6 @@ const fmtReviewDate = (d) => {
   return isNaN(t.getTime()) ? '' : t.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 };
 
-// Keep the editor's image URLs intact. Transforming signed/CDN URLs or
-// removing src for a custom observer can leave otherwise valid pictures blank.
-function DescriptionHtml({ html }) {
-  const lazyHtml = html.replace(/<img\b(?![^>]*\sloading\s*=)/gi, '<img loading="lazy"');
-  return <div className="legal cc-product-description" dangerouslySetInnerHTML={{ __html: lazyHtml }} />;
-}
 const plainText = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 // "pack_size" / "packSize" → "Pack size" for a specification row.
@@ -88,6 +84,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setHydrated(true); }, []);
   const [p, setP] = useState(seed?.prod || null);
+  const productVideos = useMemo(() => videosForProduct(p?.raw), [p?.raw]);
   const [loading, setLoading] = useState(!seed);
   const [also, setAlso] = useState([]);
   const relatedRef = useRef(null);
@@ -380,7 +377,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
           </div>
         </div>
 
-        <ProductVideos videos={videosForProduct(p.raw)} />
+        <ProductVideos videos={productVideos} />
 
         {/* About + Specifications — Morbix-style (description left, spec list right) */}
         <section className="block">
@@ -390,7 +387,7 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
               <h2>About this product</h2>
               {descHtml
                 ? (hydrated
-                  ? <DescriptionHtml html={sanitizeRich(descHtml)} />
+                  ? <ProductDescription className="legal cc-product-description" html={sanitizeRich(descHtml)} />
                   : <div className="legal">{plainText(descHtml)}</div>)
                 : <p className="muted" style={{ color: 'var(--ink-soft)', lineHeight: 1.7 }}>Everyday essentials minted to a standard — comfortable, durable and honestly priced.</p>}
             </div>
@@ -448,9 +445,9 @@ export default function TestProduct({ preview = true, initialProduct = null, ini
           (LazyMount), so the photo, price and Buy button load and respond
           first. The page's JSON-LD (pages/products/[slug]) still carries the
           reviews and FAQ for search engines. */}
-      <LazyMount minHeight={700}><SocksComparison /></LazyMount>
+      <LazyMount minHeight={700} margin="300px"><SocksComparison /></LazyMount>
 
-      <LazyMount minHeight={1200}>
+      <LazyMount minHeight={1200} margin="300px">
       <div className="wrap">
         {/* Reviews (real) */}
         <section className="block">

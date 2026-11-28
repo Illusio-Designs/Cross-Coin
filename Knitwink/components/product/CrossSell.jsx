@@ -6,22 +6,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getBestsellers } from '@/lib/api/products'
 import { ProductCard } from '@/components/collection/ProductCard'
 
-/**
- * Cross-sell carousel under the product detail.
- *
- * Accepts `initialBestsellers` from the server shell so the first
- * render has no network round-trip. After hydration, useQuery uses
- * `initialData` to seed the cache; subsequent navigations to other
- * products serve from the cache (5-min stale time inherited from the
- * shared queryClient defaults).
- */
-export function CrossSell({ currentHandle, initialBestsellers }) {
+// Mounted near the recommendations section and shares the cached bestsellers feed.
+export function CrossSell({ currentHandle }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', dragFree: true })
 
   const { data: all = [] } = useQuery({
     queryKey: ['bestsellers'],
     queryFn: () => getBestsellers().catch(() => []),
-    initialData: initialBestsellers,
   })
 
   const products = all.filter((p) => p.handle !== currentHandle)

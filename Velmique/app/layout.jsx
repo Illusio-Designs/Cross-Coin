@@ -10,7 +10,7 @@ import ClientProviders from '@/components/layout/ClientProviders';
 import SentryInit from '@/components/SentryInit';
 import ConsentSpeedInsights from '@/components/layout/ConsentSpeedInsights';
 import Analytics from '@/components/layout/Analytics';
-import CartDrawer from '@/components/cart/CartDrawer';
+import LazyCartDrawer from '@/components/cart/LazyCartDrawer';
 import ExitIntentModal from '@/components/cart/ExitIntentModal';
 import ScrollToTop from '@/components/ui/ScrollToTop';
 import ScrollProgress from '@/components/ui/ScrollProgress';
@@ -93,8 +93,8 @@ export default async function RootLayout({ children }) {
         <link rel="preload" href="/fonts/playfair-display-latin-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         {/* Without JS the no-half-draw images (SkImg) could never reveal. */}
         <noscript><style>{'.sk-frame>img{opacity:1!important}.sk-img{animation:none!important;background-image:none!important}'}</style></noscript>
-        <link rel="dns-prefetch" href="https://ik.imagekit.io" />
-        <link rel="dns-prefetch" href="https://api.crosscoin.in" />
+        <link rel="preconnect" href="https://ik.imagekit.io" />
+        <link rel="preconnect" href="https://api.crosscoin.in" />
       </head>
       <body>
         {/* Pictures stay hidden until fully loaded + decoded; this shows them
@@ -117,7 +117,7 @@ export default async function RootLayout({ children }) {
               <WhatsAppChat />
               {/* The bag + full checkout (coupons, fees, COD/prepaid, WhatsApp
                   abandoned-cart capture and the ?recover=1 recovery link). */}
-              <CartDrawer />
+              <LazyCartDrawer />
               {/* Analytics calls useSearchParams() for route-change tracking;
                   it must live inside a Suspense boundary or Next 14 bails
                   static prerendering on every page. */}

@@ -615,8 +615,8 @@ export default function ProductDetail({ slug: slugProp, initialProduct = null, i
                       key={curImg}
                       src={images[curImg]}
                       w={1200}
-                      widths={[600, 1200]}
-                      sizes="(max-width: 767px) 100vw, 50vw"
+                      widths={[480, 640, 800, 960, 1200]}
+                      sizes="(max-width: 767px) calc(100vw - 32px), 50vw"
                       alt={product.name}
                       priority={curImg === 0}
                       className="block h-full w-full object-contain"

@@ -72,8 +72,8 @@ export default function Footer() {
           <div>
             {/* invert makes the black art white; screen drops the (now-black) bg into the dark panel */}
             <span className="flex items-center gap-0.5">
-              <img src="/Gripzusfavicon.jpeg" alt="" className="h-12 w-auto object-contain invert mix-blend-screen" />
-              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-5 w-auto object-contain invert mix-blend-screen" />
+              <img src="/gripzus-mark.webp" alt="" className="h-12 w-auto object-contain invert mix-blend-screen" />
+              <img src="/assets/gripzus-wordmark.webp" alt="Gripzus" className="h-5 w-auto object-contain invert mix-blend-screen" />
             </span>
             <p className="text-paper/55 text-[13px] leading-relaxed max-w-xs mt-5">
               Engineered grip socks, made for movement. Considered pairs, built to last.

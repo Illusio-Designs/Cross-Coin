@@ -65,8 +65,8 @@ export default function Header() {
               <span className="block h-px bg-ink transition-all group-hover:w-[18px]" style={{ width: 12 }} />
             </button>
             <Link href="/" aria-label="Gripzus home" className="shrink-0 flex items-center gap-0.5">
-              <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 md:h-11 w-auto object-contain mix-blend-multiply" />
-              <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 md:h-[19px] w-auto object-contain mix-blend-multiply" />
+              <img src="/gripzus-mark.webp" alt="" className="h-9 md:h-11 w-auto object-contain mix-blend-multiply" />
+              <img src="/assets/gripzus-wordmark.webp" alt="Gripzus" className="h-4 md:h-[19px] w-auto object-contain mix-blend-multiply" />
             </Link>
           </div>
 
@@ -109,8 +109,8 @@ export default function Header() {
           <aside className="fixed inset-y-0 left-0 z-[51] w-[88%] max-w-sm bg-paper lg:hidden flex flex-col gz-drawer">
             <div className="px-5 h-[76px] border-b border-line flex items-center justify-between">
               <span className="flex items-center gap-0.5">
-                <img src="/Gripzusfavicon.jpeg" alt="" className="h-9 w-auto object-contain mix-blend-multiply" />
-                <img src="/assets/Gripzus.JPG.jpeg" alt="Gripzus" className="h-4 w-auto object-contain mix-blend-multiply" />
+                <img src="/gripzus-mark.webp" alt="" className="h-9 w-auto object-contain mix-blend-multiply" />
+                <img src="/assets/gripzus-wordmark.webp" alt="Gripzus" className="h-4 w-auto object-contain mix-blend-multiply" />
               </span>
               <button onClick={() => setMobileOpen(false)} className="w-9 h-9 flex items-center justify-center text-ink hover:rotate-90 transition-transform" aria-label="Close menu">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>

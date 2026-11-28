@@ -263,6 +263,7 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
   cursor: zoom-in;
 }
 .v-gallery__main img {
+  display: block;
   width: 100%;
   height: auto;
   aspect-ratio: auto 1 / 1;
@@ -698,7 +699,7 @@ html[data-maison] .Toastify__toast-container--top-right{top:110px;right:20px;poi
   display: block;
   aspect-ratio: 713 / 176;
   background: #57182d;
-  mask: url('/logo.webp') center / contain no-repeat;
+  mask: url('/logo-mask.webp') center / contain no-repeat;
 }
 @media (max-width: 380px) {
   .m-nav { padding-inline: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); }
