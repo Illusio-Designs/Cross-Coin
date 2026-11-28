@@ -2,6 +2,13 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
 const root = path.join(__dirname, '..');
+test('a cold product URL returns the rendered page so the gallery preload is in the first response', async () => {
+  const route = fs.readFileSync(path.join(root, 'src/pages/products/[slug].jsx'), 'utf8');
+  const start = route.indexOf('export async function getStaticPaths');
+  const end = route.indexOf('export async function getStaticProps', start);
+  const getStaticPaths = vm.runInNewContext(`(${route.slice(start, end).trim().replace(/^export /, '')})`);
+  assert.equal((await getStaticPaths()).fallback, 'blocking');
+});
 const imageSource = fs.readFileSync(path.join(root, 'src/utils/imageUtils.js'), 'utf8').replace(/^export /gm, '');
 const image = vm.createContext({ URL, process: { env: {} } });
 vm.runInContext(imageSource, image);

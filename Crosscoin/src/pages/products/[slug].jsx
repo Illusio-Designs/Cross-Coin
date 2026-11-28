@@ -20,10 +20,7 @@
  */
 
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 import TestProduct, { MAIN_WIDTHS, MAIN_SIZES, MAIN_MOBILE_MEDIA, MAIN_MOBILE_WIDTHS, openingImage } from '../test/product';
-import TestLayout from '../../components/test/TestLayout';
-import { ProductPageSkeleton } from '../../components/test/ui';
 import { ikTransform, ikSrcSet } from '../../utils/imageUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.crosscoin.in';
@@ -47,10 +44,10 @@ async function fetchJson(url, { required = false } = {}) {
   }
 }
 
-// First-time browser visits can show the skeleton while Next builds the page.
-// Next serves the full product HTML to crawlers and caches the generated page.
+// Include the gallery and its preload in the first response on a cache miss.
+// Subsequent visits still use the generated page and its ISR cache.
 export async function getStaticPaths() {
-  return { paths: [], fallback: true };
+  return { paths: [], fallback: 'blocking' };
 }
 
 export async function getStaticProps({ params }) {
@@ -105,9 +102,6 @@ function truncate(s, n) {
 }
 
 export default function ProductSlugPage({ slug, initialProduct, productFaqs, globalFaqs }) {
-  const { isFallback } = useRouter();
-  if (isFallback) return <TestLayout><ProductPageSkeleton /></TestLayout>;
-
   const seo = initialProduct?.seo || {};
   const canonical = seo.canonicalUrl || seo.canonical_url || `${SITE_URL}/products/${slug}`;
   const title = seo.metaTitle || seo.meta_title || `${initialProduct?.name || 'Product'} | CrossCoin`;
